@@ -512,12 +512,10 @@ def sort_tree_into_layers(nodes, context):
             if none_connected: roots.append(n)
     
     layers, nodes_heights = {}, {}
-    for root in roots:
-            nodes_heights[root.signature] = 0
-        
     #Possible improvement: unify roots if they represent the same data
     all_sorted_nodes = []
     for root in roots:
+        nodes_heights[root.signature] = 0
         depth_lines = get_depth_lines(root)[0]
         
         for n in nodes.values():
