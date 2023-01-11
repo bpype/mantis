@@ -34,8 +34,11 @@ class MantisTree(NodeTree):
         # no idea what this does
         print ("Update Interface function in MantisTree class")
 
+           
     def interface_update(self, context):
         prGreen("interface_update")
+        
+
 
     if bpy.app.version >= (3, 2):  # in 3.1 this can lead to a crash
         @classmethod
@@ -46,15 +49,11 @@ class MantisTree(NodeTree):
             # thank you, Sverchok
             
     def update_tree(self, context):
-        prWhite("Updating.")
         if self.do_live_update == False:
             return
         from mantis import readtree
         prGreen("Validating Tree: %s" % self.name)
-        try:
-            parsed_tree = readtree.parse_tree(self)
-        except RecursionError:
-            parsed_tree = {}
+        parsed_tree = readtree.parse_tree(self)
         self.parsed_tree=parsed_tree
         current_tree = bpy.context.space_data.path[-1].node_tree
         self.tree_valid = True
@@ -67,11 +66,11 @@ class MantisTree(NodeTree):
         current_tree = bpy.context.space_data.path[-1].node_tree
         for node in current_tree.nodes:
             if hasattr(node, "display_update"):
-                # try:
+                try:
                     node.display_update(self.parsed_tree, context)
-                # except Exception as e:
-                    # print("Node \"%s\" failed to update display with error: %s" %(wrapGreen(node.name), wrapRed(e)))
-                    # # raise e
+                except Exception as e:
+                    print("Node \"%s\" failed to update display with error: %s" %(wrapGreen(node.name), wrapRed(e)))
+                    # raise e
         
     
     def execute_tree(self,context):
@@ -80,9 +79,8 @@ class MantisTree(NodeTree):
         readtree.execute_tree(self.parsed_tree, self, context)
 
     
-@persistent
+
 def update_handler(scene):
-    prGreen("Updating from depsgraph-pre handler!")
     context=bpy.context
     if context.space_data:
         node_tree = context.space_data.path[0].node_tree
@@ -96,23 +94,18 @@ def update_handler(scene):
             if node_tree.tree_valid == False:
                 from mantis import readtree
                 node_tree.update_tree(context)
-        # if node_tree.tree_valid and node_tree.do_live_update:
-            # try:
-                # node_tree.execute_tree(context)
-            # except (RecursionError, RuntimeError):
-                # pass
-            # node_tree.tree_valid = False
 
-# @persistent
-# def execute_handler(scene):
-    # prGreen("Executing from depsgraph-post handler!")
-    # context = bpy.context
-    # if context.space_data:
-        # node_tree = context.space_data.path[0].node_tree
+def execute_handler(scene):
+    context = bpy.context
+    if context.space_data:
+        node_tree = context.space_data.path[0].node_tree
+        if node_tree.tree_valid and node_tree.do_live_update:
+            node_tree.execute_tree(context)
+            self.tree_valid = False
 
 # bpy.app.handlers.load_post.append(set_tree_invalid)
-# bpy.app.handlers.depsgraph_update_pre.append(update_handler)
-# bpy.app.handlers.depsgraph_update_post.append(execute_handler)
+bpy.app.handlers.depsgraph_update_pre.append(update_handler)
+bpy.app.handlers.depsgraph_update_post.append(execute_handler)
     
 
 class MantisNode:
@@ -122,46 +115,18 @@ class MantisNode:
     def poll(cls, ntree):
         return (ntree.bl_idname == 'MantisTree')
                 
-    def init(self, context):
+    def insert_link(self, link):
         context = bpy.context
         if context.space_data:
             node_tree = context.space_data.path[0].node_tree
             from mantis import readtree
-            prOrange("Updating from init callback")
+            prOrange("Updating from insert_link callback")
             node_tree.update_tree(context)
-    
-    # def insert_link(self, link):
-        # context = bpy.context
-        # if context.space_data:
-            # node_tree = context.space_data.path[0].node_tree
-            # from mantis import readtree
-            # prOrange("Updating from insert_link callback")
-            # node_tree.update_tree(context)
-            # if (link.to_socket.is_linked == False):
-                # node_tree.num_links+=1
-            # elif (link.to_socket.is_multi_input and 
-                  # link.to_socket.links < link.to_socket.link_limit ):
-                # node_tree.num_links+=1
-
-    def free(self):
-        context = bpy.context
-        if context.space_data:
-            node_tree = context.space_data.path[0].node_tree
-            from mantis import readtree
-            prOrange("Updating from free callback")
-            node_tree.update_tree(context)
-            sig = get_signature_from_edited_tree(self, context)
-            if node_tree.parsed_tree.get(sig):
-                del node_tree.parsed_tree[sig]
-                node_tree.display_update(context)
-
-    def copy(self, original):
-        context = bpy.context
-        if context.space_data:
-            node_tree = context.space_data.path[0].node_tree
-            from mantis import readtree
-            prOrange("Updating from copy callback")
-            node_tree.update_tree(context)
+            if (link.to_socket.is_linked == False):
+                node_tree.num_links+=1
+            elif (link.to_socket.is_multi_input and 
+                  link.to_socket.links < link.to_socket.link_limit ):
+                node_tree.num_links+=1
             
                 
 
@@ -260,32 +225,3 @@ def get_signature_from_edited_tree(self, context):
     for item in context.space_data.path[:-1]:
         sig_path.append(item.node_tree.nodes.active.name)
     return tuple(sig_path+[self.name])
-
-def get_is_name_unique(nc, tree, namespace='BONE'):
-    if namespace == 'BONE':
-        name = nc.evaluate_input("Name")
-        for sig, nc_other in tree.items():
-            if nc.__class__.__name__ in ["xFormBone"]:
-                if nc_other == nc:
-                    continue
-                if name == nc_other.evaluate_input("Name"):
-                    return False
-        return True
-
-# def get_unique_name(name, tree, namespace='BONE'):
-    # if namespace == 'BONE':
-        # stub_index = {}
-        # for sig, nc in tree.items():
-            # if nc.__class__.__name__ in ["xFormBone"]:
-                # name = sig[-1]
-                # split_name = name.split('.')
-                # prWhite(".".join(split_name[:-1]))
-                # try:
-                    # i = int(split_name[-1])
-                    # prGreen(i)
-                # except ValueError:
-                    # i=-1
-                # if i > 0:
-                    # prev_i = stub_index 
-                    # stub_index[".".join(split_name[:-1])]=i
-        # print (stub_index)

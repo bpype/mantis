@@ -5,7 +5,7 @@ from mantis.utilities import (prRed, prGreen, prPurple, prWhite,
                               prOrange,
                               wrapRed, wrapGreen, wrapPurple, wrapWhite,
                               wrapOrange,)
-from .base_definitions import get_signature_from_edited_tree, get_is_name_unique
+from .base_definitions import get_signature_from_edited_tree
 
 
 def TellClasses():
@@ -74,21 +74,9 @@ class xFormBoneNode(Node, xFormNode):
     display_ik_settings : bpy.props.BoolProperty(default=False)
     display_vp_settings : bpy.props.BoolProperty(default=False)
     display_def_settings : bpy.props.BoolProperty(default=False)
-    socket_count : bpy.props.IntProperty() # not needed anymore, right?
-    
-    error : bpy.props.BoolProperty(default=False)
-    error_msg : bpy.props.StringProperty(default="")
-    error_icon : bpy.props.StringProperty(default="NONE")
+    socket_count : bpy.props.IntProperty()
     
     def init(self, context):
-        
-        context = bpy.context
-        if context.space_data:
-            node_tree = context.space_data.path[0].node_tree
-            from mantis import readtree
-            prOrange("Updating from xFormBone init callback")
-            node_tree.update_tree(context)
-        
         self.inputs.new('StringSocket', "Name")
         self.inputs.new('RotationOrderSocket', "Rotation Order")
         self.inputs.new('RelationshipSocket', "Relationship")
@@ -157,26 +145,14 @@ class xFormBoneNode(Node, xFormNode):
         self.outputs.new('xFormSocket', "xForm Out")
     
     def draw_buttons(self, context, layout):
-        layout.label(text=self.error_msg, icon = self.error_icon)
         layout.operator("mantis.add_custom_property", text='+Add Custom Parameter')
         # layout.label(text="Edit Parameter ... not implemented")
         if (len(self.inputs) > self.socket_count):
             layout.operator("mantis.remove_custom_property", text='-Remove Custom Parameter')
         else:
             layout.label(text="")
-    
-    # def draw_label(self):
-        # if not self.error:
-            # return self.label
-        # else:
-            # return self.error_msg
         
     def display_update(self, parsed_tree, context):
-        errors = []
-        self.error_msg = ""
-        self.error_icon = "NONE"
-        self.error=False
-        
         if context.space_data:
             node_tree = context.space_data.path[0].node_tree
             nc = parsed_tree.get(get_signature_from_edited_tree(self, context))
@@ -237,52 +213,29 @@ class xFormBoneNode(Node, xFormNode):
                         link = inp.links[0]
                     else:
                         link = None
-                if get_is_name_unique(nc, parsed_tree) == False:
-                    errors.append("Bone name is not unique.")
-                    self.error_icon = "ERROR"
-                    self.color=(1.0,0.0,0.0)
-                    self.error=True
-            else:
-                errors.append("Bone is not connected to the tree.")
-                self.color=(0.7,0.35,0.0)
-                self.error_icon = "CANCEL"
-                self.error=True
             #
-        if self.display_ik_settings == True:
-            for inp in self.inputs[4:14]:
-                inp.hide = False
-        else:
-            for inp in self.inputs[4:14]:
-                inp.hide = True
-        if self.display_vp_settings == True:
-            for inp in self.inputs[16:22]:
-                inp.hide = False
-        else:
-            for inp in self.inputs[16:22]:
-                inp.hide = True
-        #
-        if self.display_def_settings == True:
-            for inp in self.inputs[24:29]:
-                inp.hide = False
-        else:
-            for inp in self.inputs[24:29]:
-                inp.hide = True
-                
-        if self.error:
-            print (errors)
-            self.use_custom_color=True
-            self.error_msg= " and ".join(errors)
-        else:
-            self.color=(0.3,0.3,0.3)
-            self.use_custom_color=False
-                
+            if self.display_ik_settings == True:
+                for inp in self.inputs[4:14]:
+                    inp.hide = False
+            else:
+                for inp in self.inputs[4:14]:
+                    inp.hide = True
+            if self.display_vp_settings == True:
+                for inp in self.inputs[16:22]:
+                    inp.hide = False
+            else:
+                for inp in self.inputs[16:22]:
+                    inp.hide = True
+            #
+            if self.display_def_settings == True:
+                for inp in self.inputs[24:29]:
+                    inp.hide = False
+            else:
+                for inp in self.inputs[24:29]:
+                    inp.hide = True
         
-
+    
     # def copy(ectype, archtype):
-        # tree = ectype.id_data.parsed_tree
-        # n = get_unique_name(ectype.name, tree)
-        # ectype.name = "boink!"
-        
         # # TODO: automatically avoid duplicating names
         # ectype.inputs["Name"].default_value = ""
 

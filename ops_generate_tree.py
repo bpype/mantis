@@ -377,12 +377,13 @@ def setup_vp_settings(bone_node, pb, do_after, node_tree):
 
 
 def setup_df_settings(bone_node, pb):
-    bone_node.inputs["Deform"].default_value = pb.bone.use_deform
-    bone_node.inputs["Envelope Distance"].default_value = pb.bone.envelope_distance
-    bone_node.inputs["Envelope Weight"].default_value = pb.bone.envelope_weight
-    bone_node.inputs["Envelope Multiply"].default_value = pb.bone.use_envelope_multiply
-    bone_node.inputs["Envelope Head Radius"].default_value = pb.bone.head_radius
-    bone_node.inputs["Envelope Tail Radius"].default_value = pb.bone.tail_radius
+        bone_node.inputs["Deform"] = pb.bone.use_deform
+        # TODO: get the rest of these working
+        # eb.envelope_distance     = self.evaluate_input("Envelope Distance")
+        # eb.envelope_weight       = self.evaluate_input("Envelope Weight")
+        # eb.use_envelope_multiply = self.evaluate_input("Envelope Multiply")
+        # eb.head_radius           = self.evaluate_input("Envelope Head Radius")
+        # eb.tail_radius           = self.evaluate_input("Envelope Tail Radius")
 
 def create_driver(in_node_name, out_node_name, armOb, finished_drivers, switches, driver_vars, fcurves, drivers, node_tree):
     # TODO: CLEAN this ABOMINATION
@@ -653,13 +654,10 @@ def create_driver(in_node_name, out_node_name, armOb, finished_drivers, switches
                     if not prop_in:
                         # try one last thing:
                         property = parameter.split("targets[")[-1]
-                        try:
-                            target_index = int(property[0])
-                            property = "targets[" + property # HACK lol
-                            # get the property by index...
-                            prop_in = out_node.inputs[target_index*2+6+1] # this is the weight, not the target
-                        except ValueError:
-                            prop_in = None
+                        target_index = int(property[0])
+                        property = "targets[" + property # HACK lol
+                        # get the property by index...
+                        prop_in = out_node.inputs[target_index*2+6+1] # this is the weight, not the target
                     if prop_in:
                         prRed ("   found: %s, %s, %s" % (property, out_node.label, out_node.name))
                         node_tree.links.new(driver_node.outputs["Driver"], prop_in)
@@ -847,9 +845,7 @@ def do_generate_armature(context, node_tree):
                 for n in node_tree.nodes:
                     if n.name == out_node_name:
                         shape_xform_n = n
-                        prRed(n.name, n.bl_idname)
-                        # relying on the socket name like this is probably wrong
-                        node_tree.links.new(shape_xform_n.outputs["xForm Out"], node_tree.nodes[in_node_name].inputs['Custom Object xForm Override'])
+                        node_tree.links.new(shape_xform_n.outputs["xForm"], node_tree.nodes[in_node_name].inputs['Custom Object xForm Override'])
                         break
                 else: # make it a task
                     prRed("Cannot set custom object transform override for %s to %s" % (in_node_name, out_node_name))
