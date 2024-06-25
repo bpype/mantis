@@ -24,7 +24,8 @@ def TellClasses():
         DriverRemoveDriverVariableInput,
         # Armature Link Node
         LinkArmatureAddTargetInput,
-        LinkArmatureRemoveTargetInput,]
+        LinkArmatureRemoveTargetInput,
+        ExportNodeTreeToJSON,]
 
 def mantis_tree_poll_op(context):
     # return True
@@ -77,6 +78,8 @@ class MantisGroupNodes(Operator):
     def poll(cls, context):
         return mantis_tree_poll_op(context)
 
+
+# IMPORTANT TODO: re-write this because it no longer work
 
 # source is https://github.com/aachman98/Sorcar/blob/master/operators/ScGroupNodes.py
 # checc here: https://github.com/nortikin/sverchok/blob/9002fd4af9ec8603e86f86ed7e567a4ed0d2e07c/core/node_group.py#L568
@@ -301,7 +304,7 @@ class CleanUpNodeGraph(bpy.types.Operator):
         
         base_tree=context.space_data.path[-1].node_tree
         
-        from mantis.grandalf.graphs import Vertex, Edge, Graph, graph_core
+        from .grandalf.graphs import Vertex, Edge, Graph, graph_core
         
         class defaultview(object):
             w,h = 1,1
@@ -336,7 +339,7 @@ class CleanUpNodeGraph(bpy.types.Operator):
         
 
         
-        from mantis.grandalf.layouts import SugiyamaLayout
+        from .grandalf.layouts import SugiyamaLayout
         
         
         sug = SugiyamaLayout(graph.C[0]) # no idea what .C[0] is
@@ -844,3 +847,31 @@ class LinkArmatureRemoveTargetInput(bpy.types.Operator):
         n = context.node
         n.inputs.remove(n.inputs[-1]); n.inputs.remove(n.inputs[-1])
         return {'FINISHED'}
+
+
+
+class ExportNodeTreeToJSON(Operator):
+    """Export this node tree as a JSON file"""
+    bl_idname = "mantis.export_node_tree_json"
+    bl_label = "Export Mantis Tree to JSON"
+
+    @classmethod
+    def poll(cls, context):
+        return (mantis_tree_poll_op(context))
+
+    def execute(self, context):
+        from .i_o import export_to_json
+        import bpy
+
+        tree = context.space_data.path[0].node_tree
+        tree.update_tree(context)
+
+        def remove_special_characters(stritree):
+            # https://stackoverflow.com/questions/295135/turn-a-stritree-into-a-valid-filename
+            # thank you user "Sophie Gage"
+            import re # regular expressions
+            return re.sub('[^\w_.)( -]', '', stritree)
+
+        path = bpy.path.abspath('//')+remove_special_characters(tree.name)+".json"
+        export_to_json(tree, path)
+        return {"FINISHED"}

@@ -1,8 +1,8 @@
-from mantis.node_container_common import *
+from .node_container_common import *
 
 # The fact that I need this means that some of these classes should
 #  probably be moved to link_containers.py
-from mantis.xForm_containers import xFormRoot, xFormArmature, xFormBone
+from .xForm_containers import xFormRoot, xFormArmature, xFormBone
 
 def TellClasses():
     return [
@@ -521,7 +521,7 @@ class UtilityFCurve:
 
     def bExecute(self, bContext = None,):
         prepare_parameters(self)
-        from mantis.utilities import get_node_prototype
+        from .utilities import get_node_prototype
         np = get_node_prototype(self.signature, self.base_tree)
         keys = []
         #['amplitude', 'back', 'bl_rna', 'co', 'co_ui', 'easing', 'handle_left', 'handle_left_type', 'handle_right', 'handle_right_type',
@@ -569,7 +569,7 @@ class UtilityDriver:
         self.outputs = {
           "Driver" : NodeSocket(name = "Driver", node=self),
         }
-        from mantis.drivers import MantisDriver
+        from .drivers import MantisDriver
         self.parameters = {
           "Driver Type":None, 
           "Expression":None, 
@@ -584,7 +584,7 @@ class UtilityDriver:
 
     def bExecute(self, bContext = None,):
         prepare_parameters(self)
-        from mantis.drivers import MantisDriver
+        from .drivers import MantisDriver
         #prPurple("Executing Driver Node")
         my_vars = []
         
@@ -629,7 +629,7 @@ class UtilitySwitch:
         self.outputs = {
           "Driver" : NodeSocket(name = "Driver", node=self),
         }
-        from mantis.drivers import MantisDriver
+        from .drivers import MantisDriver
         self.parameters = {
           "xForm":None, 
           "Parameter":None,
@@ -661,7 +661,7 @@ class UtilitySwitch:
         if xForm : xForm = xForm.bGetObject() 
         if not xForm:
             raise RuntimeError("Could not evaluate xForm for %s" % self)
-        from mantis.drivers import MantisDriver
+        from .drivers import MantisDriver
         my_driver ={ "owner" : None,
                      "prop"  : None, # will be filled out in the node that uses the driver 
                      "ind"   : -1, # same here

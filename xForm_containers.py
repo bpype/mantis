@@ -1,4 +1,4 @@
-from mantis.node_container_common import *
+from .node_container_common import *
 from bpy.types import Node
 from .base_definitions import MantisNode
 
@@ -124,7 +124,7 @@ class xFormArmature:
                         ob.animation_data.drivers.remove(ob.animation_data.drivers[-1])
             for pb in ob.pose.bones:
                 # clear it, even after deleting the edit bones, 
-                #  if we create them again the pose bones will be reused
+                #  if we create them again the pose bones will be reused 
                 while (pb.constraints):
                     pb.constraints.remove(pb.constraints[-1])
                 pb.location = (0,0,0)
@@ -132,6 +132,16 @@ class xFormArmature:
                 pb.rotation_quaternion = (1.0,0,0,0)
                 pb.rotation_axis_angle = (0,0,1.0,0)
                 pb.scale = (1.0,1.0,1.0)
+            # feels ugly and bad, whatever
+            collections = []
+            for bc in ob.data.collections:
+                collections.append(bc)
+            for bc in collections:
+                ob.data.collections.remove(bc)
+            del collections
+            # end ugly/bad
+
+
         else:
             # Create the Object
             ob = bpy.data.objects.new(name, bpy.data.armatures.new(name)) #create ob
@@ -176,7 +186,8 @@ class xFormArmature:
         selected.append(ob)
         context_override = {"active_object":ob, "selected_objects":selected}
         print("Changing Armature Mode to " +wrapPurple("EDIT"))
-        bpy.ops.object.mode_set(context_override, mode='EDIT')
+        with bContext.temp_override(**context_override):
+            bpy.ops.object.mode_set(mode='EDIT')
         if ob.mode != "EDIT":
             prRed("eh?")
         # clear it
@@ -232,7 +243,7 @@ class xFormBone:
          "Z Min"          : NodeSocket(is_input = True, name = "Z Min", node = self,),
          "Z Max"          : NodeSocket(is_input = True, name = "Z Max", node = self,),
          # Visual stuff
-         "Layer Mask"                         : NodeSocket(is_input = True, name = "Layer Mask", node = self,),
+         "Bone Collection"                         : NodeSocket(is_input = True, name = "Bone Collection", node = self,),
          "Hide"                               : NodeSocket(is_input = True, name = "Hide", node = self,),
          "Custom Object"                      : NodeSocket(is_input = True, name = "Custom Object", node = self,),
          "Custom Object xForm Override"       : NodeSocket(is_input = True, name = "Custom Object xForm Override", node = self,),
@@ -241,7 +252,6 @@ class xFormBone:
          "Custom Object Scale"                : NodeSocket(is_input = True, name = "Custom Object Scale", node = self,),
          "Custom Object Translation"          : NodeSocket(is_input = True, name = "Custom Object Translation", node = self,),
          "Custom Object Rotation"             : NodeSocket(is_input = True, name = "Custom Object Rotation", node = self,),
-         "Bone Group"                         : NodeSocket(is_input = True, name = "Bone Group", node = self,),
          # Deform Stuff
          "Deform"               : NodeSocket(is_input = True, name = "Deform", node = self,),
          "Envelope Distance"    : NodeSocket(is_input = True, name = "Envelope Distance", node = self,),
@@ -270,9 +280,8 @@ class xFormBone:
          "Y Max":None,
          "Z Min":None,
          "Z Max":None,
-         "Layer Mask":None,
          "Hide":None,
-         "Layer Mask":None,
+         "Bone Collection":None,
          "Hide":None,
          "Custom Object":None,
          "Custom Object xForm Override":None,
@@ -281,7 +290,6 @@ class xFormBone:
          "Custom Object Scale":None,
          "Custom Object Translation":None,
          "Custom Object Rotation":None,
-         "Bone Group"           : None,
          "Deform"               : None,
          "Envelope Distance"    : None,
          "Envelope Weight"      : None,
@@ -355,6 +363,23 @@ class xFormBone:
         # Create the Object
         d = xF.data
         eb = d.edit_bones.new(name)
+
+        # Bone Collections:
+        #    We treat each separate string as a Bone Collection that this object belongs to
+        #    Bone Collections are fully qualified by their hierarchy.
+        #    Separate Strings with "|" and indicate hierarchy with ">". These are special characters.
+        # NOTE: if the user names the collections differently at different times, this will take the FIRST definition and go with it
+        sCols = self.evaluate_input("Bone Collection")
+        bone_collections = sCols.split("|")
+        for collection_list in bone_collections:
+            hierarchy = collection_list.split(">")
+            col_parent = None
+            for i, sCol in enumerate(hierarchy):
+                if ( col := d.collections.get(sCol) ) is None:
+                    col = d.collections.new(sCol)
+                col.parent = col_parent
+                col_parent = col
+            col.assign(eb)
         
         if (eb.name != name):
             raise RuntimeError("Could not create bone ", name, "; Perhaps there is a duplicate bone name in the node tree?")
@@ -372,7 +397,6 @@ class xFormBone:
         assert (self.bObject), "eh? %s" % eb.name
         
         self.bSetParent(eb)
-        eb.layers = self.evaluate_input("Layer Mask")
         
         
         # Setup Deform attributes...
@@ -388,7 +412,7 @@ class xFormBone:
 
     def bFinalize(self, bContext = None):
         import bpy
-        from mantis.drivers import MantisDriver
+        from .drivers import MantisDriver
         # prevAct = bContext.view_layer.objects.active
         # bContext.view_layer.objects.active = ob
         # bpy.ops.object.mode_set(mode='OBJECT')
@@ -530,49 +554,51 @@ class xFormBone:
         pb.custom_shape_rotation_euler = self.evaluate_input("Custom Object Rotation")
         pb.use_custom_shape_bone_size = self.evaluate_input("Custom Object Scale to Bone Length")
         pb.bone.show_wire = self.evaluate_input("Custom Object Wireframe")
-        #
-        # Bone Groups
-        if bg_name := self.evaluate_input("Bone Group"): # this is a string
-            obArm = self.bGetParentArmature()
-            # Temporary! Temporary! HACK
-            color_set_items= [
-                               "DEFAULT",
-                               "THEME01",
-                               "THEME02",
-                               "THEME03",
-                               "THEME04",
-                               "THEME05",
-                               "THEME06",
-                               "THEME07",
-                               "THEME08",
-                               "THEME09",
-                               "THEME10",
-                               "THEME11",
-                               "THEME12",
-                               "THEME13",
-                               "THEME14",
-                               "THEME15",
-                               "THEME16",
-                               "THEME17",
-                               "THEME18",
-                               "THEME19",
-                               "THEME20",
-                               # "CUSTOM",
-                             ]
-            try:
-                bg = obArm.pose.bone_groups.get(bg_name)
-            except SystemError:
-                bg = None
-                pass # no clue why this happens. uninitialzied?
-            if not bg:
-                bg = obArm.pose.bone_groups.new(name=bg_name)
-                #HACK lol
-                from random import randint
-                bg.color_set = color_set_items[randint(0,14)]
-                #15-20 are black by default, gross
-                # this is good enough for now!
+        # #
+        # # D E P R E C A T E D
+        # #
+        # # Bone Groups
+        # if bg_name := self.evaluate_input("Bone Group"): # this is a string
+        #     obArm = self.bGetParentArmature()
+        #     # Temporary! Temporary! HACK
+        #     color_set_items= [
+        #                        "DEFAULT",
+        #                        "THEME01",
+        #                        "THEME02",
+        #                        "THEME03",
+        #                        "THEME04",
+        #                        "THEME05",
+        #                        "THEME06",
+        #                        "THEME07",
+        #                        "THEME08",
+        #                        "THEME09",
+        #                        "THEME10",
+        #                        "THEME11",
+        #                        "THEME12",
+        #                        "THEME13",
+        #                        "THEME14",
+        #                        "THEME15",
+        #                        "THEME16",
+        #                        "THEME17",
+        #                        "THEME18",
+        #                        "THEME19",
+        #                        "THEME20",
+        #                        # "CUSTOM",
+        #                      ]
+        #     try:
+        #         bg = obArm.pose.bone_groups.get(bg_name)
+        #     except SystemError:
+        #         bg = None
+        #         pass # no clue why this happens. uninitialzied?
+        #     if not bg:
+        #         bg = obArm.pose.bone_groups.new(name=bg_name)
+        #         #HACK lol
+        #         from random import randint
+        #         bg.color_set = color_set_items[randint(0,14)]
+        #         #15-20 are black by default, gross
+        #         # this is good enough for now!
             
-            pb.bone_group = bg
+        #     pb.bone_group = bg
             
         
         

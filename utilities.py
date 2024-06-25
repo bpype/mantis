@@ -407,9 +407,9 @@ def to_mathutils_value(socket):
             return val
         if (isinstance(socket, socket_definitions.BooleanThreeTupleSocket)):
             return (val[0], val[1], val[2]) # we'll send a tuple out
-        if ((isinstance(socket, socket_definitions.LayerMaskSocket)) or
-            (isinstance(socket, socket_definitions.LayerMaskInputSocket))):
-            return tuple(val) # should werk
+        # if ((isinstance(socket, socket_definitions.LayerMaskSocket)) or
+        #     (isinstance(socket, socket_definitions.LayerMaskInputSocket))):
+        #     return tuple(val) # should werk
     else:
         return None
 

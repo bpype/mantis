@@ -1,16 +1,3 @@
-bl_info = {
-    "name": "Mantis Rigging Nodes",
-    "author": "Joseph Brandenburg",
-    "version": (000, 000, 000),
-    "blender": (3, 00, 0),
-    "location": "todo",
-    "description": "todo",
-    "warning": "experimental, likely to freeze or crash. Use at your own risk!",
-    "wiki_url": "",
-    "tracker_url": "",
-    "category": "Rigging"}
-
-
 from . import ( ops_nodegroup,
                 base_definitions,
                 socket_definitions,
@@ -20,7 +7,7 @@ from . import ( ops_nodegroup,
                 primitives_definitions,
                 deformer_definitions,
               )
-from mantis.ops_generate_tree import CreateMantisTree
+from .ops_generate_tree import CreateMantisTree
 from bpy.types import NodeSocket
 
 
@@ -43,27 +30,29 @@ while (classLists):
     classes.extend(classLists.pop())
 
 interface_classes = []
-for cls in [cls for cls in socket_definitions.TellClasses() if issubclass(cls, NodeSocket)]:
-    name = cls.__name__+"Interface"
-    from bpy.types import NodeSocketInterface
-    def default_draw_color(self, context,):
-        return self.color
-    def default_draw(self, context, layout):
-        return
-    interface = type(
-                  name,
-                  (NodeSocketInterface,),
-                  {
-                      "color"            : cls.color,
-                      "draw_color"       : default_draw_color,
-                      "draw"             : default_draw,
-                      "bl_idname"        : name,
-                      "bl_socket_idname" : cls.__name__,
-                  },
-              )
-    interface_classes.append(interface)
+from bpy import app
+if app.version[0]  == 3:
+    for cls in [cls for cls in socket_definitions.TellClasses() if issubclass(cls, NodeSocket)]:
+        name = cls.__name__+"Interface"
+        from bpy.types import NodeSocketInterface
+        def default_draw_color(self, context,):
+            return self.color
+        def default_draw(self, context, layout):
+            return
+        interface = type(
+                      name,
+                      (NodeSocketInterface,),
+                      {
+                          "color"            : cls.color,
+                          "draw_color"       : default_draw_color,
+                          "draw"             : default_draw,
+                          "bl_idname"        : name,
+                          "bl_socket_idname" : cls.__name__,
+                      },
+                  )
+        interface_classes.append(interface)
 
-classes.extend(interface_classes)
+    classes.extend(interface_classes)
 
 import nodeitems_utils
 from nodeitems_utils import NodeCategory, NodeItem

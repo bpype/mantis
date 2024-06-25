@@ -1,7 +1,7 @@
 import bpy
 from .base_definitions import xFormNode
 from bpy.types import Node
-from mantis.utilities import (prRed, prGreen, prPurple, prWhite,
+from .utilities import (prRed, prGreen, prPurple, prWhite,
                               prOrange,
                               wrapRed, wrapGreen, wrapPurple, wrapWhite,
                               wrapOrange,)
@@ -99,7 +99,7 @@ class xFormBoneNode(Node, xFormNode):
         
         # visual settings:
         b = []
-        b.append(self.inputs.new ('LayerMaskSocket', "Layer Mask"))
+        b.append(self.inputs.new ('BoneCollectionInputSocket', "Bone Collection"))
         b.append(self.inputs.new ('xFormSocket', "Custom Object"))
         b.append(self.inputs.new ('xFormSocket', "Custom Object xForm Override"))
         b.append(self.inputs.new ('BooleanSocket', "Custom Object Scale to Bone Length"))
@@ -107,8 +107,7 @@ class xFormBoneNode(Node, xFormNode):
         b.append(self.inputs.new ('VectorScaleSocket', "Custom Object Scale"))
         b.append(self.inputs.new ('VectorSocket', "Custom Object Translation"))
         b.append(self.inputs.new ('VectorEulerSocket', "Custom Object Rotation"))
-        b.append(self.inputs.new ('StringSocket', "Bone Group"))
-        # 16-22
+        # 16-21
         # Deform Settings:
         c = []
         c.append(self.inputs.new ('BooleanSocket', "Deform"))
@@ -117,7 +116,7 @@ class xFormBoneNode(Node, xFormNode):
         c.append(self.inputs.new ('BooleanSocket', "Envelope Multiply"))
         c.append(self.inputs.new ('FloatPositiveSocket', "Envelope Head Radius"))
         c.append(self.inputs.new ('FloatPositiveSocket', "Envelope Tail Radius"))
-        #24-28
+        #22-27
         
         # c[0].default_value=False
         
@@ -128,7 +127,7 @@ class xFormBoneNode(Node, xFormNode):
         for sock in a:
             sock.hide = True
         for sock in b:
-            if sock.name in ['Custom Object', 'Layer Mask']:
+            if sock.name in ['Custom Object', 'Bone Collection']:
                 continue
             sock.hide = True
         for sock in c:
@@ -221,17 +220,17 @@ class xFormBoneNode(Node, xFormNode):
                 for inp in self.inputs[4:14]:
                     inp.hide = True
             if self.display_vp_settings == True:
-                for inp in self.inputs[16:22]:
+                for inp in self.inputs[16:21]:
                     inp.hide = False
             else:
-                for inp in self.inputs[16:22]:
+                for inp in self.inputs[16:21]:
                     inp.hide = True
             #
             if self.display_def_settings == True:
-                for inp in self.inputs[24:29]:
+                for inp in self.inputs[23:28]:
                     inp.hide = False
             else:
-                for inp in self.inputs[24:29]:
+                for inp in self.inputs[23:28]:
                     inp.hide = True
         
     

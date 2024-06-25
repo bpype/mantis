@@ -1,4 +1,4 @@
-from mantis.node_container_common import *
+from .node_container_common import *
 from bpy.types import Node
 from .base_definitions import MantisNode
 

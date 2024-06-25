@@ -1,8 +1,8 @@
-from mantis.utilities import (prRed, prGreen, prPurple, prWhite,
+from .utilities import (prRed, prGreen, prPurple, prWhite,
                               prOrange,
                               wrapRed, wrapGreen, wrapPurple, wrapWhite,
                               wrapOrange,)
-from mantis.base_definitions import GraphError, CircularDependencyError
+from .base_definitions import GraphError, CircularDependencyError
 # BE VERY CAREFUL
 # the x_containers files import * from this file
 # so all the top-level imports are carried over
@@ -396,7 +396,7 @@ def finish_drivers(self):
             drivers.append(driver)
         else:
             prRed("Failed to create driver for %s" % prop)
-    from mantis.drivers import CreateDrivers
+    from .drivers import CreateDrivers
     CreateDrivers(drivers)
 
 

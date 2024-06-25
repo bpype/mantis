@@ -1,4 +1,4 @@
-from mantis.node_container_common import *
+from .node_container_common import *
 from bpy.types import Node
 from .base_definitions import MantisNode, GraphError
 
@@ -1440,7 +1440,7 @@ class LinkDrivenParameter:
     def bFinalize(self, bContext = None):
         # TODO HACK BUG
         # This probably no longer works
-        from mantis.drivers import CreateDrivers
+        from .drivers import CreateDrivers
         CreateDrivers( [ self.parameters["Driver"] ] )
         
     def __repr__(self):

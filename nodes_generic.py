@@ -426,7 +426,7 @@ class UtilityDriverNode(Node, MantisNode):
         except AttributeError:
             proceed = False
         if proceed:
-            from mantis.f_nodegraph import (GetDownstreamXFormNodes, get_node_container)
+            from .f_nodegraph import (GetDownstreamXFormNodes, get_node_container)
             if (node_container := get_node_container(self, context)[0]):
                 dType = node_container.evaluate_input("Driver Type")
             else:

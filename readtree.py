@@ -6,7 +6,7 @@ def class_for_mantis_prototype_node(prototype_node):
     """ This is a class which returns a class to instantiate for
         the given prototype node."""
     #from .node_container_classes import TellClasses
-    from mantis import xForm_containers, link_containers, misc_containers, primitives_containers, deformer_containers
+    from . import xForm_containers, link_containers, misc_containers, primitives_containers, deformer_containers
     classes = {}
     for module in [xForm_containers, link_containers, misc_containers, primitives_containers, deformer_containers]:
         for cls in module.TellClasses():
@@ -121,7 +121,7 @@ def class_for_mantis_prototype_node(prototype_node):
 # This is really, really stupid HACK
 def gen_nc_input_for_data(socket):
     # Class List #TODO deduplicate
-    from mantis import xForm_containers, link_containers, misc_containers, primitives_containers, deformer_containers
+    from . import xForm_containers, link_containers, misc_containers, primitives_containers, deformer_containers
     classes = {}
     for module in [xForm_containers, link_containers, misc_containers, primitives_containers, deformer_containers]:
         for cls in module.TellClasses():
@@ -288,7 +288,7 @@ def reroute_links_grpout(nc, all_nc):
 
 
 def data_from_tree(base_tree, tree_path = [None], dummy_nodes = {}, all_nc = {}):
-    from mantis.node_container_common import NodeSocket
+    from .node_container_common import NodeSocket
     from .internal_containers import DummyNode
     nc_dict = {}
     tree_path_names = [tree.name for tree in tree_path if hasattr(tree, "name")]
@@ -358,6 +358,8 @@ def data_from_tree(base_tree, tree_path = [None], dummy_nodes = {}, all_nc = {})
             to_s = inp.identifier
             if not inp.is_linked:
                 nc_cls = gen_nc_input_for_data(inp)
+                print (inp)
+                prRed(nc_cls)
                 # at this point we also need to get the "Dummy Node" for
                 #  this node group.
                 if (nc_cls):
@@ -385,6 +387,8 @@ def data_from_tree(base_tree, tree_path = [None], dummy_nodes = {}, all_nc = {})
                         sig =  tuple( [None] + tree_path_names +[from_socket.node.bl_idname])
                         from_s = from_socket.identifier
                     nc_from = nc_dict.get(sig)
+            # this can be None. Why?
+            prRed (sig)
             nc_from.outputs[from_s].connect(node=nc_to, socket=to_s)
             nc_from = None
         nc_to = None
@@ -492,7 +496,7 @@ to_name_filter = [
 
 def sort_tree_into_layers(nodes, context):
     from time import time
-    from mantis.node_container_common import (get_depth_lines,
+    from .node_container_common import (get_depth_lines,
       node_depth)
     # All this function needs to do is sort out the hierarchy and
     #  get things working in order of their dependencies.
@@ -565,7 +569,7 @@ def sort_tree_into_layers(nodes, context):
 def execute_tree(nodes, base_tree, context):
     import bpy
     from time import time
-    from mantis.node_container_common import GraphError
+    from .node_container_common import GraphError
     start_time  = time()
     original_active = context.view_layer.objects.active
     
@@ -600,7 +604,8 @@ def execute_tree(nodes, base_tree, context):
     # TODO it's possible but unlikely that the user will try to run a 
     #    graph with no armature nodes in it.
     if (active):
-        bpy.ops.object.mode_set({'active_object':active, 'selected_objects':switch_me}, mode='POSE')
+        with context.temp_override(**{'active_object':active, 'selected_objects':switch_me}):
+            bpy.ops.object.mode_set(mode='POSE')
     
     #               Execute second pass (Link, Driver)                 #
     for i in range(len(layers)):
@@ -634,7 +639,8 @@ def execute_tree(nodes, base_tree, context):
                 switch_me.append(ob)
                 active = ob
     if (active):
-        bpy.ops.object.mode_set({'active_object':active, 'selected_objects':switch_me}, mode='OBJECT')
+        with context.temp_override(**{'active_object':active, 'selected_objects':switch_me}):
+            bpy.ops.object.mode_set(mode='OBJECT')
     
     prGreen("Executed Tree in %s seconds" % (time() - start_execution_time))
     prGreen("Finished executing tree in %f seconds" % (time() - start_time))

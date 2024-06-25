@@ -1,5 +1,5 @@
-from mantis.node_container_common import *
-from mantis.xForm_containers import xFormGeometryObject
+from .node_container_common import *
+from .xForm_containers import xFormGeometryObject
 from bpy.types import Node
 from .base_definitions import MantisNode
 
@@ -127,19 +127,18 @@ class DeformerArmature:
                                   'active_pose_bone':deform_bones[0],
                                   'selected_pose_bones':deform_bones,}
             #
-            bpy.ops.object.mode_set({'active_object':armOb}, mode='POSE')
-            bpy.ops.pose.select_all(action='SELECT')
-            #
-            bpy.ops.paint.weight_paint_toggle(context_override)
-            bpy.ops.paint.weight_from_bones(context_override, type='AUTOMATIC')
-            # this is not working right now but I would like to normalize stuff.
-            # hmm. I think it normalizes automatically?
-            # bpy.ops.object.vertex_group_normalize_all({'active_object':ob}, group_select_mode='BONE_DEFORM', lock_active=False)
-            bpy.ops.paint.weight_paint_toggle(context_override)
-            #
-            bpy.ops.object.mode_set({'active_object':armOb}, mode='POSE')
-            bpy.ops.pose.select_all(action='DESELECT')
-            bpy.ops.object.mode_set({'active_object':armOb}, mode='OBJECT')
+            with bContext.temp_override(**{'active_object':armOb}):
+                bpy.ops.object.mode_set(mode='POSE')
+                bpy.ops.pose.select_all(action='SELECT')
+            with bContext.temp_override(**context_override):
+                bpy.ops.paint.weight_paint_toggle()
+                bpy.ops.paint.weight_from_bones(type='AUTOMATIC')
+                bpy.ops.paint.weight_paint_toggle()
+                #
+            with bContext.temp_override(**{'active_object':armOb}):
+                bpy.ops.object.mode_set(mode='POSE')
+                bpy.ops.pose.select_all(action='DESELECT') 
+                bpy.ops.object.mode_set(mode='OBJECT')
             # TODO: modify Blender to make this available as a Python API function.
         if skin_method == "EXISTING_GROUPS":
             self.initialize_vgroups(use_existing = True)

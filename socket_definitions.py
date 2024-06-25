@@ -2,7 +2,7 @@ import bpy
 from bpy.types import NodeSocket, NodeSocketStandard
 
 
-from mantis.utilities import (prRed, prGreen, prPurple, prWhite,
+from .utilities import (prRed, prGreen, prPurple, prWhite,
                               prOrange,
                               wrapRed, wrapGreen, wrapPurple, wrapWhite,
                               wrapOrange,)
@@ -50,7 +50,7 @@ cDriverVariable = (0.66, 0.33, 0.04, 1.0)
 cFCurve         = (0.77, 0.77, 0.11, 1.0)
 cKeyframe       = (0.06, 0.22, 0.88, 1.0)
 cEnable         = (0.92, 0.92, 0.92, 1.0)
-cLayerMask      = (0.82, 0.82, 0.82, 1.0)
+cBoneCollection      = (0.82, 0.82, 0.82, 1.0)
 cDeformer       = (0.05, 0.08, 0.45, 1.0)
 
 
@@ -94,8 +94,10 @@ def TellClasses():
              DriverVariableSocket,
              FCurveSocket,
              KeyframeSocket,
-             LayerMaskSocket,
-             LayerMaskInputSocket,
+            #  LayerMaskSocket,
+            #  LayerMaskInputSocket,
+            BoneCollectionSocket,
+            BoneCollectionInputSocket,
              
              xFormParameterSocket,
              ParameterBoolSocket,
@@ -176,7 +178,11 @@ def default_update(socket, context, do_execute=True):
         return
     if not hasattr(context.space_data, "path"):
         return
-    node_tree = context.space_data.path[0].node_tree
+    try:
+        node_tree = context.space_data.path[0].node_tree
+    except IndexError: # not in the UI, for example, in a script instead.
+        node_tree = None
+        return
     if node_tree.do_live_update:
         # I don't know how the tree can be valid at 0 nodes but doesn't hurt
         #  to force it if this somehow happens.
@@ -187,7 +193,7 @@ def default_update(socket, context, do_execute=True):
         elif (node_tree.tree_valid == True):
             # prGreen("Partial Update From Socket Change.")
             # We don't have to update the whole thing, just the socket
-            from mantis.utilities import tree_from_nc
+            from .utilities import tree_from_nc
             for nc in node_tree.parsed_tree.values():
                 try:
                     if (tree_from_nc(nc.signature, nc.base_tree) == socket.node.id_data):
@@ -637,31 +643,54 @@ class StringSocket(bpy.types.NodeSocketString):
     def draw_color(self, context, node):
         return self.color
 
-class LayerMaskSocket(bpy.types.NodeSocket):
-    """Layer Mask Input socket"""
-    bl_idname = 'LayerMaskSocket'
-    bl_label = "Layer Mask"
-    default_value: bpy.props.BoolVectorProperty(subtype = "LAYER", update = update_socket, size=32)
-    color = cLayerMask
+# class LayerMaskSocket(bpy.types.NodeSocket):
+#     """Layer Mask Input socket"""
+#     bl_idname = 'LayerMaskSocket'
+#     bl_label = "Layer Mask"
+#     default_value: bpy.props.BoolVectorProperty(subtype = "LAYER", update = update_socket, size=32)
+#     color = cBoneCollection
+#     input : bpy.props.BoolProperty(default =False,)
+#     def draw(self, context, layout, node, text):
+#         ChooseDraw(self, context, layout, node, text)
+#     def draw_color(self, context, node):
+#         return self.color
+        
+# class LayerMaskInputSocket(bpy.types.NodeSocket): # I can probably use inheritance somehow lol
+#     """Layer Mask Input socket"""
+#     bl_idname = 'LayerMaskInputSocket'
+#     bl_label = "Layer Mask"
+#     default_value: bpy.props.BoolVectorProperty(subtype = "LAYER", update = update_socket, size=32)
+#     color = cBoneCollection
+#     input : bpy.props.BoolProperty(default =True,)
+#     def draw(self, context, layout, node, text):
+#         ChooseDraw(self, context, layout, node, text)
+#     def draw_color(self, context, node):
+#         return self.color
+
+
+class BoneCollectionSocket(bpy.types.NodeSocket):
+    """Bone Collection socket"""
+    bl_idname = 'BoneCollectionSocket'
+    bl_label = "Bone Collection"
+    default_value: bpy.props.StringProperty(default = "Collection", update = update_socket,)
     input : bpy.props.BoolProperty(default =False,)
+    color = cBoneCollection
     def draw(self, context, layout, node, text):
         ChooseDraw(self, context, layout, node, text)
     def draw_color(self, context, node):
         return self.color
         
-class LayerMaskInputSocket(bpy.types.NodeSocket): # I can probably use inheritance somehow lol
-    """Layer Mask Input socket"""
-    bl_idname = 'LayerMaskInputSocket'
-    bl_label = "Layer Mask"
-    default_value: bpy.props.BoolVectorProperty(subtype = "LAYER", update = update_socket, size=32)
-    color = cLayerMask
+class BoneCollectionInputSocket(bpy.types.NodeSocket):
+    """Bone Collection Input Socket"""
+    bl_idname = 'BoneCollectionInputSocket'
+    bl_label = "Bone Collection"
+    default_value: bpy.props.StringProperty(default = "Collection", update = update_socket,)
     input : bpy.props.BoolProperty(default =True,)
+    color = cBoneCollection
     def draw(self, context, layout, node, text):
         ChooseDraw(self, context, layout, node, text)
     def draw_color(self, context, node):
         return self.color
-
-
 
 #####################################################################################
 # Parameters
@@ -813,7 +842,9 @@ class EnumMetaRigSocket(NodeSocket):
     search_prop:PointerProperty(type=bpy.types.Object, poll=poll_is_armature, update=update_metarig_armature)
     
     def get_default_value(self):
-        return self.search_prop.name
+        if self.search_prop:
+            return self.search_prop.name
+        return ""
     
     default_value  : StringProperty(name = "", get=get_default_value)
     

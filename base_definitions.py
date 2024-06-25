@@ -4,7 +4,7 @@ from bpy.props import BoolProperty, StringProperty, EnumProperty, CollectionProp
 from . import ops_nodegroup
 from bpy.types import NodeTree, Node, PropertyGroup, Operator, UIList, Panel
 
-from mantis.utilities import (prRed, prGreen, prPurple, prWhite,
+from .utilities import (prRed, prGreen, prPurple, prWhite,
                               prOrange,
                               wrapRed, wrapGreen, wrapPurple, wrapWhite,
                               wrapOrange,)
@@ -44,14 +44,14 @@ class MantisTree(NodeTree):
         @classmethod
         def valid_socket_type(cls, socket_type: str):
             # https://docs.blender.org/api/master/bpy.types.NodeTree.html#bpy.types.NodeTree.valid_socket_type
-            from mantis.socket_definitions import Tell_bl_idnames
+            from .socket_definitions import Tell_bl_idnames
             return socket_type in Tell_bl_idnames()
             # thank you, Sverchok
             
     def update_tree(self, context):
         if self.do_live_update == False:
             return
-        from mantis import readtree
+        from . import readtree
         prGreen("Validating Tree: %s" % self.name)
         parsed_tree = readtree.parse_tree(self)
         self.parsed_tree=parsed_tree
@@ -75,7 +75,7 @@ class MantisTree(NodeTree):
     
     def execute_tree(self,context):
         prGreen("Executing Tree: %s" % self.name)
-        from mantis import readtree
+        from . import readtree
         readtree.execute_tree(self.parsed_tree, self, context)
 
     
@@ -92,7 +92,7 @@ def update_handler(scene):
             if prev_links != node_tree.num_links:
                 node_tree.tree_valid = False
             if node_tree.tree_valid == False:
-                from mantis import readtree
+                from . import readtree
                 node_tree.update_tree(context)
 
 def execute_handler(scene):
@@ -106,7 +106,7 @@ def execute_handler(scene):
 # bpy.app.handlers.load_post.append(set_tree_invalid)
 bpy.app.handlers.depsgraph_update_pre.append(update_handler)
 bpy.app.handlers.depsgraph_update_post.append(execute_handler)
-    
+
 
 class MantisNode:
     num_links:IntProperty(default=-1)
@@ -119,7 +119,7 @@ class MantisNode:
         context = bpy.context
         if context.space_data:
             node_tree = context.space_data.path[0].node_tree
-            from mantis import readtree
+            from . import readtree
             prOrange("Updating from insert_link callback")
             node_tree.update_tree(context)
             if (link.to_socket.is_linked == False):
@@ -150,10 +150,13 @@ class DeformerNode(MantisNode):
 
 from bpy.types import NodeCustomGroup
 # TODO: make this one's traverse() function actually work
+def poll_node_tree(self, tree):
+    return True #TODO: prevent circular group ofc
 class MantisNodeGroup(NodeCustomGroup, MantisNode):
     bl_idname = "MantisNodeGroup"
     bl_label = "Node Group"
     
+    node_tree_updater : bpy.props.PointerProperty(type=bpy.types.NodeTree, poll=poll_node_tree)
     # def poll_node_tree(self, object):
         # if object.bl_idname not in "MantisTree":
             # return False
@@ -165,55 +168,79 @@ class MantisNodeGroup(NodeCustomGroup, MantisNode):
                 # return False
     # node_tree:bpy.props.PointerProperty(type=bpy.types.NodeTree, poll=poll_node_tree)
     
-    def init(self, context):
-        pass
+    # def init(self, context):
+        # pass
+        
+        
+    def socket_value_update(self, context):
+        prGreen("updating...")
+    
+    
+    # this is a total HACK
+    def update(self):
+        if self.node_tree_updater is not self.node_tree:
+            self.update_node_tree()
+            self.node_tree_updater = self.node_tree
+    
+    
+    def update_node_tree(self):
+        self.inputs.clear()
+        self.outputs.clear()
+        for item in self.node_tree.interface.items_tree:
+            if item.item_type != "SOCKET":
+                continue
+            s = None
+            if item.in_out == 'OUTPUT':
+                s = self.outputs.new(type=item.socket_type, name=item.name, identifier=item.identifier)
+            else:
+                s = self.inputs.new(type=item.socket_type, name=item.name, identifier=item.identifier)
     
     def draw_buttons(self, context, layout):
         row = layout.row(align=True)
         row.prop(self, "node_tree", text="")
         row.operator("mantis.edit_group", text="", icon='NODETREE', emboss=True)
         
-# I don't remember why I need this?
-class GroupOutputDummySocket:
-    # a dummy class for acting like a socket that is coming from every
-    #  group output node
-    def __init__(self, tree, identifier, is_input=True):
-        #
-        # So, we need to go through the node tree and find all 
-        #   the Group Input sockets that match this
-        #   socket's identifier
-        #
-        sockets = []
-        s = None
-        for node in tree.nodes:
-            if (is_input):
-                if node.bl_idname == 'NodeGroupInput':
-                    # Group Inputs have outputs... confusing.
-                    for s in node.outputs:
-                        if (s.identifier == identifier):
-                            sockets.append(s)
-            else:
-                if node.bl_idname == 'NodeGroupOutput':
-                    for s in node.inputs:
-                        if (s.identifier == identifier):
-                            sockets.append(s)
-        sock = sockets[-1]
-        # whatever the last socket is should be OK for most of this stuff
-        self.bl_idname=sock.bl_idname
-        self.identifier = identifier
-        self.name = sock.name
-        is_linked = False
-        for s in sockets:
-            if s.is_linked:
-                is_linked = True; break
-        self.is_linked = is_linked
-        self.is_output = not is_input
-        # hopefully this doesn't matter, since it is a group node...
-        self.node = sock.node
-        self.links = []
-        for s in sockets:
-            self.links.extend(s.links)
-        # seems to werk
+# # I don't remember why I need this?
+# class GroupOutputDummySocket:
+    # # a dummy class for acting like a socket that is coming from every
+    # #  group output node
+    # def __init__(self, tree, identifier, is_input=True):
+        # #
+        # # So, we need to go through the node tree and find all 
+        # #   the Group Input sockets that match this
+        # #   socket's identifier
+        # #
+        # sockets = []
+        # s = None
+        # for node in tree.nodes:
+            # if (is_input):
+                # if node.bl_idname == 'NodeGroupInput':
+                    # # Group Inputs have outputs... confusing.
+                    # for s in node.outputs:
+                        # if (s.identifier == identifier):
+                            # sockets.append(s)
+            # else:
+                # if node.bl_idname == 'NodeGroupOutput':
+                    # for s in node.inputs:
+                        # if (s.identifier == identifier):
+                            # sockets.append(s)
+        # sock = sockets[-1]
+        # # whatever the last socket is should be OK for most of this stuff
+        # self.bl_idname=sock.bl_idname
+        # self.identifier = identifier
+        # self.name = sock.name
+        # is_linked = False
+        # for s in sockets:
+            # if s.is_linked:
+                # is_linked = True; break
+        # self.is_linked = is_linked
+        # self.is_output = not is_input
+        # # hopefully this doesn't matter, since it is a group node...
+        # self.node = sock.node
+        # self.links = []
+        # for s in sockets:
+            # self.links.extend(s.links)
+        # # seems to werk
 
 class CircularDependencyError(Exception):
     pass
