@@ -492,7 +492,7 @@ class xFormBone:
                             soft_min = inp.soft_min,
                             soft_max = inp.soft_max,)
                             
-                for num_type in ['Int', 'Bool']:
+                for num_type in ['Int']:
                     # for some reason the types don't cast implicitly
                     if num_type in inp.bl_idname:
                         ui_data.update(
@@ -500,6 +500,12 @@ class xFormBone:
                             max = int(inp.max),
                             soft_min = int(inp.soft_min),
                             soft_max = int(inp.soft_max),)
+                for bool_type in ['Bool']:
+                    # for some reason the types don't cast implicitly
+                    if bool_type in inp.bl_idname:
+                        # prPurple(ui_data.update.__text_signature__)
+                        # prPurple(ui_data.update.__doc__)
+                        ui_data.update() # TODO I can't figure out what the update function expects because it isn't documented
                 # Doesn't seem to work?
                 #pb.property_overridable_library_set("["+name+"]", True)
         # Set up IK settings, these belong to the pose bone.

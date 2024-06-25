@@ -146,7 +146,7 @@ class xFormBoneNode(Node, xFormNode):
     def draw_buttons(self, context, layout):
         layout.operator("mantis.add_custom_property", text='+Add Custom Parameter')
         # layout.label(text="Edit Parameter ... not implemented")
-        if (len(self.inputs) > self.socket_count):
+        if (len(self.inputs) >= self.socket_count):
             layout.operator("mantis.remove_custom_property", text='-Remove Custom Parameter')
         else:
             layout.label(text="")

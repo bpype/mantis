@@ -214,6 +214,7 @@ def default_update(socket, context, do_execute=True):
                 node_tree.execute_tree(context)
             except Exception as e:
                 prRed("Automatic Tree Execution failed because of %s" % e)
+                prRed(e.with_traceback())
 
 
 def update_socket(self, context,):
