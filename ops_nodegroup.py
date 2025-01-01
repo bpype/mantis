@@ -2,6 +2,11 @@ import bpy
 from bpy.types import Operator
 from mathutils import Vector
 
+from .utilities import (prRed, prGreen, prPurple, prWhite,
+                              prOrange,
+                              wrapRed, wrapGreen, wrapPurple, wrapWhite,
+                              wrapOrange,)
+
 def TellClasses():
     return [
         MantisGroupNodes,
@@ -11,12 +16,14 @@ def TellClasses():
         QueryNodeSockets,
         CleanUpNodeGraph,
         MantisMuteNode,
+        MantisVisualizeOutput,
         TestOperator,
         # xForm
         AddCustomProperty,
+        EditCustomProperty,
         RemoveCustomProperty,
         # Fcurve
-        EditFCurveNode,
+        # EditFCurveNode,
         FcurveAddKeyframeInput,
         FcurveRemoveKeyframeInput,
         # Driver
@@ -24,8 +31,8 @@ def TellClasses():
         DriverRemoveDriverVariableInput,
         # Armature Link Node
         LinkArmatureAddTargetInput,
-        LinkArmatureRemoveTargetInput,
-        ExportNodeTreeToJSON,]
+        LinkArmatureRemoveTargetInput,]
+        # ExportNodeTreeToJSON,]
 
 def mantis_tree_poll_op(context):
     # return True
@@ -78,95 +85,82 @@ class MantisGroupNodes(Operator):
     def poll(cls, context):
         return mantis_tree_poll_op(context)
 
-
-# IMPORTANT TODO: re-write this because it no longer work
-
-# source is https://github.com/aachman98/Sorcar/blob/master/operators/ScGroupNodes.py
-# checc here: https://github.com/nortikin/sverchok/blob/9002fd4af9ec8603e86f86ed7e567a4ed0d2e07c/core/node_group.py#L568
-
     def execute(self, context):
-        # Get space, path, current nodetree, selected nodes and a newly created group
-        space = context.space_data
-        path = space.path
-        node_tree = space.path[len(path)-1].node_tree
-        node_group = bpy.data.node_groups.new(ChooseNodeGroupNode(space.tree_type), space.tree_type)
-        selected_nodes = [i for i in node_tree.nodes if i.select]
-        nodes_len = len(selected_nodes)
+        base_tree=context.space_data.path[-1].node_tree
+        base_tree.is_exporting = True
 
-        # Store all links (internal/external) for the selected nodes to be created as group inputs/outputs
-        links_external_in = []
-        links_external_out = []
-        for n in selected_nodes:
-            for i in n.inputs:
-                if (i.is_linked):
-                    l = i.links[0]
-                    if (not l.from_node in selected_nodes):
-                        if (not l in links_external_in):
-                            links_external_in.append(l)
-            for o in n.outputs:
-                if (o.is_linked):
-                    for l in o.links:
-                        if (not l.to_node in selected_nodes):
-                            if (not l in links_external_out):
-                                links_external_out.append(l)
+        from .i_o import export_to_json, do_import
+        from random import random
+        grp_name = "".join([chr(int(random()*30)+35) for i in range(20)])
+        trees=[base_tree]
+        selected_nodes=export_to_json(trees, write_file=False, only_selected=True)
+        selected_nodes[base_tree.name][0]["name"]=grp_name
+        # this is for debugging the result of the export
+        # for k,v in selected_nodes[base_tree.name][2].items():
+        #     prPurple(k)
+        #     for k1, v1 in v["sockets"].items():
+        #         prRed("    ", k1, v1["name"])
+        do_import(selected_nodes, context)
 
-        # Calculate the required locations for placement of grouped node and input/output nodes
-        loc_x_in = 0
-        loc_x_out = 0
-        loc_avg = Vector((0, 0))
-        for n in selected_nodes:
-            loc_avg += n.location/nodes_len
-            if (n.location[0] < loc_x_in):
-                loc_x_in = n.location[0]
-            if (n.location[0] > loc_x_out):
-                loc_x_out = n.location[0]
-        
-        # Create and relocate group input & output nodes in the newly created group
-        group_input = node_group.nodes.new("NodeGroupInput")
-        group_output = node_group.nodes.new("NodeGroupOutput")
-        group_input.location = Vector((loc_x_in-200, loc_avg[1]))
-        group_output.location = Vector((loc_x_out+200, loc_avg[1]))
-        
-        # Copy the selected nodes from current nodetree
-        if (nodes_len > 0):
-            bpy.ops.node.clipboard_copy(get_override(type='NODE_EDITOR'))
-        
-        # Create a grouped node with correct location and assign newly created group
-        group_node = node_tree.nodes.new(ChooseNodeGroupNode(space.tree_type))
-        node_tree.nodes.active = group_node
-        group_node.location = loc_avg
-        group_node.node_tree = node_group
-        
-        # Add overlay to node editor for the newly created group
-        path.append(node_group, node=group_node)
-        
-        # Paste the copied nodes to newly created group
-        if (nodes_len > 0):
-            bpy.ops.node.clipboard_paste(get_override(type='NODE_EDITOR'))
+        affected_links_in = []
+        affected_links_out = []
 
-        # Create group input/output links in the newly created group
-        o = group_input.outputs
-        for link in links_external_in:
-            # node_group.links.new(o.get(link.from_socket.name, o[len(o)-1]), node_group.nodes[link.to_node.name].inputs[link.to_socket.name])
-            node_group.links.new(group_input.outputs[''], node_group.nodes[link.to_node.name].inputs[link.to_socket.name])
-        i = group_output.inputs
-        for link in links_external_out:
-            # node_group.links.new(node_group.nodes[link.from_node.name].outputs[link.from_socket.name], i.get(link.to_socket.name, i[len(i)-1]))
-            node_group.links.new(node_group.nodes[link.from_node.name].outputs[link.from_socket.name], group_output.inputs[''])
-        
-        # Add new links to grouped node from original external links
-        for i in range(0, len(links_external_in)):
-            link = links_external_in[i]
-            node_tree.links.new(link.from_node.outputs[link.from_socket.name], group_node.inputs[i])
-        for i in range(0, len(links_external_out)):
-            link = links_external_out[i]
-            node_tree.links.new(group_node.outputs[i], link.to_node.inputs[link.to_socket.name])
-        
-        # Remove redundant selected nodes
-        for n in selected_nodes:
-            node_tree.nodes.remove(n)
+        for l in base_tree.links:
+            if l.from_node.select and not l.to_node.select: affected_links_out.append(l)
+            if not l.from_node.select and l.to_node.select: affected_links_in.append(l)
+        delete_me = []
+        all_nodes_bounding_box=[Vector((float("inf"),float("inf"))), Vector((-float("inf"),-float("inf")))]
+        for n in base_tree.nodes:
+            if n.select: 
+                if n.location.x < all_nodes_bounding_box[0].x:
+                    all_nodes_bounding_box[0].x = n.location.x
+                if n.location.y < all_nodes_bounding_box[0].y:
+                    all_nodes_bounding_box[0].y = n.location.y
+                #
+                if n.location.x > all_nodes_bounding_box[1].x:
+                    all_nodes_bounding_box[1].x = n.location.x
+                if n.location.y > all_nodes_bounding_box[1].y:
+                    all_nodes_bounding_box[1].y = n.location.y
+                delete_me.append(n)
+        grp_node = base_tree.nodes.new('MantisNodeGroup')
+        grp_node.node_tree = bpy.data.node_groups[grp_name]
+        bb_center = all_nodes_bounding_box[0].lerp(all_nodes_bounding_box[1],0.5)
+        for n in grp_node.node_tree.nodes:
+            n.location -= bb_center
 
-        return {"FINISHED"}
+        grp_node.location = Vector((all_nodes_bounding_box[0].x+200, all_nodes_bounding_box[0].lerp(all_nodes_bounding_box[1], 0.5).y))
+
+        # for l in selected_nodes[base_tree.name][3]:
+        #     if source := l.get("source"):
+        #         n_from = base_tree.nodes.get(source[0])
+        #         # s_from = n_from.
+
+        for n in selected_nodes[base_tree.name][2].values():
+            for s in n["sockets"].values():
+                if source := s.get("source"):
+                    prGreen (s["name"], source[0], source[1])
+                    base_tree_node=base_tree.nodes.get(source[0])
+                    if s["is_output"]:
+                        for output in base_tree_node.outputs:
+                            if output.identifier == source[1]:
+                                break
+                        else:
+                            raise RuntimeError(wrapRed("Socket not found when grouping"))
+                        base_tree.links.new(input=output, output=grp_node.inputs[s["name"]])
+                    else:
+                        for s_input in base_tree_node.inputs:
+                            if s_input.identifier == source[1]:
+                                break
+                        else:
+                            raise RuntimeError(wrapRed("Socket not found when grouping"))
+                        base_tree.links.new(input=grp_node.outputs[s["name"]], output=s_input)
+
+        for n in delete_me: base_tree.nodes.remove(n)
+        base_tree.nodes.active = grp_node
+
+        base_tree.is_exporting = False
+        grp_node.node_tree.name = "Group_Node.000"
+        return {'FINISHED'}
 
 class MantisEditGroup(Operator):
     """Edit the group referenced by the active node (or exit the current node-group)"""
@@ -192,6 +186,8 @@ class MantisEditGroup(Operator):
         elif len(path) > 1:
             path.pop()
             path[0].node_tree.display_update(context)
+            # get the active node in the current path
+            path[len(path)-1].node_tree.nodes.active.update() # call update to force the node group to check if its tree has changed
         return {"CANCELLED"}
 
 class ExecuteNodeTree(Operator):
@@ -204,7 +200,6 @@ class ExecuteNodeTree(Operator):
         return (mantis_tree_poll_op(context))
 
     def execute(self, context):
-        from .utilities import parse_node_tree, print_lines
         from time import time
         from .utilities import wrapGreen
         
@@ -212,16 +207,36 @@ class ExecuteNodeTree(Operator):
         
         import cProfile
         from os import environ
+        start_time = time()
         do_profile=False
         print (environ.get("DOPROFILE"))
         if environ.get("DOPROFILE"):
             do_profile=True
         if do_profile:
-            cProfile.runctx("tree.update_tree(context)", None, locals())
-            cProfile.runctx("tree.execute_tree(context)", None, locals())
+            # cProfile.runctx("tree.update_tree(context)", None, locals())
+            # cProfile.runctx("tree.execute_tree(context)", None, locals())
+            # import hunter
+            # hunter.trace(stdlib=False, action=hunter.CallPrinter(force_colors=False))
+            # tree.update_tree(context)
+            # tree.execute_tree(context)
+            # return {"FINISHED"}
+            import pstats, io
+            from pstats import SortKey
+            with cProfile.Profile() as pr:
+                tree.update_tree(context)
+                tree.execute_tree(context)
+                # from the Python docs at https://docs.python.org/3/library/profile.html#module-cProfile
+                s = io.StringIO()
+                sortby = SortKey.TIME
+                # sortby = SortKey.CUMULATIVE
+                ps = pstats.Stats(pr, stream=s).strip_dirs().sort_stats(sortby)
+                ps.print_stats(20) # print the top 20
+                print(s.getvalue())
+
         else:
             tree.update_tree(context)
             tree.execute_tree(context)
+        prGreen("Finished executing tree in %f seconds" % (time() - start_time))
         return {"FINISHED"}
 
 # class CreateMetaGroup(Operator):
@@ -295,89 +310,19 @@ class CleanUpNodeGraph(bpy.types.Operator):
     """Clean Up Node Graph"""
     bl_idname = "mantis.nodes_cleanup"
     bl_label = "Clean Up Node Graph"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    # num_iterations=bpy.props.IntProperty(default=8)
+
 
     @classmethod
     def poll(cls, context):
         return hasattr(context, 'active_node')
 
     def execute(self, context):
-        
         base_tree=context.space_data.path[-1].node_tree
-        
-        from .grandalf.graphs import Vertex, Edge, Graph, graph_core
-        
-        class defaultview(object):
-            w,h = 1,1
-            xz = (0,0)
-        
-        verts = {}
-        for n in base_tree.nodes:
-            has_links=False
-            for inp in n.inputs:
-                if inp.is_linked:
-                    has_links=True
-                    break
-            for out in n.outputs:
-                if out.is_linked:
-                    has_links=True
-                    break
-            if not has_links:
-                continue
-                
-            v = Vertex(n.name)
-            v.view = defaultview()
-            v.view.xy = n.location
-            v.view.h = n.height*3
-            v.view.w = n.width*3
-            verts[n.name] = v
-            
-        edges = []
-        for link in base_tree.links:
-            weight = 1 # maybe this is useful
-            edges.append(Edge(verts[link.from_node.name], verts[link.to_node.name], weight) )
-        graph = Graph(verts.values(), edges)
-        
-
-        
-        from .grandalf.layouts import SugiyamaLayout
-        
-        
-        sug = SugiyamaLayout(graph.C[0]) # no idea what .C[0] is
-        
-        roots=[]
-        for node in base_tree.nodes:
-            
-            has_links=False
-            for inp in node.inputs:
-                if inp.is_linked:
-                    has_links=True
-                    break
-            for out in node.outputs:
-                if out.is_linked:
-                    has_links=True
-                    break
-            if not has_links:
-                continue
-                
-            if len(node.inputs)==0:
-                roots.append(verts[node.name])
-            else:
-                for inp in node.inputs:
-                    if inp.is_linked==True:
-                        break
-                else:
-                    roots.append(verts[node.name])
-        
-        sug.init_all(roots=roots,)
-        sug.draw(8)
-        for v in graph.C[0].sV:
-            for n in base_tree.nodes:
-                if n.name == v.data:
-                    n.location.x = v.view.xy[1]
-                    n.location.y = v.view.xy[0]
-        
-        
-        
+        from .utilities import SugiyamaGraph
+        SugiyamaGraph(base_tree, 12)
         return {'FINISHED'}
 
 
@@ -404,6 +349,29 @@ class MantisMuteNode(Operator):
         return {"FINISHED"}
 
 
+class MantisVisualizeOutput(Operator):
+    """Mantis Visualize Output Operator"""
+    bl_idname = "mantis.visualize_output"
+    bl_label = "Visualize Output"
+
+    @classmethod
+    def poll(cls, context):
+        return (mantis_tree_poll_op(context))
+
+    def execute(self, context):
+        from time import time
+        from .utilities import wrapGreen, prGreen
+        
+        tree=context.space_data.path[0].node_tree
+        tree.update_tree(context)
+        # tree.execute_tree(context)
+        prGreen(f"Visualize Tree: {tree.name}")
+        nodes = tree.parsed_tree
+        from .readtree import visualize_tree
+        visualize_tree(nodes, tree, context)
+        return {"FINISHED"}
+
+
 class TestOperator(Operator):
     """Mantis Test Operator"""
     bl_idname = "mantis.test_operator"
@@ -415,23 +383,22 @@ class TestOperator(Operator):
 
     def execute(self, context):
         path = context.space_data.path
-        node = path[len(path)-1].node_tree.nodes.active
-        print("Inputs:")
-        for sock in node.inputs:
-            print(sock.identifier)
-        print("Outputs:")
-        for sock in node.outputs:
-            print(sock.identifier)
-        print ("\n")
-        # if (not node):
-        #     return {"FINISHED"}
-        # for out in node.outputs:
-        #     utilities.lines_from_socket(out)
-        
-        # import bpy
-        # c = bpy.context
-        # print (c.space_data.path)
+        base_tree = path[0].node_tree
+        tree = path[len(path)-1].node_tree
+        node = tree.nodes.active
+        node.display_update(base_tree.parsed_tree, context)
+        # from .base_definitions import get_signature_from_edited_tree
+        # if nc := base_tree.parsed_tree.get(get_signature_from_edited_tree(node, context)):
+        #     from .utilities import get_all_dependencies
+        #     deps = get_all_dependencies(nc)
+        #     self.report({'INFO'}, f"Number of Node Dependencies: {len(deps)}")
+        #     # for n in deps:
+        #     #     prGreen(n)
+        # else:
+        #     # prRed("No NC found in parsed tree.")
+        #     self.report({'ERROR_INVALID_CONTEXT'}, "No data for node.")
         return {"FINISHED"}
+
 
 ePropertyType =(
         ('BOOL'  , "Boolean", "Boolean", 0),
@@ -508,7 +475,7 @@ class AddCustomProperty(bpy.types.Operator):
                 self.prop_name = self.prop_name[:-3] + str(number).zfill(3)
             except ValueError:
                 self.prop_name+='.001'
-                # WRONG
+                # WRONG # HACK # TODO # BUG #
         new_prop = n.inputs.new( socktype, self.prop_name)
         if self.prop_type in ['INT','FLOAT']:
             new_prop.min = self.min
@@ -519,21 +486,54 @@ class AddCustomProperty(bpy.types.Operator):
         # now do the output
         n.outputs.new( socktype, self.prop_name)
         
-        if (False):
-            print (new_prop.is_property_set("default_value"))
-            ui_data = new_prop.id_properties_ui("default_value")
-            ui_data.update(
-                description=new_prop.description,
-                default=0,) # for now
-            #if a number
-            for num_type in ['Float', 'Int', 'Bool']:
-                if num_type in new_prop.bl_idname:
-                    ui_data.update(
-                        min = new_prop.min,
-                        max = new_prop.max,
-                        soft_min = new_prop.soft_min,
-                        soft_max = new_prop.soft_max,)
         return {'FINISHED'}
+
+#DOESN'T WORK YET
+class EditCustomProperty(bpy.types.Operator):
+    """Edit Custom Property"""
+    bl_idname = "mantis.edit_custom_property"
+    bl_label = "Edit Custom Property"
+
+
+    prop_type : bpy.props.EnumProperty(
+        items=ePropertyType,
+        name="New Property Type",
+        description="Type of data for new Property",
+        default = 'BOOL',)
+    prop_name  : bpy.props.StringProperty(default='Prop')
+    
+    min:bpy.props.FloatProperty(default = 0)
+    max:bpy.props.FloatProperty(default = 1)
+    soft_min:bpy.props.FloatProperty(default = 0)
+    soft_max:bpy.props.FloatProperty(default = 1)
+    description:bpy.props.StringProperty(default = "") # TODO: use getters to fill these automatically
+    
+    node_invoked : bpy.props.PointerProperty(type=bpy.types.Node, 
+                options ={'HIDDEN'}) # note this seems to affect all
+                                     # subsequent properties
+
+    @classmethod
+    def poll(cls, context):
+        return True #( hasattr(context, 'node') ) 
+
+    def invoke(self, context, event):
+        self.node_invoked = context.node
+        wm = context.window_manager
+        return wm.invoke_props_dialog(self)
+        
+    def execute(self, context):
+        n = self.node_invoked
+        prop = n.inputs.get( self.prop_name )
+        if (s := n.inputs.get(self.prop_name)):
+            if self.prop_type in ['INT','FLOAT']:
+                new_prop.min = self.min
+                new_prop.max = self.max
+                new_prop.soft_min = self.soft_min
+                new_prop.soft_max = self.soft_max
+            new_prop.description = self.description
+        
+        return {'FINISHED'}
+
 
 
 class RemoveCustomProperty(bpy.types.Operator):
@@ -764,9 +764,9 @@ class FcurveAddKeyframeInput(bpy.types.Operator):
         return (hasattr(context, 'active_node') )
 
     def execute(self, context):
-        context.node.inputs.new("KeyframeSocket", "Keyframe")
+        num_keys = len( context.node.inputs)
+        context.node.inputs.new("KeyframeSocket", "Keyframe."+str(num_keys).zfill(3))
         return {'FINISHED'}
-
 
 class FcurveRemoveKeyframeInput(bpy.types.Operator):
     """Remove a keyframe input from the fCurve node"""
@@ -829,7 +829,7 @@ class LinkArmatureAddTargetInput(bpy.types.Operator):
     def execute(self, context):           # unicode for 'a'
         num_targets = len( list(context.node.inputs)[6:])//2
         context.node.inputs.new("xFormSocket", "Target."+str(num_targets).zfill(3))
-        context.node.inputs.new("FloatSocket", "Weight."+str(num_targets).zfill(3))
+        context.node.inputs.new("FloatFactorSocket", "Weight."+str(num_targets).zfill(3))
         return {'FINISHED'}
 
 
@@ -850,28 +850,39 @@ class LinkArmatureRemoveTargetInput(bpy.types.Operator):
 
 
 
-class ExportNodeTreeToJSON(Operator):
-    """Export this node tree as a JSON file"""
-    bl_idname = "mantis.export_node_tree_json"
-    bl_label = "Export Mantis Tree to JSON"
+# class ExportNodeTreeToJSON(Operator):
+#     """Export this node tree as a JSON file"""
+#     bl_idname = "mantis.export_node_tree_json"
+#     bl_label = "Export Mantis Tree to JSON"
 
-    @classmethod
-    def poll(cls, context):
-        return (mantis_tree_poll_op(context))
+#     @classmethod
+#     def poll(cls, context):
+#         return (mantis_tree_poll_op(context))
 
-    def execute(self, context):
-        from .i_o import export_to_json
-        import bpy
+#     def execute(self, context):
+#         from .i_o import export_to_json
+#         import bpy
 
-        tree = context.space_data.path[0].node_tree
-        tree.update_tree(context)
+#         tree = context.space_data.path[0].node_tree
+#         # tree.update_tree(context)
+#         trees = {tree}
+#         check_trees=[tree]
+#         while check_trees:
+#             check = check_trees.pop()
+#             for n in check.nodes:
+#                 if hasattr(n, "node_tree"):
+#                     if n.node_tree not in trees:
+#                         check_trees.append(n.node_tree)
+#                         trees.add(n.node_tree)
+        
 
-        def remove_special_characters(stritree):
-            # https://stackoverflow.com/questions/295135/turn-a-stritree-into-a-valid-filename
-            # thank you user "Sophie Gage"
-            import re # regular expressions
-            return re.sub('[^\w_.)( -]', '', stritree)
 
-        path = bpy.path.abspath('//')+remove_special_characters(tree.name)+".json"
-        export_to_json(tree, path)
-        return {"FINISHED"}
+#         def remove_special_characters(stritree):
+#             # https://stackoverflow.com/questions/295135/turn-a-stritree-into-a-valid-filename
+#             # thank you user "Sophie Gage"
+#             import re # regular expressions
+#             return re.sub('[^\w_.)( -]', '', stritree)
+
+#         path = bpy.path.abspath('//')+remove_special_characters(tree.name)+".json"
+#         export_to_json(trees, path)
+#         return {"FINISHED"}

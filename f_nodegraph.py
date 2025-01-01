@@ -1,3 +1,8 @@
+# TODO FIXME UNBREAK
+# why in the hell does this file even exist
+
+
+
 #Node Graph Functions
 
         
@@ -9,13 +14,12 @@ def SeekNodePathUntil(node, input_name, nodeType, direction = 'BACK'):
     else: # 'FORWARD'
         return trace_single_line_up(node, input_name)
     
-
+# may not work anymore but that should be OK
 def get_node_container(node, context):
-    from .utilities import parse_node_tree, print_lines
+    # from .utilities import parse_node_tree, print_lines
     base_tree = context.space_data.path[0].node_tree
     from .readtree import get_tree_data
-    parsed_tree = parse_node_tree(base_tree)
-    nodes = get_tree_data(parsed_tree, base_tree)
+    nodes = base_tree.parsed_tree
     node_container = None
     if (node.id_data != context.space_data.path[-1].node_tree):
         return None, None

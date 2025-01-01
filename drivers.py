@@ -55,14 +55,16 @@ class MantisDriver(dict):
 def CreateDrivers(drivers):
     def brackets(s):
         return "[\""+s+"\"]"
-    from bpy.types import Object
+    from bpy.types import Object, Key
     for driver in drivers:
-        # print (driver)
         if (isinstance(driver["owner"], Object)):
             ob = driver["owner"]
         else: # Pose Bone:
             ob = driver["owner"].id_data
-        fc = ob.driver_add(driver["owner"].path_from_id(driver["prop"]), driver["ind"])
+        if isinstance(driver["owner"], Key):
+            fc = ob.driver_add(driver["prop"])
+        else:
+            fc = ob.driver_add(driver["owner"].path_from_id(driver["prop"]), driver["ind"])
         drv = fc.driver
         try: # annoyingly, this initializes with a modifier
             fc.modifiers.remove(fc.modifiers[0])
@@ -80,11 +82,21 @@ def CreateDrivers(drivers):
             dVar = drv.variables.remove(v)
             
         for v in driver["vars"]:
+            bone = ''; target2bone = ''
+            vob, target2ob = None, None
             if (isinstance(v["owner"], Object)):
                 vob = v["owner"]
             else:
                 vob = v["owner"].id_data
                 bone = v["owner"].name
+            #
+            
+            if "xForm 2" in v.keys() and v["xForm 2"]:
+                if (isinstance(v["xForm 2"], Object)):
+                    target2ob = v["xForm 2"]
+                else:
+                    target2ob = v["xForm 2"].id_data
+                    target2bone = v["xForm 2"].name
             
             dVar = drv.variables.new()
             
@@ -98,6 +110,9 @@ def CreateDrivers(drivers):
             
             dVar.targets[0].id = vob
             dVar.targets[0].bone_target = bone
+            if len(dVar.targets) > 1:
+                dVar.targets[1].id = target2ob
+                dVar.targets[1].bone_target = target2bone
             
             if (dVar.type == "TRANSFORMS"):
                 dVar.targets[0].transform_space = v["space"]

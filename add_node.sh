@@ -9,7 +9,7 @@ icon=""
 
 
 #                     title: name           menu: name,      H  W  menu size    pairs of tag,description,  trick to swap stdout and stderr
-nodetype=$(whiptail --title "add_node.sh" --menu "Node Type" 25 78 16 "xForm" "" "Link" "" "Utility" "" 3>&2 2>&1 1>&3)
+nodetype=$(whiptail --title "add_node.sh" --menu "Node Type" 25 78 16 "xForm" "" "Link" "" "Utility" "" "Math" "" 3>&2 2>&1 1>&3)
 if [[ $nodetype == "" ]]; then
     echo "Cancelled."
 else
@@ -31,6 +31,13 @@ else
       Utility)
         nodefile="nodes_generic.py"
         cnodefile="misc_containers.py"
+        parentclass="MantisNode"
+        icon="NODE"
+        ;;
+
+      Math)
+        nodefile="math_definitions.py"
+        cnodefile="math_containers.py"
         parentclass="MantisNode"
         icon="NODE"
         ;;
@@ -75,12 +82,29 @@ else
             cancelled=1
         fi
         cancelled=$?; check_cancelled
-    else
-        num_inputs=0
-    fi
     
-    
-    if [[ $nodetype == 'Utility' ]]; then
+    elif [[ $nodetype == 'Utility' ]]; then
+        choice=$(whiptail --title "add_node.sh"\
+          --inputbox "Number of outputs?" 8 39 "0" 3>&1 1>&2 2>&3)
+        if [[ "$choice" -eq "$choice" ]]; then
+            num_outputs=$choice
+        else
+            echo "Error, must be a number"
+            cancelled=1
+        fi
+        cancelled=$?; check_cancelled
+    elif [[ $nodetype == 'Math' ]]; then
+
+        choice=$(whiptail --title "add_node.sh"\
+          --inputbox "Number of inputs?" 8 39 "0" 3>&1 1>&2 2>&3)
+        if [[ "$choice" -eq "$choice" ]]; then
+            num_inputs=$choice
+        else
+            echo "Error, must be a number"
+            cancelled=1
+        fi
+        cancelled=$?; check_cancelled
+
         choice=$(whiptail --title "add_node.sh"\
           --inputbox "Number of outputs?" 8 39 "0" 3>&1 1>&2 2>&3)
         if [[ "$choice" -eq "$choice" ]]; then
@@ -91,8 +115,11 @@ else
         fi
         cancelled=$?; check_cancelled
     else
-        num_outputs=0
+        num_inputs=0
     fi
+    
+
+
     
     if [[ $nodetype == 'Utility' && $num_inputs == "0" && $num_outputs == "0" ]]; then
         echo "Error. The node must have at least one socket."
@@ -141,10 +168,10 @@ else
         echo "        self.inputs.new('MatrixSocket', \"Matrix\")" >> classheader.txt
         echo "        self.inputs.new('RelationshipSocket', \"Relationship\")" >> classheader.txt
         #cnode
-        echo "          \"Name\"           : NodeSocket(is_input = True, to_socket = \"Name\", to_node = self)," >> cnode_def
-        echo "          \"Rotation Order\" : NodeSocket(is_input = True, to_socket = \"Rotation Order\", to_node = self)," >> cnode_def
-        echo "          \"Matrix\"         : NodeSocket(is_input = True, to_socket = \"Matrix\", to_node = self)," >> cnode_def
-        echo "          \"Relationship\"   : NodeSocket(is_input = True, to_socket = \"Relationship\", to_node = self)," >> cnode_def
+        echo "          \"Name\"           : NodeSocket(is_input = True, name = \"Name\", node = self)," >> cnode_def
+        echo "          \"Rotation Order\" : NodeSocket(is_input = True, name = \"Rotation Order\", node = self)," >> cnode_def
+        echo "          \"Matrix\"         : NodeSocket(is_input = True, name = \"Matrix\", node = self)," >> cnode_def
+        echo "          \"Relationship\"   : NodeSocket(is_input = True, name = \"Relationship\", node = self)," >> cnode_def
         #parameters; should be identical to cnode inputs
         echo "          \"Name\":None, " >> parameters
         echo "          \"Rotation Order\":None, " >> parameters
@@ -154,7 +181,7 @@ else
         #node
         echo "        self.inputs.new (\"RelationshipSocket\", \"Input Relationship\")" >> classheader.txt
         #cnode
-        echo "        \"Input Relationship\" : NodeSocket(is_input = True, to_socket = \"Input Relationship\", to_node = self,)," >> cnode_def
+        echo "        \"Input Relationship\" : NodeSocket(is_input = True, name = \"Input Relationship\", node = self,)," >> cnode_def
         #parameters; should be identical to cnode inputs
         echo "        \"Input Relationship\":None, " >> parameters
     fi
@@ -178,9 +205,9 @@ else
           "QuaternionSocket" ""\
           "QuaternionSocketAA" ""\
           "IntSocket" ""\
-	  "GeometrySocket" ""\
+	      "GeometrySocket" ""\
           "StringSocket" ""\
-          "LayerMaskSocket" ""\
+          "BoneCollectionSocket" ""\
           "BoolUpdateParentNode" ""\
           "LabelSocket" ""\
           "IKChainLengthSocket" ""\
@@ -211,7 +238,7 @@ else
         #node
         echo "        self.inputs.new(\"$sockettype\", \"$socketname\")" >> classheader.txt
         #cnode
-        echo "          \"$socketname\"   : NodeSocket(is_input = True, to_socket = \"$socketname\", to_node = self)," >> cnode_def
+        echo "          \"$socketname\"   : NodeSocket(is_input = True, name = \"$socketname\", node = self)," >> cnode_def
         #parameters; should be identical to cnode inputs
         echo "          \"$socketname\":None, " >> parameters
     done
@@ -224,14 +251,14 @@ else
         #node
         echo "        self.outputs.new('xFormSocket', \"xForm Out\")" >> classheader.txt
         #cnode
-        echo "          \"xForm Out\" : NodeSocket(from_socket=\"xForm Out\", from_node = self), }" >> cnode_def
+        echo "          \"xForm Out\" : NodeSocket(name=\"xForm Out\", node = self), }" >> cnode_def
     elif [[ $nodetype == 'Link' ]]; then
         #node
         echo "        self.outputs.new(\"RelationshipSocket\", \"Output Relationship\")" >> classheader.txt
         #cnode
-        echo "          \"Output Relationship\" : NodeSocket(from_socket = \"Output Relationship\", from_node=self), }" >> cnode_def
+        echo "          \"Output Relationship\" : NodeSocket(name = \"Output Relationship\", node=self), }" >> cnode_def
     # New Outputs
-    elif [[ $nodetype == 'Utility' ]]; then
+    elif [[ $nodetype == 'Utility' || $nodetype == 'Math' ]]; then
         
         until [[ $num_outputs == "0" ]]; do
             sockettype=$(whiptail --title "add_node.sh" --menu "Output Socket Type" 25 78 16\
@@ -250,9 +277,9 @@ else
             "QuaternionSocket" ""\
             "QuaternionSocketAA" ""\
             "IntSocket" ""\
-	    "GeometrySocket" ""\
+	        "GeometrySocket" ""\
             "StringSocket" ""\
-            "LayerMaskSocket" ""\
+            "BoneCollectionSocket" ""\
             "BoolUpdateParentNode" ""\
             "LabelSocket" ""\
             "IKChainLengthSocket" ""\
@@ -283,7 +310,7 @@ else
             #node
             echo "        self.outputs.new(\"$sockettype\", \"$socketname\")" >> classheader.txt
             #cnode
-            echo "          \"$socketname\" : NodeSocket(from_socket = \"$socketname\", from_node=self)," >> cnode_def
+            echo "          \"$socketname\" : NodeSocket(name = \"$socketname\", node=self)," >> cnode_def
             #parameters , this time it should by the cnode outputs!
             echo "          \"$socketname\":None, " >> parameters
         done
@@ -313,13 +340,13 @@ else
     echo "        return evaluate_input(self, input_name)" >> cnode_def
     echo >> cnode_def
     echo "    def bExecute(self, bContext = None,):" >> cnode_def
-    echo "        pass" >> cnode_def
+    echo "        return" >> cnode_def
     echo >> cnode_def
     echo "    def __repr__(self):" >> cnode_def
     echo "        return self.signature.__repr__()" >> cnode_def
     echo >> cnode_def    
-    echo "    def fill_parameters(self, node_prototype):" >> cnode_def
-    echo "        fill_parameters(self, node_prototype)" >> cnode_def
+    echo "    def fill_parameters(self):" >> cnode_def
+    echo "        fill_parameters(self)" >> cnode_def
     # now it's done!
     
     cat cnode_def >> $cnodefile
@@ -377,6 +404,8 @@ else
         tc_end=$(grep -n -m 1 "AllNodeCategory('UTILITIES'" $bakfile |  cut -f1 -d:)
     elif [[ $nodetype == 'Utility' && $isinput == "1" ]]; then
         tc_end=$(grep -n -m 1 "AllNodeCategory('INPUT'" $bakfile |  cut -f1 -d:)
+    elif [[ $nodetype == 'Math' ]]; then
+        tc_end=$(grep -n -m 1 "AllNodeCategory('UTILITIES'" $bakfile |  cut -f1 -d:)
     fi
     
     # the total length of the file, in lines

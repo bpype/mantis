@@ -2,8 +2,15 @@ import bpy
 from bpy.types import Node
 from .base_definitions import MantisNode
 
+
+from .utilities import (prRed, prGreen, prPurple, prWhite,
+                              prOrange,
+                              wrapRed, wrapGreen, wrapPurple, wrapWhite,
+                              wrapOrange,)
+
 def TellClasses():
     return [ InputFloatNode,
+             InputIntNode,
              InputVectorNode,
              InputBooleanNode,
              InputBooleanThreeTupleNode,
@@ -20,6 +27,8 @@ def TellClasses():
              
             #  ComposeMatrixNode,
              MetaRigMatrixNode,
+             UtilityMatrixFromCurve,
+             UtilityMatricesFromCurve,
             #  ScaleBoneLengthNode,
              UtilityMetaRigNode,
              UtilityBonePropertiesNode,
@@ -27,9 +36,28 @@ def TellClasses():
              UtilityFCurveNode,
              UtilityDriverNode,
              UtilitySwitchNode,
+             UtilityKeyframe,
              UtilityCombineThreeBoolNode,
              UtilityCombineVectorNode,
              UtilityCatStringsNode,
+             UtilityGetBoneLength,
+             UtilityPointFromBoneMatrix,
+             UtilitySetBoneLength,
+             UtilityMatrixSetLocation,
+             UtilityMatrixGetLocation,
+             UtilityMatrixFromXForm,
+             UtilityAxesFromMatrix,
+             UtilityBoneMatrixHeadTailFlip,
+             UtilityMatrixTransform,
+             UtilityTransformationMatrix,
+
+             UtilityIntToString,
+             UtilityArrayGet,
+             #
+             UtilityCompare,
+             UtilityChoose,
+             # for testing
+             UtilityPrint,
             ]
 
 
@@ -42,81 +70,110 @@ class InputFloatNode(Node, MantisNode):
     bl_idname = 'InputFloatNode'
     bl_label = "Float"
     bl_icon = 'NODE'
+    initialized : bpy.props.BoolProperty(default = False)
 
     def init(self, context):
         self.outputs.new('FloatSocket', "Float Input").input = True
+        self.initialized = True
+
+class InputIntNode(Node, MantisNode):
+    '''A node representing inheritance'''
+    bl_idname = 'InputIntNode'
+    bl_label = "Integer"
+    bl_icon = 'NODE'
+    initialized : bpy.props.BoolProperty(default = False)
+
+    def init(self, context):
+        self.outputs.new('IntSocket', "Integer").input = True
+        self.initialized = True
     
 class InputVectorNode(Node, MantisNode):
     '''A node representing inheritance'''
     bl_idname = 'InputVectorNode'
     bl_label = "Vector"
     bl_icon = 'NODE'
+    initialized : bpy.props.BoolProperty(default = False)
 
     def init(self, context):
         self.outputs.new('VectorSocket', "").input = True
+        self.initialized = True
 
 class InputBooleanNode(Node, MantisNode):
     '''A node representing inheritance'''
     bl_idname = 'InputBooleanNode'
     bl_label = "Boolean"
     bl_icon = 'NODE'
+    initialized : bpy.props.BoolProperty(default = False)
 
     def init(self, context):
         self.outputs.new('BooleanSocket', "").input = True
+        self.initialized = True
 
 class InputBooleanThreeTupleNode(Node, MantisNode):
     '''A node representing inheritance'''
     bl_idname = 'InputBooleanThreeTupleNode'
     bl_label = "Boolean Vector"
     bl_icon = 'NODE'
+    initialized : bpy.props.BoolProperty(default = False)
 
     def init(self, context):
         self.outputs.new('BooleanThreeTupleSocket', "")
+        self.initialized = True
 
 class InputRotationOrderNode(Node, MantisNode):
     '''A node representing inheritance'''
     bl_idname = 'InputRotationOrderNode'
     bl_label = "Rotation Order"
     bl_icon = 'NODE'
+    initialized : bpy.props.BoolProperty(default = False)
 
     def init(self, context):
         self.outputs.new('RotationOrderSocket', "").input = True
+        self.initialized = True
 
 class InputTransformSpaceNode(Node, MantisNode):
     '''A node representing inheritance'''
     bl_idname = 'InputTransformSpaceNode'
     bl_label = "Transform Space"
     bl_icon = 'NODE'
+    initialized : bpy.props.BoolProperty(default = False)
 
     def init(self, context):
         self.outputs.new('TransformSpaceSocket', "").input = True
+        self.initialized = True
 
 class InputStringNode(Node, MantisNode):
     '''A node representing inheritance'''
     bl_idname = 'InputStringNode'
     bl_label = "String"
     bl_icon = 'NODE'
+    initialized : bpy.props.BoolProperty(default = False)
 
     def init(self, context):
         self.outputs.new('StringSocket', "").input = True
+        self.initialized = True
 
 class InputQuaternionNode(Node, MantisNode):
     '''A node representing inheritance'''
     bl_idname = 'InputQuaternionNode'
     bl_label = "Quaternion"
     bl_icon = 'NODE'
+    initialized : bpy.props.BoolProperty(default = False)
 
     def init(self, context):
         self.outputs.new('QuaternionSocket', "").input = True
+        self.initialized = True
 
 class InputQuaternionNodeAA(Node, MantisNode):
     '''A node representing inheritance'''
     bl_idname = 'InputQuaternionNodeAA'
     bl_label = "Axis Angle"
     bl_icon = 'NODE'
+    initialized : bpy.props.BoolProperty(default = False)
 
     def init(self, context):
         self.outputs.new('QuaternionSocketAA', "").input = True
+        self.initialized = True
 
 
 class InputMatrixNode(Node, MantisNode):
@@ -128,6 +185,7 @@ class InputMatrixNode(Node, MantisNode):
     second_row : bpy.props.FloatVectorProperty(name="", size=4, default = (0.0, 1.0, 0.0, 0.0,))
     third_row  : bpy.props.FloatVectorProperty(name="", size=4, default = (0.0, 0.0, 1.0, 0.0,))
     fourth_row : bpy.props.FloatVectorProperty(name="", size=4, default = (0.0, 0.0, 0.0, 1.0,))
+    initialized : bpy.props.BoolProperty(default = False)
 
     def set_matrix(self):
         return (self.first_row[ 0], self.first_row[ 1], self.first_row[ 2], self.first_row[ 3],
@@ -137,11 +195,13 @@ class InputMatrixNode(Node, MantisNode):
 
     def init(self, context):
         self.outputs.new('MatrixSocket', "Matrix")
+        self.initialized = True
         
     def update_node(self, context):
         self.outputs["Matrix"].default_value = self.set_matrix()
 
     def draw_buttons(self, context, layout):
+        # return
         layout.prop(self, "first_row")
         layout.prop(self, "second_row")
         layout.prop(self, "third_row")
@@ -202,12 +262,14 @@ class ScaleBoneLengthNode(Node, MantisNode):
     bl_idname = 'ScaleBoneLength'
     bl_label = "Scale Bone Length"
     bl_icon = 'NODE'
+    initialized : bpy.props.BoolProperty(default = False)
 
     # === Optional Functions ===
     def init(self, context):
         self.inputs.new('MatrixSocket', "In Matrix")
         self.inputs.new('FloatSocket', "Factor")
         self.outputs.new('MatrixSocket', "Out Matrix")
+        self.initialized = True
 
 
 
@@ -221,6 +283,7 @@ class MetaRigMatrixNode(Node, MantisNode):
     second_row : bpy.props.FloatVectorProperty(name="", size=4, default = (0.0, 1.0, 0.0, 0.0,))
     third_row  : bpy.props.FloatVectorProperty(name="", size=4, default = (0.0, 0.0, 1.0, 0.0,))
     fourth_row : bpy.props.FloatVectorProperty(name="", size=4, default = (0.0, 0.0, 0.0, 1.0,))
+    initialized : bpy.props.BoolProperty(default = False)
 
     def set_matrix(self):
         return (self.first_row[ 0], self.first_row[ 1], self.first_row[ 2], self.first_row[ 3],
@@ -230,6 +293,7 @@ class MetaRigMatrixNode(Node, MantisNode):
 
     def init(self, context):
         self.outputs.new('MatrixSocket', "Matrix")
+        self.initialized = True
     
     def traverse(self, context):
         from mathutils import Matrix
@@ -248,6 +312,37 @@ class MetaRigMatrixNode(Node, MantisNode):
         mat_sock.default_value = self.set_matrix()
 
 
+class UtilityMatrixFromCurve(Node, MantisNode):
+    """Gets a matrix from a curve."""
+    bl_idname = "UtilityMatrixFromCurve"
+    bl_label = "Matrix from Curve"
+    bl_icon = "NODE"
+    
+    initialized : bpy.props.BoolProperty(default = False)
+    
+    def init(self, context):
+        curv = self.inputs.new("EnumCurveSocket", "Curve")
+        curv.icon = "OUTLINER_OB_CURVE"
+        self.inputs.new('IntSocket', 'Total Divisions')
+        self.inputs.new('IntSocket', 'Matrix Index')
+        self.outputs.new("MatrixSocket", "Matrix")
+        self.initialized = True
+
+class UtilityMatricesFromCurve(Node, MantisNode):
+    """Gets a matrix from a curve."""
+    bl_idname = "UtilityMatricesFromCurve"
+    bl_label = "Matrices from Curve"
+    bl_icon = "NODE"
+    
+    initialized : bpy.props.BoolProperty(default = False)
+    
+    def init(self, context):
+        curv = self.inputs.new("EnumCurveSocket", "Curve")
+        curv.icon = "OUTLINER_OB_CURVE"
+        self.inputs.new('IntSocket', 'Total Divisions')
+        o = self.outputs.new("MatrixSocket", "Matrices")
+        o.display_shape = 'SQUARE_DOT'
+        self.initialized = True
 
 class UtilityMetaRigNode(Node, MantisNode):
     """Gets a matrix from a meta-rig bone."""
@@ -257,6 +352,7 @@ class UtilityMetaRigNode(Node, MantisNode):
     
     armature:bpy.props.StringProperty()
     pose_bone:bpy.props.StringProperty()
+    initialized : bpy.props.BoolProperty(default = False)
     
     def init(self, context):
         armt = self.inputs.new("EnumMetaRigSocket", "Meta-Armature")
@@ -265,6 +361,7 @@ class UtilityMetaRigNode(Node, MantisNode):
         bone.icon = "BONE_DATA"
         bone.hide=True
         self.outputs.new("MatrixSocket", "Matrix")
+        self.initialized = True
     
     def display_update(self, parsed_tree, context):
         from .base_definitions import get_signature_from_edited_tree
@@ -283,6 +380,7 @@ class UtilityBonePropertiesNode(Node, MantisNode):
     bl_label = "Bone Properties"
     bl_icon = "NODE"
     #bl_width_default = 250
+    initialized : bpy.props.BoolProperty(default = False)
     
     def init(self, context):
         self.outputs.new("ParameterStringSocket", "matrix")
@@ -294,6 +392,7 @@ class UtilityBonePropertiesNode(Node, MantisNode):
         self.outputs.new("ParameterStringSocket", "rotation")
         self.outputs.new("ParameterStringSocket", "location")
         self.outputs.new("ParameterStringSocket", "scale")
+        self.initialized = True
         
         for o in self.outputs:
             o.text_only = True
@@ -303,52 +402,66 @@ class UtilityDriverVariableNode(Node, MantisNode):
     bl_idname = "UtilityDriverVariable"
     bl_label = "Driver Variable"
     bl_icon = "NODE"
+    initialized : bpy.props.BoolProperty(default = False)
     
     
     def init(self, context):
-        self.inputs.new("EnumDriverVariableType", "Variable Type")
-        self.inputs.new("ParameterStringSocket", "Property")
-        self.inputs.new("IntSocket", "Property Index")
-        self.inputs.new("EnumDriverVariableEvaluationSpace", "Evaluation Space")
-        self.inputs.new("EnumDriverRotationMode", "Rotation Mode")
-        self.inputs.new("xFormSocket", "xForm 1")
-        self.inputs.new("xFormSocket", "xForm 2")
+        self.inputs.new("EnumDriverVariableType", "Variable Type")                 # 0
+        self.inputs.new("ParameterStringSocket", "Property")                       # 1
+        self.inputs.new("IntSocket", "Property Index")                             # 2
+        self.inputs.new("EnumDriverVariableTransformChannel", "Transform Channel") # 3
+        self.inputs.new("EnumDriverVariableEvaluationSpace", "Evaluation Space")   # 4
+        self.inputs.new("EnumDriverRotationMode", "Rotation Mode")                 # 5
+        self.inputs.new("xFormSocket", "xForm 1")                                  # 6
+        self.inputs.new("xFormSocket", "xForm 2")                                  # 7
         self.outputs.new("DriverVariableSocket", "Driver Variable")
+        self.initialized = True
         
-    def update_on_socket_change(self, context):
-        self.update()
+    # def update_on_socket_change(self, context):
+    #     self.update()
     
     def display_update(self, parsed_tree, context):
         from .base_definitions import get_signature_from_edited_tree
-        if context.space_data:
-            node_tree = context.space_data.path[0].node_tree
-            nc = parsed_tree.get(get_signature_from_edited_tree(self, context))
-            if nc:
-                driver_type = nc.evaluate_input("Variable Type")
-                if driver_type == 'SINGLE_PROP':
-                    self.inputs[0].hide = False
-                    self.inputs[1].hide = False
-                    self.inputs[2].hide = False
-                    self.inputs[3].hide = False
-                    self.inputs[4].hide = False
-                    self.inputs[5].hide = False
-                    self.inputs[6].hide = True
-                elif driver_type == 'LOC_DIFF':
-                    self.inputs[0].hide = False
-                    self.inputs[1].hide = True
-                    self.inputs[2].hide = True
-                    self.inputs[3].hide = True
-                    self.inputs[4].hide = True
-                    self.inputs[5].hide = False
-                    self.inputs[6].hide = False
-                elif driver_type == 'ROTATION_DIFF':
-                    self.inputs[0].hide = False
-                    self.inputs[1].hide = True
-                    self.inputs[2].hide = True
-                    self.inputs[3].hide = True
-                    self.inputs[4].hide = False
-                    self.inputs[5].hide = False
-                    self.inputs[6].hide = False
+        if self.inputs["Variable Type"].is_linked:
+            if context.space_data:
+                node_tree = context.space_data.path[0].node_tree
+                nc = parsed_tree.get(get_signature_from_edited_tree(self, context))
+                if nc:
+                    driver_type = nc.evaluate_input("Variable Type")
+        else:
+            driver_type = self.inputs[0].default_value
+        if driver_type == 'SINGLE_PROP':
+            self.inputs[1].hide = False
+            self.inputs[2].hide = False
+            self.inputs[3].hide = True
+            self.inputs[4].hide = False
+            self.inputs[5].hide = False
+            self.inputs[6].hide = False
+            self.inputs[7].hide = True
+        elif driver_type == 'LOC_DIFF':
+            self.inputs[1].hide = True
+            self.inputs[2].hide = True
+            self.inputs[3].hide = True
+            self.inputs[4].hide = True
+            self.inputs[5].hide = True
+            self.inputs[6].hide = False
+            self.inputs[7].hide = False
+        elif driver_type == 'ROTATION_DIFF':
+            self.inputs[1].hide = True
+            self.inputs[2].hide = True
+            self.inputs[3].hide = True
+            self.inputs[4].hide = True
+            self.inputs[5].hide = False
+            self.inputs[6].hide = False
+            self.inputs[7].hide = False
+        elif driver_type == 'TRANSFORMS':
+            self.inputs[1].hide = True
+            self.inputs[2].hide = True
+            self.inputs[3].hide = False
+            self.inputs[4].hide = False
+            self.inputs[5].hide = False
+            self.inputs[6].hide = False
+            self.inputs[7].hide = True
     
 
 class UtilityFCurveNode(Node, MantisNode):
@@ -357,38 +470,41 @@ class UtilityFCurveNode(Node, MantisNode):
     bl_label = "fCurve"
     bl_icon = "NODE"
     
-    use_kf_nodes   : bpy.props.BoolProperty(default=False)
-    fake_fcurve_ob : bpy.props.PointerProperty(type=bpy.types.Object)
+    use_kf_nodes   : bpy.props.BoolProperty(default=True)
+    # fake_fcurve_ob : bpy.props.PointerProperty(type=bpy.types.Object)
+    initialized : bpy.props.BoolProperty(default = False)
     
     def init(self, context):
         self.outputs.new("FCurveSocket", "fCurve")
-        if not self.fake_fcurve_ob:
-            ob = bpy.data.objects.new("fake_ob_"+self.name, None)
-            self.fake_fcurve_ob = ob
-            ob.animation_data_create()
-            ob.animation_data.action = bpy.data.actions.new('fake_action_'+self.name)
-            fc = ob.animation_data.action.fcurves.new('location', index=0, action_group='location')
-            fc.keyframe_points.add(2)
-            kf0 = fc.keyframe_points[0]; kf0.co_ui = (0, 0)
-            kf1 = fc.keyframe_points[1]; kf1.co_ui = (1, 1)
+        # if not self.fake_fcurve_ob:
+        #     ob = bpy.data.objects.new("fake_ob_"+self.name, None)
+        #     self.fake_fcurve_ob = ob
+        #     ob.animation_data_create()
+        #     ob.animation_data.action = bpy.data.actions.new('fake_action_'+self.name)
+        #     fc = ob.animation_data.action.fcurves.new('location', index=0, action_group='location')
+        #     fc.keyframe_points.add(2)
+        #     kf0 = fc.keyframe_points[0]; kf0.co_ui = (0, 0)
+        #     kf1 = fc.keyframe_points[1]; kf1.co_ui = (1, 1)
+        #     #
+        #     kf0.interpolation = 'BEZIER'
+        #     kf0.handle_left_type  = 'AUTO_CLAMPED'
+        #     kf0.handle_right_type = 'AUTO_CLAMPED'
+        #     kf1.interpolation = 'BEZIER'
+        #     kf1.handle_left_type  = 'AUTO_CLAMPED'
+        #     kf1.handle_right_type = 'AUTO_CLAMPED'
             #
-            kf0.interpolation = 'BEZIER'
-            kf0.handle_left_type  = 'AUTO_CLAMPED'
-            kf0.handle_right_type = 'AUTO_CLAMPED'
-            kf1.interpolation = 'BEZIER'
-            kf1.handle_left_type  = 'AUTO_CLAMPED'
-            kf1.handle_right_type = 'AUTO_CLAMPED'
-            #
+        self.initialized = True
             
     def draw_buttons(self, context, layout):
-        if self.use_kf_nodes:
-            layout.prop(self, "use_kf_nodes",  text="[ Use fCurve data ]", toggle=True, invert_checkbox=True)
-            layout.operator( 'mantis.fcurve_node_add_kf' )
-            if (len(self.inputs) > 0):
-                layout.operator( 'mantis.fcurve_node_remove_kf' )
-        else:
-            layout.prop(self, "use_kf_nodes",  text="[ Use Keyframe Nodes ]", toggle=True)
-            layout.operator('mantis.edit_fcurve_node')
+        # return
+        # if self.use_kf_nodes:
+            # layout.prop(self, "use_kf_nodes",  text="[ Use fCurve data ]", toggle=True, invert_checkbox=True)
+        layout.operator( 'mantis.fcurve_node_add_kf' )
+        if (len(self.inputs) > 0):
+            layout.operator( 'mantis.fcurve_node_remove_kf' )
+        # else:
+            # layout.prop(self, "use_kf_nodes",  text="[ Use Keyframe Nodes ]", toggle=True)
+            # layout.operator('mantis.edit_fcurve_node')
         
             
     
@@ -410,12 +526,14 @@ class UtilityDriverNode(Node, MantisNode):
     bl_idname = "UtilityDriver"
     bl_label = "Driver"
     bl_icon = "NODE"
+    initialized : bpy.props.BoolProperty(default = False)
     
     def init(self, context):
         self.inputs.new("EnumDriverType", "Driver Type")
         self.inputs.new("FCurveSocket", "fCurve")
         self.inputs.new("StringSocket", "Expression")
         self.outputs.new("DriverSocket", "Driver")
+        self.initialized = True
         
     def update(self):
         return
@@ -438,8 +556,9 @@ class UtilityDriverNode(Node, MantisNode):
                 self.inputs["Expression"].hide = True
     
     def draw_buttons(self, context, layout):
+        # return
         layout.operator( 'mantis.driver_node_add_variable' )
-        if (len(self.inputs) > 2):
+        if (len(self.inputs) > 3):
             layout.operator( 'mantis.driver_node_remove_variable' )
 
 class UtilitySwitchNode(Node, MantisNode):
@@ -447,19 +566,22 @@ class UtilitySwitchNode(Node, MantisNode):
     bl_idname = "UtilitySwitch"
     bl_label = "Switch"
     bl_icon = "NODE"
+    initialized : bpy.props.BoolProperty(default = False)
     
     def init(self, context):
-        self.inputs.new("xFormSocket", "xForm")
+        # self.inputs.new("xFormSocket", "xForm")
         self.inputs.new("ParameterStringSocket", "Parameter")
         self.inputs.new("IntSocket", "Parameter Index")
         self.inputs.new("BooleanSocket", "Invert Switch")
         self.outputs.new("DriverSocket", "Driver")
+        self.initialized = True
 
 class UtilityCombineThreeBoolNode(Node, MantisNode):
     """Combines three booleans into a three-bool."""
     bl_idname = "UtilityCombineThreeBool"
     bl_label = "CombineThreeBool"
     bl_icon = "NODE"
+    initialized : bpy.props.BoolProperty(default = False)
     
     def init(self, context):
         self.inputs.new("BooleanSocket", "X")
@@ -468,11 +590,13 @@ class UtilityCombineThreeBoolNode(Node, MantisNode):
         self.outputs.new("BooleanThreeTupleSocket", "Three-Bool")
         # this node should eventually just be a Combine Boolean Three-Tuple node
         # and the "Driver" output will need to be figured out some other way
+        self.initialized = True
 class UtilityCombineVectorNode(Node, MantisNode):
     """Combines three floats into a vector."""
     bl_idname = "UtilityCombineVector"
     bl_label = "CombineVector"
     bl_icon = "NODE"
+    initialized : bpy.props.BoolProperty(default = False)
     
     def init(self, context):
         self.inputs.new("FloatSocket", "X")
@@ -481,43 +605,363 @@ class UtilityCombineVectorNode(Node, MantisNode):
         self.outputs.new("VectorSocket", "Vector")
         # this node should eventually just be a Combine Boolean Three-Tuple node
         # and the "Driver" output will need to be figured out some other way
+        self.initialized = True
         
 class UtilityCatStringsNode(Node, MantisNode):
     """Adds a suffix to a string"""
     bl_idname = "UtilityCatStrings"
     bl_label = "Concatenate Strings"
     bl_icon = "NODE"
+    initialized : bpy.props.BoolProperty(default = False)
     
     def init(self, context):
         self.inputs.new("StringSocket", "String_1")
         self.inputs.new("StringSocket", "String_2")
         self.outputs.new("StringSocket", "OutputString")
+        self.initialized = True
     
 class InputLayerMaskNode(Node, MantisNode):
     """Represents a layer mask for a bone."""
     bl_idname = "InputLayerMaskNode"
     bl_label = "Layer Mask"
     bl_icon = "NODE"
+    initialized : bpy.props.BoolProperty(default = False)
     
     def init(self, context):
         self.outputs.new("LayerMaskInputSocket", "Layer Mask")
+        self.initialized = True
 
 class InputExistingGeometryObjectNode(Node, MantisNode):
     """Represents an existing geometry object from within the scene."""
     bl_idname = "InputExistingGeometryObject"
     bl_label = "Existing Object"
     bl_icon = "NODE"
+    initialized : bpy.props.BoolProperty(default = False)
     
     def init(self, context):
         self.inputs.new("StringSocket", "Name")
         self.outputs.new("xFormSocket", "Object")
+        self.initialized = True
+    
 
 class InputExistingGeometryDataNode(Node, MantisNode):
     """Represents a mesh or curve datablock from the scene."""
     bl_idname = "InputExistingGeometryData"
     bl_label = "Existing Geometry"
     bl_icon = "NODE"
+    initialized : bpy.props.BoolProperty(default = False)
     
     def init(self, context):
         self.inputs.new("StringSocket", "Name")
         self.outputs.new("GeometrySocket", "Geometry")
+        self.initialized = True
+
+class UtilityGetBoneLength(Node, MantisNode):
+    """Returns the length of the bone from its matrix."""
+    bl_idname = "UtilityGetBoneLength"
+    bl_label = "Get Bone Length"
+    bl_icon = "NODE"
+    initialized : bpy.props.BoolProperty(default = False)
+    
+    def init(self, context):
+        self.inputs.new("MatrixSocket", "Bone Matrix")
+        self.outputs.new("FloatSocket", "Bone Length")
+        self.initialized = True
+
+# TODO: make it work with BBones!
+class UtilityPointFromBoneMatrix(Node, MantisNode):
+    """Returns a point representing the location along a bone, given a matrix representing that bone's shape."""
+    bl_idname = "UtilityPointFromBoneMatrix"
+    bl_label = "Point from Bone Matrix"
+    bl_icon = "NODE"
+    initialized : bpy.props.BoolProperty(default = False)
+    
+    def init(self, context):
+        self.inputs.new("MatrixSocket", "Bone Matrix")
+        self.inputs.new("FloatFactorSocket", "Head/Tail")
+        self.outputs.new("VectorSocket", "Point")
+        self.initialized = True
+class UtilitySetBoneLength(Node, MantisNode):
+    """Sets the length of a bone matrix."""
+    bl_idname = "UtilitySetBoneLength"
+    bl_label = "Set Bone Matrix Length"
+    bl_icon = "NODE"
+    initialized : bpy.props.BoolProperty(default = False)
+    
+    def init(self, context):
+        self.inputs.new("MatrixSocket", "Bone Matrix")
+        self.inputs.new("FloatSocket", "Length")
+        self.outputs.new("MatrixSocket", "Bone Matrix")
+        self.initialized = True
+
+class UtilityKeyframe(Node, MantisNode):
+    """A keyframe for a FCurve"""
+    bl_idname = "UtilityKeyframe"
+    bl_label = "KeyFrame"
+    bl_icon = "NODE"
+    initialized : bpy.props.BoolProperty(default = False)
+    
+    def init(self, context):
+        # x and y
+        # output is keyframe
+        # self.inputs.new("EnumKeyframeInterpolationTypeSocket", "Interpolation")
+        # self.inputs.new("EnumKeyframeBezierHandleType", "Left Handle Type")
+        # self.inputs.new("EnumKeyframeBezierHandleType", "Right Handle Type")
+
+        # self.inputs.new("FloatSocket", "Left Handle Distance")
+        # self.inputs.new("FloatSocket", "Left Handle Value")
+        # self.inputs.new("FloatSocket", "Right Handle Frame")
+        # self.inputs.new("FloatSocket", "Right Handle Value")
+
+        self.inputs.new("FloatSocket", "Frame")
+        self.inputs.new("FloatSocket", "Value")
+        self.outputs.new("KeyframeSocket", "Keyframe")
+        # there will eventually be inputs for e.g. key type, key handles, etc.
+        # right now I am gonna hardcode LINEAR keyframes so I don't have to deal with anything else
+        # TODO TODO TODO
+    
+    
+    # def display_update(self, parsed_tree, context):
+    #     if context.space_data:
+    #         nc = parsed_tree.get(get_signature_from_edited_tree(self, context))
+    #         if nc.evaluate_input("Interpolation") in ["CONSTANT", "LINEAR"]:
+    #             for inp in self.inputs[1:6]:
+    #                 inp.hide = True
+    #         else:
+    #             if nc.evaluate_input("Left Handle Type") in ["FREE", "ALIGNED"]:
+
+    #             for inp in self.inputs[1:6]:
+    #                 inp.hide = False
+        self.initialized = True
+
+
+class UtilityBoneMatrixHeadTailFlip(Node, MantisNode):
+    """Flips a bone matrix so that the head is where the tail was and visa versa."""
+    bl_idname = "UtilityBoneMatrixHeadTailFlip"
+    bl_label = "Flip Head/Tail"
+    bl_icon = "NODE"
+    initialized : bpy.props.BoolProperty(default = False)
+    
+    def init(self, context):
+        self.inputs.new("MatrixSocket", "Bone Matrix")
+        self.outputs.new("MatrixSocket", "Bone Matrix")
+        self.initialized = True
+
+class UtilityMatrixTransform(Node, MantisNode):
+    """Transforms a matrix by another."""
+    bl_idname = "UtilityMatrixTransform"
+    bl_label = "Matrix Transform"
+    bl_icon = "NODE"
+    initialized : bpy.props.BoolProperty(default = False)
+    
+    def init(self, context):
+        self.inputs.new("MatrixSocket", "Matrix 1")
+        self.inputs.new("MatrixSocket", "Matrix 2")
+        self.outputs.new("MatrixSocket", "Out Matrix")
+        self.initialized = True
+
+class UtilityMatrixSetLocation(Node, MantisNode):
+    """Sets a matrix's location."""
+    bl_idname = "UtilityMatrixSetLocation"
+    bl_label = "Set Matrix Location"
+    bl_icon = "NODE"
+    initialized : bpy.props.BoolProperty(default = False)
+    
+    def init(self, context):
+        self.inputs.new("MatrixSocket", "Matrix")
+        self.inputs.new("VectorSocket", "Location")
+        self.outputs.new("MatrixSocket", "Matrix")
+        self.initialized = True
+
+class UtilityMatrixGetLocation(Node, MantisNode):
+    """Gets a matrix's location."""
+    bl_idname = "UtilityMatrixGetLocation"
+    bl_label = "Get Matrix Location"
+    bl_icon = "NODE"
+    initialized : bpy.props.BoolProperty(default = False)
+    
+    def init(self, context):
+        self.inputs.new("MatrixSocket", "Matrix")
+        self.outputs.new("VectorSocket", "Location")
+        self.initialized = True
+
+class UtilityTransformationMatrix(Node, MantisNode):
+    """Constructs a matrix representing a transformation"""
+    bl_idname = "UtilityTransformationMatrix"
+    bl_label = "Transformation Matrix"
+    bl_icon = "NODE"
+    initialized : bpy.props.BoolProperty(default = False)
+    
+    def init(self, context):
+        # first input is a transformation type - translation, rotation, or scale
+        #                         rotation is an especially annoying feature because it can take multiple types
+        #   so Euler, axis/angle, quaternion, matrix...
+        #   for now I am only going to implement axis-angle
+        # it should get an axis and a magnitude
+        # self.inputs.new("MatrixSocket", "Bone Matrix")
+        
+        self.inputs.new("MatrixTransformOperation", "Operation")
+        self.inputs.new("VectorSocket", "Vector")
+        self.inputs.new("FloatSocket", "W")
+        self.outputs.new("MatrixSocket", "Matrix")
+        self.initialized = True
+
+class UtilityMatrixFromXForm(Node, MantisNode):
+    """Returns the matrix of the given xForm node."""
+    bl_idname = "UtilityMatrixFromXForm"
+    bl_label = "Matrix of xForm"
+    bl_icon = "NODE"
+    initialized : bpy.props.BoolProperty(default = False)
+    
+    def init(self, context):
+        self.inputs.new("xFormSocket", "xForm")
+        self.outputs.new("MatrixSocket", "Matrix")
+        self.initialized = True
+
+class UtilityAxesFromMatrix(Node, MantisNode):
+    """Returns the axes of the matrix."""
+    bl_idname = "UtilityAxesFromMatrix"
+    bl_label = "Axes of Matrix"
+    bl_icon = "NODE"
+    initialized : bpy.props.BoolProperty(default = False)
+    
+    def init(self, context):
+        self.inputs.new("MatrixSocket", "Matrix")
+        self.outputs.new("VectorSocket", "X Axis")
+        self.outputs.new("VectorSocket", "Y Axis")
+        self.outputs.new("VectorSocket", "Z Axis")
+        self.initialized = True
+
+class UtilityIntToString(Node, MantisNode):
+    """Converts a number to a string"""
+    bl_idname = "UtilityIntToString"
+    bl_label = "Number String"
+    bl_icon = "NODE"
+    initialized : bpy.props.BoolProperty(default = False)
+    
+    def init(self, context):
+        
+        self.inputs.new("IntSocket", "Number")
+        self.inputs.new("IntSocket", "Zero Padding")
+        self.outputs.new("StringSocket", "String")
+        self.initialized = True
+
+
+class UtilityArrayGet(Node, MantisNode):
+    """Gets a value from an array at a specified index."""
+    bl_idname = "UtilityArrayGet"
+    bl_label  = "Array Get"
+    bl_icon   = "NODE"
+    initialized : bpy.props.BoolProperty(default = False)
+    
+    def init(self, context):
+        self.inputs.new('EnumArrayGetOptions', 'OoB Behaviour')
+        self.inputs.new("IntSocket", "Index")
+        s = self.inputs.new("WildcardSocket", "Array", use_multi_input=True)
+        s.display_shape = 'SQUARE_DOT'
+        self.outputs.new("WildcardSocket", "Output")
+        self.initialized = True
+    
+    def update(self):
+        wildcard_color = (0.0,0.0,0.0,0.0)
+        if self.inputs['Array'].is_linked == False:
+            self.inputs['Array'].color = wildcard_color
+            self.outputs['Output'].color = wildcard_color
+
+    def insert_link(self, link):
+        prGreen(link.from_node.name, link.from_socket.identifier, link.to_node.name, link.to_socket.identifier)
+        if link.to_socket.identifier == self.inputs['Array'].identifier:
+            from_socket = link.from_socket
+            print (from_socket.color)
+            if hasattr(from_socket, "color"):
+                self.inputs['Array'].color = from_socket.color
+                self.outputs['Output'].color = from_socket.color
+
+
+class UtilityCompare(Node, MantisNode):
+    """Compares two inputs and produces a boolean output"""
+    bl_idname = "UtilityCompare"
+    bl_label = "Compare"
+    bl_icon = "NODE"
+    initialized : bpy.props.BoolProperty(default = False)
+    
+    def init(self, context):
+        self.inputs.new("WildcardSocket", "A")
+        self.inputs.new("WildcardSocket", "B")
+        self.outputs.new("BooleanSocket", "Result")
+        self.initialized = True
+    
+    def update(self):
+        wildcard_color = (0.0,0.0,0.0,0.0)
+        if self.inputs['A'].is_linked == False:
+            self.inputs['A'].color = wildcard_color
+        if self.inputs['B'].is_linked == False:
+            self.inputs['B'].color = wildcard_color
+
+    def insert_link(self, link):
+        if link.to_socket.identifier == self.inputs['A'].identifier:
+            self.inputs['A'].color = from_socket.color_simple
+            if hasattr(from_socket, "color"):
+                self.inputs['A'].color = from_socket.color
+        if link.to_socket.identifier == self.inputs['B'].identifier:
+            self.inputs['B'].color = from_socket.color_simple
+            if hasattr(from_socket, "color"):
+                self.inputs['B'].color = from_socket.color
+
+class UtilityChoose(Node, MantisNode):
+    """Chooses an output"""
+    bl_idname = "UtilityChoose"
+    bl_label = "Choose"
+    bl_icon = "NODE"
+    initialized : bpy.props.BoolProperty(default = False)
+    
+    def init(self, context):
+        
+        self.inputs.new("BooleanSocket", "Condition")
+        self.inputs.new("WildcardSocket", "A")
+        self.inputs.new("WildcardSocket", "B")
+        self.outputs.new("WildcardSocket", "Result")
+        self.initialized = True
+    
+    def update(self):
+        wildcard_color = (0.0,0.0,0.0,0.0)
+        if self.inputs['A'].is_linked == False:
+            self.inputs['A'].color = wildcard_color
+            self.outputs['Result'].color = (1.0,0.0,0.0,0.0) # red for Error
+        if self.inputs['B'].is_linked == False:
+            self.inputs['B'].color = wildcard_color
+            self.outputs['Result'].color = (1.0,0.0,0.0,0.0)
+        # if both inputs are the same color, then use that color for the result
+        if self.inputs['A'].is_linked and self.inputs['A'].color == self.inputs['B'].color:
+            self.outputs['Result'].color = self.inputs['A'].color
+        #
+        if ((self.inputs['A'].is_linked and self.inputs['B'].is_linked) and
+            (self.inputs['A'].links[0].from_socket.bl_idname != self.inputs['B'].links[0].from_socket.bl_idname)):
+            self.inputs['A'].color = (1.0,0.0,0.0,0.0)
+            self.inputs['B'].color = (1.0,0.0,0.0,0.0)
+            self.outputs['Result'].color = (1.0,0.0,0.0,0.0)
+
+    def insert_link(self, link):
+        if link.to_socket.identifier == self.inputs['A'].identifier:
+            self.inputs['A'].color = from_socket.color_simple
+            if hasattr(from_socket, "color"):
+                self.inputs['A'].color = from_socket.color
+        if link.to_socket.identifier == self.inputs['B'].identifier:
+            self.inputs['B'].color = from_socket.color_simple
+            if hasattr(from_socket, "color"):
+                self.inputs['B'].color = from_socket.color
+
+
+
+
+class UtilityPrint(Node, MantisNode):
+    """A utility used to print arbitrary values."""
+    bl_idname = "UtilityPrint"
+    bl_label  = "Print"
+    bl_icon   = "NODE"
+    initialized : bpy.props.BoolProperty(default = False)
+    
+    def init(self, context):
+        self.inputs.new("WildcardSocket", "Input")
+        self.initialized = True
+    

@@ -37,6 +37,15 @@ def default_traverse(self, socket):
             return self.outputs["Output Relationship"]
         return None
 
+
+from mathutils import Color
+linkColor = Color((0.028034, 0.093164, 0.070379)).from_scene_linear_to_srgb()
+inheritColor = Color((0.083213, 0.131242, 0.116497)).from_scene_linear_to_srgb()
+trackingColor = Color((0.033114, 0.049013, 0.131248)).from_scene_linear_to_srgb()
+ikColor = Color((0.131117, 0.131248, 0.006971)).from_scene_linear_to_srgb()
+driverColor = Color((0.043782, 0.014745, 0.131248,)).from_scene_linear_to_srgb()
+
+
 class LinkInheritNode(Node, LinkNode):
     '''A node representing inheritance'''
     # cuss, messed this up
@@ -58,6 +67,9 @@ class LinkInheritNode(Node, LinkNode):
         p = self.inputs.new('xFormSocket', "Parent")
         # set default values...
         self.initialized = True
+        # color
+        self.use_custom_color = True
+        self.color = inheritColor
 
     def traverse(self, socket):
         if (socket == self.outputs["Inheritance"]):
@@ -125,33 +137,10 @@ class LinkInverseKinematics(Node, LinkNode):
         self.outputs.new('RelationshipSocket', "Output Relationship")
 
         self.initialized = True
+        # color
+        self.use_custom_color = True
+        self.color = ikColor
 
-
-        
-class LinkSplineIK(Node, LinkNode):
-    '''A node representing Spline IK'''
-    bl_idname = 'LinkSplineIK'
-    bl_label = "LinkSplineIK"
-    bl_icon = 'CON_SPLINEIK'
-    useTarget : bpy.props.BoolProperty(default=True)
-    def init(self, context):
-        self.inputs.new('xFormSocket', "Parent")
-        self.inputs.new ('xFormSocket', "Target")
-        self.inputs.new ('xFormSocket', "Pole Target")
-        self.inputs.new ('BooleanSocket', "Use Tail")
-        self.inputs.new ('BooleanSocket', "Stretch")
-        self.inputs.new ('FloatFactorSocket', "Position")
-        self.inputs.new ('FloatFactorSocket', "Rotation")
-        self.inputs.new ('FloatFactorSocket', "Influence")
-        self.inputs.new ('EnableSocket', "Enable")
-        self.outputs.new('RelationshipSocket', "Inheritance")
-
-    def traverse(self, socket):
-        if (socket == self.outputs["Inheritance"]):
-            return self.inputs["Parent"]
-        if (socket == self.inputs["Parent"]):
-            return self.outputs["Inheritance"]
-        return None
 
 class LinkCopyLocationNode(Node, LinkNode):
     '''A node representing Copy Location'''
@@ -159,6 +148,7 @@ class LinkCopyLocationNode(Node, LinkNode):
     bl_label = "Copy Location"
     bl_icon = 'CON_LOCLIKE'
     useTarget : bpy.props.BoolProperty(default=True)
+    initialized : bpy.props.BoolProperty(default = False)
 
     def init(self, context):
         self.inputs.new ('RelationshipSocket', "Input Relationship")
@@ -168,34 +158,17 @@ class LinkCopyLocationNode(Node, LinkNode):
         self.inputs.new ('BooleanThreeTupleSocket', "Invert")
         self.inputs.new ('TransformSpaceSocket', "Target Space")
         self.inputs.new ('TransformSpaceSocket', "Owner Space")
+        self.inputs.new ('BooleanSocket', "Offset")
         self.inputs.new ('FloatFactorSocket', "Influence")
         self.inputs.new ('xFormSocket', "Target")
         self.inputs.new ('EnableSocket', "Enable")
         #
         self.outputs.new('RelationshipSocket', "Output Relationship")
+        # color
+        self.use_custom_color = True
+        self.color = linkColor
+        self.initialized = True
 
-
-        
-    
-    # def display_update(self, parsed_tree, context):
-        # node_tree = context.space_data.path[0].node_tree
-        # nc = parsed_tree.get(get_signature_from_edited_tree(self, context))
-        # if nc:
-            # bone_prev, bone_next = False, False
-            # if (inp := nc.inputs["Input Relationship"]).is_connected:
-                # if  from_node := inp.links[0].from_node:
-                    # if from_node.__class__.__name__ in ["xFormBone"]:
-                        # bone_prev=True
-            # bone_next=True
-            # try:
-                # xForm = nc.GetxForm()
-                # if xForm.__class__.__name__ not in "xFormBone":
-                    # bone_next=False
-            # except GraphError:
-                # bone_next=False
-            # if bone_next and bone_prev:
-                # # this is where we will set whether you can pick
-                # #  the other spaces or not.
         
 class LinkCopyRotationNode(Node, LinkNode):
     '''A node representing Copy Rotation'''
@@ -203,6 +176,7 @@ class LinkCopyRotationNode(Node, LinkNode):
     bl_label = "Copy Rotation"
     bl_icon = 'CON_ROTLIKE'
     useTarget : bpy.props.BoolProperty(default=True)
+    initialized : bpy.props.BoolProperty(default = False)
 
     def init(self, context):
         self.inputs.new ('RelationshipSocket', "Input Relationship")
@@ -217,6 +191,10 @@ class LinkCopyRotationNode(Node, LinkNode):
         self.inputs.new ('EnableSocket', "Enable")
         #
         self.outputs.new('RelationshipSocket', "Output Relationship")
+        # color
+        self.use_custom_color = True
+        self.color = linkColor
+        self.initialized = True
 
 
         
@@ -226,6 +204,7 @@ class LinkCopyScaleNode(Node, LinkNode):
     bl_label = "Copy Scale"
     bl_icon = 'CON_SIZELIKE'
     useTarget : bpy.props.BoolProperty(default=True)
+    initialized : bpy.props.BoolProperty(default = False)
 
     def init(self, context):
         self.inputs.new ('RelationshipSocket', "Input Relationship")
@@ -241,6 +220,10 @@ class LinkCopyScaleNode(Node, LinkNode):
         self.inputs.new ('EnableSocket', "Enable")
         #
         self.outputs.new('RelationshipSocket', "Output Relationship")
+        # color
+        self.use_custom_color = True
+        self.color = linkColor
+        self.initialized = True
 
 
         
@@ -252,6 +235,7 @@ class LinkInheritConstraintNode(Node, LinkNode):
     bl_label = "Inherit (constraint)"
     bl_icon = 'CON_CHILDOF'
     useTarget : bpy.props.BoolProperty(default=True)
+    initialized : bpy.props.BoolProperty(default = False)
 
     # === Optional Functions ===
     def init(self, context):
@@ -264,6 +248,10 @@ class LinkInheritConstraintNode(Node, LinkNode):
         self.inputs.new ('EnableSocket', "Enable")
         #
         self.outputs.new('RelationshipSocket', "Output Relationship")
+        # color
+        self.use_custom_color = True
+        self.color = inheritColor
+        self.initialized = True
 
 
         
@@ -275,6 +263,7 @@ class LinkCopyTransformNode(Node, LinkNode):
     bl_label = "Copy Transform"
     bl_icon = 'CON_TRANSLIKE'
     useTarget : bpy.props.BoolProperty(default=True)
+    initialized : bpy.props.BoolProperty(default = False)
 
 
     # === Optional Functions ===
@@ -290,6 +279,10 @@ class LinkCopyTransformNode(Node, LinkNode):
         self.inputs.new ('EnableSocket', "Enable")
         #
         self.outputs.new('RelationshipSocket', "Output Relationship")
+        # color
+        self.use_custom_color = True
+        self.color = linkColor
+        self.initialized = True
 
 
         
@@ -320,6 +313,9 @@ class LinkStretchToNode(Node, LinkNode):
         self.outputs.new('RelationshipSocket', "Output Relationship")
 
         self.initialized = True
+        # color
+        self.use_custom_color = True
+        self.color = trackingColor
 
 
         
@@ -342,6 +338,9 @@ class LinkDampedTrackNode(Node, LinkNode):
         self.outputs.new('RelationshipSocket', "Output Relationship")
 
         self.initialized = True
+        # color
+        self.use_custom_color = True
+        self.color = trackingColor
 
 
         
@@ -366,6 +365,9 @@ class LinkLockedTrackNode(Node, LinkNode):
         self.outputs.new('RelationshipSocket', "Output Relationship")
 
         self.initialized = True
+        # color
+        self.use_custom_color = True
+        self.color = trackingColor
 
 
         
@@ -393,6 +395,9 @@ class LinkTrackToNode(Node, LinkNode):
         self.outputs.new('RelationshipSocket', "Output Relationship")
 
         self.initialized = True
+        # color
+        self.use_custom_color = True
+        self.color = trackingColor
 
 
         
@@ -425,6 +430,9 @@ class LinkLimitLocationNode(Node, LinkNode):
         #
         self.outputs.new('RelationshipSocket', "Output Relationship")
         self.initialized = True
+        # color
+        self.use_custom_color = True
+        self.color = linkColor
 
 
             
@@ -457,6 +465,9 @@ class LinkLimitScaleNode(Node, LinkNode):
         #
         self.outputs.new('RelationshipSocket', "Output Relationship")
         self.initialized = True
+        # color
+        self.use_custom_color = True
+        self.color = linkColor
 
 
             
@@ -489,6 +500,9 @@ class LinkLimitRotationNode(Node, LinkNode):
         #
         self.outputs.new('RelationshipSocket', "Output Relationship")
         self.initialized = True
+        # color
+        self.use_custom_color = True
+        self.color = linkColor
 
 
         
@@ -498,6 +512,7 @@ class LinkLimitDistanceNode(Node, LinkNode):
     bl_label = "Limit Distance"
     bl_icon = 'CON_DISTLIMIT'
     useTarget : bpy.props.BoolProperty(default=True)
+    initialized : bpy.props.BoolProperty(default = False)
 
     def init(self, context):
         self.inputs.new ('RelationshipSocket', "Input Relationship")
@@ -513,6 +528,10 @@ class LinkLimitDistanceNode(Node, LinkNode):
         self.inputs.new ('EnableSocket', "Enable")
         #
         self.outputs.new('RelationshipSocket', "Output Relationship")
+        # color
+        self.use_custom_color = True
+        self.color = linkColor
+        self.initialized = True
 
         
         
@@ -522,6 +541,7 @@ class LinkTransformationNode(Node, LinkNode):
     bl_label = "Transformation"
     bl_icon = 'CON_TRANSFORM'
     useTarget : bpy.props.BoolProperty(default=True)
+    initialized : bpy.props.BoolProperty(default = False)
 
     def init(self, context):
         hide_me = []
@@ -559,6 +579,10 @@ class LinkTransformationNode(Node, LinkNode):
         
         for s in hide_me:
             s.hide = True
+        # color
+        self.use_custom_color = True
+        self.color = linkColor
+        self.initialized = True
 
     
     
@@ -593,30 +617,69 @@ class LinkArmatureNode(Node, LinkNode):
     bl_idname = "LinkArmature"
     bl_label = "Armature (Constraint)"
     bl_icon = "CON_ARMATURE"
+    initialized : bpy.props.BoolProperty(default = False)
     
     def init(self, context):
         self.inputs.new ("RelationshipSocket", "Input Relationship")
         self.inputs.new("BooleanSocket", "Preserve Volume")
         self.inputs.new("BooleanSocket", "Use Envelopes")
         self.inputs.new("BooleanSocket", "Use Current Location")
-        self.inputs.new("FloatSocket", "Influence")
+        self.inputs.new("FloatFactorSocket", "Influence")
         self.inputs.new ('EnableSocket', "Enable")
         self.outputs.new("RelationshipSocket", "Output Relationship")
+        # color
+        self.use_custom_color = True
+        self.color = inheritColor
+        self.initialized = True
+
+
     def traverse(self, socket):
         return default_traverse(self,socket)
     
     def draw_buttons(self, context, layout):
+        # return
         layout.operator( 'mantis.link_armature_node_add_target' )
         if (len(self.inputs) > 6):
             layout.operator( 'mantis.link_armature_node_remove_target' )
         else:
             layout.label(text="")
 
+# why did I define this twice?
+# class LinkSplineIK(Node, LinkNode):
+#     '''A node representing Spline IK'''
+#     bl_idname = 'LinkSplineIK'
+#     bl_label = "LinkSplineIK"
+#     bl_icon = 'CON_SPLINEIK'
+#     useTarget : bpy.props.BoolProperty(default=True)
+#     def init(self, context):
+#         self.inputs.new('xFormSocket', "Parent")
+#         self.inputs.new ('xFormSocket', "Target")
+#         self.inputs.new ('xFormSocket', "Pole Target")
+#         self.inputs.new ('BooleanSocket', "Use Tail")
+#         self.inputs.new ('BooleanSocket', "Stretch")
+#         self.inputs.new ('FloatFactorSocket', "Position")
+#         self.inputs.new ('FloatFactorSocket', "Rotation")
+#         self.inputs.new ('FloatFactorSocket', "Influence")
+#         self.inputs.new ('EnableSocket', "Enable")
+#         self.outputs.new('RelationshipSocket', "Inheritance")
+#         # color
+#         self.use_custom_color = True
+#         self.color = ikColor
+
+#     def traverse(self, socket):
+#         if (socket == self.outputs["Inheritance"]):
+#             return self.inputs["Parent"]
+#         if (socket == self.inputs["Parent"]):
+#             return self.outputs["Inheritance"]
+#         return None
+
+
 class LinkSplineIKNode(Node, LinkNode):
     """"A node representing Spline IK"""
     bl_idname = "LinkSplineIK"
     bl_label = "Spline IK"
     bl_icon = "CON_SPLINEIK"
+    initialized : bpy.props.BoolProperty(default = False)
     
     def init(self, context):
         self.inputs.new ("RelationshipSocket", "Input Relationship")
@@ -628,8 +691,13 @@ class LinkSplineIKNode(Node, LinkNode):
         self.inputs.new("EnumYScaleMode", "Y Scale Mode")
         self.inputs.new("EnumXZScaleMode", "XZ Scale Mode")
         self.inputs.new("BooleanSocket", "Use Original Scale")
-        self.inputs.new("FloatSocket", "Influence")
+        self.inputs.new("FloatFactorSocket", "Influence")
         self.outputs.new("RelationshipSocket", "Output Relationship")
+        # color
+        self.use_custom_color = True
+        self.color = ikColor
+        self.initialized = True
+
     def traverse(self, socket):
         return default_traverse(self,socket)
         
@@ -641,6 +709,7 @@ class LinkDrivenParameterNode(Node, LinkNode):
     bl_idname = "LinkDrivenParameter"
     bl_label = "Driven Parameter"
     bl_icon = "CONSTRAINT_BONE"
+    initialized : bpy.props.BoolProperty(default = False)
     
     def init(self, context):
         self.inputs.new ( "RelationshipSocket", "Input Relationship" )
@@ -650,6 +719,11 @@ class LinkDrivenParameterNode(Node, LinkNode):
         self.inputs.new ('EnableSocket', "Enable")
         #
         self.outputs.new( "RelationshipSocket", "Output Relationship" )
+        self.initialized = True
+        
     def traverse(self, socket):
         return default_traverse(self,socket)
+        # color
+        self.use_custom_color = True
+        self.color = driverColor
 

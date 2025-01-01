@@ -16,9 +16,11 @@ class GeometryCirclePrimitive(Node, MantisNode):
     bl_idname = 'GeometryCirclePrimitive'
     bl_label = "Circle Primitive"
     bl_icon = 'NODE'
+    initialized : bpy.props.BoolProperty(default = False)
 
     def init(self, context):
         self.inputs.new('StringSocket', "Name")
         self.inputs.new('FloatPositiveSocket', "Radius")
         self.inputs.new('IntSocket', "Number of Points")
         self.outputs.new('GeometrySocket', "Circle")
+        self.initialized = True

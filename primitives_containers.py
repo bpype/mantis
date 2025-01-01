@@ -19,7 +19,6 @@ class CirclePrimitive:
 
     def __init__(self, signature, base_tree):
         self.base_tree=base_tree
-        self.executed = False
         self.signature = signature
         self.inputs = {
           "Name"               : NodeSocket(is_input = True, name = "Name", node = self),
@@ -36,9 +35,14 @@ class CirclePrimitive:
           "Circle":None, 
         }
         self.node_type = "UTILITY"
+        self.hierarchy_connections = []
+        self.connections = []
+        self.hierarchy_dependencies = []
+        self.dependencies = []
+        self.prepared = True
+        self.executed = False
 
-    def evaluate_input(self, input_name):
-        return evaluate_input(self, input_name)
+
 
     def bGetObject(self):
         from bpy import data
@@ -69,9 +73,9 @@ class CirclePrimitive:
             v.co = Matrix.Rotation(pi/2, 4, 'X') @ v.co
         # done with this, push it to the data and free the bmesh.
         bm.to_mesh(data); bm.free()
+        self.executed = True
 
-    def __repr__(self):
-        return self.signature.__repr__()
 
-    def fill_parameters(self):
-        fill_parameters(self)
+
+for c in TellClasses():
+    setup_container(c)

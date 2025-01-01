@@ -11,18 +11,18 @@ from .utilities import (prRed, prGreen, prPurple, prWhite,
 transform_spaces = (('WORLD', "World", "World Space"),
                     ('LOCAL', "Local", "Local Space"),
                     ('POSE', "Pose", "Pose Space"),
-                    # ('CUSTOM', "Custom", "Custom Space")
+                    ('CUSTOM', "Custom", "Custom Space"),
                     ('LOCAL_WITH_PARENT', "Local (With Parent)", "Local Space"),)
                     
                     # ('TRANSFORM', "Pose", "Pose Space"),)
                     
 transform_spaces_bone_object = (('WORLD', "World", "World Space"),
                                 ('LOCAL', "Local", "Local Space"),
-                                ('POSE', "Pose", "Pose Space"),)
-                                # ('CUSTOM', "Custom", "Custom Space")
+                                ('POSE', "Pose", "Pose Space"),
+                                ('CUSTOM', "Custom", "Custom Space"),)
 transform_spaces_object = (('WORLD', "World", "World Space"),
-                           ('LOCAL', "Local", "Local Space"),)
-                           # ('CUSTOM', "Custom", "Custom Space")
+                           ('LOCAL', "Local", "Local Space"),
+                           ('CUSTOM', "Custom", "Custom Space"),)
 
 enumRotationOrder =(('AUTO', 'Auto', 'Auto'),
                     ('XYZ', "XYZ", "XYZ"),
@@ -50,9 +50,9 @@ cDriverVariable = (0.66, 0.33, 0.04, 1.0)
 cFCurve         = (0.77, 0.77, 0.11, 1.0)
 cKeyframe       = (0.06, 0.22, 0.88, 1.0)
 cEnable         = (0.92, 0.92, 0.92, 1.0)
-cBoneCollection      = (0.82, 0.82, 0.82, 1.0)
+cBoneCollection = (0.82, 0.82, 0.82, 1.0)
 cDeformer       = (0.05, 0.08, 0.45, 1.0)
-
+cShapeKey       = (0.95, 0.32, 0.05, 1.0)
 
 # custom colors:
 cIK             = (0.596078, 0.596078, 0.364706, 1.000000) #because it's yellow in Blender
@@ -75,14 +75,12 @@ cGeometry          = (0.000000, 0.672443, 0.366253, 1.000000)
 
 # Hybrid approach: Make same-data, similar purpose have similar colors.
 
-
 def TellClasses():
     return [ #MantisSocket,
              #DefaultSocket,
              #InputSocket,
              MatrixSocket,
              xFormSocket,
-             xFormMultiSocket,
              RelationshipSocket,
              DeformerSocket,
              GeometrySocket,
@@ -93,11 +91,11 @@ def TellClasses():
              DriverSocket,
              DriverVariableSocket,
              FCurveSocket,
-             KeyframeSocket,
             #  LayerMaskSocket,
             #  LayerMaskInputSocket,
-            BoneCollectionSocket,
-            BoneCollectionInputSocket,
+             BoneCollectionSocket,
+             BoneCollectionInputSocket,
+             EnumArrayGetOptions,
              
              xFormParameterSocket,
              ParameterBoolSocket,
@@ -117,8 +115,9 @@ def TellClasses():
 
              EnumMetaRigSocket,
              EnumMetaBoneSocket,
+             EnumCurveSocket,
              BoolUpdateParentNode,
-             LabelSocket,
+            #  LabelSocket,
              IKChainLengthSocket,
              EnumInheritScale,
              EnumRotationMix,
@@ -138,8 +137,10 @@ def TellClasses():
              EnumTransformationRotationMixMode,
              EnumTransformationScaleMixMode,
              EnumTransformationAxes,
+             EnumBBoneHandleType,
              # Deformers
              EnumSkinning,
+             MorphTargetSocket,
              #
              FloatSocket,
              FloatPositiveSocket,
@@ -152,11 +153,35 @@ def TellClasses():
              # Drivers             
              EnumDriverVariableType,
              EnumDriverVariableEvaluationSpace,
+             EnumDriverVariableTransformChannel,
              EnumDriverRotationMode,
-             EnumDriverType,]
+             EnumDriverType,
+             KeyframeSocket,
+             EnumKeyframeInterpolationTypeSocket,
+             EnumKeyframeBezierHandleTypeSocket,
+             
+             # Math
+             MathFloatOperation,
+             MathVectorOperation,
+             MatrixTransformOperation,
 
-def Tell_bl_idnames():
-    return [cls.bl_idname for cls in TellClasses()]
+             # Schema
+             WildcardSocket,
+            #  xFormArraySocket,
+            #  RelationshipArraySocket,
+            #  BooleanArraySocket,
+            #  IntArraySocket,
+            #  FloatArraySocket,
+            #  BooleanThreeTupleArraySocket,
+            #  VectorArraySocket,
+            #  QuaternionArraySocket,
+            #  MatrixArraySocket,
+            #  StringArraySocket,
+             ]
+
+
+def Tell_bl_idnames():                                # reroute nodes
+    return [cls.bl_idname for cls in TellClasses()]#+["NodeSocketColor"]
 
 
 # Was setting color like this:
@@ -173,6 +198,7 @@ def Tell_bl_idnames():
 ########################################################################
 
 def default_update(socket, context, do_execute=True):
+    # return
     context = bpy.context
     if not context.space_data:
         return
@@ -183,7 +209,10 @@ def default_update(socket, context, do_execute=True):
     except IndexError: # not in the UI, for example, in a script instead.
         node_tree = None
         return
-    if node_tree.do_live_update:
+    if hasattr(socket.node, "initialized"):
+        if not socket.node.initialized: return
+    else: return
+    if node_tree.do_live_update and not (node_tree.is_executing or node_tree.is_exporting):
         # I don't know how the tree can be valid at 0 nodes but doesn't hurt
         #  to force it if this somehow happens.
         if ((node_tree.tree_valid == False or len(node_tree.parsed_tree) == 0)
@@ -209,12 +238,14 @@ def default_update(socket, context, do_execute=True):
                     raise e
             # Now update the tree display:
             node_tree.display_update(context)
-        if node_tree.do_live_update:
-            try:
-                node_tree.execute_tree(context)
-            except Exception as e:
-                prRed("Automatic Tree Execution failed because of %s" % e)
-                prRed(e.with_traceback())
+        try:
+            prPurple("calling Execute Tree from socket update")
+            node_tree.execute_tree(context)
+        except Exception as e:
+            prRed("Automatic Tree Execution failed because of %s" % e)
+            # I don't want to deal with this right now TODO
+            # e.__traceback__.print_last() this isn't the same kind of traceback object as the traceback module
+            # socket.node.is_triggering_execute = True
 
 
 def update_socket(self, context,):
@@ -239,14 +270,15 @@ def ik_chain_length_update_socket(self, context):
     default_update(self,context)
     # self.node.update_chain_length(context)
     
+# TODO: this is stupid. I don't know what I was trying to do when i made this
 # Driver Variable:
 def driver_variable_socket_update(self, context):
     default_update(self,context)
-    self.node.update_on_socket_change(context)
+    # self.node.update_on_socket_change(context) # why?
     
 def driver_socket_update(self, context):
     default_update(self,context)
-    self.node.update_on_socket_change(context)
+    # self.node.update_on_socket_change(context) # same here, no idea
 
 def update_metarig_armature(self, context,):
     if self.search_prop:
@@ -266,6 +298,7 @@ def update_metarig_posebone(self, context,):
 
 
 def ChooseDraw(self, context, layout, node, text, icon = "NONE", use_enum=True, nice_bool=True, icon_only=False):
+    # return
     # TEXT ONLY
     if ( (hasattr(self, "text_only")) and (getattr(self, "text_only") ) ):
         layout.label(text=text)
@@ -293,12 +326,16 @@ class RelationshipSocket(NodeSocket):
     # Optional identifier string. If not explicitly defined, the python class name is used.
     bl_idname = 'RelationshipSocket'
     bl_label = "Relationship"
-    color = cRelationship
+    color_simple = cRelationship
+    color : bpy.props.FloatVectorProperty(default=cRelationship, size=4)
     input : bpy.props.BoolProperty(default =False,)
     def draw(self, context, layout, node, text):
         ChooseDraw(self, context, layout, node, text)
     def draw_color(self, context, node):
         return self.color
+    @classmethod
+    def draw_color_simple(self):
+        return self.color_simple
 
 class DeformerSocket(NodeSocket):
     # Description string
@@ -306,12 +343,16 @@ class DeformerSocket(NodeSocket):
     # Optional identifier string. If not explicitly defined, the python class name is used.
     bl_idname = 'DeformerSocket'
     bl_label = "Deformer"
-    color = cDeformer
+    color_simple = cDeformer
+    color : bpy.props.FloatVectorProperty(default=cDeformer, size=4)
     input : bpy.props.BoolProperty(default =False,)
     def draw(self, context, layout, node, text):
         ChooseDraw(self, context, layout, node, text)
     def draw_color(self, context, node):
         return self.color
+    @classmethod
+    def draw_color_simple(self):
+        return self.color_simple
 
 
 
@@ -326,7 +367,8 @@ class MatrixSocket(NodeSocket):
                    0.0, 0.0, 0.0, 1.0),
         size=16,
         update = update_socket,)
-    color = cMatrix
+    color_simple = cMatrix
+    color : bpy.props.FloatVectorProperty(default=cMatrix, size=4)
     input : bpy.props.BoolProperty(default =False,)
 
     # Optional function for drawing the socket input value
@@ -334,6 +376,9 @@ class MatrixSocket(NodeSocket):
         layout.label(text=text)
     def draw_color(self, context, node):
         return self.color
+    @classmethod
+    def draw_color_simple(self):
+        return self.color_simple
 
     # Utility functions to make handling the 16 numbers more bearable
     def SetValue(self, mat):
@@ -362,39 +407,31 @@ class xFormSocket(NodeSocket):
     '''xFrom Input Output'''
     bl_idname = 'xFormSocket'
     bl_label = "xForm"
-    color = cxForm
+    color_simple = cxForm
+    color : bpy.props.FloatVectorProperty(default=cxForm, size=4)
     input : bpy.props.BoolProperty(default =False,)
     def draw(self, context, layout, node, text):
         ChooseDraw(self, context, layout, node, text)
     def draw_color(self, context, node):
         return self.color
-
-class xFormMultiSocket(NodeSocket):
-    '''xFrom Input Output'''
-    bl_idname = 'xFormMultiSocket'
-    bl_label = "xForm"
-    color = cxForm
-    
-    input : bpy.props.BoolProperty(default =False,)
-    def __init__(self):
-        # self.is_multi_input=True
-        self.link_limit=0
-        
-    def draw(self, context, layout, node, text):
-        ChooseDraw(self, context, layout, node, text)
-    def draw_color(self, context, node):
-        return self.color
+    @classmethod
+    def draw_color_simple(self):
+        return self.color_simple
 
 class GeometrySocket(NodeSocket):
     '''Geometry Input Output'''
     bl_idname = 'GeometrySocket'
     bl_label = "Geometry"
-    color = cGeometry
+    color_simple = cGeometry
+    color : bpy.props.FloatVectorProperty(default=cGeometry, size=4)
     input : bpy.props.BoolProperty(default =False,)
     def draw(self, context, layout, node, text):
         ChooseDraw(self, context, layout, node, text)
     def draw_color(self, context, node):
         return self.color
+    @classmethod
+    def draw_color_simple(self):
+        return self.color_simple
 
 class GenericRotationSocket(NodeSocket):
     '''Custom node socket type'''
@@ -408,29 +445,9 @@ class GenericRotationSocket(NodeSocket):
         ChooseDraw(self, context, layout, node, text)
     def draw_color(self, context, node):
         return self.color
-
-    #TODO reimplement the below
-    # not high priority in the least
-    # def draw(self, context, layout, node, text):
-    #     if ((self.is_linked) and (not ToMathutilsValue(QuerySocket(self)[0]))):
-    #         layout.label(text="Invalid Input")
-    #     else:
-    #         layout.label(text=text)
-    # def draw_color(self, context, node):
-    #     from mathutils import Vector, Euler, Matrix, Quaternion
-    #     sock = QuerySocket(self)[0]
-    #     val = ToMathutilsValue(sock)
-    #     color = (1.0, 0.0, 0.0, 1.0,)
-    #     if (not self.is_linked):
-    #         color = (0.0, 0.0, 0.0, 0.0,)
-    #     if (val):
-    #         if ((isinstance(val, Vector)) or (isinstance(val, Euler))):
-    #             color = cVector
-    #         elif (isinstance(val, Quaternion)):
-    #             color = cQuaternion
-    #         elif (isinstance(val, Matrix)):
-    #             color = cMatrix
-    #     return (color)
+    @classmethod
+    def draw_color_simple(self):
+        return self.color_simple
 
 ###############################
 
@@ -439,78 +456,85 @@ class EnableSocket(NodeSocket):
     bl_idname = 'EnableSocket'
     bl_label = "Enable"
     default_value: bpy.props.BoolProperty(default=True, update = update_mute_socket,)
-    color = cEnable
+    color_simple = cEnable
+    color : bpy.props.FloatVectorProperty(default=cEnable, size=4)
     input : bpy.props.BoolProperty(default =False,)
     def draw(self, context, layout, node, text):
         ChooseDraw(self, context, layout, node, text, nice_bool=False)
     def draw_color(self, context, node):
         return self.color
+    @classmethod
+    def draw_color_simple(self):
+        return self.color_simple
 
 class HideSocket(NodeSocket):
     '''Custom node socket type'''
     bl_idname = 'HideSocket'
-    bl_label = "Enable"
+    bl_label = "Hide"
     default_value: bpy.props.BoolProperty(default=False, update = update_hide_socket,)
-    color = cEnable
+    color_simple = cEnable
+    color : bpy.props.FloatVectorProperty(default=cEnable, size=4)
     input : bpy.props.BoolProperty(default =False,)
     def draw(self, context, layout, node, text):
         ChooseDraw(self, context, layout, node, text, nice_bool=False)
     def draw_color(self, context, node):
         return self.color
+    @classmethod
+    def draw_color_simple(self):
+        return self.color_simple
 
 class FCurveSocket(NodeSocket):
     '''fCurve'''
     bl_idname = 'FCurveSocket'
     bl_label = "fCurve"
-    color = cFCurve
+    color_simple = cFCurve
+    color : bpy.props.FloatVectorProperty(default=cFCurve, size=4)
     input : bpy.props.BoolProperty(default =False, update = update_socket)
-    def __init__(self):
-        self.display_shape = 'DIAMOND'
+    def init(self):
+        self.display_shape = 'CIRCLE_DOT'
     def draw(self, context, layout, node, text):
         ChooseDraw(self, context, layout, node, text)
     def draw_color(self, context, node):
         return self.color
-
-class KeyframeSocket(NodeSocket):
-    '''Keyframe'''
-    bl_idname = 'KeyframeSocket'
-    bl_label = "Keyframe"
-    color = cKeyframe
-    input : bpy.props.BoolProperty(default =False, update = update_socket)
-    def __init__(self):
-        self.display_shape = 'DIAMOND'
-    def draw(self, context, layout, node, text):
-        ChooseDraw(self, context, layout, node, text)
-    def draw_color(self, context, node):
-        return self.color
+    @classmethod
+    def draw_color_simple(self):
+        return self.color_simple
 
 class DriverSocket(NodeSocket):
     '''Driver'''
     bl_idname = 'DriverSocket'
     bl_label = "Driver"
-    color = cDriver
+    color_simple = cDriver
+    color : bpy.props.FloatVectorProperty(default=cDriver, size=4)
     input : bpy.props.BoolProperty(default =False, update = update_socket)
     
-    def __init__(self):
-        self.display_shape = 'DIAMOND'
+    def init(self):
+        self.display_shape = 'CIRCLE_DOT'
     def draw(self, context, layout, node, text):
         ChooseDraw(self, context, layout, node, text)
     def draw_color(self, context, node):
         return self.color
+    @classmethod
+    def draw_color_simple(self):
+        return self.color_simple
 
 class DriverVariableSocket(NodeSocket):
     '''Driver'''
     bl_idname = 'DriverVariableSocket'
-    bl_label = "Driver"
-    color = cDriverVariable
+    bl_label = "Driver Variable"
+    color_simple = cDriverVariable
+    color : bpy.props.FloatVectorProperty(default=cDriverVariable, size=4)
     input : bpy.props.BoolProperty(default =False, update = update_socket)
     
-    def __init__(self):
-        self.display_shape = 'DIAMOND'
+    def init(self):
+        self.display_shape = 'CIRCLE_DOT'
     def draw(self, context, layout, node, text):
         ChooseDraw(self, context, layout, node, text)
     def draw_color(self, context, node):
         return self.color
+    @classmethod
+    def draw_color_simple(self):
+        return self.color_simple
 
 
 
@@ -531,24 +555,32 @@ class TransformSpaceSocket(NodeSocket):
         items=transform_spaces,
         default='WORLD',
         update = update_socket,)
-    color = cTransformSpace
+    color_simple = cTransformSpace
+    color : bpy.props.FloatVectorProperty(default=cTransformSpace, size=4)
     input : bpy.props.BoolProperty(default =False,)
     def draw(self, context, layout, node, text):
         ChooseDraw(self, context, layout, node, text)
     def draw_color(self, context, node):
         return self.color
+    @classmethod
+    def draw_color_simple(self):
+        return self.color_simple
 
 class BooleanSocket(NodeSocket):
     '''Custom node socket type'''
     bl_idname = 'BooleanSocket'
     bl_label = "Boolean"
     default_value: bpy.props.BoolProperty(update = update_socket,)
-    color = cBool
+    color_simple = cBool
+    color : bpy.props.FloatVectorProperty(default=cBool, size=4)
     input : bpy.props.BoolProperty(default =False,)
     def draw(self, context, layout, node, text):
         ChooseDraw(self, context, layout, node, text)
     def draw_color(self, context, node):
         return self.color
+    @classmethod
+    def draw_color_simple(self):
+        return self.color_simple
 
 class BooleanThreeTupleSocket(NodeSocket):
     # Description string
@@ -557,12 +589,16 @@ class BooleanThreeTupleSocket(NodeSocket):
     bl_idname = 'BooleanThreeTupleSocket'
     bl_label = "Boolean Vector"
     default_value: bpy.props.BoolVectorProperty(subtype = "XYZ",update = update_socket,)
-    color = cBool3
+    color_simple = cBool3
+    color : bpy.props.FloatVectorProperty(default=cBool3, size=4)
     input : bpy.props.BoolProperty(default =False,)
     def draw(self, context, layout, node, text):
         ChooseDraw(self, context, layout, node, text)
     def draw_color(self, context, node):
         return self.color
+    @classmethod
+    def draw_color_simple(self):
+        return self.color_simple
     def TellValue(self):
         return (self.default_value[0], self.default_value[1], self.default_value[2])
 
@@ -576,12 +612,16 @@ class RotationOrderSocket(NodeSocket):
         items=enumRotationOrder,
         default='AUTO',
         update = update_socket,)
-    color = cRotationOrder
+    color_simple = cRotationOrder
+    color : bpy.props.FloatVectorProperty(default=cRotationOrder, size=4)
     input : bpy.props.BoolProperty(default =False,)
     def draw(self, context, layout, node, text):
         ChooseDraw(self, context, layout, node, text)
     def draw_color(self, context, node):
         return self.color
+    @classmethod
+    def draw_color_simple(self):
+        return self.color_simple
 
 class QuaternionSocket(NodeSocket):
     '''Custom node socket type'''
@@ -592,18 +632,23 @@ class QuaternionSocket(NodeSocket):
         size = 4,
         default = (1.0, 0.0, 0.0, 0.0,),
         update = update_socket,)
-    color = cQuaternion
+    color_simple = cQuaternion
+    color : bpy.props.FloatVectorProperty(default=cQuaternion, size=4)
     input : bpy.props.BoolProperty(default =False,)
     def draw(self, context, layout, node, text):
         ChooseDraw(self, context, layout, node, text)
     def draw_color(self, context, node):
         return self.color
+    @classmethod
+    def draw_color_simple(self):
+        return self.color_simple
 
 class QuaternionSocketAA(NodeSocket):
     '''Custom node socket type'''
     bl_idname = 'QuaternionSocketAA'
-    bl_label = "Axis Angle"
-    color = cQuaternion
+    bl_label = "Axis Angle Quaternion"
+    color_simple = cQuaternion
+    color : bpy.props.FloatVectorProperty(default=cQuaternion, size=4)
     input : bpy.props.BoolProperty(default =False,)
     default_value: bpy.props.FloatVectorProperty(
         subtype = "AXISANGLE",
@@ -614,42 +659,54 @@ class QuaternionSocketAA(NodeSocket):
         ChooseDraw(self, context, layout, node, text)
     def draw_color(self, context, node):
         return self.color
+    @classmethod
+    def draw_color_simple(self):
+        return self.color_simple
 
 class IntSocket(NodeSocket):
     '''Custom node socket type'''
     bl_idname = 'IntSocket'
-    bl_label = "Boolean"
+    bl_label = "Integer"
     default_value: bpy.props.IntProperty(default=0, update = update_socket,)
-    color = cInt
+    color_simple = cInt
+    color : bpy.props.FloatVectorProperty(default=cInt, size=4)
     input : bpy.props.BoolProperty(default =False,)
     def draw(self, context, layout, node, text):
         ChooseDraw(self, context, layout, node, text)
     def draw_color(self, context, node):
         return self.color
+    @classmethod
+    def draw_color_simple(self):
+        return self.color_simple
 
 class StringSocket(bpy.types.NodeSocketString):
     """Float Input socket"""
     bl_idname = 'StringSocket'
-    bl_label = "Float"
+    bl_label = "String"
     default_value : bpy.props.StringProperty(default = "", update = update_socket,)
     # text_only : bpy.props.BoolProperty(default=False)
-    color = cString
+    color_simple = cString
+    color : bpy.props.FloatVectorProperty(default=cString, size=4)
     icon : bpy.props.StringProperty(default = "NONE",)
     input : bpy.props.BoolProperty(default =False,)
-    # def __init__(self):
+    # def init(self):
         # if self.node.bl_idname == 'UtilityBoneProperties':
-            # self.display_shape='DIAMOND'
+            # self.display_shape='CIRCLE_DOT'
     def draw(self, context, layout, node, text):
         ChooseDraw(self, context, layout, node, text, icon=self.icon, icon_only=True)
     def draw_color(self, context, node):
         return self.color
+    @classmethod
+    def draw_color_simple(self):
+        return self.color_simple
 
 # class LayerMaskSocket(bpy.types.NodeSocket):
 #     """Layer Mask Input socket"""
 #     bl_idname = 'LayerMaskSocket'
 #     bl_label = "Layer Mask"
 #     default_value: bpy.props.BoolVectorProperty(subtype = "LAYER", update = update_socket, size=32)
-#     color = cBoneCollection
+#     color_simple = cBoneCollection
+    color : bpy.props.FloatVectorProperty(default=cBoneCollection, size=4)
 #     input : bpy.props.BoolProperty(default =False,)
 #     def draw(self, context, layout, node, text):
 #         ChooseDraw(self, context, layout, node, text)
@@ -661,7 +718,8 @@ class StringSocket(bpy.types.NodeSocketString):
 #     bl_idname = 'LayerMaskInputSocket'
 #     bl_label = "Layer Mask"
 #     default_value: bpy.props.BoolVectorProperty(subtype = "LAYER", update = update_socket, size=32)
-#     color = cBoneCollection
+#     color_simple = cBoneCollection
+    color : bpy.props.FloatVectorProperty(default=cBoneCollection, size=4)
 #     input : bpy.props.BoolProperty(default =True,)
 #     def draw(self, context, layout, node, text):
 #         ChooseDraw(self, context, layout, node, text)
@@ -675,11 +733,15 @@ class BoneCollectionSocket(bpy.types.NodeSocket):
     bl_label = "Bone Collection"
     default_value: bpy.props.StringProperty(default = "Collection", update = update_socket,)
     input : bpy.props.BoolProperty(default =False,)
-    color = cBoneCollection
+    color_simple = cBoneCollection
+    color : bpy.props.FloatVectorProperty(default=cBoneCollection, size=4)
     def draw(self, context, layout, node, text):
         ChooseDraw(self, context, layout, node, text)
     def draw_color(self, context, node):
         return self.color
+    @classmethod
+    def draw_color_simple(self):
+        return self.color_simple
         
 class BoneCollectionInputSocket(bpy.types.NodeSocket):
     """Bone Collection Input Socket"""
@@ -687,11 +749,42 @@ class BoneCollectionInputSocket(bpy.types.NodeSocket):
     bl_label = "Bone Collection"
     default_value: bpy.props.StringProperty(default = "Collection", update = update_socket,)
     input : bpy.props.BoolProperty(default =True,)
-    color = cBoneCollection
+    color_simple = cBoneCollection
+    color : bpy.props.FloatVectorProperty(default=cBoneCollection, size=4)
     def draw(self, context, layout, node, text):
         ChooseDraw(self, context, layout, node, text)
     def draw_color(self, context, node):
         return self.color
+    @classmethod
+    def draw_color_simple(self):
+        return self.color_simple
+
+
+eArrayGetOptions =(
+        ('CAP', "Cap", "Fail if the index is out of bounds."),
+        ('WRAP', "Wrap", "Wrap around to the beginning of the array once the idex goes out of bounds."),
+        ('HOLD', "Hold", "Reuse the last element of the array if the index is out of bounds."),)
+
+class EnumArrayGetOptions(NodeSocket):
+    '''Custom node socket type'''
+    bl_idname = 'EnumArrayGetOptions'
+    bl_label = "OoB Behaviour"
+    default_value: bpy.props.EnumProperty(
+        items=eArrayGetOptions,
+        name="OoB Behaviour",
+        description="Out-of-bounds behaviour.",
+        default = 'HOLD',
+        update = update_socket,)
+    color_simple = cString
+    color : bpy.props.FloatVectorProperty(default=cString, size=4)
+    input : bpy.props.BoolProperty(default =False,)
+    def draw(self, context, layout, node, text):
+        ChooseDraw(self, context, layout, node, text)
+    def draw_color(self, context, node):
+        return self.color
+    @classmethod
+    def draw_color_simple(self):
+        return self.color_simple
 
 #####################################################################################
 # Parameters
@@ -702,24 +795,29 @@ class BoneCollectionInputSocket(bpy.types.NodeSocket):
 class xFormParameterSocket(NodeSocket):
     '''xFrom Parameter'''
     bl_idname = 'xFormParameterSocket'
-    bl_label = "Parameter"
-    color = cxForm
+    bl_label = "sForm Parameter"
+    color_simple = cxForm
+    color : bpy.props.FloatVectorProperty(default=cxForm, size=4)
     input : bpy.props.BoolProperty(default =False,)
     
-    def __init__(self):
-        self.display_shape = 'DIAMOND'
+    def init(self):
+        self.display_shape = 'CIRCLE_DOT'
     def draw(self, context, layout, node, text):
         ChooseDraw(self, context, layout, node, text)
     def draw_color(self, context, node):
         return self.color
+    @classmethod
+    def draw_color_simple(self):
+        return self.color_simple
 # what is this one again?
 
 
 class ParameterBoolSocket(bpy.types.NodeSocket):
     """Boolean Parameter Socket"""
     bl_idname = 'ParameterBoolSocket'
-    bl_label = "Bool"
-    color = cBool
+    bl_label = "Boolean Parameter"
+    color_simple = cBool
+    color : bpy.props.FloatVectorProperty(default=cBool, size=4)
     input : bpy.props.BoolProperty(default =False,)
     #custom properties:
     min:bpy.props.FloatProperty(default = 0)
@@ -728,8 +826,8 @@ class ParameterBoolSocket(bpy.types.NodeSocket):
     soft_max:bpy.props.FloatProperty(default = 1)
     description:bpy.props.StringProperty(default = "")
     default_value : bpy.props.BoolProperty(default = False, update = update_socket,)
-    def __init__(self):
-        self.display_shape = 'DIAMOND'
+    def init(self):
+        self.display_shape = 'CIRCLE_DOT'
         # if True:
             # print (self.is_property_set("default_value"))
             # ui_data = self.id_properties_ui("default_value")
@@ -746,13 +844,17 @@ class ParameterBoolSocket(bpy.types.NodeSocket):
         ChooseDraw(self, context, layout, node, text)
     def draw_color(self, context, node):
         return self.color
+    @classmethod
+    def draw_color_simple(self):
+        return self.color_simple
         
 class ParameterIntSocket(bpy.types.NodeSocket):
     """Integer Parameter socket"""
     bl_idname = 'ParameterIntSocket'
-    bl_label = "Int"
+    bl_label = "Integer Parameter"
     default_value : bpy.props.IntProperty(default = 0, update = update_socket,)
-    color = cInt
+    color_simple = cInt
+    color : bpy.props.FloatVectorProperty(default=cInt, size=4)
     input : bpy.props.BoolProperty(default =False,)
     #custom properties:
     min:bpy.props.FloatProperty(default = 0)
@@ -760,19 +862,23 @@ class ParameterIntSocket(bpy.types.NodeSocket):
     soft_min:bpy.props.FloatProperty(default = 0)
     soft_max:bpy.props.FloatProperty(default = 1)
     description:bpy.props.StringProperty(default = "")
-    def __init__(self):
-        self.display_shape = 'DIAMOND'
+    def init(self):
+        self.display_shape = 'CIRCLE_DOT'
     def draw(self, context, layout, node, text):
         ChooseDraw(self, context, layout, node, text)
     def draw_color(self, context, node):
         return self.color
+    @classmethod
+    def draw_color_simple(self):
+        return self.color_simple
         
 class ParameterFloatSocket(bpy.types.NodeSocket):
     """Float Parameter socket"""
     bl_idname = 'ParameterFloatSocket'
-    bl_label = "Float"
+    bl_label = "Float Parameter"
     default_value : bpy.props.FloatProperty(default = 0.0, update = update_socket,)
-    color = cFloat
+    color_simple = cFloat
+    color : bpy.props.FloatVectorProperty(default=cFloat, size=4)
     input : bpy.props.BoolProperty(default =False,)
     #custom properties:
     min:bpy.props.FloatProperty(default = 0)
@@ -780,47 +886,58 @@ class ParameterFloatSocket(bpy.types.NodeSocket):
     soft_min:bpy.props.FloatProperty(default = 0)
     soft_max:bpy.props.FloatProperty(default = 1)
     description:bpy.props.StringProperty(default = "")
-    def __init__(self):
-        self.display_shape = 'DIAMOND'
+    def init(self):
+        self.display_shape = 'CIRCLE_DOT'
     def draw(self, context, layout, node, text):
         ChooseDraw(self, context, layout, node, text)
     def draw_color(self, context, node):
         return self.color
+    @classmethod
+    def draw_color_simple(self):
+        return self.color_simple
         
 class ParameterVectorSocket(bpy.types.NodeSocket):
     """Vector Parameter socket"""
     bl_idname = 'ParameterVectorSocket'
-    bl_label = "Vector"
+    bl_label = "Vector Parameter"
     default_value : bpy.props.FloatVectorProperty(
         default = (0.0, 0.0, 0.0),
         update = update_socket,)
-    color = cVector
+    color_simple = cVector
+    color : bpy.props.FloatVectorProperty(default=cVector, size=4)
     input : bpy.props.BoolProperty(default =False,)
     #custom properties:
     description:bpy.props.StringProperty(default = "")
-    def __init__(self):
-        self.display_shape = 'DIAMOND'
+    def init(self):
+        self.display_shape = 'CIRCLE_DOT'
     def draw(self, context, layout, node, text):
         ChooseDraw(self, context, layout, node, text)
     def draw_color(self, context, node):
         return self.color
+    @classmethod
+    def draw_color_simple(self):
+        return self.color_simple
 
 class ParameterStringSocket(bpy.types.NodeSocket):
     """String Parameter socket"""
     bl_idname = 'ParameterStringSocket'
-    bl_label = "Float"
+    bl_label = "String Parameter"
     default_value : bpy.props.StringProperty(default = "", update = update_socket,)
-    color = cString
+    color_simple = cString
+    color : bpy.props.FloatVectorProperty(default=cString, size=4)
     input : bpy.props.BoolProperty(default =False,)
     text_only : bpy.props.BoolProperty(default=False)
     #custom properties:
     description:bpy.props.StringProperty(default = "")
-    def __init__(self):
-        self.display_shape = 'DIAMOND'
+    def init(self):
+        self.display_shape = 'CIRCLE_DOT'
     def draw(self, context, layout, node, text):
         ChooseDraw(self, context, layout, node, text)
     def draw_color(self, context, node):
         return self.color
+    @classmethod
+    def draw_color_simple(self):
+        return self.color_simple
 
 
 #####################################################################################
@@ -849,7 +966,8 @@ class EnumMetaRigSocket(NodeSocket):
     
     default_value  : StringProperty(name = "", get=get_default_value)
     
-    color = cString
+    color_simple = cString
+    color : bpy.props.FloatVectorProperty(default=cString, size=4)
     def draw(self, context, layout, node, text):
         if not (self.is_linked):
             layout.prop_search(data=self, property="search_prop", search_data=bpy.data, search_property="objects", text="", icon="OUTLINER_OB_ARMATURE", results_are_suggestions=True)
@@ -858,7 +976,43 @@ class EnumMetaRigSocket(NodeSocket):
         
     def draw_color(self, context, node):
         return self.color
+    @classmethod
+    def draw_color_simple(self):
+        return self.color_simple
 
+def poll_is_curve(self, obj):
+    return obj.type == "CURVE"
+
+class EnumCurveSocket(NodeSocket):
+    '''Choose a curve'''
+    bl_idname = 'EnumCurveSocket'
+    bl_label = "Curve"
+    
+    search_prop:PointerProperty(type=bpy.types.Object, poll=poll_is_curve, update=update_socket)
+    
+    def get_default_value(self):
+        if self.search_prop:
+            return self.search_prop.name
+        return ""
+    
+    default_value  : StringProperty(name = "", get=get_default_value)
+    
+    color_simple = cString
+    color : bpy.props.FloatVectorProperty(default=cString, size=4)
+    def draw(self, context, layout, node, text):
+        if not (self.is_linked):
+            layout.prop_search(data=self, property="search_prop", search_data=bpy.data, search_property="objects", text="", icon="OUTLINER_OB_ARMATURE", results_are_suggestions=True)
+        else:
+            try:
+                layout.label(text=self.search_prop.name)
+            except AttributeError: # TODO make this show the graph's result
+                layout.label(text="")
+        
+    def draw_color(self, context, node):
+        return self.color
+    @classmethod
+    def draw_color_simple(self):
+        return self.color_simple
 
 def SearchPBDraw(self, context, layout, node, text, icon = "NONE", use_enum=True, nice_bool=True, icon_only=False):
     layout.prop_search(data=self, property="default_value", search_data=self.search_prop.data, search_property="bones", text=text, icon=icon, results_are_suggestions=True)
@@ -887,12 +1041,13 @@ class EnumMetaBoneSocket(NodeSocket):
                  # items = populate_bones_list,
                  # name = "Meta Rig")
                  
-    def get_default_value(self):
-        return self.search_prop.name
+    # def get_default_value(self):
+    #     return self.search_prop.name
     
     default_value  : StringProperty(name = "", update=update_metarig_posebone)
                  
-    color = cString
+    color_simple = cString
+    color : bpy.props.FloatVectorProperty(default=cString, size=4)
     def draw(self, context, layout, node, text):
         if not (self.is_linked):
             if self.search_prop is None:
@@ -904,6 +1059,9 @@ class EnumMetaBoneSocket(NodeSocket):
         
     def draw_color(self, context, node):
         return self.color
+    @classmethod
+    def draw_color_simple(self):
+        return self.color_simple
     
     
     
@@ -916,35 +1074,46 @@ class BoolUpdateParentNode(NodeSocket):
     bl_idname = 'BoolUpdateParentNode'
     bl_label = "Boolean"
     default_value: bpy.props.BoolProperty(default=False, update = update_parent_node)
-    color = cBool
+    color_simple = cBool
+    color : bpy.props.FloatVectorProperty(default=cBool, size=4)
     input : bpy.props.BoolProperty(default =False,)
     def draw(self, context, layout, node, text):
         ChooseDraw(self, context, layout, node, text)
     def draw_color(self, context, node):
         return self.color
+    @classmethod
+    def draw_color_simple(self):
+        return self.color_simple
 
-class LabelSocket(bpy.types.NodeSocket):
-    """Float Input socket"""
-    bl_idname = 'LabelSocket'
-    bl_label = "Label"
-    color = (0.000, 0.000, 0.000, 0.000000)
-    input : bpy.props.BoolProperty(default =False,)
-    def draw(self, context, layout, node, text):
-        ChooseDraw(self, context, layout, node, text)
-    def draw_color(self, context, node):
-        return self.color
+# class LabelSocket(bpy.types.NodeSocket):
+#     """Float Input socket"""
+#     bl_idname = 'LabelSocket'
+#     bl_label = "Label"
+#     color = (0.000, 0.000, 0.000, 0.000000)
+#     input : bpy.props.BoolProperty(default =False,)
+#     def draw(self, context, layout, node, text):
+#         ChooseDraw(self, context, layout, node, text)
+#     def draw_color(self, context, node):
+#         return self.color
+#     @classmethod
+#     def draw_color_simple(self):
+#         return self.color
 
 class IKChainLengthSocket(NodeSocket):
     '''Custom node socket type'''
     bl_idname = 'IKChainLengthSocket'
-    bl_label = "Chain Length"
+    bl_label = "IK Chain Length"
     default_value: bpy.props.IntProperty(default=0, update = ik_chain_length_update_socket, min = 0, max = 255)
-    color = cInt
+    color_simple = cInt
+    color : bpy.props.FloatVectorProperty(default=cInt, size=4)
     input : bpy.props.BoolProperty(default =False,)
     def draw(self, context, layout, node, text):
         ChooseDraw(self, context, layout, node, text)
     def draw_color(self, context, node):
         return self.color
+    @classmethod
+    def draw_color_simple(self):
+        return self.color_simple
 
 # Inherit
 
@@ -966,12 +1135,16 @@ class EnumInheritScale(NodeSocket):
         default = 'FULL',
         #options = set(),
         update = update_socket,)
-    color = cString
+    color_simple = cString
+    color : bpy.props.FloatVectorProperty(default=cString, size=4)
     input : bpy.props.BoolProperty(default =False,)
     def draw(self, context, layout, node, text):
         ChooseDraw(self, context, layout, node, text)
     def draw_color(self, context, node):
         return self.color
+    @classmethod
+    def draw_color_simple(self):
+        return self.color_simple
 
 # Copy Rotation
 
@@ -1000,12 +1173,16 @@ class EnumRotationMix(NodeSocket):
         default = 'REPLACE',#{'REPLACE'},
         options = set(), # this has to be a set lol
         update = update_socket,)
-    color = cString
+    color_simple = cString
+    color : bpy.props.FloatVectorProperty(default=cString, size=4)
     input : bpy.props.BoolProperty(default =False,)
     def draw(self, context, layout, node, text):
         ChooseDraw(self, context, layout, node, text)
     def draw_color(self, context, node):
         return self.color
+    @classmethod
+    def draw_color_simple(self):
+        return self.color_simple
 
 eRotationMix_copytransforms =(
         ('REPLACE', "Replace", "Fully inherit scale"),
@@ -1023,12 +1200,16 @@ class EnumRotationMixCopyTransforms(NodeSocket):
         default = 'REPLACE', #{'REPLACE'},
         #options = {'ENUM_FLAG'}, # this sux
         update = update_socket,)
-    color = cString
+    color_simple = cString
+    color : bpy.props.FloatVectorProperty(default=cString, size=4)
     input : bpy.props.BoolProperty(default =False,)
     def draw(self, context, layout, node, text):
         ChooseDraw(self, context, layout, node, text)
     def draw_color(self, context, node):
         return self.color
+    @classmethod
+    def draw_color_simple(self):
+        return self.color_simple
 
 # STRETCH TO
 
@@ -1047,12 +1228,16 @@ class EnumMaintainVolumeStretchTo(NodeSocket):
         default = 'VOLUME_XZX',
         #options = {'ENUM_FLAG'},
         update = update_socket,)
-    color = cString
+    color_simple = cString
+    color : bpy.props.FloatVectorProperty(default=cString, size=4)
     input : bpy.props.BoolProperty(default =False,)
     def draw(self, context, layout, node, text):
         ChooseDraw(self, context, layout, node, text)
     def draw_color(self, context, node):
         return self.color
+    @classmethod
+    def draw_color_simple(self):
+        return self.color_simple
 
 eRotationStretchTo = (('PLANE_X', "XZ", "XZ", 1),
                       ('PLANE_Z', "ZX", "ZX", 2),
@@ -1069,12 +1254,16 @@ class EnumRotationStretchTo(NodeSocket):
         default = 'PLANE_X',
         #options = {'ENUM_FLAG'},
         update = update_socket,)
-    color = cString
+    color_simple = cString
+    color : bpy.props.FloatVectorProperty(default=cString, size=4)
     input : bpy.props.BoolProperty(default =False,)
     def draw(self, context, layout, node, text):
         ChooseDraw(self, context, layout, node, text)
     def draw_color(self, context, node):
         return self.color
+    @classmethod
+    def draw_color_simple(self):
+        return self.color_simple
 
 # Track-To
 
@@ -1100,12 +1289,16 @@ class EnumTrackAxis(NodeSocket):
         default = 'TRACK_X',
         #options = {'ENUM_FLAG'},
         update = update_socket,)
-    color = cString
+    color_simple = cString
+    color : bpy.props.FloatVectorProperty(default=cString, size=4)
     input : bpy.props.BoolProperty(default =False,)
     def draw(self, context, layout, node, text):
         ChooseDraw(self, context, layout, node, text)
     def draw_color(self, context, node):
         return self.color
+    @classmethod
+    def draw_color_simple(self):
+        return self.color_simple
 
 class EnumUpAxis(NodeSocket):
     '''Custom node socket type'''
@@ -1118,12 +1311,16 @@ class EnumUpAxis(NodeSocket):
         default = 'UP_X',
         #options = {'ENUM_FLAG'},
         update = update_socket,)
-    color = cString
+    color_simple = cString
+    color : bpy.props.FloatVectorProperty(default=cString, size=4)
     input : bpy.props.BoolProperty(default =False,)
     def draw(self, context, layout, node, text):
         ChooseDraw(self, context, layout, node, text)
     def draw_color(self, context, node):
         return self.color
+    @classmethod
+    def draw_color_simple(self):
+        return self.color_simple
 
 # Locked Track
 
@@ -1142,12 +1339,16 @@ class EnumLockAxis(NodeSocket):
         default = 'LOCK_X',
         #options = {'ENUM_FLAG'},
         update = update_socket,)
-    color = cString
+    color_simple = cString
+    color : bpy.props.FloatVectorProperty(default=cString, size=4)
     input : bpy.props.BoolProperty(default =False,)
     def draw(self, context, layout, node, text):
         ChooseDraw(self, context, layout, node, text)
     def draw_color(self, context, node):
         return self.color
+    @classmethod
+    def draw_color_simple(self):
+        return self.color_simple
 
 # Limit Distance:
 
@@ -1165,12 +1366,16 @@ class EnumLimitMode(NodeSocket):
         description="Clamp Region",
         default = 'LIMITDIST_INSIDE',
         update = update_socket,)
-    color = cString
+    color_simple = cString
+    color : bpy.props.FloatVectorProperty(default=cString, size=4)
     input : bpy.props.BoolProperty(default =False,)
     def draw(self, context, layout, node, text):
         ChooseDraw(self, context, layout, node, text)
     def draw_color(self, context, node):
         return self.color
+    @classmethod
+    def draw_color_simple(self):
+        return self.color_simple
 
 
 # Spline IK
@@ -1193,29 +1398,37 @@ class EnumYScaleMode(NodeSocket):
         description="Y Scale Mode",
         default = 'FIT_CURVE',
         update = update_socket,)
-    color = cString
+    color_simple = cString
+    color : bpy.props.FloatVectorProperty(default=cString, size=4)
     input : bpy.props.BoolProperty(default =False,)
     def draw(self, context, layout, node, text):
         ChooseDraw(self, context, layout, node, text)
     def draw_color(self, context, node):
         return self.color
+    @classmethod
+    def draw_color_simple(self):
+        return self.color_simple
 
 class EnumXZScaleMode(NodeSocket):
     '''Custom node socket type'''
     bl_idname = 'EnumXZScaleMode'
-    bl_label = "Y Scale Mode"
+    bl_label = "XZ Scale Mode"
     default_value: bpy.props.EnumProperty(
         items=eXZScaleMode,
         name="XZ Scale Mode",
         description="XZ Scale Mode",
         default = 'NONE',
         update = update_socket,)
-    color = cString
+    color_simple = cString
+    color : bpy.props.FloatVectorProperty(default=cString, size=4)
     input : bpy.props.BoolProperty(default =False,)
     def draw(self, context, layout, node, text):
         ChooseDraw(self, context, layout, node, text)
     def draw_color(self, context, node):
         return self.color
+    @classmethod
+    def draw_color_simple(self):
+        return self.color_simple
 
 
 eMapxForm = (('LOCATION', "Location", "Location",),
@@ -1223,7 +1436,7 @@ eMapxForm = (('LOCATION', "Location", "Location",),
              ('SCALE', "Scale", "Scale",),)
 
 
-eRotationMode = (('AUTO', 'Auto', 'Euler using the rotation order of the target.', 0),
+eRotationMode = (('AUTO', 'Auto', 'Automattically Selected.', 0),
                  ('XYZ', "XYZ", "Euler using the XYZ rotation order", 1),
                  ('XZY', "XZY", "Euler using the XZY rotation order", 2),
                  ('ZXY', "ZXY", "Euler using the ZXY rotation order", 3),
@@ -1252,133 +1465,192 @@ eScaleMix =(
 class EnumTransformationMap(NodeSocket):
     '''Custom node socket type'''
     bl_idname = 'EnumTransformationMap'
-    bl_label = "Map"
+    bl_label = "Map To/From"
     default_value: bpy.props.EnumProperty(
         items=eMapxForm,
         name="Map To/From",
         description="Map To/From",
         default = 'LOCATION',
         update = update_socket,)
-    color = cString
+    color_simple = cString
+    color : bpy.props.FloatVectorProperty(default=cString, size=4)
     input : bpy.props.BoolProperty(default =False,)
     def draw(self, context, layout, node, text):
         ChooseDraw(self, context, layout, node, text)
     def draw_color(self, context, node):
         return self.color
+    @classmethod
+    def draw_color_simple(self):
+        return self.color_simple
 
 
 class EnumTransformationRotationMode(NodeSocket):
     '''Custom node socket type'''
     bl_idname = 'EnumTransformationRotationMode'
-    bl_label = "Map"
+    bl_label = "Map To/From"
     default_value: bpy.props.EnumProperty(
         items=eRotationMode,
         name="Rotation Mode",
         description="Rotation Mode",
         default = 'AUTO',
         update = update_socket,)
-    color = cString
+    color_simple = cString
+    color : bpy.props.FloatVectorProperty(default=cString, size=4)
     input : bpy.props.BoolProperty(default =False,)
     def draw(self, context, layout, node, text):
         ChooseDraw(self, context, layout, node, text, use_enum=False)
     def draw_color(self, context, node):
         return self.color
+    @classmethod
+    def draw_color_simple(self):
+        return self.color_simple
         
 class EnumTransformationRotationOrder(NodeSocket):
     '''Custom node socket type'''
     bl_idname = 'EnumTransformationRotationOrder'
-    bl_label = "Map"
+    bl_label = "Map To/From"
     default_value: bpy.props.EnumProperty(
         items=enumTransformationRotationOrder,
         name="Rotation Order",
         description="Rotation Order",
         default = 'AUTO',
         update = update_socket,)
-    color = cString
+    color_simple = cString
+    color : bpy.props.FloatVectorProperty(default=cString, size=4)
     input : bpy.props.BoolProperty(default =False,)
     def draw(self, context, layout, node, text):
         ChooseDraw(self, context, layout, node, text, use_enum=False)
     def draw_color(self, context, node):
         return self.color
+    @classmethod
+    def draw_color_simple(self):
+        return self.color_simple
         
 class EnumTransformationTranslationMixMode(NodeSocket):
     '''Custom node socket type'''
     bl_idname = 'EnumTransformationTranslationMixMode'
-    bl_label = "Map"
+    bl_label = "Mix Mode"
     default_value: bpy.props.EnumProperty(
         items=eTranslationMix,
         name="Mix Translation",
         description="Mix Translation",
         default = 'ADD',
         update = update_socket,)
-    color = cString
+    color_simple = cString
+    color : bpy.props.FloatVectorProperty(default=cString, size=4)
     input : bpy.props.BoolProperty(default =False,)
     def draw(self, context, layout, node, text):
         ChooseDraw(self, context, layout, node, text, use_enum=False)
     def draw_color(self, context, node):
         return self.color
+    @classmethod
+    def draw_color_simple(self):
+        return self.color_simple
         
 class EnumTransformationRotationMixMode(NodeSocket):
     '''Custom node socket type'''
     bl_idname = 'EnumTransformationRotationMixMode'
-    bl_label = "Map"
+    bl_label = "Mix Mode"
     default_value: bpy.props.EnumProperty(
         items=eRotationMix,
         name="Mix Rotation",
         description="Mix Rotation",
         default = 'ADD',
         update = update_socket,)
-    color = cString
+    color_simple = cString
+    color : bpy.props.FloatVectorProperty(default=cString, size=4)
     input : bpy.props.BoolProperty(default =False,)
     def draw(self, context, layout, node, text):
         ChooseDraw(self, context, layout, node, text, use_enum=False)
     def draw_color(self, context, node):
         return self.color
+    @classmethod
+    def draw_color_simple(self):
+        return self.color_simple
         
 class EnumTransformationScaleMixMode(NodeSocket):
     '''Custom node socket type'''
     bl_idname = 'EnumTransformationScaleMixMode'
-    bl_label = "Map"
+    bl_label = "Mix Mode"
     default_value: bpy.props.EnumProperty(
         items=eScaleMix,
         name="Mix Scale",
         description="Mix Scale",
         default = 'REPLACE',
         update = update_socket,)
-    color = cString
+    color_simple = cString
+    color : bpy.props.FloatVectorProperty(default=cString, size=4)
     input : bpy.props.BoolProperty(default =False,)
     def draw(self, context, layout, node, text):
         ChooseDraw(self, context, layout, node, text, use_enum=False)
     def draw_color(self, context, node):
         return self.color
+    @classmethod
+    def draw_color_simple(self):
+        return self.color_simple
 
 eAxes = (
         ('X', "X", "X", 0),
         ('Y', "Y", "Y", 1),
-        ('Z', "Z", "Z", 1),
+        ('Z', "Z", "Z", 2),
     )
     
 class EnumTransformationAxes(NodeSocket):
     '''Custom node socket type'''
     bl_idname = 'EnumTransformationAxes'
-    bl_label = "Map"
+    bl_label = "Axes"
     default_value: bpy.props.EnumProperty(
         items=eAxes,
         # name="",
         # description="",
         default = 'X',
         update = update_socket,)
-    color = cString
+    color_simple = cString
+    color : bpy.props.FloatVectorProperty(default=cString, size=4)
     input : bpy.props.BoolProperty(default =False,)
     def draw(self, context, layout, node, text):
         ChooseDraw(self, context, layout, node, text, use_enum=False)
     def draw_color(self, context, node):
         return self.color
+    @classmethod
+    def draw_color_simple(self):
+        return self.color_simple
         
 #
 
+eBBoneHandleType = (
+        ('AUTO', "Automatic", "", 0),
+        ('ABSOLUTE', "Absolute", "", 1),
+        ('RELATIVE', "Relative", "", 2),
+        ('TANGENT', "Tangent", "", 3),
+    )
+
+class EnumBBoneHandleType(NodeSocket):
+    '''Custom node socket type'''
+    bl_idname = 'EnumBBoneHandleType'
+    bl_label = "Axes"
+    default_value: bpy.props.EnumProperty(
+        items=eBBoneHandleType,
+        # name="",
+        # description="",
+        default = 'AUTO',
+        update = update_socket,)
+    color_simple = cString
+    color : bpy.props.FloatVectorProperty(default=cString, size=4)
+    input : bpy.props.BoolProperty(default =False,)
+    def draw(self, context, layout, node, text):
+        ChooseDraw(self, context, layout, node, text, use_enum=False)
+    def draw_color(self, context, node):
+        return self.color
+    @classmethod
+    def draw_color_simple(self):
+        return self.color_simple
+        
+
+
 eSkinningMethod = (('EXISTING_GROUPS', "Use Existing Groups", "Use the existing vertex groups, or create empty groups if not found.",),
-                   ('AUTOMATIC_HEAT', "Automatic (Heat)", "Use Blender's heatmap automatic skinning",),)
+                   ('AUTOMATIC_HEAT', "Automatic (Heat)", "Use Blender's heatmap automatic skinning",),
+                   ('COPY_FROM_OBJECT', "Copy from object", "Copy skin weights from the selected object"),)
 
 class EnumSkinning(NodeSocket):
     '''Custom node socket type'''
@@ -1390,12 +1662,35 @@ class EnumSkinning(NodeSocket):
         description="Skinning Method",
         default = 'AUTOMATIC_HEAT',
         update = update_socket,)
-    color = cString
+    color_simple = cString
+    color : bpy.props.FloatVectorProperty(default=cString, size=4)
     input : bpy.props.BoolProperty(default =False,)
     def draw(self, context, layout, node, text):
         ChooseDraw(self, context, layout, node, text)
     def draw_color(self, context, node):
         return self.color
+    @classmethod
+    def draw_color_simple(self):
+        return self.color_simple
+
+
+class MorphTargetSocket(NodeSocket):
+    """Morph Target"""
+    bl_idname = 'MorphTargetSocket'
+    bl_label = "Morph Target"
+    
+    color_simple = cShapeKey
+    color : bpy.props.FloatVectorProperty(default=cShapeKey, size=4)
+    input : bpy.props.BoolProperty(default =False,)
+    def draw(self, context, layout, node, text):
+        ChooseDraw(self, context, layout, node, text)
+    def draw_color(self, context, node):
+        return self.color
+    @classmethod
+    def draw_color_simple(self):
+        return self.color_simple
+
+
 
 
 eDriverVariableType = ( 
@@ -1411,7 +1706,10 @@ eDriverVariableType = (
                          "Rotational Difference",
                          "Rotational Difference",
                          3),
-                         # TRANSFORMS
+                    #    ( 'TRANSFORMS',
+                    #      "Transform Channel",
+                    #      "Transform Channel",
+                    #      4),
                       )
 
 class EnumDriverVariableType(NodeSocket):
@@ -1424,12 +1722,16 @@ class EnumDriverVariableType(NodeSocket):
         description = "Variable Type",
         default = 'SINGLE_PROP',
         update = driver_variable_socket_update,)
-    color = cString
+    color_simple = cString
+    color : bpy.props.FloatVectorProperty(default=cString, size=4)
     input : bpy.props.BoolProperty(default =False,)
     def draw(self, context, layout, node, text):
         ChooseDraw(self, context, layout, node, text, use_enum=False)
     def draw_color(self, context, node):
         return self.color
+    @classmethod
+    def draw_color_simple(self):
+        return self.color_simple
 
 
 eDriverVariableEvaluationSpace = ( 
@@ -1458,12 +1760,51 @@ class EnumDriverVariableEvaluationSpace(NodeSocket):
         description = "Evaluation Space",
         default = 'WORLD_SPACE',
         update = driver_variable_socket_update,)
-    color = cString
+    color_simple = cString
+    color : bpy.props.FloatVectorProperty(default=cString, size=4)
     input : bpy.props.BoolProperty(default =False,)
     def draw(self, context, layout, node, text):
         ChooseDraw(self, context, layout, node, text, use_enum=False)
     def draw_color(self, context, node):
         return self.color
+    @classmethod
+    def draw_color_simple(self):
+        return self.color_simple
+
+eDriverVariableTransformChannel = (
+                ("LOC_X", "X Location", "The X-coordinate of an object's location.", 1),
+                ("LOC_Y", "Y Location", "The Y-coordinate of an object's location.", 2),
+                ("LOC_Z", "Z Location", "The Z-coordinate of an object's location.", 3),
+                ("ROT_X", "X Rotation", "Rotation X-axis.", 4),
+                ("ROT_Y", "Y Rotation", "Rotation Y-axis.", 5),
+                ("ROT_Z", "Z Rotation", "Rotation Z-axis.", 6),
+                ("ROT_W", "W Rotation", "Rotation W-axis.", 7),
+                ("SCALE_X", "X Scale", "The X-scale of an object's scale.", 8),
+                ("SCALE_Y", "Y Scale", "The Y-scale of an object's scale.", 9),
+                ("SCALE_Z", "Z Scale", "The Z-scale of an object's scale.", 10),
+                ("SCALE_AVG", "Average Scale", "The scale factor of an object's scale.", 11),
+                )
+
+class EnumDriverVariableTransformChannel(NodeSocket):
+    '''Custom node socket type'''
+    bl_idname = 'EnumDriverVariableTransformChannel'
+    bl_label = "Transform Channel"
+    default_value: bpy.props.EnumProperty(
+        items = eDriverVariableTransformChannel,
+        name = "Transform Channel",
+        description = "Transform Channel",
+        default = 'LOC_X',
+        update = driver_variable_socket_update,)
+    color_simple = cString
+    color : bpy.props.FloatVectorProperty(default=cString, size=4)
+    input : bpy.props.BoolProperty(default =False,)
+    def draw(self, context, layout, node, text):
+        ChooseDraw(self, context, layout, node, text, use_enum=False)
+    def draw_color(self, context, node):
+        return self.color
+    @classmethod
+    def draw_color_simple(self):
+        return self.color_simple
 
 class EnumDriverRotationMode(NodeSocket):
     '''Custom node socket type'''
@@ -1475,12 +1816,16 @@ class EnumDriverRotationMode(NodeSocket):
         description = "Rotation Mode",
         default = 'AUTO',
         update = driver_variable_socket_update,)
-    color = cString
+    color_simple = cString
+    color : bpy.props.FloatVectorProperty(default=cString, size=4)
     input : bpy.props.BoolProperty(default =False,)
     def draw(self, context, layout, node, text):
         ChooseDraw(self, context, layout, node, text, use_enum=False)
     def draw_color(self, context, node):
         return self.color
+    @classmethod
+    def draw_color_simple(self):
+        return self.color_simple
 #
 
 
@@ -1500,12 +1845,16 @@ class EnumDriverType(NodeSocket):
         description = "Driver Type",
         default = 'AVERAGE',
         update = driver_socket_update,)
-    color = cString
+    color_simple = cString
+    color : bpy.props.FloatVectorProperty(default=cString, size=4)
     input : bpy.props.BoolProperty(default =False,)
     def draw(self, context, layout, node, text):
         ChooseDraw(self, context, layout, node, text, use_enum=False)
     def draw_color(self, context, node):
         return self.color
+    @classmethod
+    def draw_color_simple(self):
+        return self.color_simple
 
 
 # Keyframe
@@ -1520,116 +1869,398 @@ class FloatSocket(bpy.types.NodeSocketFloat):
     bl_idname = 'FloatSocket'
     bl_label = "Float"
     default_value : bpy.props.FloatProperty(default = 0.0, update = update_socket,)
-    color = cFloat
+    color_simple = cFloat
+    color : bpy.props.FloatVectorProperty(default=cFloat, size=4)
     input : bpy.props.BoolProperty(default =False,)
     def draw(self, context, layout, node, text):
         ChooseDraw(self, context, layout, node, text)
     def draw_color(self, context, node):
         return self.color
+    @classmethod
+    def draw_color_simple(self):
+        return self.color_simple
         
 class FloatPositiveSocket(bpy.types.NodeSocketFloat):
     """Float Input socket"""
     bl_idname = 'FloatPositiveSocket'
-    bl_label = "Float"
+    bl_label = "Float (Positive)"
     default_value : bpy.props.FloatProperty(default = 0.0, min=0, update = update_socket,)
-    color = cFloat
+    color_simple = cFloat
+    color : bpy.props.FloatVectorProperty(default=cFloat, size=4)
     input : bpy.props.BoolProperty(default =False,)
     def draw(self, context, layout, node, text):
         ChooseDraw(self, context, layout, node, text)
     def draw_color(self, context, node):
         return self.color
+    @classmethod
+    def draw_color_simple(self):
+        return self.color_simple
 
 class FloatFactorSocket(bpy.types.NodeSocketFloatFactor):
     '''xFrom Input Output'''
     bl_idname = 'FloatFactorSocket'
-    bl_label = "xForm"
+    bl_label = "Float (Factor)"
     default_value : bpy.props.FloatProperty(
         default = 0.0,
         min = 0.0,
         max=1.0,
         update = update_socket,
         subtype='FACTOR',)
-    color = cFloat
+    color_simple = cFloat
+    color : bpy.props.FloatVectorProperty(default=cFloat, size=4)
     input : bpy.props.BoolProperty(default =False,)
     def draw(self, context, layout, node, text):
         ChooseDraw(self, context, layout, node, text)
     def draw_color(self, context, node):
         return self.color
+    @classmethod
+    def draw_color_simple(self):
+        return self.color_simple
 
 class FloatAngleSocket(bpy.types.NodeSocketFloatAngle):
     '''xFrom Input Output'''
     bl_idname = 'FloatAngleSocket'
-    bl_label = "xForm"
+    bl_label = "Float (Angle)"
     default_value : bpy.props.FloatProperty(
         default = 0.0,
         min = -180,
         max=180,
         update = update_socket,
         subtype='ANGLE',)
-    color = cFloat
+    color_simple = cFloat
+    color : bpy.props.FloatVectorProperty(default=cFloat, size=4)
     input : bpy.props.BoolProperty(default =False,)
     def draw(self, context, layout, node, text):
         ChooseDraw(self, context, layout, node, text)
     def draw_color(self, context, node):
         return self.color
+    @classmethod
+    def draw_color_simple(self):
+        return self.color_simple
 
 class VectorSocket(bpy.types.NodeSocketVectorEuler):
     """Vector Input socket"""
     bl_idname = 'VectorSocket'
-    bl_label = "Float"
+    bl_label = "Vector"
     default_value : bpy.props.FloatVectorProperty(
         default = (0.0, 0.0, 0.0),
         update = update_socket,)
-    color = cVector
+    color_simple = cVector
+    color : bpy.props.FloatVectorProperty(default=cVector, size=4)
     input : bpy.props.BoolProperty(default =False,)
     def draw(self, context, layout, node, text):
         ChooseDraw(self, context, layout, node, text)
     def draw_color(self, context, node):
         return self.color
+    @classmethod
+    def draw_color_simple(self):
+        return self.color_simple
 
 class VectorEulerSocket(bpy.types.NodeSocketVectorEuler):
     """Vector Input socket"""
     bl_idname = 'VectorEulerSocket'
-    bl_label = "Float"
+    bl_label = "Euler"
     default_value : bpy.props.FloatVectorProperty(
         default = (0.0, 0.0, 0.0),
         update = update_socket,
         subtype='EULER',)
-    color = cVector
+    color_simple = cVector
+    color : bpy.props.FloatVectorProperty(default=cVector, size=4)
     input : bpy.props.BoolProperty(default =False,)
     def draw(self, context, layout, node, text):
         ChooseDraw(self, context, layout, node, text)
     def draw_color(self, context, node):
         return self.color
+    @classmethod
+    def draw_color_simple(self):
+        return self.color_simple
 
 class VectorTranslationSocket(bpy.types.NodeSocketVectorTranslation):
     """Vector Input socket"""
     bl_idname = 'VectorTranslationSocket'
-    bl_label = "Float"
+    bl_label = "Vector (Translation)"
     default_value : bpy.props.FloatVectorProperty(
         default = (0.0, 0.0, 0.0),
         update = update_socket,
         subtype='TRANSLATION',)
-    color = cVector
+    color_simple = cVector
+    color : bpy.props.FloatVectorProperty(default=cVector, size=4)
     input : bpy.props.BoolProperty(default =False,)
     def draw(self, context, layout, node, text):
         ChooseDraw(self, context, layout, node, text)
     def draw_color(self, context, node):
         return self.color
+    @classmethod
+    def draw_color_simple(self):
+        return self.color_simple
 
 class VectorScaleSocket(bpy.types.NodeSocketVectorXYZ):
     """Vector Input socket"""
     bl_idname = 'VectorScaleSocket'
-    bl_label = "Float"
+    bl_label = "Vector (Scale)"
     default_value : bpy.props.FloatVectorProperty(
         default = (1.0, 1.0, 1.0),
         update = update_socket,
         subtype='XYZ',)
-    color = cVector
+    color_simple = cVector
+    color : bpy.props.FloatVectorProperty(default=cVector, size=4)
     input : bpy.props.BoolProperty(default =False,)
     def draw(self, context, layout, node, text):
         ChooseDraw(self, context, layout, node, text)
     def draw_color(self, context, node):
         return self.color
+    @classmethod
+    def draw_color_simple(self):
+        return self.color_simple
 
+
+
+
+
+
+
+class KeyframeSocket(NodeSocket):
+    '''Keyframe'''
+    bl_idname = 'KeyframeSocket'
+    bl_label = "Keyframe"
+    color_simple = cKeyframe
+    color : bpy.props.FloatVectorProperty(default=cKeyframe, size=4)
+    input : bpy.props.BoolProperty(default =False, update = update_socket)
+    def init(self):
+        self.display_shape = 'CIRCLE_DOT'
+    def draw(self, context, layout, node, text):
+        ChooseDraw(self, context, layout, node, text)
+    def draw_color(self, context, node):
+        return self.color
+    @classmethod
+    def draw_color_simple(self):
+        return self.color_simple
+
+
+
+
+EnumKeyframeInterpolationType = (('CONSTANT', 'Stepped', 'Stepped'),
+                                 ('LINEAR', "Linear", "Linear"),
+                                 ('BEZIER', "Bezier", "Bezier"),)
+
+
+class EnumKeyframeInterpolationTypeSocket(NodeSocket):
+    '''Keyframe Interpolation Type'''
+    bl_idname = 'EnumKeyframeInterpolationTypeSocket'
+    bl_label = "Keyframe Interpolation Type"
+    default_value :bpy.props.EnumProperty(
+        name="",
+        description="Interpolation",
+        items=EnumKeyframeInterpolationType,
+        default='LINEAR',
+        update = update_socket,)
+    
+    color_simple = cString
+    color : bpy.props.FloatVectorProperty(default=cString, size=4)
+    input : bpy.props.BoolProperty(default =False, update = update_socket)
+    def draw(self, context, layout, node, text):
+        ChooseDraw(self, context, layout, node, text)
+    def draw_color(self, context, node):
+        return self.color
+    @classmethod
+    def draw_color_simple(self):
+        return self.color_simple
+
+
+
+EnumKeyframeBezierHandleType = (('FREE', 'Free', 'Completely independent manually set handle.'),
+                                ('ALIGNED', "Aligned", "Manually set handle with rotation locked together with its pair."),
+                                ('VECTOR', "Vector", "Automatic handles that create straight lines."),
+                                ('AUTO', "Automatic", "Automatic handles that create smooth curves."),
+                                ('AUTO_CLAMPED', "Auto Clamped", "Automatic handles that create smooth curves which only change direction at keyframes."),)
+
+
+class EnumKeyframeBezierHandleTypeSocket(NodeSocket):
+    '''Keyframe Bezier Handle Type'''
+    bl_idname = 'EnumKeyframeBezierHandleTypeSocket'
+    bl_label = "Keyframe Bezier Handle Type"
+    default_value :bpy.props.EnumProperty(
+        name="",
+        description="Handle Type",
+        items=EnumKeyframeBezierHandleType,
+        default='AUTO_CLAMPED',
+        update = update_socket,)
+    
+    color_simple = cString
+    color : bpy.props.FloatVectorProperty(default=cString, size=4)
+    input : bpy.props.BoolProperty(default =False, update = update_socket)
+    def draw(self, context, layout, node, text):
+        ChooseDraw(self, context, layout, node, text)
+    def draw_color(self, context, node):
+        return self.color
+    @classmethod
+    def draw_color_simple(self):
+        return self.color_simple
+
+
+
+
+
+
+
+
+
+
+
+enumFloatOperations = (('ADD', 'Add', 'Add'),
+                      ('SUBTRACT', "Subtract", "Subtract"),
+                      ('MULTIPLY', "Multiply", "Multiply"),
+                      ('DIVIDE', "Divide", "Divide"),
+                      ('POWER', "Power", "Power"),
+                      ('FLOOR_DIVIDE', "Floor Divide", "Floor Divide"),
+                      ('MODULUS', "Modulus", "Modulus"),
+                      ('ABSOLUTE', "Absolute", "Absolute Value"),
+                      ('MAXIMUM', "Maximum", "Maximum"),
+                      ('MINIMUM', "Minimum", "Minimum"),
+                      ('GREATER THAN', "Greater Than", "Greater Than"),
+                      ('LESS THAN', "Less Than", "Less Than"),)
+
+class MathFloatOperation(NodeSocket):
+    """Float Math Operation"""
+    bl_idname = 'MathFloatOperation'
+    bl_label = "Operation"
+    default_value :bpy.props.EnumProperty(
+        name="",
+        description="Operation",
+        items=enumFloatOperations,
+        default='MULTIPLY',
+        update = update_socket,)
+    
+    color_simple = cString
+    color : bpy.props.FloatVectorProperty(default=cString, size=4)
+    input : bpy.props.BoolProperty(default =False,)
+    def draw(self, context, layout, node, text):
+        ChooseDraw(self, context, layout, node, text)
+    def draw_color(self, context, node):
+        return self.color
+    @classmethod
+    def draw_color_simple(self):
+        return self.color_simple
+
+
+
+enumVectorOperations = (('ADD', 'Add', 'Add (Component-wise)'),
+                        ('SUBTRACT', "Subtract", "Subtract (Component-wise)"),
+                        ('MULTIPLY', "Multiply", "Multiply (Component-wise)"),
+                        ('SCALE', "Scale", "Scales vector by input float or average magnitude of input vector's components."),
+                        ('DIVIDE', "Divide", "Divide (Component-wise)"),
+                        ('POWER', "Power", "Power (Component-wise)"),
+                        ('LENGTH', "Length", "Length"),
+                        ('CROSS', "Cross Product", "Cross product of A X B"),
+                        ('NORMALIZE', "Normalize", "Returns a normalized vector."),
+                        ('DOT', "Dot Product", "Dot product of A . B"),)
+
+
+       
+class MathVectorOperation(NodeSocket):
+    """Vector Math Operation"""
+    bl_idname = 'MathVectorOperation'
+    bl_label = "Operation"
+    default_value :bpy.props.EnumProperty(
+        name="",
+        description="Operation",
+        items=enumVectorOperations,
+        default='MULTIPLY',
+        update = update_socket,)
+    
+    color_simple = cString
+    color : bpy.props.FloatVectorProperty(default=cString, size=4)
+    input : bpy.props.BoolProperty(default =False,)
+    def draw(self, context, layout, node, text):
+        ChooseDraw(self, context, layout, node, text)
+    def draw_color(self, context, node):
+        return self.color
+    @classmethod
+    def draw_color_simple(self):
+        return self.color_simple
+
+
+enumMatrixTransform  = (('TRANSLATE', 'Translate', 'Translate'),
+                        ('ROTATE_AXIS_ANGLE', "Rotate (Axis-angle)", "Rotates a number of radians around an axis"),
+                        # ('ROTATE_EULER', "Rotate (Euler)", "Euler Rotation"),
+                        # ('ROTATE_QUATERNION', "Rotate (Quaternion)", "Quaternion Rotation"),
+                        ('SCALE', "Scale", "Scale"),)
+
+
+       
+class MatrixTransformOperation(NodeSocket):
+    """Matrix Transform Operation"""
+    bl_idname = 'MatrixTransformOperation'
+    bl_label = "Operation"
+    default_value :bpy.props.EnumProperty(
+        name="",
+        description="Operation",
+        items=enumMatrixTransform,
+        default='TRANSLATE',
+        update = update_socket,)
+    
+    color_simple = cString
+    color : bpy.props.FloatVectorProperty(default=cString, size=4)
+    input : bpy.props.BoolProperty(default =False,)
+    def draw(self, context, layout, node, text):
+        ChooseDraw(self, context, layout, node, text)
+    def draw_color(self, context, node):
+        return self.color
+    @classmethod
+    def draw_color_simple(self):
+        return self.color_simple
+
+
+
+
+enumIntOperations =  (('ADD', 'Add', 'Add'),
+                      ('SUBTRACT', "Subtract", "Subtract"),
+                      ('MULTIPLY', "Multiply", "Multiply"),
+                      ('FLOOR_DIVIDE', "Floor Divide", "Floor Divide"),
+                      ('POWER', "Power", "Power"),
+                      ('MODULUS', "Modulus", "Modulus"),
+                      ('ABSOLUTE', "Absolute", "Absolute Value"),
+                      ('MAXIMUM', "Maximum", "Maximum"),
+                      ('MINIMUM', "Minimum", "Minimum"),
+                      ('GREATER THAN', "Greater Than", "Greater Than"),
+                      ('LESS THAN', "Less Than", "Less Than"),)
+
+class MathIntOperation(NodeSocket):
+    """Int Math Operation"""
+    bl_idname = 'MathIntOperation'
+    bl_label = "Operation"
+    default_value :bpy.props.EnumProperty(
+        name="",
+        description="Operation",
+        items=enumIntOperations,
+        default='MULTIPLY',
+        update = update_socket,)
+    
+    color_simple = cString
+    color : bpy.props.FloatVectorProperty(default=cString, size=4)
+    input : bpy.props.BoolProperty(default =False,)
+    def draw(self, context, layout, node, text):
+        ChooseDraw(self, context, layout, node, text)
+    def draw_color(self, context, node):
+        return self.color
+    @classmethod
+    def draw_color_simple(self):
+        return self.color_simple
+
+
+class WildcardSocket(NodeSocket):
+    """Some kind of node socket lol I donno"""
+    bl_idname = 'WildcardSocket'
+    bl_label = ""
+    color_simple = (0.0,0.0,0.0,0.0)
+    color : bpy.props.FloatVectorProperty(default=(0.0,0.0,0.0,0.0), size=4)
+    input : bpy.props.BoolProperty(default =False,)
+        
+    def draw(self, context, layout, node, text):
+        ChooseDraw(self, context, layout, node, text)
+    def draw_color(self, context, node):
+        return self.color
+    @classmethod
+    def draw_color_simple(self):
+        return self.color_simple
 

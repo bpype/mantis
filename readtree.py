@@ -1,256 +1,17 @@
 from .utilities import prRed, prGreen, prPurple, prWhite, prOrange, \
                         wrapRed, wrapGreen, wrapPurple, wrapWhite, wrapOrange
+from .utilities import get_node_prototype, class_for_mantis_prototype_node, \
+                        gen_nc_input_for_data
 
-# what in the cuss is this horrible abomination??
-def class_for_mantis_prototype_node(prototype_node):
-    """ This is a class which returns a class to instantiate for
-        the given prototype node."""
-    #from .node_container_classes import TellClasses
-    from . import xForm_containers, link_containers, misc_containers, primitives_containers, deformer_containers
-    classes = {}
-    for module in [xForm_containers, link_containers, misc_containers, primitives_containers, deformer_containers]:
-        for cls in module.TellClasses():
-            classes[cls.__name__] = cls
-    # I could probably do a string.replace() here
-    # But I actually think this is a bad idea since I might not
-    #  want to use this name convention in the future
-    #  this is easy enough for now, may refactor.
-    #
-    # kek, turns out it was completely friggin' inconsistent already
-    if prototype_node.bl_idname == 'xFormRootNode':
-        return classes["xFormRoot"]
-    elif prototype_node.bl_idname == 'xFormArmatureNode':
-        return classes["xFormArmature"]
-    elif prototype_node.bl_idname == 'xFormBoneNode':
-        return classes["xFormBone"]
-    elif prototype_node.bl_idname == 'xFormGeometryObject':
-        return classes["xFormGeometryObject"]
-    elif prototype_node.bl_idname == 'linkInherit':
-        return classes["LinkInherit"]
-        # BAD need to fix the above, bl_idname is not consistent
-    # Copy's
-    elif prototype_node.bl_idname == 'LinkCopyLocation':
-        return classes["LinkCopyLocation"] # also bad
-    elif prototype_node.bl_idname == 'LinkCopyRotation':
-        return classes["LinkCopyRotation"]
-    elif prototype_node.bl_idname == 'LinkCopyScale':
-        return classes["LinkCopyScale"]
-    elif prototype_node.bl_idname == 'LinkCopyTransforms':
-        return classes["LinkCopyTransforms"]
-    elif prototype_node.bl_idname == 'LinkTransformation':
-        return classes["LinkTransformation"]
-    # Limits
-    elif prototype_node.bl_idname == 'LinkLimitLocation':
-        return classes["LinkLimitLocation"]
-    elif prototype_node.bl_idname == 'LinkLimitRotation':
-        return classes["LinkLimitRotation"]
-    elif prototype_node.bl_idname == 'LinkLimitScale':
-        return classes["LinkLimitScale"]
-    elif prototype_node.bl_idname == 'LinkLimitDistance':
-        return classes["LinkLimitDistance"]
-    # tracking
-    elif prototype_node.bl_idname == 'LinkStretchTo':
-        return classes["LinkStretchTo"]
-    elif prototype_node.bl_idname == 'LinkDampedTrack':
-        return classes["LinkDampedTrack"]
-    elif prototype_node.bl_idname == 'LinkLockedTrack':
-        return classes["LinkLockedTrack"]
-    elif prototype_node.bl_idname == 'LinkTrackTo':
-        return classes["LinkTrackTo"]
-    # misc
-    elif prototype_node.bl_idname == 'LinkInheritConstraint':
-        return classes["LinkInheritConstraint"]
-    # IK
-    elif prototype_node.bl_idname == 'LinkInverseKinematics':
-        return classes["LinkInverseKinematics"]
-    elif prototype_node.bl_idname == 'LinkSplineIK':
-        return classes["LinkSplineIK"]
-    # utilities
-    elif prototype_node.bl_idname == 'InputFloatNode':
-        return classes["InputFloat"]
-    elif prototype_node.bl_idname == 'InputVectorNode':
-        return classes["InputVector"]
-    elif prototype_node.bl_idname == 'InputBooleanNode':
-        return classes["InputBoolean"]
-    elif prototype_node.bl_idname == 'InputBooleanThreeTupleNode':
-        return classes["InputBooleanThreeTuple"]
-    elif prototype_node.bl_idname == 'InputRotationOrderNode':
-        return classes["InputRotationOrder"]
-    elif prototype_node.bl_idname == 'InputTransformSpaceNode':
-        return classes["InputTransformSpace"]
-    elif prototype_node.bl_idname == 'InputStringNode':
-        return classes["InputString"]
-    elif prototype_node.bl_idname == 'InputQuaternionNode':
-        return classes["InputQuaternion"]
-    elif prototype_node.bl_idname == 'InputQuaternionNodeAA':
-        return classes["InputQuaternionAA"]
-    elif prototype_node.bl_idname == 'InputMatrixNode':
-        return classes["InputMatrix"]
-    elif prototype_node.bl_idname == 'MetaRigMatrixNode':
-        return classes["InputMatrix"]
-    elif prototype_node.bl_idname == 'InputLayerMaskNode':
-        return classes["InputLayerMask"]
-    # geometry
-    elif prototype_node.bl_idname == 'GeometryCirclePrimitive':
-        return classes["CirclePrimitive"]
-    # Deformers:
-    elif prototype_node.bl_idname == 'DeformerArmature':
-        return classes["DeformerArmature"]
-        
-    # every node before this point is not guarenteed to follow the pattern
-    # but every node not checked above does follow the pattern.
     
-    try:
-        return classes[ prototype_node.bl_idname ]
-    except KeyError:
-        pass
-    
-    if prototype_node.bl_idname in [ 
-                                    "NodeReroute",
-                                    "NodeGroupInput",
-                                    "NodeGroupOutput",
-                                    "MantisNodeGroup",
-                                    "NodeFrame",
-                                   ]:
-           return None
-    
-    prRed(prototype_node.bl_idname)
-    raise RuntimeError("Failed to create node container for: %s" % prototype_node.bl_idname)
-    return None
 
-# This is really, really stupid HACK
-def gen_nc_input_for_data(socket):
-    # Class List #TODO deduplicate
-    from . import xForm_containers, link_containers, misc_containers, primitives_containers, deformer_containers
-    classes = {}
-    for module in [xForm_containers, link_containers, misc_containers, primitives_containers, deformer_containers]:
-        for cls in module.TellClasses():
-            classes[cls.__name__] = cls
-    #
-    socket_class_map = {
-                        "MatrixSocket"                      : classes["InputMatrix"],
-                        "xFormSocket"                       : None,
-                        "xFormMultiSocket"                  : None,
-                        "RelationshipSocket"                : classes["xFormRoot"], # world in
-                        "DeformerSocket"                    : classes["xFormRoot"], # world in
-                        "GeometrySocket"                    : classes["InputExistingGeometryData"],
-                        "EnableSocket"                      : classes["InputBoolean"],
-                        "HideSocket"                        : classes["InputBoolean"],
-                        #
-                        "DriverSocket"                      : None,
-                        "DriverVariableSocket"              : None, 
-                        "FCurveSocket"                      : None, 
-                        "KeyframeSocket"                    : None,
-                        "LayerMaskInputSocket"              : classes["InputLayerMask"],
-                        "LayerMaskSocket"                   : classes["InputLayerMask"],
-                        #
-                        "xFormParameterSocket"              : None,
-                        "ParameterBoolSocket"               : classes["InputBoolean"],
-                        "ParameterIntSocket"                : classes["InputFloat"],  #TODO: make an Int node for this
-                        "ParameterFloatSocket"              : classes["InputFloat"],
-                        "ParameterVectorSocket"             : classes["InputVector"],
-                        "ParameterStringSocket"             : classes["InputString"],
-                        #
-                        "TransformSpaceSocket"              : classes["InputTransformSpace"],
-                        "BooleanSocket"                     : classes["InputBoolean"],
-                        "BooleanThreeTupleSocket"           : classes["InputBooleanThreeTuple"],
-                        "RotationOrderSocket"               : classes["InputRotationOrder"],
-                        "QuaternionSocket"                  : classes["InputQuaternion"],
-                        "QuaternionSocketAA"                : classes["InputQuaternionAA"],
-                        "IntSocket"                         : classes["InputFloat"],
-                        "StringSocket"                      : classes["InputString"],
-                        #
-                        "BoolUpdateParentNode"              : classes["InputBoolean"],
-                        "IKChainLengthSocket"               : classes["InputFloat"],
-                        "EnumInheritScale"                  : classes["InputString"],
-                        "EnumRotationMix"                   : classes["InputString"],
-                        "EnumRotationMixCopyTransforms"     : classes["InputString"],
-                        "EnumMaintainVolumeStretchTo"       : classes["InputString"],
-                        "EnumRotationStretchTo"             : classes["InputString"],
-                        "EnumTrackAxis"                     : classes["InputString"],
-                        "EnumUpAxis"                        : classes["InputString"],
-                        "EnumLockAxis"                      : classes["InputString"],
-                        "EnumLimitMode"                     : classes["InputString"],
-                        "EnumYScaleMode"                    : classes["InputString"],
-                        "EnumXZScaleMode"                   : classes["InputString"],
-                        # Deformers
-                        "EnumSkinning"                      : classes["InputString"],
-                        #
-                        "FloatSocket"                       : classes["InputFloat"],
-                        "FloatFactorSocket"                 : classes["InputFloat"],
-                        "FloatPositiveSocket"               : classes["InputFloat"],
-                        "FloatAngleSocket"                  : classes["InputFloat"],
-                        "VectorSocket"                      : classes["InputVector"],
-                        "VectorEulerSocket"                 : classes["InputVector"],
-                        "VectorTranslationSocket"           : classes["InputVector"],
-                        "VectorScaleSocket"                 : classes["InputVector"],
-                        # Drivers             
-                        "EnumDriverVariableType"            : classes["InputString"],
-                        "EnumDriverVariableEvaluationSpace" : classes["InputString"],
-                        "EnumDriverRotationMode"            : classes["InputString"],
-                        "EnumDriverType"                    : classes["InputString"],
-                       }
-    return socket_class_map.get(socket.bl_idname, None)
-
-class DummyLink:
-    #gonna use this for faking links to keep the interface consistent
-    def __init__(self, from_socket, to_socket, nc_from=None, nc_to=None, original_from=None):
-        self.from_socket = from_socket
-        self.to_socket = to_socket
-        self.nc_from = nc_from
-        self.nc_to = nc_to
-        if (original_from):
-            self.original_from = original_from
-        else:
-            self.original_from = self.from_socket
-    def __repr__(self):
-        return(self.nc_from.__repr__()+":"+self.from_socket.name + " -> " + self.nc_to.__repr__()+":"+self.to_socket.name)
-
-# A fuction for getting to the end of a Reroute.
-def socket_seek(start_link, links):
-    link = start_link
-    while(link.from_socket):
-        for newlink in links:
-            if link.from_socket.node.inputs:
-                if newlink.to_socket == link.from_socket.node.inputs[0]:
-                    link=newlink; break
-        else:
-            break
-    return link.from_socket
-    
-def clear_reroutes(links):
-    kept_links, rerouted_starts = [], []
-    rerouted = []
-    all_links = links.copy()
-    while(all_links):
-        link = all_links.pop()
-        to_cls = link.to_socket.node.bl_idname
-        from_cls = link.from_socket.node.bl_idname
-        reroute_classes = ["NodeReroute"]
-        if (to_cls in reroute_classes and
-            from_cls in reroute_classes):
-                rerouted.append(link)
-        elif (to_cls in reroute_classes and not
-            from_cls in reroute_classes):
-                rerouted.append(link)
-        elif (from_cls in reroute_classes and not
-            to_cls in reroute_classes):
-                rerouted_starts.append(link)
-        else:
-            kept_links.append(link)
-    for start in rerouted_starts:
-        from_socket = socket_seek(start, rerouted)
-        new_link = DummyLink(from_socket=from_socket, to_socket=start.to_socket, nc_from=None, nc_to=None)
-        kept_links.append(new_link)
-    return kept_links
-
-
+# BAD NAMES ahead, as these have nothing to do with NodeReroute nodes.
 def reroute_common(nc, nc_to, all_nc):
     # we need to do this: go  to the to-node
     # then reroute the link in the to_node all the way to the beginning
     # so that the number of links in "real" nodes is unchanged
     # then the links in the dummy nodes need to be deleted
-    watch=False
+    # watch=False
     # if nc.signature[-1] == 'NodeGroupOutput': watch=True
     for inp_name, inp in nc.inputs.items():
         # assume each input socket only has one input for now
@@ -261,10 +22,11 @@ def reroute_common(nc, nc_to, all_nc):
                 from_socket = in_link.from_socket
                 links = []
                 from_links = from_nc.outputs[from_socket].links.copy()
-                while(from_links):
+                while(from_links): # This is a weird way to do this HACK
                     from_link = from_links.pop()
                     if from_link == in_link:
-                        continue # DELETE the dummy node link
+                        from_link.die()
+                        continue # DELETE the dummy node link 
                     links.append(from_link)
                 from_nc.outputs[from_socket].links = links
                 down = nc_to.outputs[inp_name]
@@ -275,156 +37,34 @@ def reroute_common(nc, nc_to, all_nc):
                     if hasattr(downlink.to_node, "reroute_links"):
                         # Recurse!
                         downlink.to_node.reroute_links(downlink.to_node, all_nc)
-        
-
+                in_link.die()
 
 def reroute_links_grp(nc, all_nc):
-    nc_to = all_nc.get( ( *nc.signature, "NodeGroupInput") )
-    reroute_common(nc, nc_to, all_nc)
+    if (nc_to := all_nc.get( ( *nc.signature, "NodeGroupInput") )):
+        reroute_common(nc, nc_to, all_nc)
+    else:
+        raise RuntimeError("Cannot read graph for some goshblamed son of a reason")
 
 def reroute_links_grpout(nc, all_nc):
-    nc_to = all_nc.get( ( *nc.signature[:-1],) )
-    reroute_common(nc, nc_to, all_nc)
+    if (nc_to := all_nc.get( ( *nc.signature[:-1],) )):
+        reroute_common(nc, nc_to, all_nc)
+    else:
+        raise RuntimeError("error leaving a node group (maybe you are running the tree from inside a node group?)... TODO: this should still work")
 
+def reroute_links_grpin(nc, all_nc):
+    pass
 
-def data_from_tree(base_tree, tree_path = [None], dummy_nodes = {}, all_nc = {}):
-    from .node_container_common import NodeSocket
-    from .internal_containers import DummyNode
-    nc_dict = {}
-    tree_path_names = [tree.name for tree in tree_path if hasattr(tree, "name")]
-    all_child_ng = []
-    tree = base_tree
-    if tree_path[-1]:
-        tree = tree_path[-1].node_tree
-    
-    # Start by looking through the nodes and making nc's where possible
-    #  store the groups, we'll process them soon.
-    for np in tree.nodes:
-        if (nc_cls := class_for_mantis_prototype_node(np)):
-            nc = nc_cls( sig := (None, *tree_path_names, np.name) , base_tree)
-            nc_dict[sig] = nc; all_nc[sig] = nc
-        elif np.bl_idname in ["NodeGroupInput", "NodeGroupOutput"]: # make a Dummy Node
-            # we only want ONE dummy in/out per tree_path, so use the bl_idname
-            sig = (None, *tree_path_names, np.bl_idname)
-            if nc_dict.get(sig):
-                continue
-            nc = DummyNode( signature=sig , base_tree=base_tree, prototype=np )
-            nc_dict[sig] = nc; all_nc[sig] = nc#; dummy_nodes[sig] = nc
-            # dummy_nodes[sig]=nc
-            if np.bl_idname in ["NodeGroupOutput"]:
-                nc.reroute_links = reroute_links_grpout
-                dummy_nodes[sig]=nc
-        elif np.bl_idname in  ["MantisNodeGroup"]:
-            # if we do this here, no duplicate links.
-            nc = DummyNode( signature= (sig := (None, *tree_path_names, np.name) ), base_tree=base_tree, prototype=np )
-            nc_dict[sig] = nc; all_nc[sig] = nc; dummy_nodes[sig] = nc
-            nc.reroute_links = reroute_links_grp
-            all_child_ng.append(np)
-        # else:
-            # prRed(np.bl_idname)
-    
-
-    # Then deal with the links in the current tree and the held_nodes.
-    kept_links = clear_reroutes(list(tree.links))
-    
-    for link in kept_links:
-        from_name = link.from_socket.node.name
-        to_name = link.to_socket.node.name
-        if link.from_socket.node.bl_idname in ["NodeGroupInput", "NodeGroupOutput"]:
-            from_name = link.from_socket.node.bl_idname
-        if link.to_socket.node.bl_idname in ["NodeGroupInput", "NodeGroupOutput"]:
-            to_name = link.to_socket.node.bl_idname
-        if link.to_socket.node.bl_idname in ["MantisNodeGroup"]:
-            continue
-        
-        nc_from = nc_dict.get( tuple([None] + tree_path_names + [from_name]) )
-        nc_to = nc_dict.get( tuple([None] + tree_path_names + [to_name]) )
-        
-        if (nc_from and nc_to):
-            from_s, to_s = link.from_socket.name, link.to_socket.name
-            if nc_to.node_type == "DUMMY": to_s = link.to_socket.identifier
-            if nc_from.node_type == "DUMMY": from_s = link.from_socket.identifier
-            connection = nc_from.outputs[from_s].connect(node=nc_to, socket=to_s)
-        else:
-            raise RuntimeError(wrapRed("Link not connected: %s -> %s in tree %s" % (from_name, to_name, tree_path_names[-1])))
-    nc_from = None; nc_to = None #clear them, since we use the same variable names again
-    
-    
-    # Now, descend into the Node Group
-    for ng in  all_child_ng:
-        nc_to = nc_dict[(None, *tree_path_names, ng.name)]
-        for inp in ng.inputs:
-            # nc_to = nc_dict.get((None, *tree_path_names, ng.name))
-            to_s = inp.identifier
-            if not inp.is_linked:
-                nc_cls = gen_nc_input_for_data(inp)
-                print (inp)
-                prRed(nc_cls)
-                # at this point we also need to get the "Dummy Node" for
-                #  this node group.
-                if (nc_cls):
-                    sig = ("MANTIS_AUTOGENERATED", *tree_path_names, ng.name, inp.name, inp.identifier)
-                    nc_from = nc_cls(sig, base_tree)
-                    # HACK HACK HACK
-                    nc_from.inputs = {}
-                    nc_from.outputs = {inp.name:NodeSocket(name = inp.name, node=nc_from)}
-                    from .node_container_common import get_socket_value
-                    nc_from.parameters = {inp.name:get_socket_value(inp)}
-                    # HACK HACK HACK
-                    nc_dict[sig] = nc_from; all_nc[sig] = nc_from
-                    from_s = inp.name
-                else:
-                    prRed("No available auto-generated class for input %s:%s:%s" % (tree_path, ng.name, inp.name))
-            else: # We need to handle the incoming connections
-                for link in inp.links: #Usually there will only be 1
-                    from_socket = link.from_socket
-                    if (link.from_socket.node.bl_idname == "NodeReroute"):
-                        from_socket = socket_seek(link, list(tree.links))
-                    sig =  tuple( [None] + tree_path_names +[from_socket.node.name])
-                    
-                    from_s = from_socket.name
-                    if (link.from_socket.node.bl_idname in ["NodeGroupInput"]):
-                        sig =  tuple( [None] + tree_path_names +[from_socket.node.bl_idname])
-                        from_s = from_socket.identifier
-                    nc_from = nc_dict.get(sig)
-            # this can be None. Why?
-            prRed (sig)
-            nc_from.outputs[from_s].connect(node=nc_to, socket=to_s)
-            nc_from = None
-        nc_to = None
-        # Recurse!
-        data_from_tree(base_tree, tree_path+[ng], dummy_nodes, all_nc)
-    return dummy_nodes, all_nc
-
-
-def establish_node_connections(nc):
-    # This is ugly bc it adds parameters to an object
-    #  but it's kinda necesary to do it after the fact; and it
-    #  wouldn't be ugly if I just initialized the parameter elsewhere
-    connections, hierarchy_connections = [], []
-    for socket in nc.outputs.values():
-        for link in socket.links:
-            connections.append(link.to_node)
-            # this may catch custom properties... too bad.
-            if link.from_socket in from_name_filter:
-                continue
-            if link.to_socket in to_name_filter:
-                continue
-            hierarchy_connections.append(link.to_node)
-    nc.connected_to = connections
-    nc.hierarchy_connections = hierarchy_connections
-    if nc.node_type == 'DUMMY':
-        nc.hierarchy_connections = []
-
-
+# FIXME I don't think these signatures are unique.
 def insert_lazy_parents(nc):
     from .link_containers import LinkInherit
+    from .xForm_containers import xFormRoot, xFormArmature
     from .node_container_common import NodeLink
     inherit_nc = None
     if nc.inputs["Relationship"].is_connected:
         link = nc.inputs["Relationship"].links[0]
+        # print(nc)
         from_nc = link.from_node
-        if from_nc.__class__.__name__ == "xFormRoot":
+        if isinstance(from_nc, xFormRoot):
             return
         if from_nc.node_type in ["XFORM"] and link.from_socket in ["xForm Out"]:
             inherit_nc = LinkInherit(("MANTIS_AUTOGENERATED", *nc.signature[1:], "LAZY_INHERIT"), nc.base_tree)
@@ -451,37 +91,16 @@ def insert_lazy_parents(nc):
                                      "Connected":False,
                                     }
             # because the from node may have already been done.
-            establish_node_connections(from_nc)
-            establish_node_connections(inherit_nc)
+            init_connections(from_nc)
+            init_dependencies(from_nc)
+            init_connections(inherit_nc)
+            init_dependencies(inherit_nc)
             # and the inherit node never was
+    # this doesn't seem to be necessary or helpful.
+    # elif isinstance(nc, xFormArmature):
+    #         inherit_nc = xFormRoot(("MANTIS_AUTOGENERATED", *nc.signature[1:], "LAZY_ROOT"), nc.base_tree)
+    #         init_connections(inherit_nc) # we need to do this here because parse_tree expects a link not a xForm
     return inherit_nc
-
-
-def parse_tree(base_tree, do_reroute=True):
-    dummy_nodes, all_nc =  data_from_tree(base_tree, tree_path = [None], dummy_nodes = {}, all_nc = {})
-    if do_reroute:
-        for sig, dummy in dummy_nodes.items():
-            if (hasattr(dummy, "reroute_links")):
-                dummy.reroute_links(dummy, all_nc)
-        
-    
-    all_nc = list(all_nc.values()).copy()
-    kept_nc = {}
-    while (all_nc):
-        nc = all_nc.pop()
-        nc.fill_parameters()
-        if (nc.node_type in ['XFORM']) and ("Relationship" in nc.inputs.keys()):
-            new_nc = insert_lazy_parents(nc)
-            if new_nc:
-                kept_nc[new_nc.signature]=new_nc
-        establish_node_connections(nc)
-        if nc.connected_to == 0:
-            continue
-        if nc.node_type == 'DUMMY' and do_reroute:
-            continue
-        kept_nc[nc.signature]=nc
-    # return {}
-    return kept_nc
 
 
 from_name_filter = ["Driver", ]
@@ -493,6 +112,411 @@ to_name_filter = [
                  ]
 
 
+# *** # *** # *** # *** # *** # *** # *** # *** # *** # *** # *** # *** # *** # *** #
+#                                  DATA FROM NODES                                  #
+# *** # *** # *** # *** # *** # *** # *** # *** # *** # *** # *** # *** # *** # *** #
+
+from .base_definitions import replace_types
+
+# TODO: investigate whether I can set the properties in the downstream nodes directly.
+#       I am doing this in Schema Solver and it seems to work quite efficiently.
+def make_connections_to_ng_dummy(base_tree, tree_path_names, local_nc, all_nc, np):
+    from .node_container_common import NodeSocket
+    nc_to = local_nc[(None, *tree_path_names, np.name)]
+    for inp in np.inputs:
+        nc_from = None
+        if inp.bl_idname in  ['WildcardSocket']:
+            continue # it isn't a real input so I don't think it is good to check it.
+        to_s = inp.identifier
+        if not inp.is_linked: # make an autogenerated NC for the inputs of the group node
+            from .node_container_common import get_socket_value
+            nc_cls = gen_nc_input_for_data(inp)
+            if (nc_cls):
+                sig = ("MANTIS_AUTOGENERATED", *tree_path_names, np.name, inp.name, inp.identifier)
+                nc_from = nc_cls(sig, base_tree)
+                # ugly! maybe even a HACK!
+                nc_from.inputs = {}
+                nc_from.outputs = {inp.name:NodeSocket(name = inp.name, node=nc_from)}
+                nc_from.parameters = {inp.name:get_socket_value(inp)}
+                # 
+                local_nc[sig] = nc_from; all_nc[sig] = nc_from
+                from_s = inp.name
+            else: # should this be an error instead?
+                prRed("No available auto-generated class for input", *tree_path_names, np.name, inp.name)
+            nc_from.outputs[from_s].connect(node=nc_to, socket=to_s)
+
+def gen_node_containers(base_tree, current_tree, tree_path_names, all_nc, local_nc, dummy_nodes, group_nodes, schema_nodes ):
+    from .internal_containers import DummyNode
+    from .base_definitions import SchemaNode
+    for np in current_tree.nodes:
+        # TODO: find out why I had to add this in. these should be taken care of already? BUG
+        if np.bl_idname in ["NodeFrame", "NodeReroute"]:
+            continue # not a Mantis Node
+        if (nc_cls := class_for_mantis_prototype_node(np)):
+            sig = (None, *tree_path_names, np.name)
+            # but I will probably choose to handle this elsewhere
+            # if isinstance(np, SchemaNode):
+            #     continue # we won't do this one here.
+            if np.bl_idname in replace_types:
+                # prPurple(np.bl_idname)
+                sig = (None, *tree_path_names, np.bl_idname)
+                if local_nc.get(sig):
+                    continue # already made
+            nc = nc_cls( sig , base_tree)
+            local_nc[sig] = nc; all_nc[sig] = nc
+            # if np.bl_idname in ['UtilityMatricesFromCurve', 'UtilityBreakArray']:
+            #     schema_nodes[sig]=nc
+        elif np.bl_idname in ["NodeGroupInput", "NodeGroupOutput"]: # make a Dummy Node
+            # we only want ONE dummy in/out per tree_path, so use the bl_idname
+            sig = (None, *tree_path_names, np.bl_idname)
+            if not local_nc.get(sig):
+                nc = DummyNode( signature=sig , base_tree=base_tree, prototype=np )
+                local_nc[sig] = nc; all_nc[sig] = nc; dummy_nodes[sig] = nc
+                if np.bl_idname in ["NodeGroupOutput"]:
+                    nc.reroute_links = reroute_links_grpout
+                if np.bl_idname in ["NodeGroupInput"]:
+                    nc.reroute_links = reroute_links_grpin
+            # else:
+            #     nc = local_nc.get(sig)
+        elif np.bl_idname in  ["MantisNodeGroup", "MantisSchemaGroup"]:
+            nc = DummyNode( signature= (sig := (None, *tree_path_names, np.name) ), base_tree=base_tree, prototype=np )
+            local_nc[sig] = nc; all_nc[sig] = nc; dummy_nodes[sig] = nc
+            make_connections_to_ng_dummy(base_tree, tree_path_names, local_nc, all_nc, np)
+            if np.bl_idname == "MantisNodeGroup":
+                group_nodes.append(nc)
+                nc.reroute_links = reroute_links_grp
+            else:
+                group_nodes.append(nc)
+                schema_nodes[sig] = nc
+        else:
+            nc = None
+            prRed(f"Can't make nc for.. {np.bl_idname}")
+        # this should be done at init
+        if nc.signature[0] not in ['MANTIS_AUTOGENERATED'] and nc.node_type not in ['SCHEMA', 'DUMMY', 'DUMMY_SCHEMA']:
+            nc.fill_parameters()
+
+def data_from_tree(base_tree, tree_path, dummy_nodes, all_nc, all_schema):
+    # TODO: it should be realtively easy to make this use a while loop instead of recursion.
+    local_nc, group_nodes = {}, []
+    tree_path_names = [tree.name for tree in tree_path if hasattr(tree, "name")]
+    if tree_path[-1]:
+        current_tree = tree_path[-1].node_tree
+    else:
+        current_tree = base_tree
+    #
+    from .utilities import clear_reroutes
+    links = clear_reroutes(list(current_tree.links))
+    gen_node_containers(base_tree, current_tree, tree_path_names, all_nc, local_nc, dummy_nodes, group_nodes, all_schema)
+    
+    from .utilities import link_node_containers
+    for link in links:
+        link_node_containers((None, *tree_path_names), link, local_nc)
+    # Now, descend into the Node Groups and recurse
+    for nc in group_nodes:
+        # ng = get_node_prototype(nc.signature, base_tree)
+        data_from_tree(base_tree, tree_path+[nc.prototype], dummy_nodes, all_nc, all_schema)
+    return dummy_nodes, all_nc, all_schema
+
+from .utilities import check_and_add_root, init_connections, init_dependencies, init_schema_dependencies
+
+
+def delete_nc(nc):
+    return
+    # this doesn't seem to work actually
+    for socket in nc.inputs.values():
+        for l in socket.links:
+            if l is not None:
+                l.__del__()
+    for socket in nc.outputs.values():
+        for l in socket.links:
+            if l is not None:
+                l.__del__()
+
+def solve_schema_to_tree(nc, all_nc, roots=[]):
+    from .utilities import get_node_prototype
+    np = get_node_prototype(nc.signature, nc.base_tree)
+    # if not hasattr(np, 'node_tree'):
+    #     nc.bPrepare()
+    #     nc.prepared=True
+    #     return {}
+    from .schema_solve import SchemaSolver
+    length = nc.evaluate_input("Schema Length")
+
+    tree = np.node_tree
+    prOrange(f"Expanding schema {tree.name} in node {nc} with length {length}.")
+
+    solver = SchemaSolver(nc, all_nc, np)
+    solved_nodes = solver.solve(length)
+    # prGreen(f"Finished solving schema {tree.name} in node {nc}.")
+    prWhite(f"Schema declared {len(solved_nodes)} nodes.")
+    nc.prepared = True
+
+    # TODO this should be handled by the schema's finalize() function
+    del_me = []
+    for k, v in all_nc.items():
+        # delete all the schema's internal nodes. The links have already been deleted by the solver.
+        if v.signature[0] not in ['MANTIS_AUTOGENERATED'] and nc.signature[-1] in k:
+            delete_nc(v)
+            del_me.append(k)
+    for k in del_me:
+        del all_nc[k]
+    
+    for k,v in solved_nodes.items():
+        all_nc[k]=v
+        init_connections(v)
+        check_and_add_root(v, roots, include_non_hierarchy=True)
+    # end TODO
+
+    return solved_nodes
+
+# *** # *** # *** # *** # *** # *** # *** # *** # *** # *** # *** # *** # *** # *** #
+#                                  PARSE NODE TREE                                  #
+# *** # *** # *** # *** # *** # *** # *** # *** # *** # *** # *** # *** # *** # *** #
+
+def parse_tree(base_tree):
+    from uuid import uuid4 # do this here?
+    base_tree.execution_id = uuid4().__str__() # set this, it may be used by nodes during execution
+
+    # annoyingly I have to pass in values for all of the dicts because if I initialize them in the function call
+    #  then they stick around because the function definition inits them once and keeps a reference
+    # so instead I have to supply them to avoid ugly code or bugs elsewhere
+    # it's REALLY confusing when you run into this sort of problem. So it warrants four entire lines of comments!         
+    import time
+
+    data_start_time = time.time()
+
+    dummy_nodes, all_nc, all_schema =  data_from_tree(base_tree, tree_path = [None], dummy_nodes = {}, all_nc = {}, all_schema={})
+
+    # return
+
+    prGreen(f"Pulling data from tree took {time.time() - data_start_time} seconds")
+
+    for sig, dummy in dummy_nodes.items():
+        if (hasattr(dummy, "reroute_links")):
+            dummy.reroute_links(dummy, all_nc)
+    
+    # TODO
+    # MODIFY BELOW to use hierarchy_dependencies instead
+    # SCHEMA DUMMY nodes will need to gather the hierarchy and non-hierarchy dependencies
+    # so SCHEMA DUMMY will not make their dependencies all hierarchy
+    # since they will need to be able to send drivers and such   
+    start_time = time.time()
+
+
+    sig_check = (None, 'Node Group.001', 'switch_thigh')
+    roots = []
+    arrays = []
+    from .misc_containers import UtilityArrayGet
+    for nc in all_nc.values():
+        # clean up the groups
+        if nc.node_type in ["DUMMY"]:
+            if nc.prototype.bl_idname in ("MantisNodeGroup", "NodeGroupOutput"):
+                continue
+        
+        from .base_definitions import from_name_filter, to_name_filter
+        def detect_hierarchy_link(from_node, from_socket, to_node, to_socket,):
+            if to_node.node_type in ['DUMMY_SCHEMA', 'SCHEMA']:
+                prRed('a")')
+                return False
+            if (from_socket in from_name_filter) or (to_socket in to_name_filter):
+                prOrange('b')
+                return False
+            return True
+
+        init_dependencies(nc)
+        init_connections(nc)
+        check_and_add_root(nc, roots, include_non_hierarchy=True)
+        if isinstance(nc, UtilityArrayGet):
+            arrays.append(nc)
+
+    from .utilities import get_all_dependencies
+    from collections import deque
+    unsolved_schema = deque()
+    solve_only_these = []; solve_only_these.extend(list(all_schema.values()))
+    # ignore_these = []
+    for schema in all_schema.values():
+        # so basically we need to check every parent node if it is a schema
+        # this is a fairly slapdash solution but it works and I won't change it
+        for i in range(len(schema.signature)-1): # -1, we don't want to check this node, obviously
+            if parent := all_schema.get(schema.signature[:i+1]):
+                # ignore_these.append(schema.signature)
+                solve_only_these.remove(schema)
+                break
+        else:
+            init_schema_dependencies(schema, all_nc)
+            solve_only_these.extend(get_all_dependencies(schema))
+            unsolved_schema.append(schema)
+    for array in arrays:
+        solve_only_these.extend(get_all_dependencies(array))
+    solve_only_these.extend(arrays)
+    schema_solve_done = set()
+
+    solve_only_these = set(solve_only_these)
+
+
+    if False:
+        # how does a three-deep while loop make any sense and how does this even work? HACK
+        from .node_container_common import get_prepared_depth_lines
+        while unsolved_schema:
+            from collections import deque
+            unsolved_layer = deque(unsolved_schema)
+            while (roots):
+                root = roots.pop()
+                if root.prepared == False:
+                    root.bPrepare()
+                    root.prepared=True
+                nc_paths = get_prepared_depth_lines(root)[-1]
+                for nc_set in nc_paths.values():
+                    for tup in nc_set:
+                        nc = tup[-1]
+                        if nc.prepared==False and nc in solve_only_these:
+                            unsolved_layer.append(nc)
+            
+            while(unsolved_layer):
+                # this is so dumb I can't believe I am doing it this way
+                for schema in unsolved_schema:
+                    unsolved_layer.appendleft(schema)
+                nc = unsolved_layer.pop()
+                remove_me = False
+                if nc.hierarchy_dependencies:
+                    for dep in nc.hierarchy_dependencies:
+                        if dep.node_type == 'SCHEMA':
+                            prRed(f"Case A: {nc}, {dep}")
+                            remove_me = True
+                        elif dep.prepared == False:
+                            remove_me = True
+                            if dep in solve_only_these:
+                                unsolved_layer.appendleft(dep)
+                if remove_me:
+                    continue
+                #
+                if nc.prepared:
+                    if (nc.signature in all_schema.keys()):
+                        continue
+                    for n in nc.connections:
+                        if not n.prepared:
+                            unsolved_layer.append(n)
+                    continue
+                #
+                elif nc.signature in all_schema.keys() and nc.signature not in ignore_these: # ignore_these is a HACK but it should work
+                    # prOrange(nc.hierarchy_dependencies, sum([dep.prepared for dep in nc.hierarchy_dependencies]))
+                    # prOrange(nc.dependencies, sum([dep.prepared for dep in nc.dependencies]))
+                    solved_nodes = solve_schema_to_tree(nc, all_nc, roots)
+                    unsolved_schema.remove(nc)
+                    for dep in solved_nodes.values():
+                        if dep.signature in ignore_these: continue
+                        if dep.prepared or dep not in solve_only_these: continue
+                        unsolved_layer.appendleft(dep)
+                elif hasattr(nc, "bPrepare"):
+                    try:
+                        nc.bPrepare()
+                    except Exception as e:
+                        for inp in nc.inputs.values():
+                            print (inp)
+                            for l in inp.links:
+                                print (l)
+                        raise e
+                    for n in nc.connections:
+                        if not n.prepared and n in solve_only_these:
+                            unsolved_layer.append(n)
+                while (roots):
+                    root = roots.pop()
+                    if root.prepared == False:
+                        root.bPrepare()
+                        root.prepared=True
+                    nc_paths = get_prepared_depth_lines(root)[-1]
+                    for nc_set in nc_paths.values():
+                        for tup in nc_set:
+                            nc = tup[-1]
+                            if nc.prepared==False and nc in solve_only_these:
+                                unsolved_layer.append(nc)
+            if unsolved_schema:
+                prRed(unsolved_schema)
+                raise RuntimeError("Failed to resolve all schema declarations")
+        prWhite(f"Parsing tree took {time.time()-start_time} seconds.")
+    
+
+    
+    else: # this works, it's a lot simpler, it's a lot faster
+        # There is still a lot of room for optimization.
+        solve_layer = unsolved_schema.copy(); solve_layer.extend(roots)
+        
+        while(solve_layer):
+            n = solve_layer.pop()
+            # if n in schema_solve_done:
+            #     continue
+            if n not in solve_only_these:
+                continue
+
+            if n.signature in all_schema.keys() and n.signature: # ignore_these is a HACK but it should work
+                for dep in n.hierarchy_dependencies:
+                    if dep not in schema_solve_done:
+                        solve_layer.appendleft(n)
+                        break
+                else:
+                    solved_nodes = solve_schema_to_tree(n, all_nc, roots)
+                    unsolved_schema.remove(n)
+                    schema_solve_done.add(n)
+                    for node in solved_nodes.values():
+                        #
+                        init_dependencies(node)
+                        init_connections(node)
+                        #
+                        # if node.signature in ignore_these: continue
+                        solve_layer.appendleft(node)
+                        # prPurple(node)
+                    for conn in n.hierarchy_connections:
+                        if conn not in schema_solve_done and conn not in solve_layer:
+                            solve_layer.appendleft(conn)
+            else:
+                for dep in n.hierarchy_dependencies:
+                    if dep not in schema_solve_done:
+                        break
+                else:
+                    n.bPrepare()
+                    schema_solve_done.add(n)
+                    for conn in n.hierarchy_connections:
+                        if conn not in schema_solve_done and conn not in solve_layer:
+                            solve_layer.appendleft(conn)
+        if unsolved_schema:
+            # prRed(unsolved_schema)
+            raise RuntimeError("Failed to resolve all schema declarations")
+
+    all_nc = list(all_nc.values()).copy()
+    kept_nc = {}
+    while (all_nc):
+        nc = all_nc.pop()
+        if nc in arrays:
+            continue
+
+        if nc.node_type in ["DUMMY"]:
+            # prRed(nc.prototype.bl_idname)
+            if nc.prototype.bl_idname in ["MantisNodeGroup", "NodeGroupOutput"]:
+                continue
+            # continue
+        # cleanup autogen nodes
+        if nc.signature[0] == "MANTIS_AUTOGENERATED" and len(nc.inputs) == 0 and len(nc.outputs) == 1:
+            output=list(nc.outputs.values())[0]
+            value=list(nc.parameters.values())[0]   # TODO modify the dependecy get function to exclude these nodes completely
+            for l in output.links:
+                to_node = l.to_node; to_socket = l.to_socket
+                l.die()
+                to_node.parameters[to_socket] = value
+                del to_node.inputs[to_socket]
+                init_dependencies(to_node)
+                # init_connections(from_node)
+                # it seems safe, and more importantly, fast, not to update the dependencies of these nodes.
+            continue # in my test case this reduced the time cost by 33% by removing a large number of root nodes.
+            # it went from 18.9 seconds to 9-10 seconds
+
+        if (nc.node_type in ['XFORM']) and ("Relationship" in nc.inputs.keys()):
+            if (new_nc := insert_lazy_parents(nc)):
+                kept_nc[new_nc.signature]=new_nc
+        kept_nc[nc.signature]=nc
+    # raise NotImplementedError
+    prWhite(f"Parsing tree took {time.time()-start_time} seconds.")
+    prWhite("Number of Nodes: %s" % (len(kept_nc)))
+    return kept_nc
 
 def sort_tree_into_layers(nodes, context):
     from time import time
@@ -507,13 +531,8 @@ def sort_tree_into_layers(nodes, context):
     for n in nodes.values():
         if n.node_type == 'DRIVER': drivers.append(n)
         # ugly but necesary to ensure that drivers are always connected.
-        if not (hasattr(n, 'inputs')) or ( len(n.inputs) == 0):
-            roots.append(n)
-        elif (hasattr(n, 'inputs')):
-            none_connected = True
-            for inp in n.inputs.values():
-                if inp.is_linked: none_connected = False
-            if none_connected: roots.append(n)
+        check_and_add_root(n, roots)
+        
     
     layers, nodes_heights = {}, {}
     #Possible improvement: unify roots if they represent the same data
@@ -521,6 +540,7 @@ def sort_tree_into_layers(nodes, context):
     for root in roots:
         nodes_heights[root.signature] = 0
         depth_lines = get_depth_lines(root)[0]
+
         
         for n in nodes.values():
             if n.signature not in (depth_lines.keys()):
@@ -529,62 +549,152 @@ def sort_tree_into_layers(nodes, context):
             if (new_d := node_depth(depth_lines[n.signature])) > d:
                 d = new_d
             nodes_heights[n.signature] = d
-                
+    
     for k, v in nodes_heights.items():
         if (layer := layers.get(v, None)):
             layer.append(nodes[k]) # add it to the existing layer
         else: layers[v] = [nodes[k]] # or make a new layer with the node
         all_sorted_nodes.append(nodes[k]) # add it to the sorted list
     
-    for n in nodes.values():
-        if n not in all_sorted_nodes:
-            for drv in drivers:
-                if n in drv.connected_to:
-                    depth = nodes_heights[drv.signature] + 1
-                    nodes_heights[n.signature] = depth
-                    # don't try to push downstream deps up bc this
-                    #  is a driver and it will be done in the
-                    #  finalize pass anyway
-                    if (layer := layers.get(depth, None)):
-                        layer.append(n)
-                    else: layers[v] = [n]
-                else:
-                    prRed(n)
-                    raise RuntimeError(wrapRed("Failed to depth-sort nodes (because of a driver-combine node?)"))
+    # TODO: investigate whether I can treat driver conenctions as an inverted hierarchy connection
+    #     as in, a hieraarchy connection from the to_node to the from_node in the link instead of the other way around.
+    #     because it looks like I am just putting the driver node one layer higher than the other one
+    for drv in drivers:
+        for out in drv.outputs.values():
+            for l in out.links:
+                n = l.to_node
+                if n in all_sorted_nodes: continue
+                depth = nodes_heights[drv.signature] + 1
+                nodes_heights[n.signature] = depth
+                if (layer := layers.get(depth, None)):
+                    layer.append(n)
+                else: layers[v] = [n]
     #
+        #
     prGreen("Sorting depth for %d nodes finished in %s seconds" %
                (len(nodes), time() - start))
     
     keys = list(layers.keys())
     keys.sort()
     
+    num_nodes=0
+
+    print_missed=nodes.copy()
+
+    for i in keys:
+        print_layer = [l_item for l_item in layers[i]]
+        for k  in print_layer:
+            if k.node_type == "DUMMY":
+                print (k, k.prototype.bl_idname, i)
+
     if (False): # True to print the layers
         for i in keys:
             # print_layer = [l_item for l_item in layers[i] if l_item.node_type in ["XFORM",]]# "LINK", "DRIVER"]]
             print_layer = [l_item for l_item in layers[i]]
+            for k  in print_layer:
+                num_nodes+=1
+                del print_missed[k.signature]
             print(wrapGreen("%d: " % i), wrapWhite("%s" % print_layer))
+        prWhite(f"Final node count: {num_nodes}")
+        prOrange("The following nodes have been culled:")
+        for p in print_missed.values():
+            prWhite (p, p.dependencies)
     return layers
 
 
+
+def visualize_tree(nodes, base_tree, context):
+    # first create a MantisVisualizeTree
+    import bpy
+    tree = bpy.data.node_groups.new(base_tree.name+'_visualized', type='MantisVisualizeTree')
+    # HACK but OK since this isn't really "public" code
+    all_links = set()
+    for n in nodes.values():
+        vis = tree.nodes.new('MantisVisualizeNode')
+        vis.gen_data(n, get_node_prototype(n.signature, base_tree))
+
+        for inp in n.inputs.values():
+            for l in inp.links:
+                all_links.add(l)
+        for out in n.outputs.values():
+            for l in out.links:
+                all_links.add(l)
+
+    for l in all_links:
+        if l.to_node.node_type in ['SCHEMA_DUMMY', 'SCHEMA', 'DUMMY'] or \
+           l.from_node.node_type in ['SCHEMA_DUMMY', 'SCHEMA', 'DUMMY']:
+            pass
+        n_name_in = '.'.join(l.from_node.signature[1:])
+        s_name_in = l.from_socket
+        n_name_out = '.'.join(l.to_node.signature[1:])
+        s_name_out = l.to_socket
+        try:
+            tree.links.new(
+                input=tree.nodes.get(n_name_in).outputs.get(s_name_in),
+                output=tree.nodes.get(n_name_out).inputs.get(s_name_out),
+                )
+        except Exception as e:
+            print (type(e))
+            prRed(f"Could not make link {n_name_in}:{s_name_in}-->{n_name_out}:{s_name_out}")
+            print(e)
+                # raise e
+    # at this point not all links are in the tree yet!
+
+    from .utilities import SugiyamaGraph
+    SugiyamaGraph(tree, 16)
+
+#execute tree is really slow overall, but still completes 1000s of nodes in only 
 def execute_tree(nodes, base_tree, context):
+    # return
     import bpy
     from time import time
     from .node_container_common import GraphError
-    start_time  = time()
+    from uuid import uuid4
     original_active = context.view_layer.objects.active
-    
-    layers = sort_tree_into_layers(nodes, context)
     start_execution_time = time()
+
+    from collections import deque
+    xForm_pass = deque()
+    for nc in nodes.values():
+        nc.prepared = False
+        nc.executed = False
+        check_and_add_root(nc, xForm_pass)
+    pre_pass_done = []
+
+    execute_pass = xForm_pass.copy()
+    # exe_order = {}; i=0
+    executed = []
+
+
+    while(xForm_pass):
+        n = xForm_pass.pop()
+        if n.prepared:
+            continue
+        if n.node_type not in ['XFORM', 'UTILITY']:
+            for dep in n.hierarchy_dependencies:
+                if not dep.prepared:
+                    xForm_pass.appendleft(n) # hold it
+                    break
+            else:
+                n.prepared=True
+                executed.append(n)
+                for conn in n.hierarchy_connections:
+                    if  not conn.prepared:
+                        xForm_pass.appendleft(conn)
+        else:
+            for dep in n.hierarchy_dependencies:
+                if not dep.prepared:
+                    break
+            else:
+                n.bPrepare(context)
+                if not n.executed:
+                    n.bExecute(context)
+                n.prepared=True
+                executed.append(n)
+                for conn in n.hierarchy_connections:
+                    if  not conn.prepared:
+                        xForm_pass.appendleft(conn)
     
-    #             Execute the first pass (xForm, Utility)              #
-    for i in range(len(layers)):
-        for node in layers[i]:
-            if (node.node_type in ['XFORM', 'UTILITY']):
-                try:
-                    node.bExecute(context)
-                except Exception as e:
-                    prRed("Execution failed at %s" % node); raise e
-    #                     Switch to Pose Mode                          #
     active = None
     switch_me = []
     for n in nodes.values():
@@ -607,17 +717,117 @@ def execute_tree(nodes, base_tree, context):
         with context.temp_override(**{'active_object':active, 'selected_objects':switch_me}):
             bpy.ops.object.mode_set(mode='POSE')
     
+
+    for n in executed:
+        n.bPrepare(context)
+        if not n.executed:
+            n.bExecute(context)
+    
+    for n in executed:
+        n.bFinalize(context)
+
+    
+    for n in nodes.values(): # if it is a armature, switch modes
+        if ((hasattr(n, "bGetObject")) and (n.__class__.__name__ == "xFormArmature" )):
+            if (hasattr(ob, 'mode') and ob.mode == 'POSE'):
+                switch_me.append(ob)
+                active = ob
+    if (active):
+        with context.temp_override(**{'active_object':active, 'selected_objects':switch_me}):
+            bpy.ops.object.mode_set(mode='OBJECT')
+    tot_time = (time() - start_execution_time)
+    prGreen(f"Executed tree of {len(executed)} nodes in {tot_time} seconds")
+    if (original_active):
+        context.view_layer.objects.active = original_active
+        original_active.select_set(True)
+
+
+
+
+
+def execute_tree_old(nodes, base_tree, context):
+    # execute_tree_nosort(nodes, base_tree, context); return
+    import bpy
+    from time import time
+    from .node_container_common import GraphError
+    from uuid import uuid4
+    start_time  = time()
+    original_active = context.view_layer.objects.active
+    
+    # if we solve Schema trees here, then we don't need to worry about parsed_tree getting more complex
+    # however, at this point, we are going to have to do some re-connections
+    #   and I am not sure this won't mess up the dependency solving.
+    # worst case scenario, I think I can run the init_connections()
+    #   bit again after swapping the dummy-node for the solved schema tree
+
+    layers = sort_tree_into_layers(nodes, context)
+    start_execution_time = time()
+
+    # raise NotImplementedError
+    
+    #             Execute the first pass (xForm, Utility)              #
+    for i in range(len(layers)):
+        for node in layers[i]:
+            if (node.node_type in ['XFORM', 'UTILITY']):
+                try:
+                    # ex_start_time = time()
+                    # if not node.prepared:
+                    # we have to do this over again oof
+                    node.bPrepare(context)
+                    if not node.executed:
+                        node.bExecute(context)
+                    # prPurple(f"Execution step took time... {time() - ex_start_time}")
+                except Exception as e:
+                    # prRed(node)
+                    # for dep in node.dependencies:
+                    #     prOrange(" ", dep, dep.prepared&dep.executed)
+                    #     for dep in dep.dependencies:
+                    #         prWhite("  ", dep, dep.prepared&dep.executed)
+                    #         for dep in dep.dependencies:
+                    #             prPurple("   ", dep, dep.prepared&dep.executed)
+                    #             for dep in dep.dependencies:
+                    #                 prRed("    ", dep, dep.prepared&dep.executed)
+                    prRed("Execution failed at %s" % node); raise e
+    #                     Switch to Pose Mode                          #
+    active = None
+    switch_me = []
+    for n in nodes.values():
+        # if it is a armature, switch modes
+        # total hack                   #kinda dumb
+        if ((hasattr(n, "bGetObject")) and (n.__class__.__name__ == "xFormArmature" )):
+            try:
+                ob = n.bGetObject()
+            except KeyError: # for bones
+                ob = None
+            # TODO this will be a problem if and when I add mesh/curve stuff
+            if (hasattr(ob, 'mode') and ob.mode == 'EDIT'):
+                switch_me.append(ob)
+                active = ob
+                context.view_layer.objects.active = ob# need to have an active ob, not None, to switch modes.
+            # we override selected_objects to prevent anyone else from mode-switching
+    # TODO it's possible but unlikely that the user will try to run a 
+    #    graph with no armature nodes in it.
+    if (active):
+        for ob in switch_me:
+            ob.pose_position='REST'
+        with context.temp_override(**{'active_object':active, 'selected_objects':switch_me}):
+            bpy.ops.object.mode_set(mode='POSE')
     #               Execute second pass (Link, Driver)                 #
     for i in range(len(layers)):
         for n in layers[i]:
             # Now do the Link & Driver nodes during the second pass.
             if (n.node_type in ['LINK', 'DRIVER']):
                 try:
-                    n.bExecute(context)   
-                except GraphError:
-                    pass                     
+                    if not n.prepared:
+                        n.bPrepare(context)
+                    if not n.executed:
+                        n.bExecute(context)
                 except Exception as e:
-                    print (n); raise e
+                    prRed("Execution failed at %s" % n); raise e
+                # except GraphError:
+                #     pass                     
+                # except Exception as e:
+                #     prRed (n); raise e
                     
     #                          Finalize                                #
     for i in range(len(layers)):
@@ -639,6 +849,8 @@ def execute_tree(nodes, base_tree, context):
                 switch_me.append(ob)
                 active = ob
     if (active):
+        for ob in switch_me:
+            ob.pose_position='POSE'
         with context.temp_override(**{'active_object':active, 'selected_objects':switch_me}):
             bpy.ops.object.mode_set(mode='OBJECT')
     
@@ -647,3 +859,15 @@ def execute_tree(nodes, base_tree, context):
     if (original_active):
         context.view_layer.objects.active = original_active
         original_active.select_set(True)
+
+
+
+# TODO right now:
+# I am working on getting schema to ignore non-hierarchy dependencies
+# I need to ensure that the links are being made between nodes
+# so I need to check the OUTPUTS of the arrays on the DUMMY_SCHEMA of the node that is sending
+#   backwards connections out
+# then I need to make sure that they are going to the right place
+# also it is probably eventually necessary to break schema solve into schema solve_step
+#   which solves one step and decrements the length by one
+#   and holds on to the solver for next time

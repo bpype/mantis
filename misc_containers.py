@@ -4,10 +4,13 @@ from .node_container_common import *
 #  probably be moved to link_containers.py
 from .xForm_containers import xFormRoot, xFormArmature, xFormBone
 
+from math import pi, tau
+
 def TellClasses():
     return [
              # utility
              InputFloat,
+             InputIntNode,
              InputVector,
              InputBoolean,
              InputBooleanThreeTuple,
@@ -17,20 +20,48 @@ def TellClasses():
              InputQuaternion,
              InputQuaternionAA,
              InputMatrix,
-             InputLayerMask,
+            #  InputLayerMask,
              # InputGeometry,
              InputExistingGeometryObject,
              InputExistingGeometryData,
+             UtilityMatrixFromCurve,
+             UtilityMatricesFromCurve,
              UtilityMetaRig,
              UtilityBoneProperties,
              UtilityDriverVariable,
              UtilityDriver,
              UtilityFCurve,
+             UtilityKeyframe,
              UtilitySwitch,
              UtilityCombineThreeBool,
              UtilityCombineVector,
              UtilityCatStrings,
+             UtilityGetBoneLength,
+             UtilityPointFromBoneMatrix,
+             UtilitySetBoneLength,
+             UtilityMatrixSetLocation,
+             UtilityMatrixGetLocation,
+             UtilityMatrixFromXForm,
+             UtilityAxesFromMatrix,
+             UtilityBoneMatrixHeadTailFlip,
+             UtilityMatrixTransform,
+             UtilityTransformationMatrix,
+             UtilityIntToString,
+             UtilityArrayGet,
+             #
+             UtilityCompare,
+             UtilityChoose,
+             #
+             UtilityPrint,
             ]
+
+
+def matrix_from_head_tail(head, tail):
+    from mathutils import Vector, Quaternion, Matrix
+    rotation = Vector((0,1,0)).rotation_difference((tail-head).normalized()).to_matrix()
+    m= Matrix.LocRotScale(head, rotation, None)
+    m[3][3] = (tail-head).length
+    return m
 
 #*#-------------------------------#++#-------------------------------#*#
 # G E N E R I C   N O D E S
@@ -54,18 +85,35 @@ class InputFloat:
         self.outputs = {"Float Input" : NodeSocket(name = "Float Input", node=self) }
         self.parameters = {"Float Input":None, "Mute":None}
         self.node_type = 'UTILITY'
+        self.hierarchy_connections = []
+        self.connections = []
+        self.hierarchy_dependencies = []
+        self.dependencies = []
+        self.prepared = True
+        self.executed = True
         
     def evaluate_input(self, input_name):
         return self.parameters["Float Input"]
+
+class InputIntNode:
+    '''A node representing integer input'''
     
-    def bExecute(self, bContext = None,):
-        pass
-    
-    def __repr__(self):
-        return self.signature.__repr__()
+    def __init__(self, signature, base_tree):
+        self.base_tree=base_tree
+        self.signature = signature
+        self.inputs = {}
+        self.outputs = {"Integer" : NodeSocket(name = "Integer", node=self) }
+        self.parameters = {"Integer":None, "Mute":None}
+        self.node_type = 'UTILITY'
+        self.hierarchy_connections = []
+        self.connections = []
+        self.hierarchy_dependencies = []
+        self.dependencies = []
+        self.prepared = True
+        self.executed = True
         
-    def fill_parameters(self):
-        fill_parameters(self)
+    def evaluate_input(self, input_name):
+        return self.parameters["Integer"]
     
 class InputVector:
     '''A node representing vector input'''
@@ -77,18 +125,16 @@ class InputVector:
         self.outputs = {"VectorSocket" : NodeSocket(name = 'VectorSocket', node=self) }
         self.parameters = {'VectorSocket':None, "Mute":None}
         self.node_type = 'UTILITY'
+        self.hierarchy_connections = []
+        self.connections = []
+        self.hierarchy_dependencies = []
+        self.dependencies = []
+        self.prepared = True
+        self.executed = True
         
     def evaluate_input(self, input_name):
         return self.parameters["VectorSocket"]
     
-    def bExecute(self, bContext = None,):
-        pass
-    
-    def __repr__(self):
-        return self.signature.__repr__()
-        
-    def fill_parameters(self):
-        fill_parameters(self)
 
 class InputBoolean:
     '''A node representing boolean input'''
@@ -100,18 +146,15 @@ class InputBoolean:
         self.outputs = {"BooleanSocket" : NodeSocket(name = 'BooleanSocket', node=self) }
         self.parameters = {'BooleanSocket':None, "Mute":None}
         self.node_type = 'UTILITY'
+        self.hierarchy_connections = []
+        self.connections = []
+        self.hierarchy_dependencies = []
+        self.dependencies = []
+        self.prepared = True
+        self.executed = True
         
     def evaluate_input(self, input_name):
         return self.parameters["BooleanSocket"]
-    
-    def bExecute(self, bContext = None,):
-        pass
-    
-    def __repr__(self):
-        return self.signature.__repr__()
-        
-    def fill_parameters(self):
-        fill_parameters(self)
 
 class InputBooleanThreeTuple:
     '''A node representing inheritance'''
@@ -123,19 +166,16 @@ class InputBooleanThreeTuple:
         self.outputs = {"BooleanThreeTupleSocket" : NodeSocket(name = 'BooleanThreeTupleSocket', node=self) }
         self.parameters = {'BooleanThreeTupleSocket':None, "Mute":None}
         self.node_type = 'UTILITY'
+        self.hierarchy_connections = []
+        self.connections = []
+        self.hierarchy_dependencies = []
+        self.dependencies = []
+        self.prepared = True
+        self.executed = True
         
     def evaluate_input(self, input_name):
         return self.parameters["BooleanThreeTupleSocket"]
     
-    def bExecute(self, bContext = None,):
-        pass
-    
-    def __repr__(self):
-        return self.signature.__repr__()
-        
-    def fill_parameters(self):
-        fill_parameters(self)
-
 class InputRotationOrder:
     '''A node representing string input for rotation order'''
         
@@ -146,18 +186,16 @@ class InputRotationOrder:
         self.outputs = {"RotationOrderSocket" : NodeSocket(name = 'RotationOrderSocket', node=self) }
         self.parameters = {'RotationOrderSocket':None, "Mute":None}
         self.node_type = 'UTILITY'
+        self.hierarchy_connections = []
+        self.connections = []
+        self.hierarchy_dependencies = []
+        self.dependencies = []
+        self.prepared = True
+        self.executed = True
         
     def evaluate_input(self, input_name):
         return self.parameters["RotationOrderSocket"]
     
-    def bExecute(self, bContext = None,):
-        pass
-    
-    def __repr__(self):
-        return self.signature.__repr__()
-        
-    def fill_parameters(self):
-        fill_parameters(self)
 
 class InputTransformSpace:
     '''A node representing string input for transform space'''
@@ -169,19 +207,16 @@ class InputTransformSpace:
         self.outputs = {"TransformSpaceSocket" : NodeSocket(name = 'TransformSpaceSocket', node=self) }
         self.parameters = {'TransformSpaceSocket':None, "Mute":None}
         self.node_type = 'UTILITY'
+        self.hierarchy_connections = []
+        self.connections = []
+        self.hierarchy_dependencies = []
+        self.dependencies = []
+        self.prepared = True
+        self.executed = True
         
     def evaluate_input(self, input_name):
         return self.parameters["TransformSpaceSocket"]
     
-    def bExecute(self, bContext = None,):
-        pass
-    
-    def __repr__(self):
-        return self.signature.__repr__()
-        
-    def fill_parameters(self):
-        fill_parameters(self)
-
 class InputString:
     '''A node representing string input'''
         
@@ -192,19 +227,16 @@ class InputString:
         self.outputs = {"" : NodeSocket(name = '', node=self) }
         self.parameters = {'':None, "Mute":None}
         self.node_type = 'UTILITY'
+        self.hierarchy_connections = []
+        self.connections = []
+        self.hierarchy_dependencies = []
+        self.dependencies = []
+        self.prepared = True
+        self.executed = True
         
     def evaluate_input(self, input_name):
         return self.parameters[""]
     
-    def bExecute(self, bContext = None,):
-        pass
-    
-    def __repr__(self):
-        return self.signature.__repr__()
-        
-    def fill_parameters(self):
-        fill_parameters(self)
-
 class InputQuaternion:
     '''A node representing quaternion input'''
     def __init__(self, signature, base_tree):
@@ -214,19 +246,17 @@ class InputQuaternion:
         self.outputs = {"QuaternionSocket" : NodeSocket(name = 'QuaternionSocket', node=self) }
         self.parameters = {'QuaternionSocket':None, "Mute":None}
         self.node_type = 'UTILITY'
+        self.hierarchy_connections = []
+        self.connections = []
+        self.hierarchy_dependencies = []
+        self.dependencies = []
+        self.prepared = True
+        self.executed = True
         
         
     def evaluate_input(self, input_name):
         return self.parameters["QuaternionSocket"]
     
-    def bExecute(self, bContext = None,):
-        pass
-    
-    def __repr__(self):
-        return self.signature.__repr__()
-        
-    def fill_parameters(self):
-        fill_parameters(self)
 
 class InputQuaternionAA:
     '''A node representing axis-angle quaternion input'''
@@ -238,20 +268,16 @@ class InputQuaternionAA:
         self.outputs  = {"QuaternionSocketAA" : NodeSocket(name = 'QuaternionSocketAA', node=self) }
         self.parameters = {'QuaternionSocketAA':None, "Mute":None}
         self.node_type = 'UTILITY'
+        self.hierarchy_connections = []
+        self.connections = []
+        self.hierarchy_dependencies = []
+        self.dependencies = []
+        self.prepared = True
+        self.executed = True
         
     def evaluate_input(self, input_name):
         return self.parameters["QuaternionSocketAA"]
     
-    def bExecute(self, bContext = None,):
-        pass
-    
-    def __repr__(self):
-        return self.signature.__repr__()
-        
-    def fill_parameters(self):
-        fill_parameters(self)
-
-
 class InputMatrix:
     '''A node representing axis-angle quaternion input'''
         
@@ -262,20 +288,22 @@ class InputMatrix:
         self.outputs  = {"Matrix" : NodeSocket(name = 'Matrix', node=self) }
         self.parameters = {'Matrix':None, "Mute":None}
         self.node_type = 'UTILITY'
+        self.hierarchy_connections = []
+        self.connections = []
+        self.hierarchy_dependencies = []
+        self.dependencies = []
+        self.prepared = True
+        self.executed = True
         
     def evaluate_input(self, input_name):
         return self.parameters["Matrix"]
     
-    def bExecute(self, bContext = None,):
-        pass
-    
-    def __repr__(self):
-        return self.signature.__repr__()
-        
-    def fill_parameters(self, node_prototype):
+    def fill_parameters(self):
         # this node is peculiar for how its data is input
         # It uses node properties that are not addressable as sockets.
         from mathutils import Matrix
+        from .utilities import get_node_prototype
+        node_prototype = get_node_prototype(self.signature, self.base_tree)
         
         matrix = ( node_prototype.first_row[ 0], node_prototype.first_row[ 1], node_prototype.first_row[ 2], node_prototype.first_row[ 3],
                    node_prototype.second_row[0], node_prototype.second_row[1], node_prototype.second_row[2], node_prototype.second_row[3],
@@ -283,21 +311,163 @@ class InputMatrix:
                    node_prototype.fourth_row[0], node_prototype.fourth_row[1], node_prototype.fourth_row[2], node_prototype.fourth_row[3], )
         self.parameters["Matrix"] = Matrix([matrix[0:4], matrix[4:8], matrix[8:12], matrix[12:16]])
         # print (self.parameters["Matrix"])
+
+class UtilityMatrixFromCurve:
+    '''Get a matrix from a curve'''
+
+    def __init__(self, signature, base_tree):
+        self.base_tree=base_tree
+        self.executed = False
+        self.signature = signature
+        self.inputs = {
+          "Curve"            : NodeSocket(is_input = True, name = "Curve", node=self),
+          "Total Divisions"  : NodeSocket(is_input = True, name = "Total Divisions", node=self),
+          "Matrix Index"     : NodeSocket(is_input = True, name = "Matrix Index", node=self),
+        }
+        self.outputs = {
+          "Matrix" : NodeSocket(name = "Matrix", node=self),
+        }
+        self.parameters = {
+          "Curve"            : None,
+          "Total Divisions"  : None,
+          "Matrix Index"     : None,
+          "Matrix"           : None,
+        }
+        self.node_type = "UTILITY"
+        self.hierarchy_connections = []
+        self.connections = []
+        self.hierarchy_dependencies = []
+        self.dependencies = []
+        self.prepared = False
+        self.executed = False
+
+    def bPrepare(self, bContext = None,):
+        from mathutils import Matrix
+        import bpy
+        m = Matrix.Identity(4)
+        curve = bpy.data.objects.get(self.evaluate_input("Curve"))
+        if not curve:
+            prRed(f"No curve found for {self}. Using an Identity matrix instead.")
+            m[3][3] = 1.0
+        else:
+            from .utilities import mesh_from_curve, data_from_ribbon_mesh
+            if not bContext:
+                # TODO find out if this is bad or a HACK or if it is OK
+                bContext = bpy.context
+            # IMPORTANT TODO: I need to be able to reuse this m
+            # First, try to get the one we made before
+            m_name = curve.name+'.'+self.base_tree.execution_id
+            if not (m := bpy.data.meshes.get(m_name)):
+                m = mesh_from_curve(curve, bContext)
+                m.name = m_name
+            #
+            num_divisions = self.evaluate_input("Total Divisions")
+            m_index = self.evaluate_input("Matrix Index")
+            factors = [1/num_divisions*m_index, 1/num_divisions*(m_index+1)]
+            data = data_from_ribbon_mesh(m, [factors], curve.matrix_world)
+            # print(data)
+            
+            m = matrix_from_head_tail(data[0][0][0], data[0][0][1])
+
+        self.parameters["Matrix"] = m
+        self.prepared = True
+        self.executed = True
+    
+    def bFinalize(self, bContext=None):
+        import bpy
+        curve_name = self.evaluate_input("Curve")
+        curve = bpy.data.objects.get(curve_name)
+        m_name = curve.name+'.'+self.base_tree.execution_id
+        if (mesh := bpy.data.meshes.get(m_name)):
+            bpy.data.meshes.remove(mesh)
+
+    def fill_parameters(self):
+        fill_parameters(self)
+
+class UtilityMatricesFromCurve:
+    '''Get matrices from a curve'''
+
+    def __init__(self, signature, base_tree):
+        self.base_tree=base_tree
+        self.executed = False
+        self.signature = signature
+        self.inputs = {
+          "Curve"            : NodeSocket(is_input = True, name = "Curve", node=self),
+          "Total Divisions"  : NodeSocket(is_input = True, name = "Total Divisions", node=self),
+        #   "Matrix Index"     : NodeSocket(is_input = True, name = "Matrix Index", node=self),
+        }
+        self.outputs = {
+          "Matrices" : NodeSocket(name = "Matrices", node=self),
+        }
+        self.parameters = {
+          "Curve"            : None,
+          "Total Divisions"  : None,
+        #   "Matrix Index"     : None,
+          "Matrices"           : None,
+        }
+        self.node_type = "UTILITY"
+        self.hierarchy_connections = []
+        self.connections = []
+        self.hierarchy_dependencies = []
+        self.dependencies = []
+        self.prepared = False
+        self.executed = False
+
+    def bPrepare(self, bContext = None,):
+        import time
+        # start_time = time.time()
+        #
+        from mathutils import Matrix
+        import bpy
+        m = Matrix.Identity(4)
+        curve_name = self.evaluate_input("Curve")
+        curve = bpy.data.objects.get(curve_name)
+        if not curve:
+            prRed(f"No curve found for {self}. Using an Identity matrix instead.")
+            m[3][3] = 1.0
+        else:
+            from .utilities import mesh_from_curve, data_from_ribbon_mesh
+            if not bContext:
+                bContext = bpy.context
+            m_name = curve.name+'.'+self.base_tree.execution_id
+            if not (mesh := bpy.data.meshes.get(m_name)):
+                mesh = mesh_from_curve(curve, bContext)
+                mesh.name = m_name
+            num_divisions = self.evaluate_input("Total Divisions")
+            factors = [0.0] + [(1/num_divisions*(i+1)) for i in range(num_divisions)]
+            data = data_from_ribbon_mesh(mesh, [factors], curve.matrix_world)
+            
+            # 0 is the spline index. 0 selects points as opposed to normals or whatever.
+            matrices = [matrix_from_head_tail(data[0][0][i], data[0][0][i+1]) for i in range(num_divisions)]
         
 
-# # NOT YET IMPLEMENTED:
-# class InputMatrixNode(Node, MantisNode):
-    # '''A node representing matrix input'''
-    # inputs = 
-    # # the node is implemented as a set of sixteen float inputs
-    # # but I think I can boil it down to one matrix input
+        for link in self.outputs["Matrices"].links:
+            for i, m in enumerate(matrices):
+                name = "Matrix"+str(i).zfill(4)
+                if not (out := self.outputs.get(name)): # reuse them if there are multiple links.
+                    out = self.outputs[name] = NodeSocket(name = name, node=self)
+                c = out.connect(link.to_node, link.to_socket)
+                # prOrange(c)
+                self.parameters[name] = m
+                # print (mesh)
+            link.die()
 
+        self.prepared = True
+        self.executed = True
+        # prGreen(f"Matrices from curves took {time.time() - start_time} seconds.")
+    
+    def bFinalize(self, bContext=None):
+        import bpy
+        curve_name = self.evaluate_input("Curve")
+        curve = bpy.data.objects.get(curve_name)
+        m_name = curve.name+'.'+self.base_tree.execution_id
+        if (mesh := bpy.data.meshes.get(m_name)):
+            prGreen(f"Freeing mesh data {m_name}...")
+            bpy.data.meshes.remove(mesh)
 
-# class ScaleBoneLengthNode(Node, MantisNode):
-    # '''Scale Bone Length'''
-    # pass
+    def fill_parameters(self):
+        fill_parameters(self)
 
- 
 class UtilityMetaRig:
     '''A node representing an armature object'''
 
@@ -317,11 +487,14 @@ class UtilityMetaRig:
           "Meta-Bone" : None,
         }
         self.node_type = "UTILITY"
+        self.hierarchy_connections = []
+        self.connections = []
+        self.hierarchy_dependencies = []
+        self.dependencies = []
+        self.prepared = False
+        self.executed = False
 
-    def evaluate_input(self, input_name):
-        return evaluate_input(self, input_name)
-
-    def bExecute(self, bContext = None,):
+    def bPrepare(self, bContext = None,):
         #kinda clumsy, whatever
         import bpy
         from mathutils import Matrix
@@ -336,22 +509,24 @@ class UtilityMetaRig:
                 if ( b := armOb.data.bones.get(meta_bone)):
                     # calculate the correct object-space matrix
                     m = Matrix.Identity(3)
-                    bones = []
+                    bones = [] # from the last ancestor, mult the matrices until we get to b
                     while (b): bones.append(b); b = b.parent
                     while (bones): b = bones.pop(); m = m @ b.matrix
                     m = Matrix.Translation(b.head_local) @ m.to_4x4()
+                    #
                     m[3][3] = b.length # this is where I arbitrarily decided to store length
-        
+                # else:
+                #     prRed("no bone for MetaRig node ", self)
+        else:
+            raise RuntimeError(wrapRed(f"No meta-rig input for MetaRig node {self}"))
         
         self.parameters["Matrix"] = m
-
-
-    def __repr__(self):
-        return self.signature.__repr__()
+        self.prepared = True
+        self.executed = True
 
     def fill_parameters(self):
         fill_parameters(self)
-        self.parameters["Matrix"] = None
+        # self.parameters["Matrix"] = None # why in the
 
 
 class UtilityBoneProperties:
@@ -386,19 +561,18 @@ class UtilityBoneProperties:
           "scale":None, 
         }
         self.node_type = "UTILITY"
-
-    def evaluate_input(self, input_name):
-        return evaluate_input(self, input_name)
-
-    def bExecute(self, bContext = None,):
-        pass
-
-    def __repr__(self):
-        return self.signature.__repr__()
+        #
+        self.hierarchy_connections = []
+        self.connections = []
+        self.hierarchy_dependencies = []
+        self.dependencies = []
+        self.prepared = True
+        self.executed = True
 
     def fill_parameters(self):
         pass#fill_parameters(self)
         
+# TODO this should probably be moved to Links
 class UtilityDriverVariable:
     '''A node representing an armature object'''
 
@@ -427,7 +601,14 @@ class UtilityDriverVariable:
           "xForm 1":None, 
           "xForm 2":None,
         }
-        self.node_type = "LINK" # MUST be run in Pose mode
+        self.node_type = "DRIVER" # MUST be run in Pose mode
+        #
+        self.hierarchy_connections = []
+        self.connections = []
+        self.hierarchy_dependencies = []
+        self.dependencies = []
+        self.prepared = True
+        self.executed = False
         
     def evaluate_input(self, input_name):
         if input_name == 'Property':
@@ -474,6 +655,8 @@ class UtilityDriverVariable:
                 elif i == 2: dVarChannel = "SCALE_Z"
                 elif i == 3: dVarChannel = "SCALE_AVG"
                 else: raise RuntimeError("Invalid property index for %s" % self)
+            if self.evaluate_input("Property") == 'scale_average':
+                dVarChannel = "SCALE_AVG"
         if dVarChannel: v_type = "TRANSFORMS"
         
         my_var = {
@@ -482,8 +665,8 @@ class UtilityDriverVariable:
             "type"          : v_type,
             "space"         : self.evaluate_input("Evaluation Space"),
             "rotation_mode" : self.evaluate_input("Rotation Mode"),
-            "xForm 1"       : self.GetxForm(index = 1),
-            "xForm 2"       : self.GetxForm(index = 2),
+            "xForm 1"       : xForm1,#self.GetxForm(index = 1),
+            "xForm 2"       : xForm2,#self.GetxForm(index = 2),
             "channel"       : dVarChannel,}
         
         # Push parameter to downstream connected node.connected:
@@ -491,13 +674,49 @@ class UtilityDriverVariable:
             self.parameters[out.name] = my_var
             for link in out.links:
                 link.to_node.parameters[link.to_socket] = my_var
+        self.executed = True
             
 
-    def __repr__(self):
-        return self.signature.__repr__()
 
-    def fill_parameters(self):
-        fill_parameters(self)
+
+class UtilityKeyframe:
+    '''A node representing a keyframe for a F-Curve'''
+
+    def __init__(self, signature, base_tree):
+        self.base_tree=base_tree
+        self.executed = False
+        self.signature = signature
+        self.inputs = {
+          "Frame"   : NodeSocket(is_input = True, name = "Frame", node = self),
+          "Value"   : NodeSocket(is_input = True, name = "Value", node = self),
+        }
+        self.outputs = {
+          "Keyframe" : NodeSocket(name = "Keyframe", node=self),
+        }
+
+        self.parameters = {
+          "Frame":None, 
+          "Value":None, 
+          "Keyframe":{}, # for some reason I have to initialize this and then use the dict... why? TODO find out
+        }
+        self.node_type = "DRIVER" # MUST be run in Pose mode
+        setup_custom_props(self)
+        self.hierarchy_connections = []
+        self.connections = []
+        self.hierarchy_dependencies = []
+        self.dependencies = []
+        self.prepared = False
+        self.executed = False
+
+    def bPrepare(self, bContext = None,):
+        key = self.parameters["Keyframe"]
+        from mathutils import Vector
+        key["co"]= Vector( (self.evaluate_input("Frame"), self.evaluate_input("Value"),))
+        # eventually this will have the right data, TODO
+        # self.parameters["Keyframe"] = key
+        self.prepared = True
+        self.executed = True
+
 
 class UtilityFCurve:
     '''A node representing an armature object'''
@@ -511,10 +730,17 @@ class UtilityFCurve:
           "fCurve" : NodeSocket(name = "fCurve", node=self),
         }
         self.parameters = {
+          "Use_KeyFrame_Nodes": True, # HACK
           "fCurve":None, 
         }
         self.node_type = "UTILITY"
         setup_custom_props(self)
+        self.hierarchy_connections = []
+        self.connections = []
+        self.hierarchy_dependencies = []
+        self.dependencies = []
+        self.prepared = False
+        self.executed = False
 
     def evaluate_input(self, input_name):
         return evaluate_input(self, input_name)
@@ -523,13 +749,22 @@ class UtilityFCurve:
         prepare_parameters(self)
         from .utilities import get_node_prototype
         np = get_node_prototype(self.signature, self.base_tree)
+
+
         keys = []
         #['amplitude', 'back', 'bl_rna', 'co', 'co_ui', 'easing', 'handle_left', 'handle_left_type', 'handle_right', 'handle_right_type',
         # 'interpolation', 'period', 'rna_type', 'select_control_point', 'select_left_handle', 'select_right_handle', 'type']
 
-        if np.use_kf_nodes:
-            pass # for now
+        if True: #np.use_kf_nodes:
+            for k in self.inputs.keys():
+                # print (self.inputs[k])
+                key = self.evaluate_input(k)
+                key["type"]="GENERATED"
+                key["interpolation"] = "LINEAR"
+                keys.append(key)
+
         else:
+            raise NotImplementedError("Getting the keys from an fCurve isn't really working anymore lol need to fix")
             fc_ob = np.fake_fcurve_ob
             fc = fc_ob.animation_data.action.fcurves[0]
             for k in fc.keyframe_points:
@@ -546,13 +781,11 @@ class UtilityFCurve:
             self.parameters[out.name] = keys
             for link in out.links:
                 link.to_node.parameters[link.to_socket] = keys
+        # the above was a HACK. I don't want nodes modiying their descenedents.
+        # If the above was necessary, I want to get an error from it so I can fix it in the descendent's class
+        self.prepared = True
+        self.executed = True
                 
-
-    def __repr__(self):
-        return self.signature.__repr__()
-
-    def fill_parameters(self):
-        fill_parameters(self)
 
 class UtilityDriver:
     '''A node representing an armature object'''
@@ -578,9 +811,12 @@ class UtilityDriver:
         }
         self.node_type = "DRIVER" # MUST be run in Pose mode
         setup_custom_props(self)
-
-    def evaluate_input(self, input_name):
-        return evaluate_input(self, input_name)
+        self.hierarchy_connections = []
+        self.connections = []
+        self.hierarchy_dependencies = []
+        self.dependencies = []
+        self.prepared = True
+        self.executed = True
 
     def bExecute(self, bContext = None,):
         prepare_parameters(self)
@@ -606,12 +842,8 @@ class UtilityDriver:
         
         self.parameters["Driver"].update(my_driver)
         print("Initializing driver %s " % (wrapPurple(self.__repr__())) )
+        self.executed = True
 
-    def __repr__(self):
-        return self.signature.__repr__()
-
-    def fill_parameters(self):
-        fill_parameters(self)
 
 class UtilitySwitch:
     '''A node representing an armature object'''
@@ -621,7 +853,7 @@ class UtilitySwitch:
         self.executed = False
         self.signature = signature
         self.inputs = {
-          "xForm"   : NodeSocket(is_input = True, name = "xForm", node = self),
+        #   "xForm"   : NodeSocket(is_input = True, name = "xForm", node = self),
           "Parameter"   : NodeSocket(is_input = True, name = "Parameter", node = self),
           "Parameter Index"   : NodeSocket(is_input = True, name = "Parameter Index", node = self),
           "Invert Switch" : NodeSocket(is_input = True, name = "Invert Switch", node = self),
@@ -631,13 +863,19 @@ class UtilitySwitch:
         }
         from .drivers import MantisDriver
         self.parameters = {
-          "xForm":None, 
+        #   "xForm":None, 
           "Parameter":None,
           "Parameter Index":None, 
           "Invert Switch":None,
           "Driver":MantisDriver(), # empty for now
         }
         self.node_type = "DRIVER" # MUST be run in Pose mode
+        self.hierarchy_connections = []
+        self.connections = []
+        self.hierarchy_dependencies = []
+        self.dependencies = []
+        self.prepared = True
+        self.executed = False
 
     def evaluate_input(self, input_name):
         if input_name == 'Parameter':
@@ -648,7 +886,7 @@ class UtilitySwitch:
         return evaluate_input(self, input_name)
 
     def GetxForm(self,):
-        trace = trace_single_line(self, "xForm" )
+        trace = trace_single_line(self, "Parameter" )
         for node in trace[0]:
             if (node.__class__ in [xFormRoot, xFormArmature, xFormBone]):
                 return node #this will fetch the first one, that's good!
@@ -679,7 +917,7 @@ class UtilitySwitch:
         my_driver   ["expression"] = "a"
         
         my_driver = MantisDriver(my_driver)
-        # this makes it so I can check for type later!
+    # this makes it so I can check for type later!
         
         if self.evaluate_input("Invert Switch") == True:
             my_driver   ["expression"] = "1 - a"
@@ -695,13 +933,10 @@ class UtilitySwitch:
         #  the same instance is filled out. 
         self.parameters["Driver"].update(my_driver)
         print("Initializing driver %s " % (wrapPurple(self.__repr__())) )
+        self.executed = True
 
-    def __repr__(self):
-        return self.signature.__repr__()
 
-    def fill_parameters(self):
-        fill_parameters(self)
-        
+
 class UtilityCombineThreeBool:
     '''A node for combining three booleans into a boolean three-tuple'''
 
@@ -722,11 +957,14 @@ class UtilityCombineThreeBool:
           "Y":None,
           "Z":None, }
         self.node_type = "UTILITY"
+        self.hierarchy_connections = []
+        self.connections = []
+        self.hierarchy_dependencies = []
+        self.dependencies = []
+        self.prepared = False
+        self.executed = False
 
-    def evaluate_input(self, input_name):
-        return evaluate_input(self, input_name)
-
-    def bExecute(self, bContext = None,):
+    def bPrepare(self, bContext = None,):
         #prPurple("Executing CombineThreeBool Node")
         #prepare_parameters(self)
         self.parameters["Three-Bool"] = (
@@ -738,12 +976,9 @@ class UtilityCombineThreeBool:
         #  because Blender allows circular dependencies in drivers
         #  (sort of), I need to adopt a more convoluted way of doing
         #  things here or elsewhere.
+        self.prepared = True
+        self.executed = True
 
-    def __repr__(self):
-        return self.signature.__repr__()
-
-    def fill_parameters(self):
-        fill_parameters(self)
 
 # Note this is a copy of the above. This needs to be de-duplicated into
   # a simpler CombineVector node_container.
@@ -768,23 +1003,22 @@ class UtilityCombineVector:
           "Y":None,
           "Z":None, }
         self.node_type = "UTILITY"
+        self.hierarchy_connections = []
+        self.connections = []
+        self.hierarchy_dependencies = []
+        self.dependencies = []
+        self.prepared = False
+        self.executed = False
 
-    def evaluate_input(self, input_name):
-        return evaluate_input(self, input_name)
-
-    def bExecute(self, bContext = None,):
+    def bPrepare(self, bContext = None,):
         #prPurple("Executing CombineVector Node")
         prepare_parameters(self)
         self.parameters["Vector"] = (
           self.evaluate_input("X"),
           self.evaluate_input("Y"),
           self.evaluate_input("Z"), )
-
-    def __repr__(self):
-        return self.signature.__repr__()
-
-    def fill_parameters(self):
-        fill_parameters(self)
+        self.prepared = True
+        self.executed = True
 
 class UtilityCatStrings:
     '''A node representing an armature object'''
@@ -805,18 +1039,17 @@ class UtilityCatStrings:
           "String_2":None,
         }
         self.node_type = "UTILITY"
-
-    def evaluate_input(self, input_name):
-        return evaluate_input(self, input_name)
-
-    def bExecute(self, bContext = None,):
+        self.hierarchy_connections = []
+        self.connections = []
+        self.hierarchy_dependencies = []
+        self.dependencies = []
+        self.prepared = False
+        self.executed = False
+    
+    def bPrepare(self, bContext = None,):
         self.parameters["OutputString"] = self.evaluate_input("String_1")+self.evaluate_input("String_2")
-
-    def __repr__(self):
-        return self.signature.__repr__()
-
-    def fill_parameters(self):
-        fill_parameters(self)
+        self.prepared = True
+        self.executed = True
 
 class InputLayerMask:
     '''A node representing an armature object'''
@@ -835,50 +1068,13 @@ class InputLayerMask:
           "Layer Mask":None, 
         }
         self.node_type = "UTILITY"
+        self.hierarchy_connections = []
+        self.connections = []
+        self.hierarchy_dependencies = []
+        self.dependencies = []
+        self.prepared = True
+        self.executed = True
 
-    def evaluate_input(self, input_name):
-        return evaluate_input(self, input_name)
-
-    def bExecute(self, bContext = None,):
-        pass
-
-    def __repr__(self):
-        return self.signature.__repr__()
-
-    def fill_parameters(self):
-        fill_parameters(self)
-
-# class InputGeometry:
-    # '''A node representing an armature object'''
-
-    # def __init__(self, signature, base_tree):
-        # self.base_tree=base_tree
-        # self.executed = False
-        # self.signature = signature
-        # self.inputs = {
-          # "Geometry Name"   : NodeSocket(is_input = True, to_socket = "Geometry Name", to_node = self),
-        # }
-        # self.outputs = {
-          # "Geometry" : NodeSocket(from_socket = "Geometry", from_node=self),
-        # }
-        # self.parameters = {
-
-          # "Geometry Name":None, 
-          # "Geometry":None, 
-        # }
-        # self.node_type = "UTILITY"
-
-    # def evaluate_input(self, input_name):
-        # return evaluate_input(self, input_name)
-
-    # def bExecute(self, bContext = None,):
-        # pass
-
-    # def __repr__(self):
-        # return self.signature.__repr__()
-
-    # def fill_parameters(self, node_prototype):
-        # fill_parameters(self, node_prototype)
 
 class InputExistingGeometryObject:
     '''A node representing an existing object'''
@@ -898,26 +1094,17 @@ class InputExistingGeometryObject:
           "Object":None, 
         }
         self.node_type = "UTILITY"
-        
-    def evaluate_input(self, input_name):
-        return evaluate_input(self, input_name)
-
-    def bGetObject(self):
+        self.hierarchy_connections = []
+        self.connections = []
+        self.hierarchy_dependencies = []
+        self.dependencies = []
+        self.prepared = True
+        self.executed = True
+    
+    # mode for interface consistency
+    def bGetObject(self, mode=''):
         from bpy import data
         return data.objects.get( self.evaluate_input("Name") )
-        
-    def bExecute(self, bContext = None,):
-        pass
-
-        # DO: make this data, of course
-        # try curve and then mesh
-        # probably should print a warning on the node if it is ambiguous
-
-    def __repr__(self):
-        return self.signature.__repr__()
-
-    def fill_parameters(self):
-        fill_parameters(self)
 
 class InputExistingGeometryData:
     '''A node representing existing object data'''
@@ -938,11 +1125,14 @@ class InputExistingGeometryData:
           "Geometry":None, 
         }
         self.node_type = "UTILITY"
-
-    def evaluate_input(self, input_name):
-        return evaluate_input(self, input_name)
-
-    def bGetObject(self):
+        self.hierarchy_connections = []
+        self.connections = []
+        self.hierarchy_dependencies = []
+        self.dependencies = []
+        self.prepared = True
+        self.executed = True
+    # mode for interface consistency
+    def bGetObject(self, mode=''):
         from bpy import data
         # first try Curve, then try Mesh
         bObject = data.curves.get(self.evaluate_input("Name"))
@@ -950,11 +1140,570 @@ class InputExistingGeometryData:
             bObject = data.meshes.get(self.evaluate_input("Name"))
         return bObject
         
+
+class UtilityGetBoneLength:
+    '''A node to get the length of a bone matrix'''
+
+    def __init__(self, signature, base_tree):
+        self.base_tree=base_tree
+        self.executed = False
+        self.signature = signature
+        self.inputs = {
+          "Bone Matrix"   : NodeSocket(is_input = True, name = "Bone Matrix", node = self),
+        }
+        self.outputs = {
+          "Bone Length"   : NodeSocket(name = "Bone Length", node = self),
+        }
+        self.parameters = {
+
+          "Bone Length":None, 
+        }
+        self.node_type = "UTILITY"
+        self.hierarchy_connections = []
+        self.connections = []
+        self.hierarchy_dependencies = []
+        self.dependencies = []
+        self.prepared = False
+        self.executed = False
+
+    def bPrepare(self, bContext = None,):
+        # print (self.inputs['Bone Matrix'].links)
+        if l := self.evaluate_input("Bone Matrix"):
+            self.parameters["Bone Length"] = l[3][3]
+        self.prepared = True
+        self.executed = True
+
+class UtilityPointFromBoneMatrix:
+    '''A node representing an armature object'''
+
+    def __init__(self, signature, base_tree):
+        self.base_tree=base_tree
+        self.executed = False
+        self.signature = signature
+        self.inputs = {
+          "Bone Matrix"   : NodeSocket(is_input = True, name = "Bone Matrix", node = self),
+          "Head/Tail"     : NodeSocket(is_input = True, name = "Head/Tail", node = self),
+        }
+        self.outputs = {
+          "Point"     : NodeSocket(name = "Point", node = self),
+        }
+        self.parameters = {
+
+          "Bone Matrix":None, 
+          "Head/Tail":None,
+          "Point":None,
+        }
+        self.node_type = "UTILITY"
+        self.hierarchy_connections = []
+        self.connections = []
+        self.hierarchy_dependencies = []
+        self.dependencies = []
+        self.prepared = False
+        self.executed = False
+
+    # TODO: find out why this is sometimes not ready at bPrepare phase
+    def bPrepare(self, bContext = None,):
+        from mathutils import Vector
+        matrix = self.evaluate_input("Bone Matrix")
+        head, rotation, _scale = matrix.copy().decompose()
+        tail = head + (rotation @ Vector((0,1,0)))*matrix[3][3]
+        self.parameters["Point"] = head.lerp(tail, self.evaluate_input("Head/Tail"))
+        self.prepared = True
+        self.executed = True
+
+
+class UtilitySetBoneLength:
+    '''Sets the length of a Bone's matrix'''
+
+    def __init__(self, signature, base_tree):
+        self.base_tree=base_tree
+        self.executed = False
+        self.signature = signature
+        self.inputs = {
+          "Bone Matrix"   : NodeSocket(is_input = True, name = "Bone Matrix", node = self),
+          "Length"        : NodeSocket(is_input = True, name = "Length", node = self),
+        }
+        self.outputs = {
+          "Bone Matrix"   : NodeSocket(name = "Bone Matrix", node = self),
+        }
+        self.parameters = {
+
+          "Bone Matrix":None, 
+          "Length":None,
+        }
+        self.node_type = "UTILITY"
+        self.hierarchy_connections = []
+        self.connections = []
+        self.hierarchy_dependencies = []
+        self.dependencies = []
+        self.prepared = False
+        self.executed = False
+    
+    def bPrepare(self, bContext = None,):
+        from mathutils import Vector
+        if matrix := self.evaluate_input("Bone Matrix"):
+            matrix = matrix.copy()
+            # print (self.inputs["Length"].links)
+            matrix[3][3] = self.evaluate_input("Length")
+            self.parameters["Length"] = self.evaluate_input("Length")
+            self.parameters["Bone Matrix"] = matrix
+        self.prepared = True
+        self.executed = True
+
+  
+class UtilityMatrixSetLocation:
+    '''Sets the location of a matrix'''
+
+    def __init__(self, signature, base_tree):
+        self.base_tree=base_tree
+        self.executed = False
+        self.signature = signature
+        self.inputs = {
+          "Matrix"        : NodeSocket(is_input = True, name = "Matrix", node = self),
+          "Location"      : NodeSocket(is_input = True, name = "Location", node = self),
+        }
+        self.outputs = {
+          "Matrix"        : NodeSocket(name = "Matrix", node = self),
+        }
+        self.parameters = {
+
+          "Matrix"   : None, 
+          "Location" : None,
+        }
+        self.node_type = "UTILITY"
+        self.connections, self.hierarchy_connections = [], []
+        self.dependencies, self.hierarchy_dependencies = [], []
+        self.prepared, self.executed = False,False
+    
+    def bPrepare(self, bContext = None,):
+        from mathutils import Vector
+        if matrix := self.evaluate_input("Matrix"):
+            matrix = matrix.copy()
+            # print (self.inputs["Length"].links)
+            loc = self.evaluate_input("Location")
+            matrix[0][3] = loc[0]; matrix[1][3] = loc[1]; matrix[2][3] = loc[2]
+            self.parameters["Matrix"] = matrix
+        self.prepared = True
+        self.executed = True
+
+class UtilityMatrixGetLocation:
+    '''Gets the location of a matrix'''
+    def __init__(self, signature, base_tree):
+        self.base_tree=base_tree
+        self.signature = signature
+        self.inputs = {
+          "Matrix"        : NodeSocket(is_input = True, name = "Matrix", node = self),
+        }
+        self.outputs = {
+          "Location"      : NodeSocket(name = "Location", node = self),
+        }
+        self.parameters = {
+
+          "Matrix"   : None, 
+          "Location" : None,
+        }
+        self.node_type = "UTILITY"
+        self.connections, self.hierarchy_connections = [], []
+        self.dependencies, self.hierarchy_dependencies = [], []
+        self.prepared, self.executed = False,False
+    
+    def bPrepare(self, bContext = None,):
+        from mathutils import Vector
+        if matrix := self.evaluate_input("Matrix"):
+            self.parameters["Location"] = matrix.to_translation()
+        self.prepared = True; self.executed = True
+
+
+class UtilityMatrixFromXForm:
+    """Returns the matrix of the given xForm node."""
+    def __init__(self, signature, base_tree):
+        self.base_tree=base_tree
+        self.signature = signature
+        self.inputs = {
+          "xForm"        : NodeSocket(is_input = True, name = "xForm", node = self),
+        }
+        self.outputs = {
+          "Matrix"      : NodeSocket(name = "Matrix", node = self),
+        }
+        self.parameters = {
+          "Matrix"   : None,
+        }
+        self.node_type = "UTILITY"
+        self.connections, self.hierarchy_connections = [], []
+        self.dependencies, self.hierarchy_dependencies = [], []
+        self.prepared, self.executed = False,False
+    
+    def GetxForm(self):
+        trace = trace_single_line(self, "xForm")
+        for node in trace[0]:
+            if (node.node_type == 'XFORM'):
+                return node
+        raise GraphError("%s is not connected to an xForm" % self)
+        
+    def bPrepare(self, bContext = None,):
+        from mathutils import Vector
+        if matrix := self.GetxForm().parameters.get("Matrix"):
+            self.parameters["Matrix"] = matrix.copy()
+        self.prepared = True; self.executed = True
+
+
+class UtilityAxesFromMatrix:
+    """Returns the axes of the given matrix."""
+    def __init__(self, signature, base_tree):
+        self.base_tree=base_tree
+        self.signature = signature
+        self.inputs = {
+          "Matrix"        : NodeSocket(is_input = True, name = "Matrix", node = self),
+        }
+        self.outputs = {
+          "X Axis"      : NodeSocket(name = "X Axis", node = self),
+          "Y Axis"      : NodeSocket(name = "Y Axis", node = self),
+          "Z Axis"      : NodeSocket(name = "Z Axis", node = self),
+        }
+        self.parameters = {
+          "Matrix"   : None,
+          "X Axis"   : None,
+          "Y Axis"   : None,
+          "Z Axis"   : None,
+        }
+        self.node_type = "UTILITY"
+        self.connections, self.hierarchy_connections = [], []
+        self.dependencies, self.hierarchy_dependencies = [], []
+        self.prepared, self.executed = False,False
+        
+    def bPrepare(self, bContext = None,):
+        from mathutils import Vector
+        if matrix := self.evaluate_input("Matrix"):
+            matrix= matrix.copy().to_3x3()
+            self.parameters['X Axis'] = matrix @ Vector((1,0,0))
+            self.parameters['Y Axis'] = matrix @ Vector((0,1,0))
+            self.parameters['Z Axis'] = matrix @ Vector((0,0,1))
+        self.prepared = True; self.executed = True
+
+
+class UtilityBoneMatrixHeadTailFlip:
+    def __init__(self, signature, base_tree):
+        self.base_tree=base_tree
+        self.executed = False
+        self.signature = signature
+        self.inputs = {
+          "Bone Matrix"   : NodeSocket(is_input = True, name = "Bone Matrix", node = self),
+        }
+        self.outputs = {
+          "Bone Matrix"   : NodeSocket(name = "Bone Matrix", node = self),
+        }
+        self.parameters = {
+          "Bone Matrix":None, 
+        }
+        self.node_type = "UTILITY"
+        self.hierarchy_connections = []
+        self.connections = []
+        self.hierarchy_dependencies = []
+        self.dependencies = []
+        self.prepared = False
+        self.executed = False
+
+    def bPrepare(self, bContext = None,):
+        from mathutils import Vector, Matrix, Quaternion
+        from bpy.types import Bone
+        if matrix := self.evaluate_input("Bone Matrix"):
+            axis, roll = Bone.AxisRollFromMatrix(matrix.to_3x3())
+            new_mat = Bone.MatrixFromAxisRoll(-1*axis, roll)
+            length = matrix[3][3]
+            new_mat.resize_4x4()         # last column contains
+            new_mat[0][3] = matrix[0][3] + axis[0]*length # x location
+            new_mat[1][3] = matrix[1][3] + axis[1]*length # y location
+            new_mat[2][3] = matrix[2][3] + axis[2]*length # z location
+            new_mat[3][3] = length                           # length
+            self.parameters["Bone Matrix"] = new_mat
+        self.prepared, self.executed = True, True
+
+
+class UtilityMatrixTransform:
+    def __init__(self, signature, base_tree):
+        self.base_tree=base_tree
+        self.executed = False
+        self.signature = signature
+        self.inputs = {
+          "Matrix 1"   : NodeSocket(is_input = True, name = "Matrix 1", node = self),
+          "Matrix 2"   : NodeSocket(is_input = True, name = "Matrix 2", node = self),
+        }
+        self.outputs = {
+          "Out Matrix"     : NodeSocket(name = "Out Matrix", node = self),
+        }
+        self.parameters = {
+          "Matrix 1"   : None,
+          "Matrix 2"   : None,
+          "Out Matrix" : None,
+        }
+        self.node_type = "UTILITY"
+        self.hierarchy_connections = []
+        self.connections = []
+        self.hierarchy_dependencies = []
+        self.dependencies = []
+        self.prepared = False
+        self.executed = False
+
+    def bPrepare(self, bContext = None,):
+        from mathutils import Vector
+        mat1 = self.evaluate_input("Matrix 1"); mat2 = self.evaluate_input("Matrix 2")
+        if mat1 and mat2:
+            mat1copy = mat1.copy()
+            self.parameters["Out Matrix"] = mat2 @ mat1copy
+            self.parameters["Out Matrix"].translation = mat1copy.to_translation()+ mat2.to_translation()
+        else:
+            raise RuntimeError(wrapRed(f"Node {self} did not receive all matrix inputs... found input 1? {mat1 is not None}, 2? {mat2 is not None}"))
+        self.prepared = True
+        self.executed = True
+
+
+
+class UtilityTransformationMatrix:
+    def __init__(self, signature, base_tree):
+        self.base_tree=base_tree
+        self.executed = False
+        self.signature = signature
+        self.inputs = {
+          "Operation"   : NodeSocket(is_input = True, name = "Operation", node = self),
+          "Vector"        : NodeSocket(is_input = True, name = "Vector", node = self),
+          "W"   : NodeSocket(is_input = True, name = "W", node = self),
+        }
+        self.outputs = {
+          "Matrix"     : NodeSocket(name = "Matrix", node = self),
+        }
+        self.parameters = {
+          "Operation"   : None,
+          "Origin"      : None,
+          "Vector"        : None,
+          "W"   : None,
+          "Matrix"      : None,
+        }
+        self.node_type = "UTILITY"
+        self.hierarchy_connections = []
+        self.connections = []
+        self.hierarchy_dependencies = []
+        self.dependencies = []
+        self.prepared = False
+        self.executed = False
+
+# enumMatrixTransform  = (('TRANSLATE', 'Translate', 'Translate'),
+#                         ('ROTATE_AXIS_ANGLE', "Rotate (Vector-angle)", "Rotates a number of radians around an axis"),
+#                         ('ROTATE_EULER', "Rotate (Euler)", "Euler Rotation"),
+#                         ('ROTATE_QUATERNION', "Rotate (Quaternion)", "Quaternion Rotation"),
+#                         ('SCALE', "Scale", "Scale"),)
+
+    def bPrepare(self, bContext = None,):
+        from mathutils import Matrix, Vector
+        if (operation := self.evaluate_input("Operation")) == 'ROTATE_AXIS_ANGLE':
+            # this can, will, and should fail if the axis is 0,0,0
+            self.parameters["Matrix"] = rotMat = Matrix.Rotation(self.evaluate_input("W"), 4, Vector(self.evaluate_input("Vector")).normalized())
+        elif (operation := self.evaluate_input("Operation")) == 'TRANSLATE':
+            m = Matrix.Identity(4)
+            if axis := self.evaluate_input("Vector"):
+                m[0][3]=axis[0];m[1][3]=axis[1];m[2][3]=axis[2]
+            self.parameters['Matrix'] = m
+        else:
+            raise NotImplementedError(self.evaluate_input("Operation").__repr__()+ "  Operation not yet implemented.")
+        self.prepared = True
+        self.executed = True
+
+
+
+class UtilityIntToString:
+    def __init__(self, signature, base_tree):
+        self.base_tree=base_tree
+        self.executed = False
+        self.signature = signature
+        self.inputs = {
+          "Number"        : NodeSocket(is_input = True, name = "Number", node = self),
+          "Zero Padding"  : NodeSocket(is_input = True, name = "Zero Padding", node = self),
+        }
+        self.outputs = {
+          "String"        : NodeSocket(name = "String", node = self),
+        }
+        self.parameters = {
+          "Number"        : None,
+          "Zero Padding"  : None,
+          "String"        : None,
+        }
+        self.node_type = "UTILITY"
+        self.hierarchy_connections = []
+        self.connections = []
+        self.hierarchy_dependencies = []
+        self.dependencies = []
+        self.prepared = False
+        self.executed = False
+
+    def bPrepare(self, bContext = None,):
+        number = self.evaluate_input("Number")
+
+        zeroes = self.evaluate_input("Zero Padding")
+        # I'm casting to int because I want to support any number, even though the node asks for int.
+        self.parameters["String"] = str(int(number)).zfill(int(zeroes))
+        self.prepared = True
+        self.executed = True
+
+class UtilityArrayGet:
+    def __init__(self, signature, base_tree):
+        self.base_tree=base_tree
+        self.executed = False
+        self.signature = signature
+        self.inputs = {
+          "Index"          : NodeSocket(is_input = True, name = "Index", node = self),
+          "OoB Behaviour"  : NodeSocket(is_input = True, name = "OoB Behaviour", node = self),
+          "Array"          : NodeSocket(is_input = True, name = "Array", node = self),
+        }
+        self.outputs = {
+          "Output"        : NodeSocket(name = "Output", node = self),
+        }
+        self.parameters = {
+          "Index"          : None,
+          "OoB Behaviour"  : None,
+          "Array"          : None,
+          "Output"         : None,
+        }
+        self.node_type = "UTILITY"
+        self.hierarchy_connections = []
+        self.connections = []
+        self.hierarchy_dependencies = []
+        self.dependencies = []
+        self.prepared = False
+        self.executed = False
+
+    def bPrepare(self, bContext = None,):
+      if self.prepared == False:
+        oob   = self.evaluate_input("OoB Behaviour")
+        index = self.evaluate_input("Index")
+
+        from .utilities import cap, wrap
+        
+        # we must assume that the array has sent the correct number of links
+
+        if oob == 'WRAP':
+            index = index % len(self.inputs['Array'].links)
+        if oob == 'HOLD':
+            index = cap(index, len(self.inputs['Array'].links)-1)
+
+        # relink the connections and then kill all the links to and from the array
+        from .utilities import init_connections, init_dependencies
+        l = self.inputs["Array"].links[index]
+        for link in self.outputs["Output"].links:
+            to_node = link.to_node
+            l.from_node.outputs[l.from_socket].connect(to_node, link.to_socket)
+            link.die()
+            init_dependencies(to_node)
+        from_node=l.from_node
+        for inp in self.inputs.values():
+            for l in inp.links:
+              l.die()
+        init_connections(from_node)
+        if self in from_node.hierarchy_connections:
+          raise RuntimeError()
+        self.hierarchy_connections = []
+        self.connections = []
+        self.hierarchy_dependencies = []
+        self.dependencies = []
+
+        self.prepared = True
+        self.executed = True
+
+
+class UtilityPrint:
+    def __init__(self, signature, base_tree):
+        self.base_tree=base_tree
+        self.executed = False
+        self.signature = signature
+        self.inputs = {
+          "Input"          : NodeSocket(is_input = True, name = "Input", node = self),
+        }
+        self.outputs = {}
+        self.parameters = {
+          "Input"          : None,
+        }
+        self.node_type = "UTILITY"
+        self.hierarchy_connections = []
+        self.connections = []
+        self.hierarchy_dependencies = []
+        self.dependencies = []
+        self.prepared = False
+        self.executed = False
+
+    def bPrepare(self, bContext = None,):
+        if my_input := self.evaluate_input("Input"):
+            prGreen(my_input)
+        # else:
+        #     prRed("No input to print.")
+        self.prepared = True
+
     def bExecute(self, bContext = None,):
-        pass
+        if my_input := self.evaluate_input("Input"):
+            prGreen(my_input)
+        # else:
+        #     prRed("No input to print.")
+        self.executed = True
 
-    def __repr__(self):
-        return self.signature.__repr__()
 
-    def fill_parameters(self):
-        fill_parameters(self)
+class UtilityCompare:
+    def __init__(self, signature, base_tree):
+        self.base_tree=base_tree
+        self.executed = False
+        self.signature = signature
+        self.inputs = {
+          "A"           : NodeSocket(is_input = True, name = "A", node = self),
+          "B"           : NodeSocket(is_input = True, name = "B", node = self),
+        }
+        self.outputs = {
+          "Result"      : NodeSocket(name = "Result", node = self),
+        }
+        self.parameters = {
+          "A"           : None,
+          "B"           : None,
+          "Result"      : None,
+        }
+        self.node_type = "UTILITY"
+        self.hierarchy_connections, self.connections = [], []
+        self.hierarchy_dependencies, self.dependencies = [], []
+        self.prepared, self.executed = False, False
+
+    def bPrepare(self, bContext = None,):
+        self.parameters["Result"] = self.evaluate_input("A") == self.evaluate_input("B")
+        self.prepared = True; self.executed = True
+
+
+class UtilityChoose:
+    def __init__(self, signature, base_tree):
+        self.base_tree=base_tree
+        self.executed = False
+        self.signature = signature
+        self.inputs = {
+          "Condition"   : NodeSocket(is_input = True, name = "Condition", node = self),
+          "A"           : NodeSocket(is_input = True, name = "A", node = self),
+          "B"           : NodeSocket(is_input = True, name = "B", node = self),
+        }
+        self.outputs = {
+          "Result"      : NodeSocket(name = "Result", node = self),
+        }
+        self.parameters = {
+          "Condition"   : None,
+          "A"           : None,
+          "B"           : None,
+          "Result"      : None,
+        }
+        self.node_type = "UTILITY"
+        self.hierarchy_connections, self.connections = [], []
+        self.hierarchy_dependencies, self.dependencies = [], []
+        self.prepared, self.executed = False, False
+
+    def bPrepare(self, bContext = None,):
+        condition = self.evaluate_input("Condition")
+        if condition:
+            self.parameters["Result"] = self.evaluate_input("B")
+        else:
+            self.parameters["Result"] = self.evaluate_input("A")
+        self.prepared = True
+        self.executed = True
+
+
+
+for c in TellClasses():
+    setup_container(c)

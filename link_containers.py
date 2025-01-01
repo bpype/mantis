@@ -1,5 +1,5 @@
 from .node_container_common import *
-from bpy.types import Node
+from bpy.types import Node, Bone
 from .base_definitions import MantisNode, GraphError
 
 #TODO: get rid of this, it's unnecesary here, we always want to import
@@ -38,7 +38,7 @@ def TellClasses():
 
 def default_evaluate_input(nc, input_name):
     # should catch 'Target', 'Pole Target' and ArmatureConstraint targets, too
-    if ('Target' in input_name) and input_name != "Target Space":
+    if ('Target' in input_name) and input_name not in  ["Target Space", "Use Target Z"]:
         socket = nc.inputs.get(input_name)
         if socket.is_linked:
             return socket.links[0].from_node
@@ -47,6 +47,13 @@ def default_evaluate_input(nc, input_name):
     else:
         return evaluate_input(nc, input_name)
 
+# def set_constraint_name(nc):
+#     if name := nc.evaluate_input("Name"):
+#         return name
+#     return nc.__class__.__name__
+
+# set the name if it is available, otherwise just use the constraint's nice name
+set_constraint_name = lambda nc : nc.evaluate_input("Name") if nc.evaluate_input("Name") else nc.__class__.__name__
 
 
 #*#-------------------------------#++#-------------------------------#*#
@@ -86,28 +93,27 @@ class LinkInherit:
         self.inputs["Parent"].set_traverse_target(self.outputs["Inheritance"])
         self.outputs["Inheritance"].set_traverse_target(self.inputs["Parent"])
         self.node_type = 'LINK'
+        self.hierarchy_connections = []
+        self.connections = []
+        self.hierarchy_dependencies = []
+        self.dependencies = []
+        self.prepared = True
+        self.executed = True
     
         
     def evaluate_input(self, input_name):
         return default_evaluate_input(self, input_name)
         
     def GetxForm(self): # DUPLICATED, TODO fix this
+        # I think this is only run in display update.
         trace = trace_single_line_up(self, "Inheritance")
         for node in trace[0]:
             if (node.node_type == 'XFORM'):
                 return node
         raise GraphError("%s is not connected to a downstream xForm" % self)
     
-    def bExecute(self, bContext = None,):
-        # this is handled by the xForm objects, since it isn't really
-        #  a constraint.
-        pass
     
-    def __repr__(self):
-        return self.signature.__repr__()
         
-    def fill_parameters(self):
-        fill_parameters(self)
 
 
 class LinkCopyLocation:
@@ -124,6 +130,7 @@ class LinkCopyLocation:
             "Invert"             : NodeSocket(is_input = True, name = "Invert", node = self,),
             "Target Space"       : NodeSocket(is_input = True, name = "Target Space", node = self,),
             "Owner Space"        : NodeSocket(is_input = True, name = "Owner Space", node = self,),
+            "Offset"             : NodeSocket(is_input = True, name = "Offset", node = self,),
             "Influence"          : NodeSocket(is_input = True, name = "Influence", node = self,),
             "Target"             : NodeSocket(is_input = True, name = "Target", node = self,),
             "Enable"             : NodeSocket(is_input = True, name = "Enable", node = self,), }
@@ -138,6 +145,7 @@ class LinkCopyLocation:
             "Invert":None,
             "Target Space":None,
             "Owner Space":None,
+            "Offset":None,
             "Influence":None,
             "Target":None,
             "Enable":None, }
@@ -145,6 +153,12 @@ class LinkCopyLocation:
         self.inputs["Input Relationship"].set_traverse_target(self.outputs["Output Relationship"])
         self.outputs["Output Relationship"].set_traverse_target(self.inputs["Input Relationship"])
         self.node_type = 'LINK'
+        self.hierarchy_connections = []
+        self.connections = []
+        self.hierarchy_dependencies = []
+        self.dependencies = []
+        self.prepared = True
+        self.executed = False
         
         
         
@@ -161,9 +175,28 @@ class LinkCopyLocation:
         print(wrapGreen("Creating ")+wrapWhite("Copy Location")+
              wrapGreen(" Constraint for bone: ") +
              wrapOrange(self.GetxForm().bGetObject().name))
-        c.name = self.evaluate_input("Name")
+        if constraint_name := self.evaluate_input("Name"):
+            c.name = constraint_name
         self.bObject = c
+        custom_space_owner, custom_space_target = False, False
+        if self.inputs["Owner Space"].is_connected and self.inputs["Owner Space"].links[0].from_node.node_type == 'XFORM':
+            custom_space_owner=True
+            c.owner_space='CUSTOM'
+            xf = self.inputs["Owner Space"].links[0].from_node.bGetObject(mode="OBJECT")
+            if isinstance(xf, Bone):
+                c.space_object=self.inputs["Owner Space"].links[0].from_node.bGetParentArmature(); c.space_subtarget=xf.name
+            else:
+                c.space_object=xf
+        if self.inputs["Target Space"].is_connected and self.inputs["Target Space"].links[0].from_node.node_type == 'XFORM':
+            custom_space_target=True
+            c.target_space='CUSTOM'
+            xf = self.inputs["Owner Space"].links[0].from_node.bGetObject(mode="OBJECT")
+            if isinstance(xf, Bone):
+                c.space_object=self.inputs["Target Space"].links[0].from_node.bGetParentArmature(); c.space_subtarget=xf.name
+            else:
+                c.space_object=xf
         props_sockets = {
+        'use_offset'       : ("Offset", False),
         'head_tail'       : ("Head/Tail", 0),
         'use_bbone_shape' : ("UseBBone", False),
         'invert_x'        : ( ("Invert", 0), False),
@@ -177,16 +210,16 @@ class LinkCopyLocation:
         'influence'       : ("Influence", 1),
         'mute'            : ("Enable", True),
         }
-        evaluate_sockets(self, c, props_sockets)    
+        if custom_space_owner: del props_sockets['owner_space']
+        if custom_space_target: del props_sockets['target_space']
+        #
+        evaluate_sockets(self, c, props_sockets)
+        self.executed = True
         
     def bFinalize(self, bContext = None):
         finish_drivers(self)
     
-    def __repr__(self):
-        return self.signature.__repr__()
         
-    def fill_parameters(self):
-        fill_parameters(self)
         
 
 class LinkCopyRotation:
@@ -224,6 +257,12 @@ class LinkCopyRotation:
         self.inputs["Input Relationship"].set_traverse_target(self.outputs["Output Relationship"])
         self.outputs["Output Relationship"].set_traverse_target(self.inputs["Input Relationship"])
         self.node_type = 'LINK'
+        self.hierarchy_connections = []
+        self.connections = []
+        self.hierarchy_dependencies = []
+        self.dependencies = []
+        self.prepared = True
+        self.executed = False
         
     def evaluate_input(self, input_name):
         return default_evaluate_input(self, input_name)
@@ -238,8 +277,6 @@ class LinkCopyRotation:
         print(wrapGreen("Creating ")+wrapWhite("Copy Rotation")+
              wrapGreen(" Constraint for bone: ") +
              wrapOrange(self.GetxForm().bGetObject().name))
-        if self.parameters["Enable"]:
-            c.enabled = True; c.mute = False
         
         rotation_order = self.evaluate_input("RotationOrder")
         if ((rotation_order == 'QUATERNION') or (rotation_order == 'AXIS_ANGLE')):
@@ -249,8 +286,26 @@ class LinkCopyRotation:
                 c.euler_order = rotation_order
             except TypeError: # it's a driver or incorrect
                 c.euler_order = 'AUTO'
-        c.name = self.evaluate_input("Name")
+        if constraint_name := self.evaluate_input("Name"):
+            c.name = constraint_name
         self.bObject = c
+        custom_space_owner, custom_space_target = False, False
+        if self.inputs["Owner Space"].is_connected and self.inputs["Owner Space"].links[0].from_node.node_type == 'XFORM':
+            custom_space_owner=True
+            c.owner_space='CUSTOM'
+            xf = self.inputs["Owner Space"].links[0].from_node.bGetObject(mode="OBJECT")
+            if isinstance(xf, Bone):
+                c.space_object=self.inputs["Owner Space"].links[0].from_node.bGetParentArmature(); c.space_subtarget=xf.name
+            else:
+                c.space_object=xf
+        if self.inputs["Target Space"].is_connected and self.inputs["Target Space"].links[0].from_node.node_type == 'XFORM':
+            custom_space_target=True
+            c.target_space='CUSTOM'
+            xf = self.inputs["Owner Space"].links[0].from_node.bGetObject(mode="OBJECT")
+            if isinstance(xf, Bone):
+                c.space_object=self.inputs["Target Space"].links[0].from_node.bGetParentArmature(); c.space_subtarget=xf.name
+            else:
+                c.space_object=xf
         props_sockets = {
         'euler_order' : ("RotationOrder", 'AUTO'),
         'mix_mode'       : ("Rotation Mix", 'REPLACE'),
@@ -265,16 +320,16 @@ class LinkCopyRotation:
         'influence'      : ("Influence", 1),
         'mute'            : ("Enable", True),
         }
-        evaluate_sockets(self, c, props_sockets)    
+        if custom_space_owner: del props_sockets['owner_space']
+        if custom_space_target: del props_sockets['target_space']
+        #
+        evaluate_sockets(self, c, props_sockets)
+        self.executed = True
             
     def bFinalize(self, bContext = None):
         finish_drivers(self)
     
-    def __repr__(self):
-        return self.signature.__repr__()
         
-    def fill_parameters(self):
-        fill_parameters(self)
         
 class LinkCopyScale:
     '''A node representing Copy Scale'''
@@ -312,6 +367,12 @@ class LinkCopyScale:
         self.inputs["Input Relationship"].set_traverse_target(self.outputs["Output Relationship"])
         self.outputs["Output Relationship"].set_traverse_target(self.inputs["Input Relationship"])
         self.node_type = 'LINK'
+        self.hierarchy_connections = []
+        self.connections = []
+        self.hierarchy_dependencies = []
+        self.dependencies = []
+        self.prepared = True
+        self.executed = False
         
     def evaluate_input(self, input_name):
         return default_evaluate_input(self, input_name)
@@ -326,8 +387,26 @@ class LinkCopyScale:
         print(wrapGreen("Creating ")+wrapWhite("Copy Scale")+
              wrapGreen(" Constraint for bone: ") +
              wrapOrange(self.GetxForm().bGetObject().name))
-        c.name = self.evaluate_input("Name")
+        if constraint_name := self.evaluate_input("Name"):
+            c.name = constraint_name
         self.bObject = c
+        custom_space_owner, custom_space_target = False, False
+        if self.inputs["Owner Space"].is_connected and self.inputs["Owner Space"].links[0].from_node.node_type == 'XFORM':
+            custom_space_owner=True
+            c.owner_space='CUSTOM'
+            xf = self.inputs["Owner Space"].links[0].from_node.bGetObject(mode="OBJECT")
+            if isinstance(xf, Bone):
+                c.space_object=self.inputs["Owner Space"].links[0].from_node.bGetParentArmature(); c.space_subtarget=xf.name
+            else:
+                c.space_object=xf
+        if self.inputs["Target Space"].is_connected and self.inputs["Target Space"].links[0].from_node.node_type == 'XFORM':
+            custom_space_target=True
+            c.target_space='CUSTOM'
+            xf = self.inputs["Target Space"].links[0].from_node.bGetObject(mode="OBJECT")
+            if isinstance(xf, Bone):
+                c.space_object=self.inputs["Owner Space"].links[0].from_node.bGetParentArmature(); c.space_subtarget=xf.name
+            else:
+                c.space_object=xf
         props_sockets = {
         'use_offset'       : ("Offset", False),
         'use_make_uniform' : ("Average", False),
@@ -339,16 +418,16 @@ class LinkCopyScale:
         'influence'        : ("Influence", 1),
         'mute'             : ("Enable", True),
         }
-        evaluate_sockets(self, c, props_sockets)    
+        if custom_space_owner: del props_sockets['owner_space']
+        if custom_space_target: del props_sockets['target_space']
+        #
+        evaluate_sockets(self, c, props_sockets)   
+        self.executed = True 
             
     def bFinalize(self, bContext = None):
         finish_drivers(self)
     
-    def __repr__(self):
-        return self.signature.__repr__()
         
-    def fill_parameters(self):
-        fill_parameters(self)
 
 class LinkCopyTransforms:
     '''A node representing Copy Transfoms'''
@@ -384,6 +463,12 @@ class LinkCopyTransforms:
         self.inputs["Input Relationship"].set_traverse_target(self.outputs["Output Relationship"])
         self.outputs["Output Relationship"].set_traverse_target(self.inputs["Input Relationship"])
         self.node_type = 'LINK'
+        self.hierarchy_connections = []
+        self.connections = []
+        self.hierarchy_dependencies = []
+        self.dependencies = []
+        self.prepared = True
+        self.executed = False
         
     def evaluate_input(self, input_name):
         return default_evaluate_input(self, input_name)
@@ -398,8 +483,26 @@ class LinkCopyTransforms:
         print(wrapGreen("Creating ")+wrapWhite("Copy Transforms")+
              wrapGreen(" Constraint for bone: ") +
              wrapOrange(self.GetxForm().bGetObject().name))
-        c.name = self.evaluate_input("Name")
+        if constraint_name := self.evaluate_input("Name"):
+            c.name = constraint_name
         self.bObject = c
+        custom_space_owner, custom_space_target = False, False
+        if self.inputs["Owner Space"].is_connected and self.inputs["Owner Space"].links[0].from_node.node_type == 'XFORM':
+            custom_space_owner=True
+            c.owner_space='CUSTOM'
+            xf = self.inputs["Owner Space"].links[0].from_node.bGetObject(mode="OBJECT")
+            if isinstance(xf, Bone):
+                c.space_object=self.inputs["Owner Space"].links[0].from_node.bGetParentArmature(); c.space_subtarget=xf.name
+            else:
+                c.space_object=xf
+        if self.inputs["Target Space"].is_connected and self.inputs["Target Space"].links[0].from_node.node_type == 'XFORM':
+            custom_space_target=True
+            c.target_space='CUSTOM'
+            xf = self.inputs["Target Space"].links[0].from_node.bGetObject(mode="OBJECT")
+            if isinstance(xf, Bone):
+                c.space_object=self.inputs["Target Space"].links[0].from_node.bGetParentArmature(); c.space_subtarget=xf.name
+            else:
+                c.space_object=xf
         props_sockets = {
         'head_tail'       : ("Head/Tail", 0),
         'use_bbone_shape' : ("UseBBone", False),
@@ -409,15 +512,16 @@ class LinkCopyTransforms:
         'influence'       : ("Influence", 1),
         'mute'            :  ("Enable", False)
         }
-        evaluate_sockets(self, c, props_sockets)        
+        if custom_space_owner: del props_sockets['owner_space']
+        if custom_space_target: del props_sockets['target_space']
+        #
+        evaluate_sockets(self, c, props_sockets)  
+        self.executed = True
+
     def bFinalize(self, bContext = None):
         finish_drivers(self)
     
-    def __repr__(self):
-        return self.signature.__repr__()
         
-    def fill_parameters(self):
-        fill_parameters(self)
 
 
 transformation_props_sockets = {
@@ -548,6 +652,12 @@ class LinkTransformation:
         self.inputs["Input Relationship"].set_traverse_target(self.outputs["Output Relationship"])
         self.outputs["Output Relationship"].set_traverse_target(self.inputs["Input Relationship"])
         self.node_type = 'LINK'
+        self.hierarchy_connections = []
+        self.connections = []
+        self.hierarchy_dependencies = []
+        self.dependencies = []
+        self.prepared = True
+        self.executed = False
         
     def evaluate_input(self, input_name):
         return default_evaluate_input(self, input_name)
@@ -562,18 +672,37 @@ class LinkTransformation:
         print(wrapGreen("Creating ")+wrapWhite("Transformation")+
              wrapGreen(" Constraint for bone: ") +
              wrapOrange(self.GetxForm().bGetObject().name))
-        c.name = self.evaluate_input("Name")
+        if constraint_name := self.evaluate_input("Name"):
+            c.name = constraint_name
         self.bObject = c
-        props_sockets = transformation_props_sockets
-        evaluate_sockets(self, c, props_sockets)        
+        custom_space_owner, custom_space_target = False, False
+        if self.inputs["Owner Space"].is_connected and self.inputs["Owner Space"].links[0].from_node.node_type == 'XFORM':
+            custom_space_owner=True
+            c.owner_space='CUSTOM'
+            xf = self.inputs["Owner Space"].links[0].from_node.bGetObject(mode="OBJECT")
+            if isinstance(xf, Bone):
+                c.space_object=self.inputs["Owner Space"].links[0].from_node.bGetParentArmature(); c.space_subtarget=xf.name
+            else:
+                c.space_object=xf
+        if self.inputs["Target Space"].is_connected and self.inputs["Target Space"].links[0].from_node.node_type == 'XFORM':
+            custom_space_target=True
+            c.target_space='CUSTOM'
+            xf = self.inputs["Owner Space"].links[0].from_node.bGetObject(mode="OBJECT")
+            if isinstance(xf, Bone):
+                c.space_object=self.inputs["Target Space"].links[0].from_node.bGetParentArmature(); c.space_subtarget=xf.name
+            else:
+                c.space_object=xf
+        props_sockets = transformation_props_sockets.copy()
+        if custom_space_owner: del props_sockets['owner_space']
+        if custom_space_target: del props_sockets['target_space']
+        #
+        evaluate_sockets(self, c, props_sockets)     
+        self.executed = True
+
     def bFinalize(self, bContext = None):
         finish_drivers(self)
     
-    def __repr__(self):
-        return self.signature.__repr__()
         
-    def fill_parameters(self):
-        fill_parameters(self)
 
 class LinkLimitLocation:
     def __init__(self, signature, base_tree):
@@ -622,6 +751,12 @@ class LinkLimitLocation:
         self.inputs["Input Relationship"].set_traverse_target(self.outputs["Output Relationship"])
         self.outputs["Output Relationship"].set_traverse_target(self.inputs["Input Relationship"])
         self.node_type = 'LINK'
+        self.hierarchy_connections = []
+        self.connections = []
+        self.hierarchy_dependencies = []
+        self.dependencies = []
+        self.prepared = True
+        self.executed = False
         
     def evaluate_input(self, input_name):
         return default_evaluate_input(self, input_name)
@@ -637,8 +772,18 @@ class LinkLimitLocation:
              wrapGreen(" Constraint for bone: ") +
              wrapOrange(self.GetxForm().bGetObject().name))
         
-        c.name = self.evaluate_input("Name")
+        if constraint_name := self.evaluate_input("Name"):
+            c.name = constraint_name
         self.bObject = c
+        custom_space_owner = False
+        if self.inputs["Owner Space"].is_connected and self.inputs["Owner Space"].links[0].from_node.node_type == 'XFORM':
+            custom_space_owner=True
+            c.owner_space='CUSTOM'
+            xf = self.inputs["Owner Space"].links[0].from_node.bGetObject(mode="OBJECT")
+            if isinstance(xf, Bone):
+                c.space_object=self.inputs["Owner Space"].links[0].from_node.bGetParentArmature(); c.space_subtarget=xf.name
+            else:
+                c.space_object=xf
         props_sockets = {
         'use_transform_limit' : ("Affect Transform", False),
         'use_max_x'           : ("Use Max X", False),
@@ -657,15 +802,15 @@ class LinkLimitLocation:
         'influence'           : ("Influence", 1),
         'mute'               : ("Enable", True),
         }
-        evaluate_sockets(self, c, props_sockets)        
+        if custom_space_owner: del props_sockets['owner_space']
+        #
+        evaluate_sockets(self, c, props_sockets)
+        self.executed = True
+
     def bFinalize(self, bContext = None):
         finish_drivers(self)
     
-    def __repr__(self):
-        return self.signature.__repr__()
         
-    def fill_parameters(self):
-        fill_parameters(self)
         
 class LinkLimitRotation:
     def __init__(self, signature, base_tree):
@@ -708,6 +853,12 @@ class LinkLimitRotation:
         self.inputs["Input Relationship"].set_traverse_target(self.outputs["Output Relationship"])
         self.outputs["Output Relationship"].set_traverse_target(self.inputs["Input Relationship"])
         self.node_type = 'LINK'
+        self.hierarchy_connections = []
+        self.connections = []
+        self.hierarchy_dependencies = []
+        self.dependencies = []
+        self.prepared = True
+        self.executed = False
         
     def evaluate_input(self, input_name):
         return default_evaluate_input(self, input_name)
@@ -722,8 +873,18 @@ class LinkLimitRotation:
              wrapGreen(" Constraint for bone: ") +
              wrapOrange(self.GetxForm().bGetObject().name))
         
-        c.name = self.evaluate_input("Name")
+        if constraint_name := self.evaluate_input("Name"):
+            c.name = constraint_name
         self.bObject = c
+        custom_space_owner = False
+        if self.inputs["Owner Space"].is_connected and self.inputs["Owner Space"].links[0].from_node.node_type == 'XFORM':
+            custom_space_owner=True
+            c.owner_space='CUSTOM'
+            xf = self.inputs["Owner Space"].links[0].from_node.bGetObject(mode="OBJECT")
+            if isinstance(xf, Bone):
+                c.space_object=self.inputs["Owner Space"].links[0].from_node.bGetParentArmature(); c.space_subtarget=xf.name
+            else:
+                c.space_object=xf
         props_sockets = {
         'use_transform_limit' : ("Affect Transform", False),
         'use_limit_x'         : ("Use X", False),
@@ -739,15 +900,15 @@ class LinkLimitRotation:
         'influence'           : ("Influence", 1),
         'mute'               : ("Enable", True),
         }
-        evaluate_sockets(self, c, props_sockets)        
+        if custom_space_owner: del props_sockets['owner_space']
+        #
+        evaluate_sockets(self, c, props_sockets)
+        self.executed = True
+
     def bFinalize(self, bContext = None):
         finish_drivers(self)
     
-    def __repr__(self):
-        return self.signature.__repr__()
         
-    def fill_parameters(self):
-        fill_parameters(self)
         
 class LinkLimitScale:
     def __init__(self, signature, base_tree):
@@ -796,6 +957,12 @@ class LinkLimitScale:
         self.inputs["Input Relationship"].set_traverse_target(self.outputs["Output Relationship"])
         self.outputs["Output Relationship"].set_traverse_target(self.inputs["Input Relationship"])
         self.node_type = 'LINK'
+        self.hierarchy_connections = []
+        self.connections = []
+        self.hierarchy_dependencies = []
+        self.dependencies = []
+        self.prepared = True
+        self.executed = False
         
     def evaluate_input(self, input_name):
         return default_evaluate_input(self, input_name)
@@ -810,8 +977,18 @@ class LinkLimitScale:
              wrapGreen(" Constraint for bone: ") +
              wrapOrange(self.GetxForm().bGetObject().name))
         
-        c.name = self.evaluate_input("Name")
+        if constraint_name := self.evaluate_input("Name"):
+            c.name = constraint_name
         self.bObject = c
+        custom_space_owner = False
+        if self.inputs["Owner Space"].is_connected and self.inputs["Owner Space"].links[0].from_node.node_type == 'XFORM':
+            custom_space_owner=True
+            c.owner_space='CUSTOM'
+            xf = self.inputs["Owner Space"].links[0].from_node.bGetObject(mode="OBJECT")
+            if isinstance(xf, Bone):
+                c.space_object=self.inputs["Owner Space"].links[0].from_node.bGetParentArmature(); c.space_subtarget=xf.name
+            else:
+                c.space_object=xf
         props_sockets = {
         'use_transform_limit' : ("Affect Transform", False),
         'use_max_x'           : ("Use Max X", False),
@@ -830,15 +1007,15 @@ class LinkLimitScale:
         'influence'           : ("Influence", 1),
         'mute'               :  ("Enable", True),
         }
-        evaluate_sockets(self, c, props_sockets)        
+        if custom_space_owner: del props_sockets['owner_space']
+        #
+        evaluate_sockets(self, c, props_sockets)
+        self.executed = True
+
     def bFinalize(self, bContext = None):
         finish_drivers(self)
     
-    def __repr__(self):
-        return self.signature.__repr__()
         
-    def fill_parameters(self):
-        fill_parameters(self)
         
 class LinkLimitDistance:
     def __init__(self, signature, base_tree):
@@ -875,6 +1052,12 @@ class LinkLimitDistance:
         self.inputs["Input Relationship"].set_traverse_target(self.outputs["Output Relationship"])
         self.outputs["Output Relationship"].set_traverse_target(self.inputs["Input Relationship"])
         self.node_type = 'LINK'
+        self.hierarchy_connections = []
+        self.connections = []
+        self.hierarchy_dependencies = []
+        self.dependencies = []
+        self.prepared = True
+        self.executed = False
         
     def evaluate_input(self, input_name):
         return default_evaluate_input(self, input_name)
@@ -889,12 +1072,30 @@ class LinkLimitDistance:
              wrapOrange(self.GetxForm().bGetObject().name))
         c = self.GetxForm().bGetObject().constraints.new('LIMIT_DISTANCE')
         get_target_and_subtarget(self, c)
-        c.name = self.evaluate_input("Name")
+        if constraint_name := self.evaluate_input("Name"):
+            c.name = constraint_name
         self.bObject = c
         #
         # TODO: set distance automagically
         # IMPORTANT TODO BUG
         
+        custom_space_owner, custom_space_target = False, False
+        if self.inputs["Owner Space"].is_connected and self.inputs["Owner Space"].links[0].from_node.node_type == 'XFORM':
+            custom_space_owner=True
+            c.owner_space='CUSTOM'
+            xf = self.inputs["Owner Space"].links[0].from_node.bGetObject(mode="OBJECT")
+            if isinstance(xf, Bone):
+                c.space_object=self.inputs["Owner Space"].links[0].from_node.bGetParentArmature(); c.space_subtarget=xf.name
+            else:
+                c.space_object=xf
+        if self.inputs["Target Space"].is_connected and self.inputs["Target Space"].links[0].from_node.node_type == 'XFORM':
+            custom_space_target=True
+            c.target_space='CUSTOM'
+            xf = self.inputs["Owner Space"].links[0].from_node.bGetObject(mode="OBJECT")
+            if isinstance(xf, Bone):
+                c.space_object=self.inputs["Target Space"].links[0].from_node.bGetParentArmature(); c.space_subtarget=xf.name
+            else:
+                c.space_object=xf
         props_sockets = {
         'distance'            : ("Distance", 0),
         'head_tail'           : ("Head/Tail", 0),
@@ -906,16 +1107,16 @@ class LinkLimitDistance:
         'influence'           : ("Influence", 1),
         'mute'               : ("Enable", True),
         }
+        if custom_space_owner: del props_sockets['owner_space']
+        if custom_space_target: del props_sockets['target_space']
+        #
         evaluate_sockets(self, c, props_sockets)
+        self.executed = True
 
     def bFinalize(self, bContext = None):
         finish_drivers(self)
     
-    def __repr__(self):
-        return self.signature.__repr__()
         
-    def fill_parameters(self):
-        fill_parameters(self)
 
 # Tracking
 
@@ -962,6 +1163,12 @@ class LinkStretchTo:
         self.inputs["Input Relationship"].set_traverse_target(self.outputs["Output Relationship"])
         self.outputs["Output Relationship"].set_traverse_target(self.inputs["Input Relationship"])
         self.node_type = 'LINK'
+        self.hierarchy_connections = []
+        self.connections = []
+        self.hierarchy_dependencies = []
+        self.dependencies = []
+        self.prepared = True
+        self.executed = False
         
     def evaluate_input(self, input_name):
         return default_evaluate_input(self, input_name)
@@ -976,7 +1183,8 @@ class LinkStretchTo:
              wrapOrange(self.GetxForm().bGetObject().name))
         c = self.GetxForm().bGetObject().constraints.new('STRETCH_TO')
         get_target_and_subtarget(self, c)
-        c.name = self.evaluate_input("Name")
+        if constraint_name := self.evaluate_input("Name"):
+            c.name = constraint_name
         self.bObject = c
         props_sockets = {
         'head_tail'       : ("Head/Tail", 0),
@@ -998,15 +1206,12 @@ class LinkStretchTo:
         if (self.evaluate_input("Original Length") == 0):
             # this is meant to be set automatically.
             c.rest_length = self.GetxForm().bGetObject().bone.length
+        self.executed = True
         
     def bFinalize(self, bContext = None):
         finish_drivers(self)
     
-    def __repr__(self):
-        return self.signature.__repr__()
         
-    def fill_parameters(self):
-        fill_parameters(self)
 
 class LinkDampedTrack:
     def __init__(self, signature, base_tree):
@@ -1035,6 +1240,12 @@ class LinkDampedTrack:
         self.inputs["Input Relationship"].set_traverse_target(self.outputs["Output Relationship"])
         self.outputs["Output Relationship"].set_traverse_target(self.inputs["Input Relationship"])
         self.node_type = 'LINK'
+        self.hierarchy_connections = []
+        self.connections = []
+        self.hierarchy_dependencies = []
+        self.dependencies = []
+        self.prepared = True
+        self.executed = False
         
     def evaluate_input(self, input_name):
         return default_evaluate_input(self, input_name)
@@ -1049,7 +1260,8 @@ class LinkDampedTrack:
              wrapOrange(self.GetxForm().bGetObject().name))
         c = self.GetxForm().bGetObject().constraints.new('DAMPED_TRACK')
         get_target_and_subtarget(self, c)
-        c.name = self.evaluate_input("Name")
+        if constraint_name := self.evaluate_input("Name"):
+            c.name = constraint_name
         self.bObject = c
         props_sockets = {
         'head_tail'       : ("Head/Tail", 0),
@@ -1059,15 +1271,12 @@ class LinkDampedTrack:
         'mute'            : ("Enable", True),
         }
         evaluate_sockets(self, c, props_sockets)
+        self.executed = True
     
     def bFinalize(self, bContext = None):
         finish_drivers(self)
         
-    def __repr__(self):
-        return self.signature.__repr__()
         
-    def fill_parameters(self):
-        fill_parameters(self)
 
 class LinkLockedTrack:
     def __init__(self, signature, base_tree):
@@ -1098,6 +1307,12 @@ class LinkLockedTrack:
         self.inputs["Input Relationship"].set_traverse_target(self.outputs["Output Relationship"])
         self.outputs["Output Relationship"].set_traverse_target(self.inputs["Input Relationship"])
         self.node_type = 'LINK'
+        self.hierarchy_connections = []
+        self.connections = []
+        self.hierarchy_dependencies = []
+        self.dependencies = []
+        self.prepared = True
+        self.executed = False
         
     def evaluate_input(self, input_name):
         return default_evaluate_input(self, input_name)
@@ -1112,7 +1327,8 @@ class LinkLockedTrack:
              wrapOrange(self.GetxForm().bGetObject().name))
         c = self.GetxForm().bGetObject().constraints.new('LOCKED_TRACK')
         get_target_and_subtarget(self, c)
-        c.name = self.evaluate_input("Name")
+        if constraint_name := self.evaluate_input("Name"):
+            c.name = constraint_name
         self.bObject = c
         props_sockets = {
         'head_tail'       : ("Head/Tail", 0),
@@ -1123,15 +1339,12 @@ class LinkLockedTrack:
         'mute'           : ("Enable", True),
         }
         evaluate_sockets(self, c, props_sockets)
+        self.executed = True
 
     def bFinalize(self, bContext = None):
         finish_drivers(self)
     
-    def __repr__(self):
-        return self.signature.__repr__()
         
-    def fill_parameters(self):
-        fill_parameters(self)
 
 class LinkTrackTo:
     def __init__(self, signature, base_tree):
@@ -1164,6 +1377,12 @@ class LinkTrackTo:
         self.inputs["Input Relationship"].set_traverse_target(self.outputs["Output Relationship"])
         self.outputs["Output Relationship"].set_traverse_target(self.inputs["Input Relationship"])
         self.node_type = 'LINK'
+        self.hierarchy_connections = []
+        self.connections = []
+        self.hierarchy_dependencies = []
+        self.dependencies = []
+        self.prepared = True
+        self.executed = False
         
     def evaluate_input(self, input_name):
         return default_evaluate_input(self, input_name)
@@ -1178,7 +1397,8 @@ class LinkTrackTo:
              wrapOrange(self.GetxForm().bGetObject().name))
         c = self.GetxForm().bGetObject().constraints.new('TRACK_TO')
         get_target_and_subtarget(self, c)
-        c.name = self.evaluate_input("Name")
+        if constraint_name := self.evaluate_input("Name"):
+            c.name = constraint_name
         self.bObject = c
         props_sockets = {
         'head_tail'       : ("Head/Tail", 0),
@@ -1190,12 +1410,9 @@ class LinkTrackTo:
         'mute'           : ("Enable", True),
         }
         evaluate_sockets(self, c, props_sockets)
+        self.executed = True
     
-    def __repr__(self):
-        return self.signature.__repr__()
         
-    def fill_parameters(self):
-        fill_parameters(self)
 
     def bFinalize(self, bContext = None):
         finish_drivers(self)
@@ -1230,6 +1447,12 @@ class LinkInheritConstraint:
         self.inputs["Input Relationship"].set_traverse_target(self.outputs["Output Relationship"])
         self.outputs["Output Relationship"].set_traverse_target(self.inputs["Input Relationship"])
         self.node_type = 'LINK'
+        self.hierarchy_connections = []
+        self.connections = []
+        self.hierarchy_dependencies = []
+        self.dependencies = []
+        self.prepared = True
+        self.executed = False
         
     def evaluate_input(self, input_name):
         return default_evaluate_input(self, input_name)
@@ -1244,7 +1467,8 @@ class LinkInheritConstraint:
              wrapOrange(self.GetxForm().bGetObject().name))
         c = self.GetxForm().bGetObject().constraints.new('CHILD_OF')
         get_target_and_subtarget(self, c)
-        c.name = self.evaluate_input("Name")
+        if constraint_name := self.evaluate_input("Name"):
+            c.name = constraint_name
         self.bObject = c
         
         props_sockets = {
@@ -1261,17 +1485,12 @@ class LinkInheritConstraint:
         'mute'             : ("Enable", True),
         }
         evaluate_sockets(self, c, props_sockets)
-            
-        
         c.set_inverse_pending
+        self.executed = True
         
         
     
-    def __repr__(self):
-        return self.signature.__repr__()
         
-    def fill_parameters(self):
-        fill_parameters(self)
 
     def bFinalize(self, bContext = None):
         finish_drivers(self)
@@ -1311,6 +1530,12 @@ class LinkInverseKinematics:
         self.node_type = 'LINK'
         self.bObject = None
         self.drivers = {}
+        self.hierarchy_connections = []
+        self.connections = []
+        self.hierarchy_dependencies = []
+        self.dependencies = []
+        self.prepared = True
+        self.executed = False
         
     def evaluate_input(self, input_name):
         return default_evaluate_input(self, input_name)
@@ -1327,15 +1552,17 @@ class LinkInverseKinematics:
         c = self.GetxForm().bGetObject().constraints.new('IK')
         get_target_and_subtarget(self, c)
         get_target_and_subtarget(self, c, input_name = 'Pole Target')
-        c.name = self.evaluate_input("Name")
+        if constraint_name := self.evaluate_input("Name"):
+            c.name = constraint_name
         
         self.bObject = c
+        c.chain_count = 1 # so that, if there are errors, this doesn't print a whole bunch of circular dependency crap from having infinite chain length
         if (c.pole_target): # Calculate the pole angle, the user shouldn't have to.
             pole_object = c.pole_target
             pole_location = pole_object.matrix_world.decompose()[0]
             if (c.pole_subtarget):
                 pole_object = c.pole_target.pose.bones[c.pole_subtarget]
-                pole_location = pole_object.matrix.decompose()[0]
+                pole_location += pole_object.bone.head_local
             #HACK HACK
             handle_location = myOb.bone.tail_local if (self.evaluate_input("Use Tail")) else myOb.bone.head_local
             counter = 0
@@ -1349,15 +1576,26 @@ class LinkInverseKinematics:
                 counter+=1
             head_location = base_bone.bone.head_local
 
-            pole_normal = (handle_location - head_location).cross(pole_location - head_location)
-            vector_u = myOb.bone.x_axis
-            vector_v = pole_normal.cross(base_bone.bone.y_axis)
-            angle = -1 * vector_u.angle(vector_v)
-            # TODO: create warnings for edge cases that fail such as pole target in the same place as handle
-            # if (vector_u.cross(vector_v).angle(base_bone.bone.y_axis) < 1):
-                # angle = angle
-            
-            c.pole_angle = angle
+            # modified from https://blender.stackexchange.com/questions/19754/how-to-set-calculate-pole-angle-of-ik-constraint-so-the-chain-does-not-move
+            from mathutils import Vector
+
+            def signed_angle(vector_u, vector_v, normal):
+                # Normal specifies orientation
+                angle = vector_u.angle(vector_v)
+                if vector_u.cross(vector_v).angle(normal) < 1:
+                    angle = -angle
+                return angle
+
+            def get_pole_angle(base_bone, ik_bone, pole_location):
+                pole_normal = (ik_bone.bone.tail_local - base_bone.bone.head_local).cross(pole_location - base_bone.bone.head_local)
+                projected_pole_axis = pole_normal.cross(base_bone.bone.tail_local - base_bone.bone.head_local)
+                x_axis= base_bone.bone.matrix_local.to_3x3() @ Vector((1,0,0))
+                return signed_angle(x_axis, projected_pole_axis, base_bone.bone.tail_local - base_bone.bone.head_local)
+
+            pole_angle_in_radians = get_pole_angle(base_bone,
+                                                myOb,
+                                                pole_location)
+            c.pole_angle = pole_angle_in_radians
         
         props_sockets = {
         'chain_count'   : ("Chain Length", 1),
@@ -1375,17 +1613,12 @@ class LinkInverseKinematics:
         #         into a driver).
         c.use_location   = self.evaluate_input("Position") > 0
         c.use_rotation   = self.evaluate_input("Rotation") > 0
-        
-    
-    def __repr__(self):
-        return self.signature.__repr__()
+        self.executed = True
     
     def bFinalize(self, bContext = None):
         finish_drivers(self)
         
         
-    def fill_parameters(self):
-        fill_parameters(self)
 
 # This is kinda a weird design decision?
 class LinkDrivenParameter:
@@ -1412,6 +1645,12 @@ class LinkDrivenParameter:
         self.inputs["Input Relationship"].set_traverse_target(self.outputs["Output Relationship"])
         self.outputs["Output Relationship"].set_traverse_target(self.inputs["Input Relationship"])
         self.node_type = "LINK"
+        self.hierarchy_connections = []
+        self.connections = []
+        self.hierarchy_dependencies = []
+        self.dependencies = []
+        self.prepared = True
+        self.executed = False
 
     def GetxForm(self):
         return GetxForm(self)
@@ -1437,24 +1676,21 @@ class LinkDrivenParameter:
         driver["ind"] = self.evaluate_input("Index")
         
         self.parameters["Driver"] = driver
+        self.executed = True
+
     def bFinalize(self, bContext = None):
         # TODO HACK BUG
         # This probably no longer works
         from .drivers import CreateDrivers
         CreateDrivers( [ self.parameters["Driver"] ] )
         
-    def __repr__(self):
-        return self.signature.__repr__()
 
-    def fill_parameters(self):
-        fill_parameters(self)
         
 class LinkArmature:
     '''A node representing an armature object'''
 
-    def __init__(self, signature, base_tree):
+    def __init__(self, signature, base_tree,):
         self.base_tree=base_tree
-        self.executed = False
         self.signature = signature
         self.inputs = {
         "Input Relationship"   : NodeSocket(is_input = True, name = "Input Relationship", node = self,),
@@ -1480,6 +1716,12 @@ class LinkArmature:
         self.outputs["Output Relationship"].set_traverse_target(self.inputs["Input Relationship"])
         self.node_type = "LINK"
         setup_custom_props(self)
+        self.hierarchy_connections = []
+        self.connections = []
+        self.hierarchy_dependencies = []
+        self.dependencies = []
+        self.prepared = True
+        self.executed = False
 
 
     def GetxForm(self):
@@ -1492,7 +1734,8 @@ class LinkArmature:
         prGreen("Creating Armature Constraint for bone: \""+ self.GetxForm().bGetObject().name + "\"")
         prepare_parameters(self)
         c = self.GetxForm().bGetObject().constraints.new('ARMATURE')
-        c.name = self.evaluate_input("Name")
+        if constraint_name := self.evaluate_input("Name"):
+            c.name = constraint_name
         self.bObject = c
         # get number of targets
         num_targets = len( list(self.inputs.values())[6:] )//2
@@ -1510,23 +1753,24 @@ class LinkArmature:
             target_input_name = list(self.inputs.keys())[i*2+6  ]
             weight_input_name = list(self.inputs.keys())[i*2+6+1]
             get_target_and_subtarget(self, target, target_input_name)
-            targets_weights[i]=self.evaluate_input(weight_input_name)
-            # props_sockets["targets[%d].weight" % i] = (weight_input_name, 0)
+            weight_value=self.evaluate_input(weight_input_name)
+            if not isinstance(weight_value, float):
+                weight_value=0
+            targets_weights[i]=weight_value
+
+            props_sockets["targets[%d].weight" % i] = (weight_input_name, 0)
             # targets_weights.append({"weight":(weight_input_name, 0)})
         evaluate_sockets(self, c, props_sockets)
         for target, value in targets_weights.items():
             c.targets[target].weight=value
         # for i, (target, weight) in enumerate(zip(c.targets, targets_weights)):
             # evaluate_sockets(self, target, weight)
+        self.executed = True
 
     def bFinalize(self, bContext = None):
         finish_drivers(self)
 
-    def __repr__(self):
-        return self.signature.__repr__()
 
-    def fill_parameters(self):
-        fill_parameters(self)
 
 
 class LinkSplineIK:
@@ -1534,7 +1778,6 @@ class LinkSplineIK:
 
     def __init__(self, signature, base_tree):
         self.base_tree=base_tree
-        self.executed = False
         self.signature = signature
         self.inputs = {
           "Input Relationship" : NodeSocket(is_input = True, name = "Input Relationship", node = self,),
@@ -1567,6 +1810,12 @@ class LinkSplineIK:
         self.inputs["Input Relationship"].set_traverse_target(self.outputs["Output Relationship"])
         self.outputs["Output Relationship"].set_traverse_target(self.inputs["Input Relationship"])
         self.node_type = "LINK"
+        self.hierarchy_connections = []
+        self.connections = []
+        self.hierarchy_dependencies = []
+        self.dependencies = []
+        self.prepared = True
+        self.executed = False
 
     def evaluate_input(self, input_name):
         return default_evaluate_input(self, input_name)
@@ -1579,7 +1828,8 @@ class LinkSplineIK:
         prGreen("Creating Spline-IK Constraint for bone: \""+ self.GetxForm().bGetObject().name + "\"")
         c = self.GetxForm().bGetObject().constraints.new('SPLINE_IK')
         get_target_and_subtarget(self, c)
-        c.name = self.evaluate_input("Name")
+        if constraint_name := self.evaluate_input("Name"):
+            c.name = constraint_name
         self.bObject = c
         props_sockets = {
         'chain_count' : ("Chain Length", 0),
@@ -1593,9 +1843,8 @@ class LinkSplineIK:
         }
 
         evaluate_sockets(self, c, props_sockets)
+        self.executed = True
 
-    def __repr__(self):
-        return self.signature.__repr__()
 
-    def fill_parameters(self):
-        fill_parameters(self)
+for c in TellClasses():
+    setup_container(c)

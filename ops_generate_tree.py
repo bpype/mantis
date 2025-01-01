@@ -29,6 +29,22 @@ def create_inheritance_node(pb, parent_name, bone_inherit_node, node_tree):
     return parent_node
 
 def get_pretty_name(name):
+    if   name == "bbone_curveinx": return "BBone X Curve-In"
+    elif name == "bbone_curveinz": return "BBone Z Curve-In"
+    elif name == "bbone_curveoutx": return "BBone X Curve-Out"
+    elif name == "bbone_curveoutz": return "BBone Z Curve-Out"
+    elif name == "BBone HQ Deformation":
+        raise NotImplementedError(wrapRed("I wasn't expecting this property to be driven lol why would you even want to do that"))
+    
+    elif name == "bbone_handle_type_start": return "BBone Start Handle Type"
+    elif name == "bbone_handle_type_end": return "BBone End Handle Type"
+    elif name == "bbone_x": return "BBone X Size"
+    elif name == "bbone_z": return "BBone Z Size"
+    elif name == "bbone_rollin": return "BBone Roll-In"
+    elif name == "bbone_rollout": return "BBone Roll-Out"
+    elif name == "bbone_scalein": return "BBone Scale-In"
+    elif name == "bbone_scaleout": return "BBone Scale-Out"
+
     pretty = name.replace("_", " ")
     words = pretty.split(" "); pretty = ''
     for word in words:
@@ -64,7 +80,7 @@ def create_relationship_node_for_constraint(node_tree, c):
         return None
     
     
-def fill_parameters(node, c):
+def fill_parameters(node, c, context):
     # just try the basic parameters...
     
     node.mute = not c.enabled
@@ -75,7 +91,8 @@ def fill_parameters(node, c):
     try:
         owner_space = c.owner_space
         if c.owner_space == 'CUSTOM':
-            raise NotImplementedError("Custom Space is a TODO")
+            pass
+            #raise NotImplementedError("Custom Space is a TODO")
         if ( input := node.inputs.get("Owner Space") ):
             input.default_value = owner_space
     except AttributeError:
@@ -84,7 +101,8 @@ def fill_parameters(node, c):
     try:
         target_space = c.target_space
         if c.target_space == 'CUSTOM':
-            raise NotImplementedError("Custom Space is a TODO")
+            pass
+            #raise NotImplementedError("Custom Space is a TODO")
         if ( input := node.inputs.get("Target Space") ):
             input.default_value = target_space
     except AttributeError:
@@ -196,7 +214,8 @@ def fill_parameters(node, c):
         node.inputs["Use Envelopes"].default_value = c.use_bone_envelopes
         node.inputs["Use Current Location"].default_value = c.use_current_location
         for i in range(len(c.targets)):
-            bpy.ops.mantis.link_armature_node_add_target({'node':node})
+            with context.temp_override(node=node):
+                bpy.ops.mantis.link_armature_node_add_target()
     elif (c.type == 'SPLINE_IK'):
         node.inputs["Chain Length"].default_value = c.chain_count
         node.inputs["Even Divisions"].default_value = c.use_even_divisions
@@ -349,7 +368,15 @@ def setup_vp_settings(bone_node, pb, do_after, node_tree):
     bone_node.inputs["Custom Object Rotation"].default_value = pb.custom_shape_rotation_euler
     bone_node.inputs["Custom Object Scale to Bone Length"].default_value = pb.use_custom_shape_bone_size
     bone_node.inputs["Custom Object Wireframe"].default_value = pb.bone.show_wire
-    bone_node.inputs["Layer Mask"].default_value = pb.bone.layers
+    # bone_node.inputs["Layer Mask"].default_value = pb.bone.layers
+
+    collection_membership = ''
+    for col in pb.bone.collections:
+        # TODO: implement this!
+        pass
+    bone_node.inputs["Bone Collection"].default_value = collection_membership
+
+
     
     if (shape_ob := pb.custom_shape):
         shape_n = None
@@ -377,7 +404,7 @@ def setup_vp_settings(bone_node, pb, do_after, node_tree):
 
 
 def setup_df_settings(bone_node, pb):
-        bone_node.inputs["Deform"] = pb.bone.use_deform
+        bone_node.inputs["Deform"].default_value = pb.bone.use_deform
         # TODO: get the rest of these working
         # eb.envelope_distance     = self.evaluate_input("Envelope Distance")
         # eb.envelope_weight       = self.evaluate_input("Envelope Weight")
@@ -385,7 +412,7 @@ def setup_df_settings(bone_node, pb):
         # eb.head_radius           = self.evaluate_input("Envelope Head Radius")
         # eb.tail_radius           = self.evaluate_input("Envelope Tail Radius")
 
-def create_driver(in_node_name, out_node_name, armOb, finished_drivers, switches, driver_vars, fcurves, drivers, node_tree):
+def create_driver(in_node_name, out_node_name, armOb, finished_drivers, switches, driver_vars, fcurves, drivers, node_tree, context):
     # TODO: CLEAN this ABOMINATION
     print ("DRIVER: ", in_node_name, out_node_name)
     in_node  = node_tree.nodes[ in_node_name]
@@ -419,6 +446,11 @@ def create_driver(in_node_name, out_node_name, armOb, finished_drivers, switches
             # OK, let's prepare before making the node
             #  we want to reuse existing nodes if possible.
             target_string = fc.driver.variables[0].targets[0].data_path
+            if target_string == "":
+                for var in fc.driver.variables:
+                    print (var)
+                    print (var.name)
+                    print (var.targets)
             bone = target_string.split("pose.bones[\"")[1]
             bone = bone.split("\"]")[0]
             bone_node = node_tree.nodes.get(bone)
@@ -437,20 +469,20 @@ def create_driver(in_node_name, out_node_name, armOb, finished_drivers, switches
             fail = False
             switch_node = None
             for n in switches:
+                # if n.inputs[0].is_linked:
+                #     if n.inputs[0].links[0].from_node != bone_node:
+                #         fail = True
                 if n.inputs[0].is_linked:
                     if n.inputs[0].links[0].from_node != bone_node:
                         fail = True
-                if n.inputs[1].is_linked:
-                    if n.inputs[1].links[0].from_node != bone_node:
-                        fail = True
-                    if n.inputs[1].links[0].from_socket != bone_node.outputs.get(p_string):
+                    if n.inputs[0].links[0].from_socket != bone_node.outputs.get(p_string):
                         fail = True
                 else:
-                    if n.inputs[1].default_value != p_string:
+                    if n.inputs[0].default_value != p_string:
                         fail = True
-                if n.inputs[2].default_value != fc.array_index:
+                if n.inputs[1].default_value != fc.array_index:
                     fail = True
-                if n.inputs[3].default_value != inverted:
+                if n.inputs[2].default_value != inverted:
                     fail = True
                 if not fail:
                     switch_node = n
@@ -458,10 +490,13 @@ def create_driver(in_node_name, out_node_name, armOb, finished_drivers, switches
             else:
                 # make and connect the switch node
                 switch_node = node_tree.nodes.new("UtilitySwitch"); switches.append(switch_node)
-                node_tree.links.new(bone_node.outputs["xForm Out"], switch_node.inputs[0])
-                node_tree.links.new(bone_node.outputs[p_string], switch_node.inputs[1])
-                switch_node.inputs[2].default_value = fc.array_index
-                switch_node.inputs[3].default_value = inverted
+                # node_tree.links.new(bone_node.outputs["xForm Out"], switch_node.inputs[0])
+                try:
+                    node_tree.links.new(bone_node.outputs[p_string], switch_node.inputs[0])
+                except KeyError:
+                    prRed("this is such bad code lol fix this", p_string)
+                switch_node.inputs[1].default_value = fc.array_index
+                switch_node.inputs[2].default_value = inverted
                 #print ("   Inverted?  ", inverted, (fc.evaluate(0) == 1) and (fc.evaluate(1) == 0), switch_node.inputs[3].default_value)
                 if not inverted:
                     print ("    --> Check this node: %s" % switch_node.name)
@@ -490,6 +525,7 @@ def create_driver(in_node_name, out_node_name, armOb, finished_drivers, switches
                     target1, target2, bone_target, bone_target2 = [None]*4
                     var_data = {}
                     var_data["Variable Type"] = var.type
+                    var_data["Property"] = ""
                     if len(var.targets) >= 1:
                         target1 = var.targets[0]
                         if (var_data["Variable Type"] != 'SINGLE_PROP'):
@@ -514,8 +550,9 @@ def create_driver(in_node_name, out_node_name, armOb, finished_drivers, switches
                                 "SCALE_Y"   : ('scale', 1),
                                 "SCALE_Z"   : ('scale', 2),
                                 "SCALE_AVG" : ('scale', 3), }
-                            if (var.transform_type in transform_channel_map.keys()):
-                                var_data["Property"], var_data["Property Index"] = transform_channel_map[var.transform_type]
+                            # if (var.transform_type in transform_channel_map.keys()):
+                            #     var_data["Property"], var_data["Property Index"] = transform_channel_map[var.transform_type]
+                            prRed("I am pretty sure this thing does not friggin work with whatever it is I commented above...")
                             var_data["Evaluation Space"] = var.targets[0].transform_space
                             var_data["Rotation Mode"] = var.targets[0].rotation_mode
                     if len(var.targets) == 2:
@@ -564,7 +601,12 @@ def create_driver(in_node_name, out_node_name, armOb, finished_drivers, switches
                         var_node = node_tree.nodes.new("UtilityDriverVariable"); driver_vars.append(var_node)
                         prRed("Creating Node: %s" % var_node.name)
                         for key, value in var_data.items():
-                            var_node.inputs[key].default_value = value
+                            try:
+                                var_node.inputs[key].default_value = value
+                            except TypeError as e: # maybe it is a variable\
+                                if key == "Variable Type":
+                                    var_node.inputs[key].default_value = "SINGLE_PROP"
+                                else: raise e
                         if (target1 and bone_target):
                             node_tree.links.new(node_tree.nodes[bone_target].outputs['xForm Out'], var_node.inputs['xForm 1'])
                         elif (target1 and not bone_target):
@@ -617,16 +659,23 @@ def create_driver(in_node_name, out_node_name, armOb, finished_drivers, switches
                     break
                 else:
                     fCurve_node = node_tree.nodes.new("UtilityFCurve")
-                    fc_ob = fCurve_node.fake_fcurve_ob
-                    node_fc = fc_ob.animation_data.action.fcurves[0]
-                    fcurves.append(fCurve_node)
-                    while(node_fc.keyframe_points): # clear it, it has a default FC
-                        node_fc.keyframe_points.remove(node_fc.keyframe_points[0], fast=True)
-                    node_fc.update()
-                    node_fc.keyframe_points.add(len(keys))
-                    for k, v in keys.items():
-                        node_fc.keyframe_points[k].co_ui = v['co_ui']
-                        # todo eventually the other dict elements ofc
+                    # fc_ob = fCurve_node.fake_fcurve_ob
+                    # node_fc = fc_ob.animation_data.action.fcurves[0]
+                    # fcurves.append(fCurve_node)
+                    # while(node_fc.keyframe_points): # clear it, it has a default FC
+                    #     node_fc.keyframe_points.remove(node_fc.keyframe_points[0], fast=True)
+                    # node_fc.update()
+                    # node_fc.keyframe_points.add(len(keys))
+                    # for k, v in keys.items():
+                    #     node_fc.keyframe_points[k].co_ui = v['co_ui']
+                    #     # todo eventually the other dict elements ofc
+                    for num_keys, (k, v) in enumerate(keys.items()):
+                        fCurve_node.inputs.new("KeyframeSocket", "Keyframe."+str(num_keys).zfill(3))
+                        kf_node = node_tree.nodes.new("UtilityKeyframe")
+                        kf_node.inputs[0].default_value = v['co_ui'][0]
+                        kf_node.inputs[1].default_value = v['co_ui'][1]
+                        node_tree.links.new(kf_node.outputs[0], fCurve_node.inputs[num_keys])
+                        
                     
                 # NOW the driver itself
                 driver_node = None
@@ -638,22 +687,29 @@ def create_driver(in_node_name, out_node_name, armOb, finished_drivers, switches
                 
                 node_tree.links.new(fCurve_node.outputs[0], driver_node.inputs['fCurve'])
                 for i, var_node in zip(range(num_vars), var_nodes):
-                    # TODO TODO
-                    bpy.ops.mantis.driver_node_add_variable({'node':driver_node})
+                    # TODO TODO BUG HACK
+                    with context.temp_override(node=driver_node):
+                        bpy.ops.mantis.driver_node_add_variable()
                     # This causes an error when you run it from the console! DO NOT leave this
                     node_tree.links.new(var_node.outputs[0], driver_node.inputs[-1])
                 # HACK duplicated code from earlier...
                 parameter = fc.data_path
                 prWhite( "parameter: %s" % parameter)
+                property = ''
                 if len(parameter.split("[\"") ) == 3:
                     property = parameter.split(".")[-1]
                     if (property == 'mute'): # this is mapped to the 'Enable' socket...
                         prop_in = out_node.inputs.get('Enable')
                     else:
                         prop_in = out_node.inputs.get(get_pretty_name(property))
+                        if not prop_in: # this is a HACK because my solution is terrible and also bad
+                            if property == "head_tail":
+                                prop_in = out_node.inputs.get("Head/Tail")
+                                # the socket should probably know what Blender thing is being mapped to it as a custom prop
                     if not prop_in:
                         # try one last thing:
                         property = parameter.split("targets[")[-1]
+
                         target_index = int(property[0])
                         property = "targets[" + property # HACK lol
                         # get the property by index...
@@ -663,6 +719,9 @@ def create_driver(in_node_name, out_node_name, armOb, finished_drivers, switches
                         node_tree.links.new(driver_node.outputs["Driver"], prop_in)
                     else:
                         prRed ("   couldn't find: %s, %s, %s" % (property, out_node.label, out_node.name))
+                elif len(parameter.split("[\"") ) == 2:
+                    # print (parameter.split("[\"") ); raise NotImplementedError
+                    property = parameter.split(".")[-1]
                 else:
                     prWhite( "parameter: %s" % parameter)
                     prRed ("   couldn't find: ", property, out_node.label, out_node.name)
@@ -766,10 +825,34 @@ def do_generate_armature(context, node_tree):
                         
                         # bone_inherit_node[bone_node.name]=[root_child]
                     
+
+                    bone_node.inputs["Lock Location"].default_value = pb.lock_location
+                    bone_node.inputs["Lock Rotation"].default_value = pb.lock_rotation
+                    bone_node.inputs["Lock Scale"].default_value    = pb.lock_scale
+
                     setup_custom_properties(bone_node, pb)
                     setup_ik_settings(bone_node, pb)
                     setup_vp_settings(bone_node, pb, do_after, node_tree)
                     setup_df_settings(bone_node, pb)
+
+                    # BBONES
+                    bone_node.inputs["BBone X Size"].default_value = pb.bone.bbone_x
+                    bone_node.inputs["BBone Z Size"].default_value = pb.bone.bbone_z
+                    bone_node.inputs["BBone Segments"].default_value = pb.bone.bbone_segments
+                    if pb.bone.bbone_mapping_mode == "CURVED":
+                        bone_node.inputs["BBone HQ Deformation"].default_value = True
+                    bone_node.inputs["BBone Start Handle Type"].default_value = pb.bone.bbone_handle_type_start
+                    bone_node.inputs["BBone End Handle Type"].default_value = pb.bone.bbone_handle_type_end
+                    bone_node.inputs["BBone Custom Start Handle"].default_value = pb.bone.bbone_handle_type_start
+                    bone_node.inputs["BBone Custom End Handle"].default_value = pb.bone.bbone_handle_type_end
+                    
+                    bone_node.inputs["BBone X Curve-In"].default_value = pb.bone.bbone_curveinx
+                    bone_node.inputs["BBone Z Curve-In"].default_value = pb.bone.bbone_curveinz
+                    bone_node.inputs["BBone X Curve-Out"].default_value = pb.bone.bbone_curveoutx
+                    bone_node.inputs["BBone Z Curve-Out"].default_value = pb.bone.bbone_curveoutz
+
+                    prRed("BBone Implementation is not complete, expect errors and missing features for now")
+
                     
                     #
                     for c in pb.constraints:
@@ -797,7 +880,7 @@ def do_generate_armature(context, node_tree):
                             if (hasattr(c, "pole_subtarget")):
                                 if c.pole_target and c.pole_subtarget: # this node has a pole target, find the node associated with it... 
                                     do_after.append( ("Pole Target", c_node.name , c.pole_subtarget ) )
-                            fill_parameters(c_node, c)
+                            fill_parameters(c_node, c, context)
                             if (hasattr(c, "targets")): # Armature Modifier, annoying.
                                 for i in range(len(c.targets)):
                                     if (c.targets[i].subtarget):
@@ -808,10 +891,9 @@ def do_generate_armature(context, node_tree):
                                     pb_string = fc.data_path.split("[\"")[1]; pb_string = pb_string.split("\"]")[0]
                                     try:
                                         c_string = fc.data_path.split("[\"")[2]; c_string = c_string.split("\"]")[0]
-                                    except IndexError:
-                                        print ("Find out what causes this:   %s" % c_string)
-                                    if pb.name == pb_string and c.name == c_string:
                                         do_after.append ( ("driver", bone_node.name, c_node.name) )
+                                    except IndexError: # the above expects .pose.bones["some name"].constraints["some constraint"]
+                                        do_after.append ( ("driver", bone_node.name, bone_node.name) ) # it's a property I guess
                     try:
                         node_tree.links.new(parent_node.outputs["Inheritance"], bone_node.inputs['Relationship'])
                     except KeyError: # may have changed, see above
@@ -832,7 +914,10 @@ def do_generate_armature(context, node_tree):
                 node_tree.links.new(out_node.outputs["Object"], in_node.inputs["Target"])
             if task in ['Target', 'Pole Target']:
                 in_node  = node_tree.nodes[ in_node_name ]
-                out_node = node_tree.nodes[ out_node_name ]
+                try:
+                    out_node = node_tree.nodes[ out_node_name ]
+                except KeyError:
+                    prRed (f"Failed to find node: {out_node_name} as pole target for node: {in_node_name} and input {task}")
                 #
                 node_tree.links.new(out_node.outputs["xForm Out"], in_node.inputs[task])
             elif (task[:6] == 'Target'):
@@ -845,13 +930,13 @@ def do_generate_armature(context, node_tree):
                 for n in node_tree.nodes:
                     if n.name == out_node_name:
                         shape_xform_n = n
-                        node_tree.links.new(shape_xform_n.outputs["xForm"], node_tree.nodes[in_node_name].inputs['Custom Object xForm Override'])
+                        node_tree.links.new(shape_xform_n.outputs["xForm Out"], node_tree.nodes[in_node_name].inputs['Custom Object xForm Override'])
                         break
                 else: # make it a task
                     prRed("Cannot set custom object transform override for %s to %s" % (in_node_name, out_node_name))
                 
             elif task in ["driver"]:
-                create_driver(in_node_name, out_node_name, armOb, finished_drivers, switches, driver_vars, fcurves, drivers, node_tree)
+                create_driver(in_node_name, out_node_name, armOb, finished_drivers, switches, driver_vars, fcurves, drivers, node_tree, context)
                         
             # annoyingly, Rigify uses f-modifiers to setup its fcurves
             # I do not intend to support fcurve modifiers in Mantis at this time
@@ -869,10 +954,10 @@ def do_generate_armature(context, node_tree):
 
 
 
-class CreateMantisTree(Operator):
-    """Create Mantis Tree From Selected"""
-    bl_idname = "mantis.create_tree"
-    bl_label = "Create Mantis Tree"
+class GenerateMantisTree(Operator):
+    """Generate Mantis Tree From Selected"""
+    bl_idname = "mantis.generate_tree"
+    bl_label = "Generate Mantis Tree from Selected"
 
     @classmethod
     def poll(cls, context):

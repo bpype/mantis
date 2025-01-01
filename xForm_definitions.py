@@ -61,10 +61,99 @@ class xFormRootNode(Node, xFormNode):
     bl_idname = 'xFormRootNode'
     bl_label = "World Root"
     bl_icon = 'WORLD'
+    initialized : bpy.props.BoolProperty(default = False)
 
     def init(self, context):
         self.outputs.new('RelationshipSocket', "World Out")
-        
+        self.initialized=True
+
+
+
+# I had chat gpt flip these so they may be a little innacurate
+# always visible
+main_names = {
+"Name":'StringSocket',
+"Rotation Order":'RotationOrderSocket',
+"Relationship":'RelationshipSocket',
+"Matrix":'MatrixSocket',}
+
+# IK SETTINGS
+ik_names = {
+"IK Stretch":'FloatFactorSocket',
+"Lock IK":'BooleanThreeTupleSocket',
+"IK Stiffness":'NodeSocketVector',
+"Limit IK":'BooleanThreeTupleSocket',
+"X Min":'NodeSocketFloatAngle',
+"X Max":'NodeSocketFloatAngle',
+"Y Min":'NodeSocketFloatAngle',
+"Y Max":'NodeSocketFloatAngle',
+"Z Min":'NodeSocketFloatAngle',
+"Z Max":'NodeSocketFloatAngle',
+}
+
+#display settings
+display_names = {
+"Bone Collection":'BoneCollectionSocket',
+"Custom Object":'xFormSocket',
+"Custom Object xForm Override":'xFormSocket',
+"Custom Object Scale to Bone Length":'BooleanSocket',
+"Custom Object Wireframe":'BooleanSocket',
+"Custom Object Scale":'VectorScaleSocket',
+"Custom Object Translation":'VectorSocket',
+"Custom Object Rotation":'VectorEulerSocket',
+}
+
+# deform_names
+deform_names = {
+"Deform":'BooleanSocket',
+"Envelope Distance":'FloatPositiveSocket',
+"Envelope Weight":'FloatFactorSocket',
+"Envelope Multiply":'BooleanSocket',
+"Envelope Head Radius":'FloatPositiveSocket',
+"Envelope Tail Radius":'FloatPositiveSocket',
+}
+
+bbone_names = {
+    "BBone Segments":"IntSocket", # BONE
+    "BBone X Size":"FloatSocket", # BONE
+    "BBone Z Size":"FloatSocket", # BONE
+    # "bbone_mapping_mode":"StringSocket", <== BONE
+    "BBone HQ Deformation":"BooleanSocket", # BONE bbone_mapping_mode
+    "BBone X Curve-In":"FloatSocket", # BONE AND POSE
+    "BBone Z Curve-In":"FloatSocket", # BONE AND POSE
+    "BBone X Curve-Out":"FloatSocket", # BONE AND POSE
+    "BBone Z Curve-Out":"FloatSocket", # BONE AND POSE
+    "BBone Roll-In":"FloatSocket", # BONE AND POSE
+    "BBone Roll-Out":"FloatSocket", # BONE AND POSE
+    "BBone Inherit End Roll":"BooleanSocket", # BONE
+    "BBone Scale-In":"VectorSocket", # BONE AND POSE
+    "BBone Scale-Out":"VectorSocket", # BONE AND POSE
+    "BBone Ease-In":"FloatSocket", # BONE AND POSE
+    "BBone Ease-Out":"FloatSocket", # BONE AND POSE
+    "BBone Easing":"BooleanSocket", # BONE
+    "BBone Start Handle Type":"EnumBBoneHandleType", # BONE
+    "BBone Custom Start Handle":"StringSocket", # BONE
+    "BBone Start Handle Scale":"BooleanThreeTupleSocket", # BONE
+    "BBone Start Handle Ease":"BooleanSocket", # BONE
+    "BBone End Handle Type":"EnumBBoneHandleType", # BONE
+    "BBone Custom End Handle":"StringSocket", # BONE
+    "BBone End Handle Scale":"BooleanThreeTupleSocket", # BONE
+    "BBone End Handle Ease":"BooleanSocket", # BONE
+
+}
+
+other_names = {
+    "Lock Location":'BooleanThreeTupleSocket',
+    "Lock Rotation":'BooleanThreeTupleSocket',
+    "Lock Scale":'BooleanThreeTupleSocket',
+    "Hide":'HideSocket',
+}
+
+from mathutils import Color
+xFormColor = Color((0.093172, 0.047735, 0.028036)).from_scene_linear_to_srgb()
+
+
+
 class xFormBoneNode(Node, xFormNode):
     '''A node representing a Bone'''
     bl_idname = 'xFormBoneNode'
@@ -74,76 +163,66 @@ class xFormBoneNode(Node, xFormNode):
     display_ik_settings : bpy.props.BoolProperty(default=False)
     display_vp_settings : bpy.props.BoolProperty(default=False)
     display_def_settings : bpy.props.BoolProperty(default=False)
+    display_bb_settings : bpy.props.BoolProperty(default=False)
     socket_count : bpy.props.IntProperty()
+    initialized : bpy.props.BoolProperty(default = False)
     
     def init(self, context):
-        self.inputs.new('StringSocket', "Name")
-        self.inputs.new('RotationOrderSocket', "Rotation Order")
-        self.inputs.new('RelationshipSocket', "Relationship")
-        self.inputs.new('MatrixSocket', "Matrix")
 
-        # IK SETTINGS
-        a = []
-        # a.append(self.inputs.new ('LabelSocket', "IK Settings"))
-        a.append(self.inputs.new ('FloatFactorSocket', "IK Stretch"))
-        a.append(self.inputs.new ('BooleanThreeTupleSocket', "Lock IK"))
-        a.append(self.inputs.new ('NodeSocketVector', "IK Stiffness"))
-        a.append(self.inputs.new ('BooleanThreeTupleSocket', "Limit IK"))
-        a.append(self.inputs.new ('NodeSocketFloatAngle', "X Min"))
-        a.append(self.inputs.new ('NodeSocketFloatAngle', "X Max"))
-        a.append(self.inputs.new ('NodeSocketFloatAngle', "Y Min"))
-        a.append(self.inputs.new ('NodeSocketFloatAngle', "Y Max"))
-        a.append(self.inputs.new ('NodeSocketFloatAngle', "Z Min"))
-        a.append(self.inputs.new ('NodeSocketFloatAngle', "Z Max"))
-        #4-14
-        
-        # visual settings:
-        b = []
-        b.append(self.inputs.new ('BoneCollectionInputSocket', "Bone Collection"))
-        b.append(self.inputs.new ('xFormSocket', "Custom Object"))
-        b.append(self.inputs.new ('xFormSocket', "Custom Object xForm Override"))
-        b.append(self.inputs.new ('BooleanSocket', "Custom Object Scale to Bone Length"))
-        b.append(self.inputs.new ('BooleanSocket', "Custom Object Wireframe"))
-        b.append(self.inputs.new ('VectorScaleSocket', "Custom Object Scale"))
-        b.append(self.inputs.new ('VectorSocket', "Custom Object Translation"))
-        b.append(self.inputs.new ('VectorEulerSocket', "Custom Object Rotation"))
-        # 16-21
-        # Deform Settings:
-        c = []
-        c.append(self.inputs.new ('BooleanSocket', "Deform"))
-        c.append(self.inputs.new ('FloatPositiveSocket', "Envelope Distance"))
-        c.append(self.inputs.new ('FloatFactorSocket',   "Envelope Weight"))
-        c.append(self.inputs.new ('BooleanSocket', "Envelope Multiply"))
-        c.append(self.inputs.new ('FloatPositiveSocket', "Envelope Head Radius"))
-        c.append(self.inputs.new ('FloatPositiveSocket', "Envelope Tail Radius"))
-        #22-27
-        
-        # c[0].default_value=False
-        
-        # Hide should be last
-        b.append(self.inputs.new ('HideSocket',   "Hide"))
-    
-        
-        for sock in a:
-            sock.hide = True
-        for sock in b:
-            if sock.name in ['Custom Object', 'Bone Collection']:
+        for name, sock_type in main_names.items():
+            self.inputs.new(sock_type, name)
+
+        for name, sock_type in ik_names.items():
+            s = self.inputs.new(sock_type, name)
+            s.hide = True
+
+        for name, sock_type in display_names.items():
+            s = self.inputs.new(sock_type, name)
+            if s.name in ['Custom Object', 'Bone Collection']:
                 continue
-            sock.hide = True
-        for sock in c:
-            if sock.name == 'Deform':
+            s.hide = True
+        
+        for name, sock_type in deform_names.items():
+            s = self.inputs.new(sock_type, name)
+            if s.name == 'Deform':
                 continue
-            sock.hide = True
-            
-        # Thinking about using colors for nodes, why not?
-        # cxForm          = (0.443137, 0.242157, 0.188235,) #could even fetch the theme colors...
-        # self.color=cxForm
-        # self.use_custom_color=True
+            s.hide = True
+        
+        for name, sock_type in bbone_names.items():
+            s = self.inputs.new(sock_type, name)
+            if s.name == "BBone Segments":
+                continue
+            s.hide = True
+
+        for name, sock_type in other_names.items():
+            self.inputs.new(sock_type, name)
+        # could probably simplify this further with iter_tools.chain() but meh
+
         self.socket_count = len(self.inputs)
         #
         self.outputs.new('xFormSocket', "xForm Out")
+
+
+        # set up some defaults...
+        self.inputs['Rotation Order'].default_value = "XYZ"
+        self.inputs['Lock Location'].default_value[0] = True
+        self.inputs['Lock Location'].default_value[1] = True
+        self.inputs['Lock Location'].default_value[2] = True
+        self.inputs['Lock Rotation'].default_value[0] = True
+        self.inputs['Lock Rotation'].default_value[1] = True
+        self.inputs['Lock Rotation'].default_value[2] = True
+        self.inputs['Lock Scale'].default_value[0] = True
+        self.inputs['Lock Scale'].default_value[1] = True
+        self.inputs['Lock Scale'].default_value[2] = True
+
+        # color
+        self.use_custom_color = True
+        self.color = xFormColor
+        #
+        self.initialized=True
     
     def draw_buttons(self, context, layout):
+        # return
         layout.operator("mantis.add_custom_property", text='+Add Custom Parameter')
         # layout.label(text="Edit Parameter ... not implemented")
         if (len(self.inputs) >= self.socket_count):
@@ -153,7 +232,6 @@ class xFormBoneNode(Node, xFormNode):
         
     def display_update(self, parsed_tree, context):
         if context.space_data:
-            node_tree = context.space_data.path[0].node_tree
             nc = parsed_tree.get(get_signature_from_edited_tree(self, context))
             other_nc = None
             if len(self.inputs.get("Relationship").links)>0:
@@ -164,21 +242,24 @@ class xFormBoneNode(Node, xFormNode):
             if nc and other_nc:
                 self.display_vp_settings = nc.inputs["Custom Object"].is_connected
                 self.display_def_settings = nc.evaluate_input("Deform")
+                self.display_bb_settings = nc.evaluate_input("BBone Segments") > 1
                 self.display_ik_settings = False
                 #
                 from .node_container_common import ( trace_all_lines_up,
                                                      trace_single_line)
-                trace = trace_all_lines_up(nc, "xForm Out")
-                
-                for key in trace.keys():
-                    if (ik_nc:= parsed_tree.get(key)):
-                        if ik_nc.__class__.__name__ in ["LinkInverseKinematics"]:
-                            # if the tree is invalid? This shouldn't be necessary.
-                            if ik_nc.inputs["Input Relationship"].is_connected:
-                                chain_count = ik_nc.evaluate_input("Chain Length")
-                                if chain_count == 0:
-                                    self.display_ik_settings = True
-                                else:
+                #TODO find a much faster way to do this
+                if False and self.id_data.do_live_update: #TODO this is extremely freaking slow
+                    trace = trace_all_lines_up(nc, "xForm Out")
+
+                    for key in trace.keys():
+                        if (ik_nc:= parsed_tree.get(key)):
+                            if ik_nc.__class__.__name__ in ["LinkInverseKinematics"]:
+                                # if the tree is invalid? This shouldn't be necessary.
+                                if ik_nc.inputs["Input Relationship"].is_connected:
+                                    chain_count = ik_nc.evaluate_input("Chain Length")
+                                    # if chain_count == 0: # this is wrong
+                                    #     self.display_ik_settings = True
+                                    # else:
                                     if ik_nc.evaluate_input("Use Tail") == False:
                                         chain_count+=1
                                     for line in trace[key]:
@@ -191,9 +272,8 @@ class xFormBoneNode(Node, xFormNode):
                                             if path_nc.node_type == 'XFORM':
                                                 xForm_line.append(path_nc)
                                             prev_path_nc = path_nc
-                                            
-                                        else:
-                                            if len(xForm_line) < chain_count:
+                                        else: # if it can finish cleaning the line of non-xForms and still has a connection
+                                            if (len(xForm_line) < chain_count) or (chain_count == 0):
                                                 self.display_ik_settings = True
                 
                 inp = nc.inputs["Relationship"]
@@ -212,26 +292,27 @@ class xFormBoneNode(Node, xFormNode):
                         link = inp.links[0]
                     else:
                         link = None
-            #
-            if self.display_ik_settings == True:
-                for inp in self.inputs[4:14]:
-                    inp.hide = False
-            else:
-                for inp in self.inputs[4:14]:
-                    inp.hide = True
-            if self.display_vp_settings == True:
-                for inp in self.inputs[16:21]:
-                    inp.hide = False
-            else:
-                for inp in self.inputs[16:21]:
-                    inp.hide = True
-            #
-            if self.display_def_settings == True:
-                for inp in self.inputs[23:28]:
-                    inp.hide = False
-            else:
-                for inp in self.inputs[23:28]:
-                    inp.hide = True
+        
+            
+            for name in ik_names.keys():
+                self.inputs[name].hide = not self.display_ik_settings
+            
+            for name in display_names.keys():
+                if name in ['Custom Object', 'Bone Collection']: continue
+                self.inputs[name].hide = not self.display_vp_settings
+
+            for name in deform_names.keys():
+                if name in ['Deform']: continue
+                self.inputs[name].hide = not self.display_def_settings
+
+            for name in bbone_names.keys():
+                if name in ['BBone Segments']: continue
+                self.inputs[name].hide = not self.display_bb_settings
+            
+
+    # def update(self):
+    #     self.display_update()
+
         
     
     # def copy(ectype, archtype):
@@ -244,6 +325,7 @@ class xFormArmatureNode(Node, xFormNode):
     bl_idname = 'xFormArmatureNode'
     bl_label = "Armature"
     bl_icon = 'OUTLINER_OB_ARMATURE'
+    initialized : bpy.props.BoolProperty(default = False)
 
     def init(self, context):
         self.inputs.new('StringSocket', "Name")
@@ -252,16 +334,30 @@ class xFormArmatureNode(Node, xFormNode):
         self.inputs.new('MatrixSocket', "Matrix")
         self.outputs.new('xFormSocket', "xForm Out")
 
+        # color
+        self.use_custom_color = True
+        self.color = xFormColor
+
+        self.initialized=True
+
 
 class xFormGeometryObjectNode(Node, xFormNode):
     """Represents a curve or mesh object."""
     bl_idname = "xFormGeometryObject"
     bl_label = "Geometry Object"
     bl_icon = "EMPTY_AXIS"
+    initialized : bpy.props.BoolProperty(default = False)
     
     def init(self, context):
         self.inputs.new('StringSocket', "Name")
         self.inputs.new('GeometrySocket', "Geometry")
         self.inputs.new('MatrixSocket', "Matrix")
         self.inputs.new('RelationshipSocket', "Relationship")
+        self.inputs.new('DeformerSocket', "Deformer")
         self.outputs.new('xFormSocket', "xForm Out")
+
+        # color
+        self.use_custom_color = True
+        self.color = xFormColor
+
+        self.initialized=True
