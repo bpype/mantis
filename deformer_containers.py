@@ -112,7 +112,7 @@ class DeformerArmature:
                 elif ( isinstance(trace[i], InputExistingGeometryObject)):
                     if (ob := trace[i].bGetObject()).type == "ARMATURE":
                         return ob
-
+        raise RuntimeError(f"Cannot find armature for node {self}")
         return None
         #should do the trick...
 
@@ -167,6 +167,8 @@ class DeformerArmature:
             d = self.GetxForm().bGetObject().modifiers[mod_name]
         except KeyError:
             d = self.GetxForm().bGetObject().modifiers.new(mod_name, type='ARMATURE')
+        if d is None:
+            raise RuntimeError(f"Modifier was not created in node {self} -- the object is invalid.")
         self.bObject = d
         d.object = self.bGetParentArmature()
         props_sockets = {
