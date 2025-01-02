@@ -84,6 +84,33 @@ class MantisTree(NodeTree):
                 except Exception as e:
                     print("Node \"%s\" failed to update display with error: %s" %(wrapGreen(node.name), wrapRed(e)))
                     # raise e
+        # from .utilities import all_trees_in_tree
+        # all_my_trees = all_trees_in_tree(self,)
+        # for tree in all_my_trees:
+        # I think using the current visible tree is actually fine
+        if True:
+            # HACK 
+            for l in current_tree.links:
+                l.is_valid = True # I don't want Blender marking these for me. No warning is better than a wrong warning.
+            # end HACK
+
+        # in the future, fix it properly. Here is a start.
+        else: # this is harder to fix than I thought!
+            tree_path_names=[None,]
+            for i, path_item in enumerate(bpy.context.space_data.path[:-1]):
+                tree_path_names.append(path_item.node_tree.nodes.active.name)
+            for l in current_tree.links: # We need to loop through actual links so we can filter them
+                if l.is_valid == False:
+                    if nc_from := self.parsed_tree.get( (*tree_path_names, l.from_node.name)) is None:
+                        continue
+                    for o in nc_from.outputs.values():
+                        for mlink in o.links:
+                            if (mlink.to_socket == l.to_socket.name) and (mlink.to_node.signature[-1] == l.to_node.name):
+                                l.is_valid = not mlink.is_hierarchy
+                                # in reality, we need to trace the link UP and find a cycle - then find a link in the cycle that is non-hierarchy
+                                # the actual link that BLENDER marks as invalid may be a hierarchy link.
+        # let's see if this works
+
         
     
     def execute_tree(self,context):
@@ -695,7 +722,7 @@ replace_types = ["NodeGroupInput", "NodeGroupOutput", "SchemaIncomingConnection"
 #   in schema generation and this is the easiest way to do it for now.
 custom_props_types = ["LinkArmature", "UtilityKeyframe", "UtilityFCurve", "UtilityDriver", "xFormBone"]
 
-from_name_filter = ["Driver", ]
+from_name_filter = ["Driver",]
 to_name_filter = [
                    "Custom Object xForm Override",
                    "Custom Object",
