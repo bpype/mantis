@@ -1138,6 +1138,8 @@ class InputExistingGeometryData:
         bObject = data.curves.get(self.evaluate_input("Name"))
         if not bObject:
             bObject = data.meshes.get(self.evaluate_input("Name"))
+        if bObject is None:
+            raise RuntimeError(f"Could not find a mesh or curve datablock named \"{self.evaluate_input('Name')}\" for node {self}")
         return bObject
         
 
