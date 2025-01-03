@@ -231,6 +231,8 @@ class SchemaSolver:
                             to_node = outgoing.to_node
                             from_node =frame_nc.get( (*self.autogen_path_names, from_np.name+self.index_str()) )
                             connection = from_node.outputs[link.from_socket.name].connect(node=to_node, socket=outgoing.to_socket)
+                            # we need to kill the link between the Schema itself and the next node and update the deps. Otherwise:confusing bugs.
+                            outgoing.die(); init_dependencies(to_node)
                     # else: # the node just isn't connected out this socket.
         
 

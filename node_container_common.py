@@ -647,11 +647,19 @@ class NodeLink:
         self.is_alive = False
         self.to_node.inputs[self.to_socket].flush_links()
         self.from_node.outputs[self.from_socket].flush_links()
-
-
-
-
-
+    
+    def insert_node(self, middle_node, middle_node_in, middle_node_out, re_init_hierarchy = True):
+        to_node = self.to_node
+        to_socket = self.to_socket
+        self.to_node = middle_node
+        self.to_socket = middle_node_in
+        middle_node.outputs[middle_node_out].connect(to_node, to_socket)
+        if re_init_hierarchy:
+            from .utilities import init_connections, init_dependencies
+            init_connections(self.from_node)
+            init_connections(middle_node)
+            init_dependencies(middle_node)
+            init_dependencies(to_node)
 
 class NodeSocket:
     @property # this is a read-only property.

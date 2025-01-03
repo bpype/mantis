@@ -36,9 +36,32 @@ class DummyNode:
         self.hierarchy_dependencies = []
         self.dependencies = []
         self.executed = False
-        #
-        # 
-        self.pre_pass_done = False
-        self.execute_pass_done = False
 
 setup_container(DummyNode)
+
+
+class NoOpNode:
+    def __init__(self, signature, base_tree):
+        self.signature = signature
+        self.base_tree = base_tree
+        self.inputs={
+          "Input"   : NodeSocket(is_input = True, name = "Input", node = self),
+        }
+        self.outputs = {
+          "Output" : NodeSocket(name = "Output", node=self),
+        }
+        self.parameters = {
+            "Input"  : None,
+            "Output" : None,
+        }
+        self.inputs["Input"].set_traverse_target(self.outputs["Output"])
+        self.outputs["Output"].set_traverse_target(self.inputs["Input"])
+        self.node_type = 'UTILITY'
+        self.prepared = True
+        self.hierarchy_connections = [];  self.connections = []
+        self.hierarchy_dependencies = []; self.dependencies = []
+        self.executed = True
+    
+    # this node is useful for me to insert in the tree and use for debugging especially connections.
+
+setup_container(NoOpNode)
