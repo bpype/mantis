@@ -314,14 +314,6 @@ def parse_tree(base_tree):
                 continue
         
         from .base_definitions import from_name_filter, to_name_filter
-        def detect_hierarchy_link(from_node, from_socket, to_node, to_socket,):
-            if to_node.node_type in ['DUMMY_SCHEMA', 'SCHEMA']:
-                prRed('a")')
-                return False
-            if (from_socket in from_name_filter) or (to_socket in to_name_filter):
-                prOrange('b')
-                return False
-            return True
 
         init_dependencies(nc)
         init_connections(nc)
@@ -333,13 +325,11 @@ def parse_tree(base_tree):
     from collections import deque
     unsolved_schema = deque()
     solve_only_these = []; solve_only_these.extend(list(all_schema.values()))
-    # ignore_these = []
     for schema in all_schema.values():
         # so basically we need to check every parent node if it is a schema
         # this is a fairly slapdash solution but it works and I won't change it
         for i in range(len(schema.signature)-1): # -1, we don't want to check this node, obviously
             if parent := all_schema.get(schema.signature[:i+1]):
-                # ignore_these.append(schema.signature)
                 solve_only_these.remove(schema)
                 break
         else:
@@ -353,134 +343,43 @@ def parse_tree(base_tree):
 
     solve_only_these = set(solve_only_these)
 
-
-    if False:
-        # how does a three-deep while loop make any sense and how does this even work? HACK
-        from .node_container_common import get_prepared_depth_lines
-        while unsolved_schema:
-            from collections import deque
-            unsolved_layer = deque(unsolved_schema)
-            while (roots):
-                root = roots.pop()
-                if root.prepared == False:
-                    root.bPrepare()
-                    root.prepared=True
-                nc_paths = get_prepared_depth_lines(root)[-1]
-                for nc_set in nc_paths.values():
-                    for tup in nc_set:
-                        nc = tup[-1]
-                        if nc.prepared==False and nc in solve_only_these:
-                            unsolved_layer.append(nc)
-            
-            while(unsolved_layer):
-                # this is so dumb I can't believe I am doing it this way
-                for schema in unsolved_schema:
-                    unsolved_layer.appendleft(schema)
-                nc = unsolved_layer.pop()
-                remove_me = False
-                if nc.hierarchy_dependencies:
-                    for dep in nc.hierarchy_dependencies:
-                        if dep.node_type == 'SCHEMA':
-                            prRed(f"Case A: {nc}, {dep}")
-                            remove_me = True
-                        elif dep.prepared == False:
-                            remove_me = True
-                            if dep in solve_only_these:
-                                unsolved_layer.appendleft(dep)
-                if remove_me:
-                    continue
-                #
-                if nc.prepared:
-                    if (nc.signature in all_schema.keys()):
-                        continue
-                    for n in nc.connections:
-                        if not n.prepared:
-                            unsolved_layer.append(n)
-                    continue
-                #
-                elif nc.signature in all_schema.keys() and nc.signature not in ignore_these: # ignore_these is a HACK but it should work
-                    # prOrange(nc.hierarchy_dependencies, sum([dep.prepared for dep in nc.hierarchy_dependencies]))
-                    # prOrange(nc.dependencies, sum([dep.prepared for dep in nc.dependencies]))
-                    solved_nodes = solve_schema_to_tree(nc, all_nc, roots)
-                    unsolved_schema.remove(nc)
-                    for dep in solved_nodes.values():
-                        if dep.signature in ignore_these: continue
-                        if dep.prepared or dep not in solve_only_these: continue
-                        unsolved_layer.appendleft(dep)
-                elif hasattr(nc, "bPrepare"):
-                    try:
-                        nc.bPrepare()
-                    except Exception as e:
-                        for inp in nc.inputs.values():
-                            print (inp)
-                            for l in inp.links:
-                                print (l)
-                        raise e
-                    for n in nc.connections:
-                        if not n.prepared and n in solve_only_these:
-                            unsolved_layer.append(n)
-                while (roots):
-                    root = roots.pop()
-                    if root.prepared == False:
-                        root.bPrepare()
-                        root.prepared=True
-                    nc_paths = get_prepared_depth_lines(root)[-1]
-                    for nc_set in nc_paths.values():
-                        for tup in nc_set:
-                            nc = tup[-1]
-                            if nc.prepared==False and nc in solve_only_these:
-                                unsolved_layer.append(nc)
-            if unsolved_schema:
-                prRed(unsolved_schema)
-                raise RuntimeError("Failed to resolve all schema declarations")
-        prWhite(f"Parsing tree took {time.time()-start_time} seconds.")
+    solve_layer = unsolved_schema.copy(); solve_layer.extend(roots)
     
+    while(solve_layer):
+        n = solve_layer.pop()
+        if n not in solve_only_these:
+            continue
 
-    
-    else: # this works, it's a lot simpler, it's a lot faster
-        # There is still a lot of room for optimization.
-        solve_layer = unsolved_schema.copy(); solve_layer.extend(roots)
-        
-        while(solve_layer):
-            n = solve_layer.pop()
-            # if n in schema_solve_done:
-            #     continue
-            if n not in solve_only_these:
-                continue
-
-            if n.signature in all_schema.keys() and n.signature: # ignore_these is a HACK but it should work
-                for dep in n.hierarchy_dependencies:
-                    if dep not in schema_solve_done:
-                        solve_layer.appendleft(n)
-                        break
-                else:
-                    solved_nodes = solve_schema_to_tree(n, all_nc, roots)
-                    unsolved_schema.remove(n)
-                    schema_solve_done.add(n)
-                    for node in solved_nodes.values():
-                        #
-                        init_dependencies(node)
-                        init_connections(node)
-                        #
-                        # if node.signature in ignore_these: continue
-                        solve_layer.appendleft(node)
-                        # prPurple(node)
-                    for conn in n.hierarchy_connections:
-                        if conn not in schema_solve_done and conn not in solve_layer:
-                            solve_layer.appendleft(conn)
+        if n.signature in all_schema.keys() and n.signature:
+            for dep in n.hierarchy_dependencies:
+                if dep not in schema_solve_done:
+                    solve_layer.appendleft(n)
+                    break
             else:
-                for dep in n.hierarchy_dependencies:
-                    if dep not in schema_solve_done:
-                        break
-                else:
-                    n.bPrepare()
-                    schema_solve_done.add(n)
-                    for conn in n.hierarchy_connections:
-                        if conn not in schema_solve_done and conn not in solve_layer:
-                            solve_layer.appendleft(conn)
-        if unsolved_schema:
-            # prRed(unsolved_schema)
-            raise RuntimeError("Failed to resolve all schema declarations")
+                solved_nodes = solve_schema_to_tree(n, all_nc, roots)
+                unsolved_schema.remove(n)
+                schema_solve_done.add(n)
+                for node in solved_nodes.values():
+                    #
+                    init_dependencies(node)
+                    init_connections(node)
+                    #
+                    solve_layer.appendleft(node)
+                for conn in n.hierarchy_connections:
+                    if conn not in schema_solve_done and conn not in solve_layer:
+                        solve_layer.appendleft(conn)
+        else:
+            for dep in n.hierarchy_dependencies:
+                if dep not in schema_solve_done:
+                    break
+            else:
+                n.bPrepare()
+                schema_solve_done.add(n)
+                for conn in n.hierarchy_connections:
+                    if conn not in schema_solve_done and conn not in solve_layer:
+                        solve_layer.appendleft(conn)
+    if unsolved_schema:
+        raise RuntimeError("Failed to resolve all schema declarations")
 
     all_nc = list(all_nc.values()).copy()
     kept_nc = {}
@@ -490,7 +389,6 @@ def parse_tree(base_tree):
             continue
 
         if nc.node_type in ["DUMMY"]:
-            # prRed(nc.prototype.bl_idname)
             if nc.prototype.bl_idname in ["MantisNodeGroup", "NodeGroupOutput"]:
                 continue
             # continue
@@ -513,7 +411,6 @@ def parse_tree(base_tree):
             if (new_nc := insert_lazy_parents(nc)):
                 kept_nc[new_nc.signature]=new_nc
         kept_nc[nc.signature]=nc
-    # raise NotImplementedError
     prWhite(f"Parsing tree took {time.time()-start_time} seconds.")
     prWhite("Number of Nodes: %s" % (len(kept_nc)))
     return kept_nc
