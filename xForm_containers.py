@@ -423,7 +423,7 @@ class xFormBone:
         finished = False
         if (trace := trace_single_line(self, "Relationship")[0] ) :
             for i in range(len(trace)):
-                # have to look in reverse, actually
+                # have to look in reverse, actually TODO
                 if ( isinstance(trace[ i ], xFormArmature ) ):
                     return trace[ i ].bGetObject()
         return None
@@ -898,14 +898,16 @@ class xFormGeometryObject:
     def bPrepare(self, bContext = None,):
         import bpy
         self.bObject = bpy.data.objects.get(self.evaluate_input("Name"))
+        trace = trace_single_line(self, "Geometry")
         if (not self.bObject) or (self.inputs["Geometry"].is_linked and self.bObject.type == "EMPTY"):
-            trace = trace_single_line(self, "Geometry")
             if trace[-1]:
                 self.bObject = bpy.data.objects.new(self.evaluate_input("Name"), trace[-1].node.bGetObject())
-        else: # clear it
-            self.bObject.constraints.clear()
-            self.bObject.animation_data_clear() # this is a little dangerous.
-            self.bObject.modifiers.clear()
+        if self.bObject and (self.inputs["Geometry"].is_linked and self.bObject.type  in ["MESH", "CURVE"]):
+            self.bObject.data = trace[-1].node.bGetObject()
+        # clear it
+        self.bObject.constraints.clear()
+        self.bObject.animation_data_clear() # this is a little dangerous.
+        self.bObject.modifiers.clear()
                     
         try:
             bpy.context.collection.objects.link(self.bObject)
