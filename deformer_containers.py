@@ -135,7 +135,11 @@ class DeformerArmature:
         # we'll use modifiers for this, maybe use GN for it in the future tho
         import bpy
         ob = self.GetxForm().bGetObject()
-        copy_from = self.GetxForm(socket="Copy Skin Weights From")
+        try:
+            copy_from = self.GetxForm(socket="Copy Skin Weights From")
+        except GraphError:
+            copy_from = None
+            prRed(f"No object found for copying weights in {self}, continuing anyway.")
         m = ob.modifiers.new(type="DATA_TRANSFER", name="Mantis_temp_data_transfer")
         m.object = None; m.use_vert_data = True
         m.data_types_verts = {'VGROUP_WEIGHTS'}
@@ -143,6 +147,7 @@ class DeformerArmature:
         m.layers_vgroup_select_src = 'ALL'
         m.layers_vgroup_select_dst = 'NAME'
         m.object = copy_from
+        m.use_object_transform = False
         ob.modifiers.move(len(ob.modifiers)-1, 0)
 
         # ob.data = ob.data.copy()
@@ -218,8 +223,8 @@ class DeformerArmature:
         elif skin_method == "EXISTING_GROUPS":
             pass
         elif skin_method == "COPY_FROM_OBJECT":
+            self.initialize_vgroups()
             self.copy_weights()
-            # self.initialize_vgroups(use_existing = True)
 
 
 class DeformerMorphTarget:

@@ -302,8 +302,8 @@ class DeformerArmatureNode(Node, DeformerNode):
         node_tree = context.space_data.path[0].node_tree
         nc = parsed_tree.get(get_signature_from_edited_tree(self, context))
         if nc:
-            if nc.evaluate_input("Skinning Method") == "COPY_FROM_OBJECT":
-                self.inputs["Copy Skin Weights From"].hide = False
+            self.inputs["Copy Skin Weights From"].hide = not (nc.evaluate_input("Skinning Method") == "COPY_FROM_OBJECT")
+                
 
 from .utilities import get_socket_maps, relink_socket_map
 
