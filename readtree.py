@@ -625,13 +625,12 @@ def execute_tree(nodes, base_tree, context):
     if (active):
         with context.temp_override(**{'active_object':active, 'selected_objects':switch_me}):
             bpy.ops.object.mode_set(mode='POSE')
-    
 
     for n in executed:
         n.bPrepare(context)
         if not n.executed:
             n.bExecute(context)
-    
+
     for n in executed:
         n.bFinalize(context)
 
@@ -644,6 +643,8 @@ def execute_tree(nodes, base_tree, context):
     if (active):
         with context.temp_override(**{'active_object':active, 'selected_objects':switch_me}):
             bpy.ops.object.mode_set(mode='OBJECT')
+    for ob in switch_me:
+        ob.data.pose_position = 'POSE'
     tot_time = (time() - start_execution_time)
     prGreen(f"Executed tree of {len(executed)} nodes in {tot_time} seconds")
     if (original_active):

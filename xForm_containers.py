@@ -145,6 +145,7 @@ class xFormArmature:
             
         self.bObject = ob.name
         ob.matrix_world = matrix.copy()
+        ob.data.pose_position = 'REST'
         
         # # first, get the parent object
         # parent_node = get_parent(self)
@@ -886,20 +887,29 @@ class xFormGeometryObject:
         from bpy.types import Object, Bone
         parent_nc = get_parent(self, type='LINK')
         if (parent_nc):
-            #TODO: this is a lazy HACK that will lead to many a BUG. FIXME.
-            parent = parent_nc.inputs['Parent'].links[0].from_node # <===
-            parent_bOb = parent.bGetObject(mode = 'EDIT')
-            if isinstance(parent_bOb, Bone):
-                armOb= parent.bGetParentArmature()
-                ob.parent = armOb
-                ob.parent_type = 'BONE'
-                ob.parent_bone = parent_bOb.name
-            elif isinstance(parent, Object):
-                ob.parent = parent
-            # blender will do the matrix math for me IF I set the world
-            #   matrix after setting the parent.
-            #
-            # deal with parenting settings here, if necesary
+            parent = None
+            if self.inputs["Relationship"].is_linked:
+                trace = trace_single_line(self, "Relationship")
+                for node in trace[0]:
+                    if node is self: continue # lol
+                    if (node.node_type == 'XFORM'):
+                        parent = node; break
+                if parent is None:
+                    raise GraphError(f"Could not set parent for {self}")
+
+                parent_bOb = parent.bGetObject(mode = 'OBJECT')
+                if parent_bOb is None:
+                    raise GraphError(f"Could not get parent object  for {self}")
+                
+                print (parent_bOb.__class__.__name__)
+
+                if isinstance(parent_bOb, Bone):
+                    armOb= parent.bGetParentArmature()
+                    ob.parent = armOb
+                    ob.parent_type = 'BONE'
+                    ob.parent_bone = parent_bOb.name
+                elif isinstance(parent_bOb, Object):
+                    ob.parent = parent_bOb
 
     def bPrepare(self, bContext = None,):
         import bpy
