@@ -354,6 +354,8 @@ class xFormGeometryObjectNode(Node, xFormNode):
         self.inputs.new('MatrixSocket', "Matrix")
         self.inputs.new('RelationshipSocket', "Relationship")
         self.inputs.new('DeformerSocket', "Deformer")
+        self.inputs.new ("HideSocket", "Hide in Viewport")
+        self.inputs.new ("BooleanSocket", "Hide in Render")
         self.outputs.new('xFormSocket', "xForm Out")
 
         # color

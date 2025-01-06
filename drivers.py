@@ -82,11 +82,13 @@ def CreateDrivers(drivers):
             dVar = drv.variables.remove(v)
             
         for v in driver["vars"]:
+            pose_bone = False
             bone = ''; target2bone = ''
             vob, target2ob = None, None
             if (isinstance(v["owner"], Object)):
                 vob = v["owner"]
             else:
+                pose_bone = True
                 vob = v["owner"].id_data
                 bone = v["owner"].name
             #
@@ -118,11 +120,17 @@ def CreateDrivers(drivers):
                 dVar.targets[0].transform_space = v["space"]
                 dVar.targets[0].transform_type = v["channel"]
             if (dVar.type == 'SINGLE_PROP'):
-                stub = "pose.bones[\""+v["owner"].name+"\"]"
-                if (hasattr( v["owner"], v["prop"] )):
-                    dVar.targets[0].data_path = stub + "."+ (v["prop"])
+                if pose_bone:
+                    stub = "pose.bones[\""+v["owner"].name+"\"]"
+                    if (hasattr( v["owner"], v["prop"] )):
+                        dVar.targets[0].data_path = stub + "."+ (v["prop"])
+                    else:
+                        dVar.targets[0].data_path = stub + brackets(v["prop"])
                 else:
-                    dVar.targets[0].data_path = stub + brackets(v["prop"])
+                    if (hasattr( v["owner"], v["prop"] )):
+                        dVar.targets[0].data_path = (v["prop"])
+                    else:
+                        dVar.targets[0].data_path = brackets(v["prop"])
         # setup keyframe points
         kp = fc.keyframe_points
         for key in driver["keys"]:

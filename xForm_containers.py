@@ -844,7 +844,6 @@ class xFormBone:
         fill_parameters(self)
         # otherwise we will do this from the schema 
 
-
 class xFormGeometryObject:
     '''A node representing an armature object'''
 
@@ -859,6 +858,8 @@ class xFormGeometryObject:
           "Matrix"         : NodeSocket(is_input = True, name = "Matrix", node = self),
           "Relationship"   : NodeSocket(is_input = True, name = "Relationship", node = self),
           "Deformer"   : NodeSocket(is_input = True, name = "Relationship", node = self),
+          "Hide in Viewport"   : NodeSocket(is_input = True, name = "Hide in Viewport", node = self),
+          "Hide in Render"   : NodeSocket(is_input = True, name = "Hide in Render", node = self),
         }
         self.outputs = {
           "xForm Out" : NodeSocket(is_input = False, name="xForm Out", node = self), }
@@ -867,7 +868,9 @@ class xFormGeometryObject:
           "Geometry":None, 
           "Matrix":None, 
           "Relationship":None, 
-          "Deformer":None, 
+          "Deformer":None,
+          "Hide in Viewport":None,
+          "Hide in Render":None,
         }
         self.links = {} # leave this empty for now!
         # now set up the traverse target...
@@ -875,14 +878,16 @@ class xFormGeometryObject:
         self.outputs["xForm Out"].set_traverse_target(self.inputs["Relationship"])
         self.node_type = "XFORM"
         self.bObject = None
-        self.prepared = True
+        self.prepared = False
         self.executed = False
+        self.drivers = {}
 
     def bSetParent(self, ob):
         from bpy.types import Object, Bone
         parent_nc = get_parent(self, type='LINK')
         if (parent_nc):
-            parent = parent_nc.inputs['Parent'].links[0].from_node
+            #TODO: this is a lazy HACK that will lead to many a BUG. FIXME.
+            parent = parent_nc.inputs['Parent'].links[0].from_node # <===
             parent_bOb = parent.bGetObject(mode = 'EDIT')
             if isinstance(parent_bOb, Bone):
                 armOb= parent.bGetParentArmature()
@@ -895,19 +900,40 @@ class xFormGeometryObject:
             #   matrix after setting the parent.
             #
             # deal with parenting settings here, if necesary
+
     def bPrepare(self, bContext = None,):
         import bpy
+        if not self.evaluate_input("Name"):
+            self.prepared = True
+            self.executed = True
+            # and return an error if there are any dependencies:
+            if self.hierarchy_connections:
+                raise GraphError(wrapRed(f"Cannot Generate object {self} because the chosen name is empty or invalid."))
+            return
         self.bObject = bpy.data.objects.get(self.evaluate_input("Name"))
         trace = trace_single_line(self, "Geometry")
-        if (not self.bObject) or (self.inputs["Geometry"].is_linked and self.bObject.type == "EMPTY"):
+        if (not self.bObject):
             if trace[-1]:
                 self.bObject = bpy.data.objects.new(self.evaluate_input("Name"), trace[-1].node.bGetObject())
+        # handle mismatched data.
+        data_wrong = False; data  = None
+        if (self.inputs["Geometry"].is_linked and self.bObject.type == "EMPTY"):
+            data_wrong = True; data = trace[-1].node.bGetObject()
+        elif (not self.inputs["Geometry"].is_linked and not self.bObject.type == "EMPTY"):
+            data_wrong = True
+        # clumsy but functional
+        if data_wrong:
+            unlink_me = self.bObject
+            unlink_me.name = "MANTIS_TRASH.000"
+            for col in unlink_me.users_collection:
+                col.objects.unlink(unlink_me)
+            self.bObject = bpy.data.objects.new(self.evaluate_input("Name"), data)
         if self.bObject and (self.inputs["Geometry"].is_linked and self.bObject.type  in ["MESH", "CURVE"]):
             self.bObject.data = trace[-1].node.bGetObject()
         # clear it
         self.bObject.constraints.clear()
-        self.bObject.animation_data_clear() # this is a little dangerous.
-        self.bObject.modifiers.clear()
+        self.bObject.animation_data_clear() # this is a little dangerous. TODO find a better solution since this can wipe animation the user wants to keep
+        self.bObject.modifiers.clear() # I would also like a way to copy modifiers and their settings, or bake them down. oh well
                     
         try:
             bpy.context.collection.objects.link(self.bObject)
@@ -918,7 +944,23 @@ class xFormGeometryObject:
         matrix = self.evaluate_input("Matrix")
         self.parameters['Matrix'] = matrix
         self.bObject.matrix_world = matrix
+        self.prepared = True
+
+    def bExecute(self, bContext = None,):
+        # putting this in bExecute simply prevents it from being run more than once.
+        # maybe I should do that with the rest of bPrepare, too.
+        props_sockets = {
+            'hide_viewport'    : ("Hide in Viewport", False),
+            'hide_render'      : ("Hide in Render", False),
+        }
+        evaluate_sockets(self, self.bObject, props_sockets)
         self.executed = True
+
+    def bFinalize(self, bContext = None):
+        for i, (driver_key, driver_item) in enumerate(self.drivers.items()):
+            print (wrapGreen(i), wrapWhite(self), wrapPurple(driver_key))
+            prOrange(driver_item)
+        finish_drivers(self)
             
         
     def bGetObject(self, mode = 'POSE'):
