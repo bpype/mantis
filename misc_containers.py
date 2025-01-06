@@ -1093,18 +1093,20 @@ class InputExistingGeometryObject:
           "Name":None, 
           "Object":None, 
         }
-        self.node_type = "UTILITY"
+        self.node_type = "XFORM"
         self.hierarchy_connections = []
         self.connections = []
         self.hierarchy_dependencies = []
         self.dependencies = []
-        self.prepared = True
-        self.executed = True
+        self.prepared = False
+        self.executed = False
     
-    # mode for interface consistency
-    def bGetObject(self, mode=''):
+    def bPrepare(self, bContext=None):
         from bpy import data
-        return data.objects.get( self.evaluate_input("Name") )
+        self.bObject = data.objects.get( self.evaluate_input("Name") )
+        self.prepared = True; self.executed = True
+    def bGetObject(self, mode=''):
+        return self.bObject
 
 class InputExistingGeometryData:
     '''A node representing existing object data'''
@@ -1346,6 +1348,10 @@ class UtilityMatrixFromXForm:
         from mathutils import Vector
         if matrix := self.GetxForm().parameters.get("Matrix"):
             self.parameters["Matrix"] = matrix.copy()
+        elif hasattr(self.GetxForm().bObject, "matrix"):
+            self.parameters["Matrix"] = self.GetxForm().bObject.matrix.copy()
+        elif hasattr(self.GetxForm().bObject, "matrix_world"):
+            self.parameters["Matrix"] = self.GetxForm().bObject.matrix_world.copy()
         self.prepared = True; self.executed = True
 
 
