@@ -828,6 +828,10 @@ class xFormBone:
         
 
     def bGetObject(self, mode = 'POSE'):
+        if mode in ["POSE", "OBJECT"] and self.bGetParentArmature().mode == "EDIT":
+            raise RuntimeError("Cannot get Bone or PoseBone in Edit mode.")
+        elif mode == "EDIT" and self.bGetParentArmature().mode != "EDIT":
+            raise RuntimeError("Cannot get EditBone except in Edit mode.")
         try:
             if   (mode == 'EDIT'):
                 return self.bGetParentArmature().data.edit_bones[self.bObject]
@@ -883,7 +887,7 @@ class xFormGeometryObject:
         self.executed = False
         self.drivers = {}
 
-    def bSetParent(self, ob):
+    def bSetParent(self):
         from bpy.types import Object, Bone
         parent_nc = get_parent(self, type='LINK')
         if (parent_nc):
@@ -895,21 +899,17 @@ class xFormGeometryObject:
                     if (node.node_type == 'XFORM'):
                         parent = node; break
                 if parent is None:
-                    raise GraphError(f"Could not set parent for {self}")
-
-                parent_bOb = parent.bGetObject(mode = 'OBJECT')
-                if parent_bOb is None:
-                    raise GraphError(f"Could not get parent object  for {self}")
-                
-                print (parent_bOb.__class__.__name__)
-
-                if isinstance(parent_bOb, Bone):
+                    raise GraphError(f"Could not get parent node for {self}")
+                if parent.bObject is None:
+                    raise GraphError(f"Could not get parent object from node {parent} for {self}")
+                if isinstance(parent, xFormBone):
                     armOb= parent.bGetParentArmature()
-                    ob.parent = armOb
-                    ob.parent_type = 'BONE'
-                    ob.parent_bone = parent_bOb.name
-                elif isinstance(parent_bOb, Object):
-                    ob.parent = parent_bOb
+                    self.bObject.parent = armOb
+                    self.bObject.parent_type = 'BONE'
+                    self.bObject.parent_bone = parent.bObject
+                    # self.bObject.matrix_parent_inverse = parent.parameters["Matrix"].inverted()
+                elif isinstance(parent, xFormArmature):
+                    self.bObject.parent = parent.bGetObject()
 
     def bPrepare(self, bContext = None,):
         import bpy
@@ -949,11 +949,6 @@ class xFormGeometryObject:
             bpy.context.collection.objects.link(self.bObject)
         except RuntimeError: #already in; but a dangerous thing to pass.
             pass
-        
-        self.bSetParent(self.bObject)
-        matrix = self.evaluate_input("Matrix")
-        self.parameters['Matrix'] = matrix
-        self.bObject.matrix_world = matrix
         self.prepared = True
 
     def bExecute(self, bContext = None,):
@@ -967,6 +962,10 @@ class xFormGeometryObject:
         self.executed = True
 
     def bFinalize(self, bContext = None):
+        self.bSetParent()
+        matrix = self.evaluate_input("Matrix")
+        self.parameters['Matrix'] = matrix
+        self.bObject.matrix_world = matrix
         for i, (driver_key, driver_item) in enumerate(self.drivers.items()):
             print (wrapGreen(i), wrapWhite(self), wrapPurple(driver_key))
             prOrange(driver_item)
