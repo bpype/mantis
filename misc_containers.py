@@ -1104,6 +1104,8 @@ class InputExistingGeometryObject:
     def bPrepare(self, bContext=None):
         from bpy import data
         self.bObject = data.objects.get( self.evaluate_input("Name") )
+        if self is None and (name := self.evaluate_input("Name")):
+          prRed(f"No object found with name {name} in {self}")
         self.prepared = True; self.executed = True
     def bGetObject(self, mode=''):
         return self.bObject
@@ -1345,13 +1347,16 @@ class UtilityMatrixFromXForm:
         raise GraphError("%s is not connected to an xForm" % self)
         
     def bPrepare(self, bContext = None,):
-        from mathutils import Vector
+        from mathutils import Vector, Matrix
+        self.parameters["Matrix"] = Matrix.Identity(4)
         if matrix := self.GetxForm().parameters.get("Matrix"):
             self.parameters["Matrix"] = matrix.copy()
         elif hasattr(self.GetxForm().bObject, "matrix"):
             self.parameters["Matrix"] = self.GetxForm().bObject.matrix.copy()
         elif hasattr(self.GetxForm().bObject, "matrix_world"):
             self.parameters["Matrix"] = self.GetxForm().bObject.matrix_world.copy()
+        else:
+          prRed(f"Could not find matrix for {self} - check if the referenced object exists.")
         self.prepared = True; self.executed = True
 
 
