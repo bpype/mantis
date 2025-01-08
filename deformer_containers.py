@@ -147,7 +147,7 @@ class DeformerArmature:
         m.layers_vgroup_select_src = 'ALL'
         m.layers_vgroup_select_dst = 'NAME'
         m.object = copy_from
-        m.use_object_transform = False
+        # m.use_object_transform = False # testing reveals that this is undesirable - since the objects may not have their transforms applied.
         ob.modifiers.move(len(ob.modifiers)-1, 0)
 
         # ob.data = ob.data.copy()
