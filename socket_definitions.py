@@ -7,14 +7,19 @@ from .utilities import (prRed, prGreen, prPurple, prWhite,
                               wrapRed, wrapGreen, wrapPurple, wrapWhite,
                               wrapOrange,)
 
+transform_spaces_bone_to = (('WORLD', "World", "World Space"),
+                            ('LOCAL', "Local", "Local Space"),
+                            ('POSE', "Pose", "Pose Space"),
+                            ('CUSTOM', "Custom", "Custom Space"),
+                            ('LOCAL_WITH_PARENT', "Local (With Parent)", "Local Space"),
+                            ('LOCAL_OWNER_ORIENT', "Local (Owner Orientation)", "Local Space"),)
 
-transform_spaces = (('WORLD', "World", "World Space"),
-                    ('LOCAL', "Local", "Local Space"),
-                    ('POSE', "Pose", "Pose Space"),
-                    ('CUSTOM', "Custom", "Custom Space"),
-                    ('LOCAL_WITH_PARENT', "Local (With Parent)", "Local Space"),)
+transform_spaces_bone_from = (('WORLD', "World", "World Space"),
+                              ('LOCAL', "Local", "Local Space"),
+                              ('POSE', "Pose", "Pose Space"),
+                              ('CUSTOM', "Custom", "Custom Space"),
+                              ('LOCAL_WITH_PARENT', "Local (With Parent)", "Local Space"),)
                     
-                    # ('TRANSFORM', "Pose", "Pose Space"),)
                     
 transform_spaces_bone_object = (('WORLD', "World", "World Space"),
                                 ('LOCAL', "Local", "Local Space"),
@@ -545,6 +550,12 @@ class DriverVariableSocket(NodeSocket):
 # def get_transform_space_enum(self, context):
     # pass
 
+def get_transform_space(self, context):
+    if "Owner" in self.name:
+        return transform_spaces_bone_from
+    else:
+        return transform_spaces_bone_to
+
 class TransformSpaceSocket(NodeSocket):
     '''Custom node socket type'''
     bl_idname = 'TransformSpaceSocket'
@@ -552,8 +563,8 @@ class TransformSpaceSocket(NodeSocket):
     default_value: bpy.props.EnumProperty(
         name="Space Transform",
         description="Space Transform",
-        items=transform_spaces,
-        default='WORLD',
+        items=get_transform_space,
+        default=0,
         update = update_socket,)
     color_simple = cTransformSpace
     color : bpy.props.FloatVectorProperty(default=cTransformSpace, size=4)
@@ -1185,9 +1196,15 @@ class EnumRotationMix(NodeSocket):
         return self.color_simple
 
 eRotationMix_copytransforms =(
-        ('REPLACE', "Replace", "Fully inherit scale"),
-        ('BEFORE', "Before", "Fully inherit scale"),
-        ('AFTER', "After", "Fully inherit scale"),)
+        ('REPLACE', "Replace (Aligned)", "Fully inherit scale"),
+        ('BEFORE', "Before (Aligned)", "Fully inherit scale"),
+        ('AFTER', "After (Aligned)", "Fully inherit scale"),
+        ('REPLACE_SPLIT', "Replace (Split Channels)", "Fully inherit scale"),
+        ('BEFORE_SPLIT', "Before (Split Channels)", "Fully inherit scale"),
+        ('AFTER_SPLIT', "After (Split Channels)", "Fully inherit scale"),
+        ('REPLACE_FULL', "Replace (Full)", "Fully inherit scale"),
+        ('BEFORE_FULL', "Before (Full)", "Fully inherit scale"),
+        ('AFTER_FULL', "After (Full)", "Fully inherit scale"),)
 
 class EnumRotationMixCopyTransforms(NodeSocket):
     '''Custom node socket type'''
