@@ -516,16 +516,12 @@ def get_all_dependencies(nc):
     nodes = []
     can_descend = True
     check_nodes = [nc]
-    while (len(check_nodes) > 0): # this seems innefficient, why 2 loops?
-        new_nodes = []
-        while (len(check_nodes) > 0):
-            node = check_nodes.pop()
-            connected_nodes = node.hierarchy_dependencies.copy()
-            for new_node in connected_nodes:
-                if new_node in nodes: continue 
-                new_nodes.append(new_node)
-                nodes.append(new_node)
-        check_nodes = new_nodes
+    while (len(check_nodes) > 0):
+        node = check_nodes.pop()
+        connected_nodes = node.hierarchy_dependencies.copy()
+        for new_node in connected_nodes:
+            if new_node in nodes: raise GraphError() 
+            nodes.append(new_node)
     return nodes
             
 ##################################################################################################
