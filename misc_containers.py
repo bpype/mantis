@@ -122,8 +122,8 @@ class InputVector:
         self.base_tree=base_tree
         self.signature = signature
         self.inputs = {}
-        self.outputs = {"VectorSocket" : NodeSocket(name = 'VectorSocket', node=self) }
-        self.parameters = {'VectorSocket':None, "Mute":None}
+        self.outputs = {"" : NodeSocket(name = '', node=self) }
+        self.parameters = {'':None, "Mute":None}
         self.node_type = 'UTILITY'
         self.hierarchy_connections = []
         self.connections = []
@@ -133,7 +133,7 @@ class InputVector:
         self.executed = True
         
     def evaluate_input(self, input_name):
-        return self.parameters["VectorSocket"]
+        return self.parameters[""]
     
 
 class InputBoolean:
@@ -143,8 +143,8 @@ class InputBoolean:
         self.base_tree=base_tree
         self.signature = signature
         self.inputs = {}
-        self.outputs = {"BooleanSocket" : NodeSocket(name = 'BooleanSocket', node=self) }
-        self.parameters = {'BooleanSocket':None, "Mute":None}
+        self.outputs = {"" : NodeSocket(name = '', node=self) }
+        self.parameters = {'':None, "Mute":None}
         self.node_type = 'UTILITY'
         self.hierarchy_connections = []
         self.connections = []
@@ -154,7 +154,7 @@ class InputBoolean:
         self.executed = True
         
     def evaluate_input(self, input_name):
-        return self.parameters["BooleanSocket"]
+        return self.parameters[""]
 
 class InputBooleanThreeTuple:
     '''A node representing inheritance'''
@@ -163,8 +163,8 @@ class InputBooleanThreeTuple:
         self.base_tree=base_tree
         self.signature = signature
         self.inputs = {}
-        self.outputs = {"BooleanThreeTupleSocket" : NodeSocket(name = 'BooleanThreeTupleSocket', node=self) }
-        self.parameters = {'BooleanThreeTupleSocket':None, "Mute":None}
+        self.outputs = {"" : NodeSocket(name = '', node=self) }
+        self.parameters = {'':None, "Mute":None}
         self.node_type = 'UTILITY'
         self.hierarchy_connections = []
         self.connections = []
@@ -174,7 +174,7 @@ class InputBooleanThreeTuple:
         self.executed = True
         
     def evaluate_input(self, input_name):
-        return self.parameters["BooleanThreeTupleSocket"]
+        return self.parameters[""]
     
 class InputRotationOrder:
     '''A node representing string input for rotation order'''
@@ -183,8 +183,8 @@ class InputRotationOrder:
         self.base_tree=base_tree
         self.signature = signature
         self.inputs = {}
-        self.outputs = {"RotationOrderSocket" : NodeSocket(name = 'RotationOrderSocket', node=self) }
-        self.parameters = {'RotationOrderSocket':None, "Mute":None}
+        self.outputs = {"" : NodeSocket(name = '', node=self) }
+        self.parameters = {'':None, "Mute":None}
         self.node_type = 'UTILITY'
         self.hierarchy_connections = []
         self.connections = []
@@ -194,7 +194,7 @@ class InputRotationOrder:
         self.executed = True
         
     def evaluate_input(self, input_name):
-        return self.parameters["RotationOrderSocket"]
+        return self.parameters[""]
     
 
 class InputTransformSpace:
@@ -204,8 +204,8 @@ class InputTransformSpace:
         self.base_tree=base_tree
         self.signature = signature
         self.inputs = {}
-        self.outputs = {"TransformSpaceSocket" : NodeSocket(name = 'TransformSpaceSocket', node=self) }
-        self.parameters = {'TransformSpaceSocket':None, "Mute":None}
+        self.outputs = {"" : NodeSocket(name = '', node=self) }
+        self.parameters = {'':None, "Mute":None}
         self.node_type = 'UTILITY'
         self.hierarchy_connections = []
         self.connections = []
@@ -215,7 +215,7 @@ class InputTransformSpace:
         self.executed = True
         
     def evaluate_input(self, input_name):
-        return self.parameters["TransformSpaceSocket"]
+        return self.parameters[""]
     
 class InputString:
     '''A node representing string input'''
@@ -243,8 +243,8 @@ class InputQuaternion:
         self.base_tree=base_tree
         self.signature = signature
         self.inputs = {}
-        self.outputs = {"QuaternionSocket" : NodeSocket(name = 'QuaternionSocket', node=self) }
-        self.parameters = {'QuaternionSocket':None, "Mute":None}
+        self.outputs = {"" : NodeSocket(name = 'QuaternionSocket', node=self) }
+        self.parameters = {'':None, "Mute":None}
         self.node_type = 'UTILITY'
         self.hierarchy_connections = []
         self.connections = []
@@ -255,7 +255,7 @@ class InputQuaternion:
         
         
     def evaluate_input(self, input_name):
-        return self.parameters["QuaternionSocket"]
+        return self.parameters[""]
     
 
 class InputQuaternionAA:
@@ -265,8 +265,8 @@ class InputQuaternionAA:
         self.base_tree=base_tree
         self.signature = signature
         self.inputs = {}
-        self.outputs  = {"QuaternionSocketAA" : NodeSocket(name = 'QuaternionSocketAA', node=self) }
-        self.parameters = {'QuaternionSocketAA':None, "Mute":None}
+        self.outputs  = {"" : NodeSocket(name = 'QuaternionSocketAA', node=self) }
+        self.parameters = {'':None, "Mute":None}
         self.node_type = 'UTILITY'
         self.hierarchy_connections = []
         self.connections = []
@@ -276,7 +276,7 @@ class InputQuaternionAA:
         self.executed = True
         
     def evaluate_input(self, input_name):
-        return self.parameters["QuaternionSocketAA"]
+        return self.parameters[""]
     
 class InputMatrix:
     '''A node representing axis-angle quaternion input'''
