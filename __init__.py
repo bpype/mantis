@@ -166,6 +166,7 @@ matrix_category = [
         NodeItem("UtilityAxesFromMatrix"),
         NodeItem("UtilityMatrixTransform"),
         NodeItem("UtilityTransformationMatrix"),
+        NodeItem("UtilitySetBoneMatrixTail"),
     ]
 groups_category = [
         NodeItem("MantisNodeGroup"),

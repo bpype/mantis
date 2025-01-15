@@ -48,6 +48,7 @@ def TellClasses():
              UtilityTransformationMatrix,
              UtilityIntToString,
              UtilityArrayGet,
+             UtilitySetBoneMatrixTail,
              #
              UtilityCompare,
              UtilityChoose,
@@ -1612,13 +1613,44 @@ class UtilityArrayGet:
         init_connections(from_node)
         if self in from_node.hierarchy_connections:
           raise RuntimeError()
-        self.hierarchy_connections = []
-        self.connections = []
-        self.hierarchy_dependencies = []
-        self.dependencies = []
+        # this is intentional because the Array Get is kind of a weird hybrid between a Utility and a Schema
+        # so it should be removed from the tree when it is done. it has already dealt with the actual links.
+        # however I think this is redundant. Check.
+        self.hierarchy_connections, self.connections = [], []
+        self.hierarchy_dependencies, self.dependencies = [], []
 
         self.prepared = True
         self.executed = True
+
+class UtilitySetBoneMatrixTail:
+    def __init__(self, signature, base_tree):
+        self.base_tree=base_tree
+        self.executed = False
+        self.signature = signature
+        self.inputs = {
+          "Matrix"          : NodeSocket(is_input = True, name = "Matrix", node = self),
+          "Tail Location"  : NodeSocket(is_input = True, name = "Tail Location", node = self),
+        }
+        self.outputs = {
+          "Result"        : NodeSocket(name = "Result", node = self),
+        }
+        self.parameters = {
+          "Matrix"     : None,
+          "Tail Location"   : None,
+          "Result"     : None,
+        }
+        self.node_type = "UTILITY"
+        self.hierarchy_connections, self.connections = [], []
+        self.hierarchy_dependencies, self.dependencies = [], []
+        self.prepared, self.executed = False, False
+
+    def bPrepare(self, bContext = None,):
+      from mathutils import Matrix
+      matrix = self.evaluate_input("Matrix")
+      if matrix is None: matrix = Matrix.Identity(4)
+      #just do this for now lol
+      self.parameters["Result"] = matrix_from_head_tail(matrix.translation, self.evaluate_input("Tail Location"))
+
 
 
 class UtilityPrint:

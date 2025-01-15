@@ -50,6 +50,7 @@ def TellClasses():
              UtilityBoneMatrixHeadTailFlip,
              UtilityMatrixTransform,
              UtilityTransformationMatrix,
+             UtilitySetBoneMatrixTail,
 
              UtilityIntToString,
              UtilityArrayGet,
@@ -805,6 +806,28 @@ class UtilityTransformationMatrix(Node, MantisNode):
         self.inputs.new("FloatSocket", "W")
         self.outputs.new("MatrixSocket", "Matrix")
         self.initialized = True
+
+# Blender calculates bone roll this way...
+# https://projects.blender.org/blender/blender/src/commit/dd209221675ac7b62ce47b7ea42f15cbe34a6035/source/blender/editors/armature/armature_edit.cc#L281
+# but this looks like it will be harder to re-implement than to re-use. Unfortunately, it doesn't apply directly to a matrix so I have to call a method
+# in the edit bone. Thus, this node currently does nothing and the xForm node has to handle it by reading back through the tree....
+# this will lead to bugs.
+# So instead, we need to avoid calculating the roll for now.
+# but I want to make that its own node and add roll-recalc to this node, too.
+
+class UtilitySetBoneMatrixTail(Node, MantisNode):
+    """Constructs a matrix representing a transformation"""
+    bl_idname = "UtilitySetBoneMatrixTail"
+    bl_label = "Set Bone Matrix Tail"
+    bl_icon = "NODE"
+    initialized : bpy.props.BoolProperty(default = False)
+    
+    def init(self, context):
+        self.inputs.new("MatrixSocket", "Matrix")
+        self.inputs.new("VectorSocket", "Tail Location")
+        self.outputs.new("MatrixSocket", "Result")
+        self.initialized = True
+
 
 class UtilityMatrixFromXForm(Node, MantisNode):
     """Returns the matrix of the given xForm node."""
