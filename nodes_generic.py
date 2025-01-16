@@ -638,13 +638,22 @@ class InputExistingGeometryObjectNode(Node, MantisNode):
     bl_label = "Existing Object"
     bl_icon = "NODE"
     initialized : bpy.props.BoolProperty(default = False)
+    # We want Mantis to import widgets and stuff, so we hold a reference to the object
+    object_reference : bpy.props.PointerProperty(type=bpy.types.Object,) 
     
     def init(self, context):
         self.inputs.new("StringSocket", "Name")
         self.outputs.new("xFormSocket", "Object")
         self.initialized = True
     
-
+    def display_update(self, parsed_tree, context):
+        from .base_definitions import get_signature_from_edited_tree
+        nc = parsed_tree.get(get_signature_from_edited_tree(self, context))
+        if nc: # this is done here so I don't have to define yet another custom socket.
+            self.object_reference = bpy.data.objects.get(nc.evaluate_input("Name"))
+    
+# TODO: maybe I should hold a data reference here, too.
+#       but it is complicated by the fact that Mantis does not distinguish b/tw geo types
 class InputExistingGeometryDataNode(Node, MantisNode):
     """Represents a mesh or curve datablock from the scene."""
     bl_idname = "InputExistingGeometryData"
