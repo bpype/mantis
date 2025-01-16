@@ -99,7 +99,6 @@ def TellClasses():
             #  LayerMaskSocket,
             #  LayerMaskInputSocket,
              BoneCollectionSocket,
-             BoneCollectionInputSocket,
              EnumArrayGetOptions,
              
              xFormParameterSocket,
@@ -305,25 +304,28 @@ def update_metarig_posebone(self, context,):
 def ChooseDraw(self, context, layout, node, text, icon = "NONE", use_enum=True, nice_bool=True, icon_only=False):
     # return
     # TEXT ONLY
-    if ( (hasattr(self, "text_only")) and (getattr(self, "text_only") ) ):
+    if self.node.bl_idname in ["NodeGroupInput", "NodeGroupOutput"]:
         layout.label(text=text)
-    # ENUM VALUES (this is a HACK, fix it later)
-    elif ('Enum' in self.bl_idname) and (use_enum):
-        layout.prop_tabs_enum(self, "default_value",)
-    # for OUTPUT sockets that take INPUT (confusing name!)
-    elif ((hasattr(self, "default_value")) and hasattr(self, "input") and getattr(self, "input")):
-        # for simple input nodes
-        layout.prop(self, "default_value", text=text, toggle=nice_bool, slider=True)
-    # for INPUTS that are NOT CONNECTED
-    elif (hasattr(self, "default_value")) and not (self.is_output or self.is_linked):
-        # DO: expose these values as parameters for this function
-        #   and set them for each socket.
-        if icon == 'NONE': icon_only = False
-        elif icon_only == True : text = "" # "real" icon-only looks bad for strings, need to check other props types.
-        layout.prop(self, "default_value", text=text, toggle=nice_bool, slider=True, icon=icon,)
-    # CONNECTED sockets and outputs without input fields
     else:
-        layout.label(text=text)
+        if ( (hasattr(self, "text_only")) and (getattr(self, "text_only") ) ):
+            layout.label(text=text)
+        # ENUM VALUES (this is a HACK, fix it later)
+        elif ('Enum' in self.bl_idname) and (use_enum):
+            layout.prop_tabs_enum(self, "default_value",)
+        # for OUTPUT sockets that take INPUT (confusing name!)
+        elif ((hasattr(self, "default_value")) and hasattr(self, "input") and getattr(self, "input")):
+            # for simple input nodes
+            layout.prop(self, "default_value", text=text, toggle=nice_bool, slider=True)
+        # for INPUTS that are NOT CONNECTED
+        elif (hasattr(self, "default_value")) and not (self.is_output or self.is_linked):
+            # DO: expose these values as parameters for this function
+            #   and set them for each socket.
+            if icon == 'NONE': icon_only = False
+            elif icon_only == True : text = "" # "real" icon-only looks bad for strings, need to check other props types.
+            layout.prop(self, "default_value", text=text, toggle=nice_bool, slider=True, icon=icon,)
+        # CONNECTED sockets and outputs without input fields
+        else:
+            layout.label(text=text)
 
 class RelationshipSocket(NodeSocket):
     # Description string
@@ -753,22 +755,7 @@ class BoneCollectionSocket(bpy.types.NodeSocket):
     @classmethod
     def draw_color_simple(self):
         return self.color_simple
-        
-class BoneCollectionInputSocket(bpy.types.NodeSocket):
-    """Bone Collection Input Socket"""
-    bl_idname = 'BoneCollectionInputSocket'
-    bl_label = "Bone Collection"
-    default_value: bpy.props.StringProperty(default = "Collection", update = update_socket,)
-    input : bpy.props.BoolProperty(default =True,)
-    color_simple = cBoneCollection
-    color : bpy.props.FloatVectorProperty(default=cBoneCollection, size=4)
-    def draw(self, context, layout, node, text):
-        ChooseDraw(self, context, layout, node, text)
-    def draw_color(self, context, node):
-        return self.color
-    @classmethod
-    def draw_color_simple(self):
-        return self.color_simple
+
 
 
 eArrayGetOptions =(
@@ -980,10 +967,17 @@ class EnumMetaRigSocket(NodeSocket):
     color_simple = cString
     color : bpy.props.FloatVectorProperty(default=cString, size=4)
     def draw(self, context, layout, node, text):
-        if not (self.is_linked):
+        if self.is_output:
+            layout.label(text=self.name)
+        elif not (self.is_linked):
             layout.prop_search(data=self, property="search_prop", search_data=bpy.data, search_property="objects", text="", icon="OUTLINER_OB_ARMATURE", results_are_suggestions=True)
-        else:
+        elif hasattr(self.node, "armature"):
             layout.label(text=self.node.armature)
+            # TODO: we should actually use the parsed tree to query this info directly, since this socket may belong to a node group in/out
+            # which doesn't have this parameter. whatever.
+        else:
+            layout.label(text=self.name)
+        
         
     def draw_color(self, context, node):
         return self.color
@@ -1012,12 +1006,14 @@ class EnumCurveSocket(NodeSocket):
     color : bpy.props.FloatVectorProperty(default=cString, size=4)
     def draw(self, context, layout, node, text):
         if not (self.is_linked):
-            layout.prop_search(data=self, property="search_prop", search_data=bpy.data, search_property="objects", text="", icon="OUTLINER_OB_ARMATURE", results_are_suggestions=True)
+            layout.prop_search(data=self, property="search_prop", search_data=bpy.data, search_property="objects", text="", icon="CURVE_DATA", results_are_suggestions=True)
         else:
             try:
                 layout.label(text=self.search_prop.name)
             except AttributeError: # TODO make this show the graph's result
-                layout.label(text="")
+                layout.label(text=self.name)
+
+
         
     def draw_color(self, context, node):
         return self.color

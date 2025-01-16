@@ -171,7 +171,7 @@ def clear_reroutes(links):
             kept_links.append(link)
     for start in rerouted_starts:
         from_socket = socket_seek(start, rerouted)
-        new_link = DummyLink(from_socket=from_socket, to_socket=start.to_socket, nc_from=None, nc_to=None, )
+        new_link = DummyLink(from_socket=from_socket, to_socket=start.to_socket, nc_from=None, nc_to=None, multi_input_sort_id=start.multi_input_sort_id )
         kept_links.append(new_link)
     return kept_links
 
@@ -799,7 +799,6 @@ def gen_nc_input_for_data(socket):
                         # "LayerMaskInputSocket"               : classes["InputLayerMask"],
                         # "LayerMaskSocket"                    : classes["InputLayerMask"],
                         "BoneCollectionSocket"                 : classes["InputString"],
-                        "BoneCollectionInputSocket"            : classes["InputString"],
                         #
                         "xFormParameterSocket"                 : None,
                         "ParameterBoolSocket"                  : classes["InputBoolean"],
@@ -831,6 +830,7 @@ def gen_nc_input_for_data(socket):
                         "EnumYScaleMode"                       : classes["InputString"],
                         "EnumXZScaleMode"                      : classes["InputString"],
                         "EnumCurveSocket"                      : classes["InputString"],
+                        "EnumMetaRigSocket"             : classes["InputString"],
                         # Deformers
                         "EnumSkinning"                         : classes["InputString"],
                         #

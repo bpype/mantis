@@ -631,10 +631,9 @@ class NodeLink:
         self.to_node = to_node
         self.to_socket = to_socket
         self.from_node.outputs[self.from_socket].links.append(self)
+        # it is the responsibility of the node that uses these links to sort them correctly based on the sort_id
         self.multi_input_sort_id = multi_input_sort_id
         self.to_node.inputs[self.to_socket].links.append(self)
-        if self.multi_input_sort_id>0:
-            self.to_node.inputs[self.to_socket].links.sort(key=lambda a : -1*a.multi_input_sort_id)
         self.is_hierarchy = detect_hierarchy_link(from_node, from_socket, to_node, to_socket,)
         self.is_alive = True
     
@@ -682,6 +681,7 @@ class NodeSocket:
             self.can_traverse = True
         
     def connect(self, node, socket, sort_id=0):
+        prOrange(sort_id)
         if  (self.is_input):
             to_node   = self.node; from_node = node
             to_socket = self.name; from_socket = socket
@@ -697,14 +697,6 @@ class NodeSocket:
                 to_node,
                 to_socket,
                 sort_id)
-        
-        # if (from_node.signature[-2] in ["Chiral Identifier"] and
-            # from_node.signature[-1] in ['Input_4']):
-                # print(wrapRed("Connecting %s" % new_link),)
-        # if (from_node.signature[-2] in ["Chiral Identifier"] and
-            # from_node.signature[-1] in ['Input_3',]):
-                # print(wrapRed("Connecting %s" % new_link),)
-        
         return new_link
     
     def set_traverse_target(self, traverse_target):

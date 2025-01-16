@@ -374,6 +374,10 @@ class UtilityMetaRigNode(Node, MantisNode):
             self.inputs["Meta-Bone"].hide=True
         else:
             self.inputs["Meta-Bone"].hide=False
+        if self.inputs["Meta-Armature"].is_connected:
+            self.inputs["Meta-Armature"].search_prop = None
+        if self.inputs["Meta-Bone"].is_connected:
+            self.inputs["Meta-Bone"].search_prop = None
 
 class UtilityBonePropertiesNode(Node, MantisNode):
     """Provides as sockets strings identifying bone transform properties."""

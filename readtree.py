@@ -257,6 +257,9 @@ def solve_schema_to_tree(nc, all_nc, roots=[]):
     tree = np.node_tree
     prOrange(f"Expanding schema {tree.name} in node {nc} with length {length}.")
 
+    for inp in nc.inputs.values():
+        inp.links.sort(key=lambda a : -a.multi_input_sort_id)
+
     solver = SchemaSolver(nc, all_nc, np)
     solved_nodes = solver.solve(length)
     # prGreen(f"Finished solving schema {tree.name} in node {nc}.")
