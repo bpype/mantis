@@ -76,6 +76,8 @@ class MantisTree(NodeTree):
 
     
     def display_update(self, context):
+        if self.is_exporting:
+            return
         current_tree = bpy.context.space_data.path[-1].node_tree
         for node in current_tree.nodes:
             if hasattr(node, "display_update"):
