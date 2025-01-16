@@ -1213,7 +1213,7 @@ class UtilityPointFromBoneMatrix:
         from mathutils import Vector
         matrix = self.evaluate_input("Bone Matrix")
         head, rotation, _scale = matrix.copy().decompose()
-        tail = head + (rotation @ Vector((0,1,0)))*matrix[3][3]
+        tail = head.copy() + (rotation @ Vector((0,1,0)))*matrix[3][3]
         self.parameters["Point"] = head.lerp(tail, self.evaluate_input("Head/Tail"))
         self.prepared = True
         self.executed = True

@@ -194,6 +194,8 @@ class MathStaticVector:
             v_result = a/b
         if self.evaluate_input("Operation") == "POWER":
             v_result = a**b
+        # since these are unary, we need to make a copy lest we create spooky effects elsewhere.
+        a = a.copy()
         if self.evaluate_input("Operation") == "SCALE":
             v_result = a.normalized() * s
         if self.evaluate_input("Operation") == "LENGTH":
@@ -205,6 +207,7 @@ class MathStaticVector:
         if self.evaluate_input("Operation") == "NORMALIZE":
             v_result =  a.normalized()
         self.parameters["Result Float"] = f_result
+        # if v_result:
         self.parameters["Result Vector"] = v_result
         self.prepared = True
         self.executed = True
