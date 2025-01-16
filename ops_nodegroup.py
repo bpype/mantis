@@ -14,6 +14,7 @@ def TellClasses():
         ExecuteNodeTree,
         # CreateMetaGroup,
         QueryNodeSockets,
+        ForceDisplayUpdate,
         CleanUpNodeGraph,
         MantisMuteNode,
         MantisVisualizeOutput,
@@ -303,6 +304,21 @@ class QueryNodeSockets(Operator):
         
         # This is useful. Todo: reimplement this eventually.
         
+        return {"FINISHED"}
+
+
+class ForceDisplayUpdate(Operator):
+    """Utility Operator for querying the data in a socket"""
+    bl_idname = "mantis.force_display_update"
+    bl_label = "Force Mantis Display Update"
+
+    @classmethod
+    def poll(cls, context):
+        return (mantis_tree_poll_op(context))
+
+    def execute(self, context):
+        base_tree = bpy.context.space_data.path[0].node_tree
+        base_tree.display_update(context)
         return {"FINISHED"}
 
 
