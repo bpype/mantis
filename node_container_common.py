@@ -623,7 +623,7 @@ class NodeLink:
     to_node = None
     to_socket = None
     
-    def __init__(self, from_node, from_socket, to_node, to_socket):
+    def __init__(self, from_node, from_socket, to_node, to_socket, multi_input_sort_id=0):
         if from_node.signature == to_node.signature:
             raise RuntimeError("Cannot connect a node to itself.")
         self.from_node = from_node
@@ -631,7 +631,10 @@ class NodeLink:
         self.to_node = to_node
         self.to_socket = to_socket
         self.from_node.outputs[self.from_socket].links.append(self)
+        self.multi_input_sort_id = multi_input_sort_id
         self.to_node.inputs[self.to_socket].links.append(self)
+        if self.multi_input_sort_id>0:
+            self.to_node.inputs[self.to_socket].links.sort(key=lambda a : -1*a.multi_input_sort_id)
         self.is_hierarchy = detect_hierarchy_link(from_node, from_socket, to_node, to_socket,)
         self.is_alive = True
     
@@ -678,7 +681,7 @@ class NodeSocket:
         if (traverse_target):
             self.can_traverse = True
         
-    def connect(self, node, socket):
+    def connect(self, node, socket, sort_id=0):
         if  (self.is_input):
             to_node   = self.node; from_node = node
             to_socket = self.name; from_socket = socket
@@ -692,7 +695,8 @@ class NodeSocket:
                 from_node,
                 from_socket,
                 to_node,
-                to_socket)
+                to_socket,
+                sort_id)
         
         # if (from_node.signature[-2] in ["Chiral Identifier"] and
             # from_node.signature[-1] in ['Input_4']):
@@ -722,11 +726,12 @@ class NodeSocket:
 # do I need this and the link class above?
 class DummyLink:
     #gonna use this for faking links to keep the interface consistent
-    def __init__(self, from_socket, to_socket, nc_from=None, nc_to=None, original_from=None):
+    def __init__(self, from_socket, to_socket, nc_from=None, nc_to=None, original_from=None, multi_input_sort_id=0):
         self.from_socket = from_socket
         self.to_socket = to_socket
         self.nc_from = nc_from
         self.nc_to = nc_to
+        self.multi_input_sort_id = multi_input_sort_id
         # self.from_node = from_socket.node
         # self.to_node = to_socket.node
         if (original_from):

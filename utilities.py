@@ -171,7 +171,7 @@ def clear_reroutes(links):
             kept_links.append(link)
     for start in rerouted_starts:
         from_socket = socket_seek(start, rerouted)
-        new_link = DummyLink(from_socket=from_socket, to_socket=start.to_socket, nc_from=None, nc_to=None)
+        new_link = DummyLink(from_socket=from_socket, to_socket=start.to_socket, nc_from=None, nc_to=None, )
         kept_links.append(new_link)
     return kept_links
 
@@ -496,7 +496,7 @@ def link_node_containers(tree_path_names, link, local_nc, from_suffix='', to_suf
         if nc_to.node_type in dummy_types: to_s = link.to_socket.identifier
         if nc_from.node_type in dummy_types: from_s = link.from_socket.identifier
         try:
-            connection = nc_from.outputs[from_s].connect(node=nc_to, socket=to_s)
+            connection = nc_from.outputs[from_s].connect(node=nc_to, socket=to_s, sort_id=link.multi_input_sort_id)
             if connection is None:
                 prWhite(f"Already connected: {from_name}:{from_s}->{to_name}:{to_s}")
             return connection
@@ -847,7 +847,7 @@ def gen_nc_input_for_data(socket):
                         "EnumDriverVariableEvaluationSpace"    : classes["InputString"],
                         "EnumDriverRotationMode"               : classes["InputString"],
                         "EnumDriverType"                       : classes["InputString"],
-                        "EnumKeyframeInterpolationTypeSocket"  : classes["InputString"],
+                        "EnumKeyframeInterpTypeSocket"  : classes["InputString"],
                         "EnumKeyframeBezierHandleTypeSocket"   : classes["InputString"],
                         # Math
                         "MathFloatOperation"                   : classes["InputString"],

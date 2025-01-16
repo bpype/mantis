@@ -143,7 +143,7 @@ def make_connections_to_ng_dummy(base_tree, tree_path_names, local_nc, all_nc, n
                 from_s = inp.name
             else: # should this be an error instead?
                 prRed("No available auto-generated class for input", *tree_path_names, np.name, inp.name)
-            nc_from.outputs[from_s].connect(node=nc_to, socket=to_s)
+            nc_from.outputs[from_s].connect(node=nc_to, socket=to_s, sort_id=0)
 
 def gen_node_containers(base_tree, current_tree, tree_path_names, all_nc, local_nc, dummy_nodes, group_nodes, schema_nodes ):
     from .internal_containers import DummyNode
