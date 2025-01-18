@@ -24,6 +24,7 @@ def TellClasses():
              # InputGeometry,
              InputExistingGeometryObject,
              InputExistingGeometryData,
+             UtilityPointFromCurve,
              UtilityMatrixFromCurve,
              UtilityMatricesFromCurve,
              UtilityMetaRig,
@@ -335,12 +336,9 @@ class UtilityMatrixFromCurve:
           "Matrix"           : None,
         }
         self.node_type = "UTILITY"
-        self.hierarchy_connections = []
-        self.connections = []
-        self.hierarchy_dependencies = []
-        self.dependencies = []
-        self.prepared = False
-        self.executed = False
+        self.hierarchy_connections, self.connections = [], []
+        self.hierarchy_dependencies, self.dependencies = [], []
+        self.prepared, self.executed = False, False
 
     def bPrepare(self, bContext = None,):
         from mathutils import Matrix
@@ -373,6 +371,67 @@ class UtilityMatrixFromCurve:
         self.parameters["Matrix"] = m
         self.prepared = True
         self.executed = True
+    
+    def bFinalize(self, bContext=None):
+        import bpy
+        curve_name = self.evaluate_input("Curve")
+        curve = bpy.data.objects.get(curve_name)
+        m_name = curve.name+'.'+self.base_tree.execution_id
+        if (mesh := bpy.data.meshes.get(m_name)):
+            bpy.data.meshes.remove(mesh)
+
+    def fill_parameters(self):
+        fill_parameters(self)
+
+
+class UtilityPointFromCurve:
+    '''Get a point from a curve'''
+
+    def __init__(self, signature, base_tree):
+        self.base_tree=base_tree
+        self.executed = False
+        self.signature = signature
+        self.inputs = {
+          "Curve"             : NodeSocket(is_input = True, name = "Curve", node=self),
+          "Factor"            : NodeSocket(is_input = True, name = "Factor", node=self),
+        }
+        self.outputs = {
+          "Point" : NodeSocket(name = "Point", node=self),
+        }
+        self.parameters = {
+          "Curve"       : None,
+          "Factor"      : None,
+          "Point"       : None,
+        }
+        self.node_type = "UTILITY"
+        self.hierarchy_connections, self.connections = [], []
+        self.hierarchy_dependencies, self.dependencies = [], []
+        self.prepared, self.executed = False, False
+
+    def bPrepare(self, bContext = None,):
+        from mathutils import Matrix
+        import bpy
+        curve = bpy.data.objects.get(self.evaluate_input("Curve"))
+        if not curve:
+            raise RuntimeError(f"No curve found for {self}.")
+        else:
+            from .utilities import mesh_from_curve, data_from_ribbon_mesh
+            if not bContext:
+                # TODO find out if this is bad or a HACK or if it is OK
+                bContext = bpy.context
+            # IMPORTANT TODO: I need to be able to reuse this m
+            # First, try to get the one we made before
+            m_name = curve.name+'.'+self.base_tree.execution_id
+            if not (m := bpy.data.meshes.get(m_name)):
+                m = mesh_from_curve(curve, bContext)
+                m.name = m_name
+            #
+            num_divisions = 1
+            factors = [self.evaluate_input("Factor")]
+            data = data_from_ribbon_mesh(m, [factors], curve.matrix_world)
+            p = data[0][0][0]
+        self.parameters["Point"] = p
+        self.prepared, self.executed = True, True
     
     def bFinalize(self, bContext=None):
         import bpy
@@ -1586,6 +1645,9 @@ class UtilityArrayGet:
 
     def bPrepare(self, bContext = None,):
       if self.prepared == False:
+        # sort the array entries
+        for inp in self.inputs.values():
+            inp.links.sort(key=lambda a : -a.multi_input_sort_id)
         oob   = self.evaluate_input("OoB Behaviour")
         index = self.evaluate_input("Index")
 

@@ -28,6 +28,7 @@ def TellClasses():
             #  ComposeMatrixNode,
              MetaRigMatrixNode,
              UtilityMatrixFromCurve,
+             UtilityPointFromCurve,
              UtilityMatricesFromCurve,
             #  ScaleBoneLengthNode,
              UtilityMetaRigNode,
@@ -325,8 +326,23 @@ class UtilityMatrixFromCurve(Node, MantisNode):
         curv = self.inputs.new("EnumCurveSocket", "Curve")
         curv.icon = "OUTLINER_OB_CURVE"
         self.inputs.new('IntSocket', 'Total Divisions')
-        self.inputs.new('IntSocket', 'Matrix Index')
         self.outputs.new("MatrixSocket", "Matrix")
+        self.initialized = True
+
+
+class UtilityPointFromCurve(Node, MantisNode):
+    """Gets a point from a curve."""
+    bl_idname = "UtilityPointFromCurve"
+    bl_label = "Point from Curve"
+    bl_icon = "NODE"
+    
+    initialized : bpy.props.BoolProperty(default = False)
+    
+    def init(self, context):
+        curv = self.inputs.new("EnumCurveSocket", "Curve")
+        curv.icon = "OUTLINER_OB_CURVE"
+        self.inputs.new('FloatFactorSocket', 'Factor')
+        self.outputs.new("VectorSocket", "Point")
         self.initialized = True
 
 class UtilityMatricesFromCurve(Node, MantisNode):
