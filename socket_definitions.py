@@ -2166,7 +2166,8 @@ enumVectorOperations = (('ADD', 'Add', 'Add (Component-wise)'),
                         ('LENGTH', "Length", "Length"),
                         ('CROSS', "Cross Product", "Cross product of A X B"),
                         ('NORMALIZE', "Normalize", "Returns a normalized vector."),
-                        ('DOT', "Dot Product", "Dot product of A . B"),)
+                        ('DOT', "Dot Product", "Dot product of A . B"),
+                        ('LINEAR_INTERP', "Linear Interpolation", "Linear Interpolation between vectors A and B by factor"))
 
 
        

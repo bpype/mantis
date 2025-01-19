@@ -116,6 +116,9 @@ class MathStaticVectorNode(Node, MantisNode):
             elif op in ['LENGTH', 'NORMALIZE']: # only a vector input
                 self.inputs["Vector B"].hide = True
                 self.inputs["Scalar A"].hide = True
+            elif op in ['LINEAR_INTERP']: # both inputs
+                self.inputs["Vector B"].hide = False
+                self.inputs["Scalar A"].hide = False
             else:
                 self.inputs["Vector B"].hide = False
                 self.inputs["Scalar A"].hide = True

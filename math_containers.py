@@ -206,6 +206,8 @@ class MathStaticVector:
             f_result =  a.dot(b)
         if self.evaluate_input("Operation") == "NORMALIZE":
             v_result =  a.normalized()
+        if self.evaluate_input("Operation") == "LINEAR_INTERP":
+            v_result =  a.lerp(b, s).copy()
         self.parameters["Result Float"] = f_result
         # if v_result:
         self.parameters["Result Vector"] = v_result
