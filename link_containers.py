@@ -190,7 +190,7 @@ class LinkCopyLocation:
         if self.inputs["Target Space"].is_connected and self.inputs["Target Space"].links[0].from_node.node_type == 'XFORM':
             custom_space_target=True
             c.target_space='CUSTOM'
-            xf = self.inputs["Owner Space"].links[0].from_node.bGetObject(mode="OBJECT")
+            xf = self.inputs["Target Space"].links[0].from_node.bGetObject(mode="OBJECT")
             if isinstance(xf, Bone):
                 c.space_object=self.inputs["Target Space"].links[0].from_node.bGetParentArmature(); c.space_subtarget=xf.name
             else:
@@ -301,7 +301,7 @@ class LinkCopyRotation:
         if self.inputs["Target Space"].is_connected and self.inputs["Target Space"].links[0].from_node.node_type == 'XFORM':
             custom_space_target=True
             c.target_space='CUSTOM'
-            xf = self.inputs["Owner Space"].links[0].from_node.bGetObject(mode="OBJECT")
+            xf = self.inputs["Target Space"].links[0].from_node.bGetObject(mode="OBJECT")
             if isinstance(xf, Bone):
                 c.space_object=self.inputs["Target Space"].links[0].from_node.bGetParentArmature(); c.space_subtarget=xf.name
             else:
@@ -687,7 +687,7 @@ class LinkTransformation:
         if self.inputs["Target Space"].is_connected and self.inputs["Target Space"].links[0].from_node.node_type == 'XFORM':
             custom_space_target=True
             c.target_space='CUSTOM'
-            xf = self.inputs["Owner Space"].links[0].from_node.bGetObject(mode="OBJECT")
+            xf = self.inputs["Target Space"].links[0].from_node.bGetObject(mode="OBJECT")
             if isinstance(xf, Bone):
                 c.space_object=self.inputs["Target Space"].links[0].from_node.bGetParentArmature(); c.space_subtarget=xf.name
             else:
@@ -1091,7 +1091,7 @@ class LinkLimitDistance:
         if self.inputs["Target Space"].is_connected and self.inputs["Target Space"].links[0].from_node.node_type == 'XFORM':
             custom_space_target=True
             c.target_space='CUSTOM'
-            xf = self.inputs["Owner Space"].links[0].from_node.bGetObject(mode="OBJECT")
+            xf = self.inputs["Target Space"].links[0].from_node.bGetObject(mode="OBJECT")
             if isinstance(xf, Bone):
                 c.space_object=self.inputs["Target Space"].links[0].from_node.bGetParentArmature(); c.space_subtarget=xf.name
             else:
