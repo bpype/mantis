@@ -73,7 +73,8 @@ def export_to_json(trees, path="", write_file=True, only_selected=False):
                     "links", "nodes", "internal_links", "inputs", "outputs",
                     "__slots__", "dimensions", "type", "interface",
                     "library_weak_reference", "parsed_tree", "node_tree_updater",
-                    "asset_data", "preview", ] # blender asset stuff
+                    "asset_data", "preview",  # blender asset stuff
+                    "object_reference" ] # this one is here to hold on to widgets when appending
     # don't ignore: "bl_idname", "bl_label",
     # ignore the name, it's the dict - key for the node props
      # no that's stupid don't ignore the name good grief
