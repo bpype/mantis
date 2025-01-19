@@ -571,6 +571,10 @@ class xFormBone:
             # 'bbone_curveinz'             : ("BBone Z Curve-In", pb.bone.bbone_curveinz),
             # 'bbone_curveoutx'            : ("BBone X Curve-Out", pb.bone.bbone_curveoutx),
             # 'bbone_curveoutz'            : ("BBone Z Curve-Out", pb.bone.bbone_curveoutz),
+            # TODO this section should be done with props-socket thing
+            b.bbone_handle_use_scale_start = self.evaluate_input("BBone Start Handle Scale")
+            b.bbone_handle_use_scale_start = self.evaluate_input("BBone End Handle Scale")
+
             
         import bpy
         from .drivers import MantisDriver
