@@ -365,8 +365,12 @@ class UtilityMatrixFromCurve:
             factors = [1/num_divisions*m_index, 1/num_divisions*(m_index+1)]
             data = data_from_ribbon_mesh(m, [factors], curve.matrix_world)
             # print(data)
-            
+            # this is in world space... let's just convert it back
             m = matrix_from_head_tail(data[0][0][0], data[0][0][1])
+            m.translation -= curve.location
+            # TODO HACK TODO
+            # all the nodes should work in world-space, and it should be the responsibility
+            # of the xForm node to convert!
 
         self.parameters["Matrix"] = m
         self.prepared = True
@@ -429,7 +433,7 @@ class UtilityPointFromCurve:
             num_divisions = 1
             factors = [self.evaluate_input("Factor")]
             data = data_from_ribbon_mesh(m, [factors], curve.matrix_world)
-            p = data[0][0][0]
+            p = data[0][0][0] - curve.location
         self.parameters["Point"] = p
         self.prepared, self.executed = True, True
     
