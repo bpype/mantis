@@ -540,7 +540,7 @@ def evaluate_sockets(nc, c, props_sockets):
 
 
 def finish_driver(nc, driver_item, prop):
-    prWhite(nc, prop)
+    # prWhite(nc, prop)
     index = driver_item[1]; driver_sock = driver_item[0]
     driver_trace = trace_single_line(nc, driver_sock)
     driver_provider, driver_socket = driver_trace[0][-1], driver_trace[1]
@@ -681,7 +681,6 @@ class NodeSocket:
             self.can_traverse = True
         
     def connect(self, node, socket, sort_id=0):
-        prOrange(sort_id)
         if  (self.is_input):
             to_node   = self.node; from_node = node
             to_socket = self.name; from_socket = socket

@@ -1741,14 +1741,14 @@ class UtilityPrint:
 
     def bPrepare(self, bContext = None,):
         if my_input := self.evaluate_input("Input"):
-            prGreen(my_input)
+            print("Preparation phase: ", wrapWhite(self), wrapGreen(my_input))
         # else:
         #     prRed("No input to print.")
         self.prepared = True
 
     def bExecute(self, bContext = None,):
         if my_input := self.evaluate_input("Input"):
-            prGreen(my_input)
+            print("Execution phase: ", wrapWhite(self), wrapGreen(my_input))
         # else:
         #     prRed("No input to print.")
         self.executed = True
