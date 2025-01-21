@@ -1548,7 +1548,7 @@ class LinkInverseKinematics:
         print(wrapGreen("Creating ")+wrapOrange("Inverse Kinematics")+
              wrapGreen(" Constraint for bone: ") +
              wrapOrange(self.GetxForm().bGetObject().name))
-        myOb = self.GetxForm().bGetObject()
+        ik_bone = self.GetxForm().bGetObject()
         c = self.GetxForm().bGetObject().constraints.new('IK')
         get_target_and_subtarget(self, c)
         get_target_and_subtarget(self, c, input_name = 'Pole Target')
@@ -1559,22 +1559,40 @@ class LinkInverseKinematics:
         c.chain_count = 1 # so that, if there are errors, this doesn't print a whole bunch of circular dependency crap from having infinite chain length
         if (c.pole_target): # Calculate the pole angle, the user shouldn't have to.
             pole_object = c.pole_target
-            pole_location = pole_object.matrix_world.decompose()[0]
+            assert pole_object == c.target, f"Error with {self}: Pole Target must be bone within the same Armature as IK Bone  -- for now."
+            pole_location = None
             if (c.pole_subtarget):
                 pole_object = c.pole_target.pose.bones[c.pole_subtarget]
-                pole_location += pole_object.bone.head_local
+                pole_location = pole_object.bone.head_local
+            else: #TODO this is a dumb limitation but I don't want to convert to the armature's local space so that some idiot can rig in a stupid way
+                raise RuntimeError(f"Error with {self}: Pole Target must be bones within the same Armature as IK Bone -- for now.")
             #HACK HACK
-            handle_location = myOb.bone.tail_local if (self.evaluate_input("Use Tail")) else myOb.bone.head_local
+            handle_location = ik_bone.bone.tail_local if (self.evaluate_input("Use Tail")) else ik_bone.bone.head_local
             counter = 0
-            parent = myOb
-            base_bone = myOb
+            parent = ik_bone
+            base_bone = ik_bone
             while (parent is not None):
+                counter+=1
                 if ((self.evaluate_input("Chain Length") != 0) and (counter > self.evaluate_input("Chain Length"))):
                     break
                 base_bone = parent
                 parent = parent.parent
-                counter+=1
-            head_location = base_bone.bone.head_local
+
+            def get_main_axis(bone, knee_location):
+                # To decide whether the IK mainly bends around the x or z axis....
+                x_axis = bone.matrix_local.to_3x3() @ Vector((1,0,0))
+                y_axis = bone.matrix_local.to_3x3() @ Vector((0,1,0))
+                z_axis = bone.matrix_local.to_3x3() @ Vector((0,0,1))
+                # project the knee location onto the plane of the bone.
+                from .utilities import project_point_to_plane
+                planar_projection = project_point_to_plane(knee_location, bone.head_local, y_axis)
+                # and get the dot between the X and Z axes to find which one the knee is displaced on.
+                x_dot = x_axis.dot(planar_projection) # whichever axis' dot-product is closer to zero 
+                z_dot = z_axis.dot(planar_projection) #  with the base_bone's axis is in-line with it.
+                prWhite(bone.name, z_dot, x_dot)
+                # knee is in-line with this axis vector, the bend is happening on the perpendicular axis.
+                if abs(z_dot) < abs(x_dot): return x_axis # so we return X if Z is in-line with the knee
+                else: return z_axis                       # and visa versa
 
             # modified from https://blender.stackexchange.com/questions/19754/how-to-set-calculate-pole-angle-of-ik-constraint-so-the-chain-does-not-move
             from mathutils import Vector
@@ -1586,16 +1604,26 @@ class LinkInverseKinematics:
                     angle = -angle
                 return angle
 
-            def get_pole_angle(base_bone, ik_bone, pole_location):
+            def get_pole_angle(base_bone, ik_bone, pole_location, main_axis):
                 pole_normal = (ik_bone.bone.tail_local - base_bone.bone.head_local).cross(pole_location - base_bone.bone.head_local)
                 projected_pole_axis = pole_normal.cross(base_bone.bone.tail_local - base_bone.bone.head_local)
-                x_axis= base_bone.bone.matrix_local.to_3x3() @ Vector((1,0,0))
-                return signed_angle(x_axis, projected_pole_axis, base_bone.bone.tail_local - base_bone.bone.head_local)
+                # note that this normal-axis is the y-axis but flipped
+                return signed_angle(main_axis, projected_pole_axis, base_bone.bone.tail_local - base_bone.bone.head_local)
 
-            pole_angle_in_radians = get_pole_angle(base_bone,
-                                                myOb,
-                                                pole_location)
+            if self.evaluate_input("Use Tail") == True:
+                main_axis = get_main_axis(ik_bone.bone, ik_bone.bone.tail_local)
+                # pole angle to the PV:
+                pole_angle_in_radians = get_pole_angle(base_bone, ik_bone, pole_location, main_axis)
+            elif ik_bone.bone.parent:
+                main_axis = get_main_axis(ik_bone.bone.parent, ik_bone.bone.tail_local)
+                pole_angle_in_radians = get_pole_angle(base_bone, ik_bone, pole_location, main_axis)
+            else: # the bone is not using "Use Tail" and it has no parent -- meaningless.
+                pole_angle_in_radians = 0
+            
             c.pole_angle = pole_angle_in_radians
+
+            # TODO: the pole target should be a bone in a well-designed rig, but I don't want to force this, so....
+            #   in future, calculate all this in world-space so we can use other objects as the pole.
         
         props_sockets = {
         'chain_count'   : ("Chain Length", 1),

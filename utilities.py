@@ -690,7 +690,8 @@ def SugiyamaGraph(tree, iterations):
                     n.location.x -= next_node.width*1.5
         
 
-
+def project_point_to_plane(point, origin, normal):
+    return point - normal.dot(point- origin)*normal
 
 ##################################################################################################
 # stuff I should probably refactor!!
@@ -1185,3 +1186,66 @@ def data_from_ribbon_mesh(m, factorsList, mat, ribbons = None, fReport = None):
             normals.append( outNorm )
         ret.append( (points, widths, normals) )
     return ret # this is a list of tuples containing three lists
+
+
+
+
+#This bisection search is generic, and it searches based on the
+# magnitude of the error, rather than the sign.
+# If the sign of the error is meaningful, a simpler function
+# can be used.
+def do_bisect_search_by_magnitude(
+        owner, 
+        attribute,
+        index = None,
+        test_function = None,
+        modify = None,
+        max_iterations = 10000,
+        threshold = 0.0001,
+        thresh2   = 0.0005,
+        context = None,
+        update_dg = None,
+    ):
+    from math import floor
+    i = 0; best_so_far = 0; best = float('inf')
+    min = 0; center = max_iterations//2; max = max_iterations
+    # enforce getting the absolute value, in case the function has sign information
+    # The sign may be useful in a sign-aware bisect search, but this one is more robust!
+    test = lambda : abs(test_function(owner, attribute, index, context = context,))
+    while (i <= max_iterations):
+        upper = (max - ((max-center))//2)
+        modify(owner, attribute, index, upper, context = context); error1 = test()
+        lower = (center - ((center-min))//2)
+        modify(owner, attribute, index, lower, context = context); error2 = test()
+        if (error1 < error2):
+            min = center
+            center, check = upper, upper
+            error = error1
+        else:
+            max = center
+            center, check = lower, lower
+            error = error2
+        if (error <= threshold) or (min == max-1):
+            break
+        if (error < thresh2):
+            j = min
+            while (j < max):
+                modify(owner, attribute, index, j * 1/max_iterations, context = context)
+                error = test()
+                if (error < best):
+                    best_so_far = j; best = error
+                if (error <= threshold):
+                    break
+                j+=1
+            else: # loop has completed without finding a solution
+                i = best_so_far; error = test()
+                modify(owner, attribute, index, best_so_far, context = context)
+                break
+        if (error < best):
+            best_so_far = check; best = error
+        i+=1
+        if update_dg:
+            update_dg.update()
+    else: # Loop has completed without finding a solution
+        i = best_so_far
+        modify(owner, attribute, best_so_far, context = context); i+=1
