@@ -91,7 +91,7 @@ input_category=[
             # NodeItem("InputQuaternionNode"),
             # NodeItem("InputQuaternionNodeAA"),
             NodeItem("InputMatrixNode"),
-            NodeItem("InputLayerMaskNode"),
+            # NodeItem("InputLayerMaskNode"), # DEPRECATED since we have Bone Collections now
             NodeItem("InputExistingGeometryObject"),
             NodeItem("InputExistingGeometryData"),
     ]
@@ -122,9 +122,9 @@ link_relationship_category = [
 deformer_category=[NodeItem(cls.bl_idname) for cls in deformer_definitions.TellClasses()]
 xForm_category = [
          NodeItem("xFormGeometryObject"),
-        # NodeItem("xFormNullNode"),
+        # NodeItem("xFormNullNode"), # REMOVED since GeometryObject makes an empty if it has no Geometry
         NodeItem("xFormBoneNode"),
-        NodeItem("xFormRootNode"),
+        # NodeItem("xFormRootNode"), # REMOVED since it is a no-op
         NodeItem("xFormArmatureNode"),
     ]
 driver_category = [

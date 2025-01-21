@@ -436,6 +436,7 @@ class UtilityDriverVariableNode(Node, MantisNode):
         self.inputs.new("xFormSocket", "xForm 1")                                  # 6
         self.inputs.new("xFormSocket", "xForm 2")                                  # 7
         self.outputs.new("DriverVariableSocket", "Driver Variable")
+        self.inputs[3].hide = True
         self.initialized = True
         
     # def update_on_socket_change(self, context):
@@ -483,6 +484,7 @@ class UtilityDriverVariableNode(Node, MantisNode):
             self.inputs[5].hide = False
             self.inputs[6].hide = False
             self.inputs[7].hide = True
+        self.inputs[3].hide = True
     
 
 class UtilityFCurveNode(Node, MantisNode):
