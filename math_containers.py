@@ -129,18 +129,6 @@ class MathStaticFloat:
         self.prepared = True
         self.executed = True
 
-
-# enumVectorOperations = (('ADD', 'Add', 'Add (Component-wise)'),
-#                         ('SUBTRACT', "Subtract", "Subtract (Component-wise)"),
-#                         ('MULTIPLY', "Multiply", "Multiply (Component-wise)"),
-#                         ('SCALE', "Scale", "Scales vector by input float or average magnitude of input vector's components."),
-#                         ('DIVIDE', "Divide", "Divide (Component-wise)"),
-#                         ('POWER', "Power", "Power (Component-wise)"),
-#                         ('LENGTH', "Length", "Length"),
-#                         ('CROSS', "Cross Product", "Cross product of A X B"),
-#                         ('DOT', "Dot Product", "Dot product of A . B"),
-
-
 class MathStaticVector:
     '''A node representing an armature object'''
 

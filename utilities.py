@@ -314,18 +314,6 @@ def init_dependencies(nc):
     nc.hierarchy_dependencies = hc
     nc.dependencies = c
 
-# schema_input_types = [
-#         'SchemaIndex',
-#         'SchemaArrayInput',
-#         'SchemaArrayInputGet',
-#         'SchemaConstInput',
-#         'SchemaIncomingConnection',
-# ]
-# schema_output_types = [
-#         'SchemaArrayOutput',
-#         'SchemaConstOutput',
-#         'SchemaOutgoingConnection',
-# ]
 
 from .base_definitions import from_name_filter, to_name_filter
 
@@ -333,18 +321,6 @@ def init_schema_dependencies(schema, all_nc):
     schema_name = schema.signature[-1]
     all_input_nodes = []
     all_output_nodes = []
-    # all_inernal_nodes = []
-    # for nc in all_nc.values():
-    #     for t in schema_input_types:
-    #         if nc.signature == (*schema.signature, t):
-    #             all_input_nodes.append(nc)
-    #     for t in schema_output_types:
-    #         if nc.signature == (*schema.signature, t):
-    #             all_output_nodes.append(nc)
-    # prOrange (schema.connections)
-    # print (schema.hierarchy_connections)
-    # prOrange (schema.dependencies)
-    # prOrange (schema.hierarchy_dependencies)
 
     # so the challenge is to map these and check both ends
     from .base_definitions import from_name_filter, to_name_filter
@@ -405,71 +381,9 @@ def init_schema_dependencies(schema, all_nc):
                         if hierarchy:
                             hc.append(from_link.from_node)
                         c.append(from_link.from_node)
-        # prPurple(item.in_out)
-        # if hierarchy:
-        #     prOrange(item.name)
-        # else:
-        #     prWhite(item.name)
-        #     print(hierarchy_reason)
-
-        # else:
-        #     c = schema.connections
-        #     hc = schema.hierarchy_connections
-        #     if item.parent and item.parent.name == 'Array':
-        #         if nc := all_nc.get((*schema.signature, 'SchemaArrayOutput')):
-        #             for from_link in nc.inputs[item.name].links:
-        #                 if from_link.from_socket in from_name_filter:
-        #                     hierarchy = False
-        #             for to_link in schema.outputs[item.identifier].links:
-        #                 if to_link.to_socket in to_name_filter:
-        #                     hierarchy = False
-        #     if item.parent and item.parent.name == 'Constant':
-        #         if nc := all_nc.get((*schema.signature, 'SchemaConstOutput')):
-        #             for from_link in nc.inputs[item.name].links:
-        #                 if from_link.from_socket in from_name_filter:
-        #                     hierarchy = False
-        #             for to_link in schema.outputs[item.identifier].links:
-        #                 if to_link.to_socket in to_name_filter:
-        #                     hierarchy = False
-        #     if item.parent and item.parent.name == 'Connection':
-        #         if nc := all_nc.get((*schema.signature, 'SchemaOutgoingConnection')):
-        #             for from_link in nc.inputs[item.name].links:
-        #                 if from_link.from_socket in from_name_filter:
-        #                     hierarchy = False
-        #             for to_link in schema.outputs[item.identifier].links:
-        #                 if to_link.to_socket in to_name_filter:
-        #                     hierarchy = False
-    # for nc in all_input_nodes:
-    #     for output in nc.outputs.values():
-    #         for l in output.links:
-    #             if l.to_socket in to_name_filter:
-    #                 print("not hierarchy", l.to_socket)
-    #             else:
-    #                 print("hierarchy", l.to_socket)
-    # for inp in schema.inputs.values():
-    #     for l in inp.links:
-    #         if l.from_socket in from_name_filter:
-    #             print("not hierarchy", l.from_socket)
-    #         else:
-    #             print("hierarchy", l.from_socket)
-    
-    # we need to get dependencies and connections
-    # but we can use the same method to do each
-
-
-    # prPurple (schema.connections)
-    # # print (schema.hierarchy_connections)
-    # prPurple (schema.dependencies)
-    # prPurple (schema.hierarchy_dependencies)
-    # #
 
 
 def check_and_add_root(n, roots, include_non_hierarchy=False):
-    # if not (hasattr(n, 'inputs')) or ( len(n.inputs) == 0):
-    #     roots.append(n)
-    # elif (hasattr(n, 'inputs')):
-    #     for inp in n.inputs.values():
-    #         if inp.is_linked: return
     if include_non_hierarchy == True and len(n.dependencies) > 0:
         return 
     elif len(n.hierarchy_dependencies) > 0:
@@ -534,30 +448,8 @@ def to_mathutils_value(socket):
     if hasattr(socket, "default_value"):
         from mathutils import Matrix, Euler, Quaternion, Vector
         val = socket.default_value
-        # if socket.bl_idname in [
-        #     'NodeSocketVector',
-        #     'NodeSocketVectorAcceleration',
-        #     'NodeSocketVectorDirection',
-        #     'NodeSocketVectorTranslation',
-        #     'NodeSocketVectorXYZ',
-        #     'NodeSocketVectorVelocity',
-        #     'VectorSocket',
-        #     'VectorEulerSocket',
-        #     'VectorTranslationSocket',
-        #     'VectorScaleSocket',
-        #     'ParameterVectorSocket',]:
-        # # if "Vector" in socket.bl_idname:
-        #     return (Vector(( val[0], val[1], val[2], )))
-        # if socket.bl_idname in ['NodeSocketVectorEuler']:
-        #     return (Euler(( val[0], val[1], val[2])), 'XYZ',) #TODO make choice
         if socket.bl_idname in ['MatrixSocket']:
             return socket.TellValue()
-        # elif socket.bl_idname in ['QuaternionSocket']:
-        #     return (Quaternion( (val[0], val[1], val[2], val[3],)) )
-        # elif socket.bl_idname in ['QuaternionSocketAA']:
-        #     return (Quaternion( (val[1], val[2], val[3],), val[0], ) )
-        # elif socket.bl_idname in ['BooleanThreeTupleSocket']:
-        #     return (val[0], val[1], val[2]) 
         else:
             return val
     else:
@@ -711,11 +603,7 @@ def class_for_mantis_prototype_node(prototype_node):
     # But I actually think this is a bad idea since I might not
     #  want to use this name convention in the future
     #  this is easy enough for now, may refactor.
-    #
-    # kek, turns out it was completely friggin' inconsistent already
-    if prototype_node.bl_idname == 'xFormRootNode':
-        return classes["xFormRoot"]
-    elif prototype_node.bl_idname == 'xFormArmatureNode':
+    if prototype_node.bl_idname == 'xFormArmatureNode':
         return classes["xFormArmature"]
     elif prototype_node.bl_idname == 'xFormBoneNode':
         return classes["xFormBone"]
@@ -775,10 +663,11 @@ def class_for_mantis_prototype_node(prototype_node):
     return None
 
 
-# This is really, really stupid HACK
+# This is really, really stupid way to do this
 def gen_nc_input_for_data(socket):
     # Class List #TODO deduplicate
     from . import xForm_containers, link_containers, misc_containers, primitives_containers, deformer_containers, math_containers, schema_containers
+    from .internal_containers import NoOpNode
     classes = {}
     for module in [xForm_containers, link_containers, misc_containers, primitives_containers, deformer_containers, math_containers, schema_containers]:
         for cls in module.TellClasses():
@@ -787,8 +676,8 @@ def gen_nc_input_for_data(socket):
     socket_class_map = {
                         "MatrixSocket"                         : classes["InputMatrix"],
                         "xFormSocket"                          : None,
-                        "RelationshipSocket"                   : classes["xFormRoot"], # world in
-                        "DeformerSocket"                       : classes["xFormRoot"], # world in
+                        "RelationshipSocket"                   : NoOpNode,
+                        "DeformerSocket"                       : NoOpNode,
                         "GeometrySocket"                       : classes["InputExistingGeometryData"],
                         "EnableSocket"                         : classes["InputBoolean"],
                         "HideSocket"                           : classes["InputBoolean"],
@@ -797,8 +686,6 @@ def gen_nc_input_for_data(socket):
                         "DriverVariableSocket"                 : None, 
                         "FCurveSocket"                         : None, 
                         "KeyframeSocket"                       : None,
-                        # "LayerMaskInputSocket"               : classes["InputLayerMask"],
-                        # "LayerMaskSocket"                    : classes["InputLayerMask"],
                         "BoneCollectionSocket"                 : classes["InputString"],
                         #
                         "xFormParameterSocket"                 : None,
@@ -812,8 +699,8 @@ def gen_nc_input_for_data(socket):
                         "BooleanSocket"                        : classes["InputBoolean"],
                         "BooleanThreeTupleSocket"              : classes["InputBooleanThreeTuple"],
                         "RotationOrderSocket"                  : classes["InputRotationOrder"],
-                        "QuaternionSocket"                     : classes["InputQuaternion"],
-                        "QuaternionSocketAA"                   : classes["InputQuaternionAA"],
+                        "QuaternionSocket"                     : None,
+                        "QuaternionSocketAA"                   : None,
                         "IntSocket"                            : classes["InputFloat"],
                         "StringSocket"                         : classes["InputString"],
                         #
@@ -831,7 +718,7 @@ def gen_nc_input_for_data(socket):
                         "EnumYScaleMode"                       : classes["InputString"],
                         "EnumXZScaleMode"                      : classes["InputString"],
                         "EnumCurveSocket"                      : classes["InputString"],
-                        "EnumMetaRigSocket"             : classes["InputString"],
+                        "EnumMetaRigSocket"                    : classes["InputString"],
                         # Deformers
                         "EnumSkinning"                         : classes["InputString"],
                         #
@@ -848,7 +735,7 @@ def gen_nc_input_for_data(socket):
                         "EnumDriverVariableEvaluationSpace"    : classes["InputString"],
                         "EnumDriverRotationMode"               : classes["InputString"],
                         "EnumDriverType"                       : classes["InputString"],
-                        "EnumKeyframeInterpTypeSocket"  : classes["InputString"],
+                        "EnumKeyframeInterpTypeSocket"         : classes["InputString"],
                         "EnumKeyframeBezierHandleTypeSocket"   : classes["InputString"],
                         # Math
                         "MathFloatOperation"                   : classes["InputString"],
@@ -986,45 +873,6 @@ def mesh_from_curve(crv, context,):
         # for now I will just do it like this
         EnsureCurveIsRibbon(crv)
         return bpy.data.meshes.new_from_object(crv)
-
-
-# def DataFromRibbon(obCrv, factorsList, context, fReport=None,):
-#     # BUG
-#     # no reasonable results if input is not  a ribbon
-#     import time
-#     start = time.time()
-#     """Returns a point from a u-value along a curve"""
-#     rM = MeshFromCurve(obCrv, context)
-#     ribbons = f_mesh.DetectRibbons(rM, fReport= fReport)
-#     for ribbon in ribbons:
-#         # could be improved, this will do a rotation for every ribbon
-#         # if even one is a circle
-#         if (ribbon[2]) == True:
-#             # could be a better implementation
-#             dupeCrv = obCrv.copy()
-#             dupeCrv.data = obCrv.data.copy()
-#             dupeCrv.data.extrude = 0
-#             dupeCrv.data.bevel_depth = 0 
-#             wM = MeshFromCurve(dupeCrv, context)
-#             wires = f_mesh.DetectWireEdges(wM)
-#             bpy.data.curves.remove(dupeCrv.data) #removes the object, too
-#             ribbonsNew = []
-#             for ribbon, wire in zip(ribbons, wires):
-#                 if (ribbon[2] == True): #if it's a circle
-#                     rNew = f_mesh.RotateRibbonToMatchWire(ribbon, rM, wire, wM)
-#                 else:
-#                     rNew = ribbon
-#                 ribbonsNew.append( rNew )
-#             ribbons = ribbonsNew
-#             break
-#     data = f_mesh.DataFromRibbon(rM, factorsList, obCrv.matrix_world, ribbons=ribbons, fReport=fReport)
-#     bpy.data.meshes.remove(rM)
-#     print ("time elapsed: ", time.time() - start)
-#     #expects data...
-#     # if ()
-
-
-#     return data
 
 def DetectRibbon(f, bm, skipMe):
     fFirst = f.index

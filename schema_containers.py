@@ -38,11 +38,7 @@ class SchemaIndex:
     def __init__(self, signature, base_tree):
         self.base_tree=base_tree
         self.signature = signature
-        self.inputs = {}#{
-        #   "X"   : NodeSocket(is_input = True, name = "X", node = self),
-        #   "Y"   : NodeSocket(is_input = True, name = "Y", node = self),
-        #   "Z"   : NodeSocket(is_input = True, name = "Z", node = self),
-        # }
+        self.inputs = {}
         self.outputs = {
           "Index" : NodeSocket(name = "Index", node=self),
           "Schema Length" : NodeSocket(name = "Schema Length", node=self),
@@ -192,28 +188,6 @@ class SchemaIncomingConnection:
         self.dependencies = []
         self.prepared = True
         self.executed = True
-
-
-
-# class SchemaChoose:
-#     def __init__(self, signature, base_tree):
-#         self.base_tree=base_tree
-#         self.signature = signature
-#         init_parameters(self)
-#         self.node_type = 'UTILITY'
-        
-#     def evaluate_input(self, input_name):
-#         return evaluate_input(self, input_name)
-    
-#     def bExecute(self, bContext = None,):
-#         pass
-    
-#     def __repr__(self):
-#         return self.signature.__repr__()
-        
-#     def fill_parameters(self):
-#         fill_parameters(self)
-
 
 for c in TellClasses():
     setup_container(c)

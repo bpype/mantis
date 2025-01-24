@@ -738,9 +738,7 @@ def do_generate_armature(context, node_tree):
         #This will generate it in the current node tree and OVERWRITE!
         node_tree.nodes.clear()
         
-        world_in = node_tree.nodes.new("xFormRootNode")
         armature = node_tree.nodes.new("xFormArmatureNode")
-        world_in.location = (-200, 0)
         armature.location = ( 0, 0)
         
         
@@ -755,9 +753,6 @@ def do_generate_armature(context, node_tree):
                 lines.append([]) # add the root itself HACK ugly
                 milestone=time()
                 prPurple("got the bone paths", time() - milestone); milestone=time()
-                # create links:
-                node_tree.links.new(world_in.outputs["World Out"], armature.inputs['Relationship'])
-                
                 # set up some properties:
                 armature.inputs["Name"].default_value = armOb.name
                 armature.name = armOb.name; armature.label = armOb.name
@@ -943,10 +938,7 @@ def do_generate_armature(context, node_tree):
 
         
         for node in node_tree.nodes:
-            if (node == world_in):
-                continue
             node.select = False
-        node_tree.nodes.active = world_in
         
         prGreen("Finished generating %d nodes in %f seconds." % (len(node_tree.nodes), time() - start))
         #bpy.ops.node.cleanup()

@@ -213,52 +213,6 @@ class InputMatrixNode(Node, MantisNode):
         mat_sock = self.outputs[0]
         mat_sock.default_value = self.set_matrix()
 
-# TODO: reimplement the nodes beneath here
-
-# from .utilities import QuerySocket, to_mathutils_value
-# class ComposeMatrixNode(Node, MantisNode):
-#     '''A utility node for composing a matrix'''
-#     bl_idname = 'ComposeMatrixNode'
-#     bl_label = "Compose Matrix"
-#     bl_icon = 'NODE'
-
-#     def init(self, context):
-#         self.inputs.new('VectorTranslationSocket', "Translation")
-#         self.inputs.new('GenericRotationSocket', "Rotation")
-#         self.inputs.new('VectorScaleSocket', "Scale")
-#         self.outputs.new('MatrixSocket', "Matrix")
-
-#     def update_node(self, context = None):
-#         from mathutils import Matrix, Euler, Quaternion, Vector
-#         mat_sock = self.outputs[0]
-#         rotation = Matrix.Identity(4)
-#         scale = Matrix.Identity(4)
-#         translation = Matrix.Identity(4)
-
-#         sock = QuerySocket(self.inputs["Rotation"])[0]
-#         val = to_mathutils_value(sock)
-#         if (val):
-#             if (isinstance(val, Vector)):
-#                 val = Euler((val[0], val[1], val[2]), 'XYZ')
-#             rotation = val.to_matrix().to_4x4()
-#         sock = QuerySocket(self.inputs["Scale"])[0]
-#         val = to_mathutils_value(sock)
-#         if (val):
-#             if (isinstance(val, Vector)):
-#                 scale = Matrix.Scale(val[0],4,(1.0,0.0,0.0)) @ Matrix.Scale(val[1],4,(0.0,1.0,0.0)) @ Matrix.Scale(val[2],4,(0.0,0.0,1.0))
-#         sock = QuerySocket(self.inputs["Translation"])[0]
-#         val = to_mathutils_value(sock)
-#         if (val):
-#             if (isinstance(val, Vector)):
-#                 translation = Matrix.Translation((val))
-        
-#         mat = translation @ rotation @ scale
-#         mat_sock.default_value = ( mat[0][0], mat[0][1], mat[0][2], mat[0][3],
-#                                    mat[1][0], mat[1][1], mat[1][2], mat[1][3],
-#                                    mat[2][0], mat[2][1], mat[2][2], mat[2][3],
-#                                    mat[3][0], mat[3][1], mat[3][2], mat[3][3], )
-
-
 class ScaleBoneLengthNode(Node, MantisNode):
     '''Scale Bone Length'''
     bl_idname = 'ScaleBoneLength'
@@ -487,6 +441,9 @@ class UtilityDriverVariableNode(Node, MantisNode):
         self.inputs[3].hide = True
     
 
+# TODO: make a way to edit the fCurve directly.
+# I had a working version of this in the past, but it required doing sinful things like
+# keeping track of the RAM address of the window.
 class UtilityFCurveNode(Node, MantisNode):
     """Creates an fCurve for use with a driver."""
     bl_idname = "UtilityFCurve"
@@ -494,55 +451,17 @@ class UtilityFCurveNode(Node, MantisNode):
     bl_icon = "NODE"
     
     use_kf_nodes   : bpy.props.BoolProperty(default=True)
-    # fake_fcurve_ob : bpy.props.PointerProperty(type=bpy.types.Object)
     initialized : bpy.props.BoolProperty(default = False)
     
     def init(self, context):
         self.outputs.new("FCurveSocket", "fCurve")
-        # if not self.fake_fcurve_ob:
-        #     ob = bpy.data.objects.new("fake_ob_"+self.name, None)
-        #     self.fake_fcurve_ob = ob
-        #     ob.animation_data_create()
-        #     ob.animation_data.action = bpy.data.actions.new('fake_action_'+self.name)
-        #     fc = ob.animation_data.action.fcurves.new('location', index=0, action_group='location')
-        #     fc.keyframe_points.add(2)
-        #     kf0 = fc.keyframe_points[0]; kf0.co_ui = (0, 0)
-        #     kf1 = fc.keyframe_points[1]; kf1.co_ui = (1, 1)
-        #     #
-        #     kf0.interpolation = 'BEZIER'
-        #     kf0.handle_left_type  = 'AUTO_CLAMPED'
-        #     kf0.handle_right_type = 'AUTO_CLAMPED'
-        #     kf1.interpolation = 'BEZIER'
-        #     kf1.handle_left_type  = 'AUTO_CLAMPED'
-        #     kf1.handle_right_type = 'AUTO_CLAMPED'
-            #
         self.initialized = True
             
     def draw_buttons(self, context, layout):
-        # return
-        # if self.use_kf_nodes:
-            # layout.prop(self, "use_kf_nodes",  text="[ Use fCurve data ]", toggle=True, invert_checkbox=True)
         layout.operator( 'mantis.fcurve_node_add_kf' )
         if (len(self.inputs) > 0):
             layout.operator( 'mantis.fcurve_node_remove_kf' )
-        # else:
-            # layout.prop(self, "use_kf_nodes",  text="[ Use Keyframe Nodes ]", toggle=True)
-            # layout.operator('mantis.edit_fcurve_node')
-        
-            
-    
-    # THE DIFFICULT part is getting it to show up in the graph editor
-    # TRY:
-    #       a modal operator that opens the Graph Editor
-    #       and then finishes when it is closed
-    #       it would reveal the object holding the fCurve before
-    #       showing the Graph Editor
-    #       And hide it after closing it.
-    #
-        
-        
-        
-        
+
 
 class UtilityDriverNode(Node, MantisNode):
     """Represents a Driver relationship"""
@@ -726,6 +645,8 @@ class UtilitySetBoneLength(Node, MantisNode):
         self.outputs.new("MatrixSocket", "Bone Matrix")
         self.initialized = True
 
+# TODO: more keyframe types should be supported in the future.
+# Some of the code that can do this is commented out here until I can implement it properly.
 class UtilityKeyframe(Node, MantisNode):
     """A keyframe for a FCurve"""
     bl_idname = "UtilityKeyframe"
@@ -751,8 +672,7 @@ class UtilityKeyframe(Node, MantisNode):
         # there will eventually be inputs for e.g. key type, key handles, etc.
         # right now I am gonna hardcode LINEAR keyframes so I don't have to deal with anything else
         # TODO TODO TODO
-    
-    
+
     # def display_update(self, parsed_tree, context):
     #     if context.space_data:
     #         nc = parsed_tree.get(get_signature_from_edited_tree(self, context))
@@ -838,11 +758,25 @@ class UtilityTransformationMatrix(Node, MantisNode):
         self.outputs.new("MatrixSocket", "Matrix")
         self.initialized = True
 
+
+    def display_update(self, parsed_tree, context):
+        operation = self.inputs['Operation'].default_value
+        if self.inputs['Operation'].is_linked:
+            if context.space_data:
+                nc = parsed_tree.get(get_signature_from_edited_tree(self, context))
+                operation = nc.evaluate_input("Operation")
+        if operation in ["ROTATE_AXIS_ANGLE", "SCALE"]:
+            self.inputs["Vector"].hide = False
+            self.inputs["W"].hide = False
+        if operation in ["TRANSLATE"]:
+            self.inputs["Vector"].hide = False
+            self.inputs["W"].hide = True
+            
+
 # Blender calculates bone roll this way...
 # https://projects.blender.org/blender/blender/src/commit/dd209221675ac7b62ce47b7ea42f15cbe34a6035/source/blender/editors/armature/armature_edit.cc#L281
 # but this looks like it will be harder to re-implement than to re-use. Unfortunately, it doesn't apply directly to a matrix so I have to call a method
-# in the edit bone. Thus, this node currently does nothing and the xForm node has to handle it by reading back through the tree....
-# this will lead to bugs.
+# in the edit bone.
 # So instead, we need to avoid calculating the roll for now.
 # but I want to make that its own node and add roll-recalc to this node, too.
 

@@ -187,7 +187,7 @@ class DeformerArmature:
         evaluate_sockets(self, d, props_sockets)
         #
         if (skin_method := self.evaluate_input("Skinning Method")) == "AUTOMATIC_HEAT":
-            # This is reatarded and leads to somewhat unpredictable
+            # This is bad and leads to somewhat unpredictable
             #  behaviour, e.g. what object will be selected? What mode?
             # also bpy.ops is ugly and prone to error when used in
             #  scripts. I don't intend to use bpy.ops when I can avoid it.
@@ -323,13 +323,12 @@ class DeformerMorphTargetDeform:
 
     def gen_morph_target_modifier(self):
         mod_name = self.evaluate_input("Name")
-        # self.GetxForm().bGetObject().add_rest_position_attribute = True # this ended up being unnecessary
         try:
             m = self.GetxForm().bGetObject().modifiers[mod_name]
         except KeyError:
             m = self.GetxForm().bGetObject().modifiers.new(mod_name, type='NODES')
         self.bObject = m
-        # at this point we make the node tre
+        # at this point we make the node tree
         from bpy import data
         ng = data.node_groups.new(mod_name, "GeometryNodeTree")
         m.node_group = ng
@@ -340,8 +339,6 @@ class DeformerMorphTargetDeform:
         # TODO CLEANUP here
         if (position := ng.nodes.get("Position")) is None: position = ng.nodes.new("GeometryNodeInputPosition")
         if (index := ng.nodes.get("Index")) is None: index = ng.nodes.new("GeometryNodeInputIndex")
-        # if (rest_position := ng.nodes.get("Rest Position")) is None: rest_position = ng.nodes.new("GeometryNodeInputNamedAttribute"); rest_position.name = "Rest Position"
-        # rest_position.data_type = "FLOAT_VECTOR"; rest_position.inputs["Name"].default_value = "rest_position"
         rest_position = position
         add_these = []
 
@@ -354,7 +351,6 @@ class DeformerMorphTargetDeform:
                 targets.append(v)
         for i, t in enumerate(targets):
             mt_node = t.links[0].from_node
-            # mt_name = "Morph Target."+str(i).zfill(3)
             mt_name = mt_node.GetxForm().bGetObject().name
             vg = mt_node.parameters["Morph Target"]["vertex_group"]
             if vg: mt_name = mt_name+"."+vg
@@ -367,8 +363,6 @@ class DeformerMorphTargetDeform:
             ng.interface.new_socket(mt_name+" Value", in_out = "INPUT", socket_type="NodeSocketFloat")
             ob_node = ng.nodes.new("GeometryNodeObjectInfo")
             sample_index = ng.nodes.new("GeometryNodeSampleIndex"); sample_index.data_type = 'FLOAT_VECTOR'
-            # if (rest_position := ng.nodes.get("Rest Position")) is None: rest_position = ng.nodes.new("GeometryNodeInputNamedAttribute"); rest_position.name = "Rest Position"
-            # rest_position.data_type = "FLOAT_VECTOR"; rest_position.inputs["Name"].default_value = "rest_position"
             subtract = ng.nodes.new("ShaderNodeVectorMath"); subtract.operation="SUBTRACT"
             scale1 = ng.nodes.new("ShaderNodeVectorMath"); scale1.operation="SCALE"
             
@@ -389,10 +383,6 @@ class DeformerMorphTargetDeform:
             else:
                 # ng.links.new(input=rest_position.outputs["Attribute"], output=subtract.inputs[1])
                 ng.links.new(input=rest_position.outputs["Position"], output=subtract.inputs[1])
-
-            # IMPORTANT TODO (?):
-               # relative objects can be recursive! Need to go back and back and back as long as we have relative objects!
-               # in reality I am not sure haha
 
             ng.links.new(input=subtract.outputs["Vector"], output=scale1.inputs[0])
 
@@ -426,16 +416,12 @@ class DeformerMorphTargetDeform:
         SugiyamaGraph(ng, 12)
 
 
-        # for k,v in props_sockets.items():
-        #     print(wrapWhite(k), wrapOrange(v))
         evaluate_sockets(self, m, props_sockets)
         for socket, ob in object_map.items():
             m[socket]=ob
         finish_drivers(self)
 
     def gen_shape_key(self): # TODO: make this a feature of the node definition that appears only when there are no prior deformers - and shows a warning!
-        self.gen_morph_target_modifier()
-        return
         # TODO: the below works well, but it is quite slow. It does not seem to have better performence. Its only advantage is export to FBX.
         # there are a number of things I need to fix here
         #   - reuse shape keys if possible
@@ -465,7 +451,6 @@ class DeformerMorphTargetDeform:
             # hafta make new geometry for the object and add shape keys and all that
             # the benefit to all this being maybe better performence and exporting to game engines via .fbx
 
-        #
         # first make a basis shape key
         ob.shape_key_add(name='Basis', from_mix=False)
         keys={}
@@ -503,16 +488,7 @@ class DeformerMorphTargetDeform:
         self.bObject = sk.id_data
         evaluate_sockets(self, sk.id_data, props_sockets)
         finish_drivers(self)
-            
-        
         prWhite(f"Initializing morph target took {time() -start_time} seconds")
-        
-        
-        
-            
-
-            
-
         # then we need to get all the data from the morph targets, pull all the relative shapes first and add them, vertex groups and properties
         # next we add all the shape keys that are left, and their vertex groups
         # set the slider ranges to -10 and 10
@@ -523,10 +499,10 @@ class DeformerMorphTargetDeform:
         # let's find out if there is a prior deformer.
         # if not, then there should be an option to use plain 'ol shape keys
         # GN is always desirable as an option though because it can be baked.
-        if self.inputs["Deformer"].is_linked:
+        if self.inputs["Deformer"].is_linked and True:
+            # for now we won't do Blender Shape Keys
             self.gen_morph_target_modifier()
-        else:
-            # for now we'll just do it this way.
+        else: # TODO: give the user the option to do this via a node property.
             self.gen_shape_key()
 
 

@@ -38,7 +38,8 @@ def default_traverse(self, socket):
         return None
 
 
-from mathutils import Color
+from mathutils import Color # these colors were sampled from Blender's UI
+# TODO: maybe read the relevant colors from the Theme
 linkColor = Color((0.028034, 0.093164, 0.070379)).from_scene_linear_to_srgb()
 inheritColor = Color((0.083213, 0.131242, 0.116497)).from_scene_linear_to_srgb()
 trackingColor = Color((0.033114, 0.049013, 0.131248)).from_scene_linear_to_srgb()
@@ -643,36 +644,6 @@ class LinkArmatureNode(Node, LinkNode):
             layout.operator( 'mantis.link_armature_node_remove_target' )
         else:
             layout.label(text="")
-
-# why did I define this twice?
-# class LinkSplineIK(Node, LinkNode):
-#     '''A node representing Spline IK'''
-#     bl_idname = 'LinkSplineIK'
-#     bl_label = "LinkSplineIK"
-#     bl_icon = 'CON_SPLINEIK'
-#     useTarget : bpy.props.BoolProperty(default=True)
-#     def init(self, context):
-#         self.inputs.new('xFormSocket', "Parent")
-#         self.inputs.new ('xFormSocket', "Target")
-#         self.inputs.new ('xFormSocket', "Pole Target")
-#         self.inputs.new ('BooleanSocket', "Use Tail")
-#         self.inputs.new ('BooleanSocket', "Stretch")
-#         self.inputs.new ('FloatFactorSocket', "Position")
-#         self.inputs.new ('FloatFactorSocket', "Rotation")
-#         self.inputs.new ('FloatFactorSocket', "Influence")
-#         self.inputs.new ('EnableSocket', "Enable")
-#         self.outputs.new('RelationshipSocket', "Inheritance")
-#         # color
-#         self.use_custom_color = True
-#         self.color = ikColor
-
-#     def traverse(self, socket):
-#         if (socket == self.outputs["Inheritance"]):
-#             return self.inputs["Parent"]
-#         if (socket == self.inputs["Parent"]):
-#             return self.outputs["Inheritance"]
-#         return None
-
 
 class LinkSplineIKNode(Node, LinkNode):
     """"A node representing Spline IK"""

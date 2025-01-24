@@ -12,12 +12,9 @@ from .utilities import (prRed, prGreen, prPurple, prWhite,
 
 # SO: the idea is that the driver's input is a Python dictionary
 #     with all of the requisite information to build the driver
-
 # I need a generic function to create the driver
 
 # EXAMPLE INPUT:
-
-
 # example   =     {"owner":None,
                     # "prop":None,
                     # "ind":-1,
@@ -46,8 +43,6 @@ from .utilities import (prRed, prGreen, prPurple, prWhite,
                             # "type":"KEYFRAME",},],
                     # }
 
-#Explain this ^ ?
-#
 
 class MantisDriver(dict):
     pass

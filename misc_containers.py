@@ -2,7 +2,7 @@ from .node_container_common import *
 
 # The fact that I need this means that some of these classes should
 #  probably be moved to link_containers.py
-from .xForm_containers import xFormRoot, xFormArmature, xFormBone
+from .xForm_containers import xFormArmature, xFormBone
 
 from math import pi, tau
 
@@ -17,11 +17,7 @@ def TellClasses():
              InputRotationOrder,
              InputTransformSpace,
              InputString,
-             InputQuaternion,
-             InputQuaternionAA,
              InputMatrix,
-            #  InputLayerMask,
-             # InputGeometry,
              InputExistingGeometryObject,
              InputExistingGeometryData,
              UtilityPointFromCurve,
@@ -50,10 +46,10 @@ def TellClasses():
              UtilityIntToString,
              UtilityArrayGet,
              UtilitySetBoneMatrixTail,
-             #
+             # Control flow switches
              UtilityCompare,
              UtilityChoose,
-             #
+             # useful NoOp:
              UtilityPrint,
             ]
 
@@ -66,16 +62,8 @@ def matrix_from_head_tail(head, tail):
     return m
 
 #*#-------------------------------#++#-------------------------------#*#
-# G E N E R I C   N O D E S
+# U T I L I T Y   N O D E S
 #*#-------------------------------#++#-------------------------------#*#
-
-
-# in reality, none of these inputs have names
-#  so I am using the socket name for now
-#  I suppose I could use any name :3
-
-# TODO: the inputs that do not have names should have an empty string
-#   TODO after that: make this work with identifiers instead, stupid.
 
 class InputFloat:
     '''A node representing float input'''
@@ -159,7 +147,7 @@ class InputBoolean:
         return self.parameters[""]
 
 class InputBooleanThreeTuple:
-    '''A node representing inheritance'''
+    '''A node representing a tuple of three booleans'''
         
     def __init__(self, signature, base_tree):
         self.base_tree=base_tree
@@ -227,47 +215,6 @@ class InputString:
         self.signature = signature
         self.inputs = {}
         self.outputs = {"" : NodeSocket(name = '', node=self) }
-        self.parameters = {'':None, "Mute":None}
-        self.node_type = 'UTILITY'
-        self.hierarchy_connections = []
-        self.connections = []
-        self.hierarchy_dependencies = []
-        self.dependencies = []
-        self.prepared = True
-        self.executed = True
-        
-    def evaluate_input(self, input_name):
-        return self.parameters[""]
-    
-class InputQuaternion:
-    '''A node representing quaternion input'''
-    def __init__(self, signature, base_tree):
-        self.base_tree=base_tree
-        self.signature = signature
-        self.inputs = {}
-        self.outputs = {"" : NodeSocket(name = 'QuaternionSocket', node=self) }
-        self.parameters = {'':None, "Mute":None}
-        self.node_type = 'UTILITY'
-        self.hierarchy_connections = []
-        self.connections = []
-        self.hierarchy_dependencies = []
-        self.dependencies = []
-        self.prepared = True
-        self.executed = True
-        
-        
-    def evaluate_input(self, input_name):
-        return self.parameters[""]
-    
-
-class InputQuaternionAA:
-    '''A node representing axis-angle quaternion input'''
-        
-    def __init__(self, signature, base_tree):
-        self.base_tree=base_tree
-        self.signature = signature
-        self.inputs = {}
-        self.outputs  = {"" : NodeSocket(name = 'QuaternionSocketAA', node=self) }
         self.parameters = {'':None, "Mute":None}
         self.node_type = 'UTILITY'
         self.hierarchy_connections = []
@@ -686,7 +633,7 @@ class UtilityDriverVariable:
     def GetxForm(self, index=1):
         trace = trace_single_line(self, "xForm 1" if index == 1 else "xForm 2")
         for node in trace[0]:
-            if (node.__class__ in [xFormRoot, xFormArmature, xFormBone]):
+            if (node.__class__ in [xFormArmature, xFormBone]):
                 return node #this will fetch the first one, that's good!
         return None
 
@@ -952,7 +899,7 @@ class UtilitySwitch:
     def GetxForm(self,):
         trace = trace_single_line(self, "Parameter" )
         for node in trace[0]:
-            if (node.__class__ in [xFormRoot, xFormArmature, xFormBone]):
+            if (node.__class__ in [xFormArmature, xFormBone]):
                 return node #this will fetch the first one, that's good!
         return None
 
@@ -1563,12 +1510,6 @@ class UtilityTransformationMatrix:
         self.prepared = False
         self.executed = False
 
-# enumMatrixTransform  = (('TRANSLATE', 'Translate', 'Translate'),
-#                         ('ROTATE_AXIS_ANGLE', "Rotate (Vector-angle)", "Rotates a number of radians around an axis"),
-#                         ('ROTATE_EULER', "Rotate (Euler)", "Euler Rotation"),
-#                         ('ROTATE_QUATERNION', "Rotate (Quaternion)", "Quaternion Rotation"),
-#                         ('SCALE', "Scale", "Scale"),)
-
     def bPrepare(self, bContext = None,):
         from mathutils import Matrix, Vector
         if (operation := self.evaluate_input("Operation")) == 'ROTATE_AXIS_ANGLE':
@@ -1579,6 +1520,8 @@ class UtilityTransformationMatrix:
             if axis := self.evaluate_input("Vector"):
                 m[0][3]=axis[0];m[1][3]=axis[1];m[2][3]=axis[2]
             self.parameters['Matrix'] = m
+        elif (operation := self.evaluate_input("Operation")) == 'SCALE':
+            self.parameters["Matrix"] = Matrix.Scale(self.evaluate_input("W"), 4, Vector(self.evaluate_input("Vector")).normalized())
         else:
             raise NotImplementedError(self.evaluate_input("Operation").__repr__()+ "  Operation not yet implemented.")
         self.prepared = True

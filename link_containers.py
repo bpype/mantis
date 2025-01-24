@@ -2,8 +2,6 @@ from .node_container_common import *
 from bpy.types import Node, Bone
 from .base_definitions import MantisNode, GraphError
 
-#TODO: get rid of this, it's unnecesary here, we always want to import
-#  all classes in this file
 def TellClasses():
     return [
              # special
@@ -46,11 +44,6 @@ def default_evaluate_input(nc, input_name):
         
     else:
         return evaluate_input(nc, input_name)
-
-# def set_constraint_name(nc):
-#     if name := nc.evaluate_input("Name"):
-#         return name
-#     return nc.__class__.__name__
 
 # set the name if it is available, otherwise just use the constraint's nice name
 set_constraint_name = lambda nc : nc.evaluate_input("Name") if nc.evaluate_input("Name") else nc.__class__.__name__

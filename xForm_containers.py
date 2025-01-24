@@ -6,7 +6,6 @@ def TellClasses():
              
     return [ 
              # xForm
-             xFormRoot,
              xFormArmature,
              xFormBone,
              xFormGeometryObject,
@@ -15,50 +14,6 @@ def TellClasses():
 #*#-------------------------------#++#-------------------------------#*#
 # X - F O R M   N O D E S
 #*#-------------------------------#++#-------------------------------#*#
-
-# class xFormNull:
-    # '''A node representing an Empty object'''
-    # inputs =
-    # {
-     # "Name":None,
-     # "Rotation Order":None,
-     # "Matrix":None,
-     # "Relationship":None,
-    # }
-    # outputs =
-    # {
-     # "xFormOut":None,
-    # }
-    # parameters =
-    # {
-     # "Name":None,
-     # "Rotation Order":None,
-     # "Matrix":None,
-     # "Relationship":None,
-    # }
-    
-    # def evaluate_input(self, input):
-        # pass
-    
-    # def instantiate_blender_object(self):
-        # pass
-
-class xFormRoot:
-    '''A node representing the root of the scene.'''
-    
-    def __init__(self, signature, base_tree):
-        self.base_tree=base_tree
-        self.signature = signature
-        self.inputs = {}
-        self.outputs = {"World Out":NodeSocket(name="World Out", node = self),}
-        self.parameters = {}
-        self.node_type = 'XFORM'
-        self.hierarchy_connections = []
-        self.connections = []
-        self.hierarchy_dependencies = []
-        self.dependencies = []
-        self.prepared = True
-        self.executed = True
 
 
 class xFormArmature:
@@ -147,12 +102,6 @@ class xFormArmature:
         ob.matrix_world = matrix.copy()
         ob.data.pose_position = 'REST'
         
-        # # first, get the parent object
-        # parent_node = get_parent(self)
-        # if hasattr(parent_node, "bObject"):
-            # # this won't work of course, TODO
-            # ob.parent = parent_node.bObject
-            # # print (self.bObject)
         if True:
             from bpy.types import EditBone
             parent_nc = get_parent(self, type='LINK')
@@ -195,16 +144,6 @@ class xFormArmature:
         
         self.executed = True
     
-    # # not used yet
-    # #
-    # def bFinalize(self, bContext = None):
-        # import bpy
-        # ob = self.bGetObject()
-        # prevAct = bContext.view_layer.objects.active
-        # bContext.view_layer.objects.active = ob
-        # bpy.ops.object.mode_set(mode='OBJECT')
-        # print ("Changing Armature Mode to OBJECT")
-        # bContext.view_layer.objects.active = prevAct
 
     def bGetObject(self, mode = ''):
         import bpy; return bpy.data.objects[self.bObject]
@@ -772,64 +711,7 @@ class xFormBone:
             except AttributeError:
                 ob=None
             if type(ob) in [bpy.types.Object]:
-                pb.custom_shape = ob
-        #
-        # pb.bone.hide = self.evaluate_input("Hide")
-        # pb.custom_shape_scale_xyz = self.evaluate_input("Custom Object Scale")
-        # pb.custom_shape_translation = self.evaluate_input("Custom Object Translation")
-        # pb.custom_shape_rotation_euler = self.evaluate_input("Custom Object Rotation")
-        # pb.use_custom_shape_bone_size = self.evaluate_input("Custom Object Scale to Bone Length")
-        # pb.bone.show_wire = self.evaluate_input("Custom Object Wireframe")
-
-
-        # #
-        # # D E P R E C A T E D
-        # #
-        # # Bone Groups
-        # if bg_name := self.evaluate_input("Bone Group"): # this is a string
-        #     obArm = self.bGetParentArmature()
-        #     # Temporary! Temporary! HACK
-        #     color_set_items= [
-        #                        "DEFAULT",
-        #                        "THEME01",
-        #                        "THEME02",
-        #                        "THEME03",
-        #                        "THEME04",
-        #                        "THEME05",
-        #                        "THEME06",
-        #                        "THEME07",
-        #                        "THEME08",
-        #                        "THEME09",
-        #                        "THEME10",
-        #                        "THEME11",
-        #                        "THEME12",
-        #                        "THEME13",
-        #                        "THEME14",
-        #                        "THEME15",
-        #                        "THEME16",
-        #                        "THEME17",
-        #                        "THEME18",
-        #                        "THEME19",
-        #                        "THEME20",
-        #                        # "CUSTOM",
-        #                      ]
-        #     try:
-        #         bg = obArm.pose.bone_groups.get(bg_name)
-        #     except SystemError:
-        #         bg = None
-        #         pass # no clue why this happens. uninitialzied?
-        #     if not bg:
-        #         bg = obArm.pose.bone_groups.new(name=bg_name)
-        #         #HACK lol
-        #         from random import randint
-        #         bg.color_set = color_set_items[randint(0,14)]
-        #         #15-20 are black by default, gross
-        #         # this is good enough for now!
-            
-        #     pb.bone_group = bg
-            
-        
-        
+                pb.custom_shape = ob 
 
     def bGetObject(self, mode = 'POSE'):
         if mode in ["POSE", "OBJECT"] and self.bGetParentArmature().mode == "EDIT":

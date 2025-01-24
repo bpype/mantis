@@ -44,11 +44,6 @@ class MathStaticInt(Node, MantisNode):
             else:
                 self.inputs["Int B"].hide = False
 
-    def traverse(self, socket):
-        return default_traverse(self,socket)
-                   
-
-
 # do... make the operations now
 class MathStaticFloatNode(Node, MantisNode):
     """A node that performs mathematical operations on float numbers as a preprocess step before generating the rig."""
@@ -75,10 +70,6 @@ class MathStaticFloatNode(Node, MantisNode):
                 self.inputs["Float B"].hide = True
             else:
                 self.inputs["Float B"].hide = False
-
-    def traverse(self, socket):
-        return default_traverse(self,socket)
-
 
 class MathStaticVectorNode(Node, MantisNode):
     """Performs a vector math operation as a preprocess before executing the tree."""
@@ -122,7 +113,3 @@ class MathStaticVectorNode(Node, MantisNode):
             else:
                 self.inputs["Vector B"].hide = False
                 self.inputs["Scalar A"].hide = True
-
-    
-    def traverse(self, socket):
-        return default_traverse(self,socket)

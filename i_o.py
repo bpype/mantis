@@ -40,7 +40,7 @@ def remove_special_characters(name):
 
 
 def fix_custom_parameter(n, property_definition, ):
-    if n.bl_idname in ['xFormNullNode', 'xFormBoneNode', 'xFormRootNode', 'xFormArmatureNode', 'xFormGeometryObjectNode',]:
+    if n.bl_idname in ['xFormNullNode', 'xFormBoneNode', 'xFormArmatureNode', 'xFormGeometryObjectNode',]:
         prop_name = property_definition["name"]
         prop_type = property_definition["bl_idname"]
         
@@ -201,20 +201,6 @@ def export_to_json(trees, path="", write_file=True, only_selected=False):
                 else:
                     v = None
                 v_type = type(v)
-
-                # this identifies a weird bug...
-                # try:
-                #     problem = v != s.default_value
-                #     if problem:
-                #         prRed(s.node.name, s.name, s.bl_idname, s.default_value)
-                #         print(s.default_value, v)
-                # except AttributeError:
-                #     pass
-                # so it seems doing the .get thing bypassed some kind of getter that made the value "nice"
-                # so e.g. enums were using the Int identifier and bool vectors used int bitmasks
-
-                # if s.bl_idname == 'TransformSpaceSocket':
-                #     prWhite(v)
                 if v is None:
                     return socket # we don't need to store this.
                 if not is_jsonable(v):
@@ -235,8 +221,6 @@ def export_to_json(trees, path="", write_file=True, only_selected=False):
                         socket["soft_max"] = v
                     if v := getattr(s,'description', None):
                         socket["description"] = v
-                # if s.bl_idname == 'TransformSpaceSocket':
-                #     prRed(socket['default_value'])
                 return socket
                 #
 
@@ -248,10 +232,6 @@ def export_to_json(trees, path="", write_file=True, only_selected=False):
                 socket = socket_data(s)
                 socket["index"]=i
                 sockets[s.identifier] = socket
-            # for i, s in enumerate(n.inputs):
-            #     sockets[s.identifier]["index"] = i
-            # for i, s in enumerate(n.outputs):
-            #     sockets[s.identifier]["index"] = i
             
             node_props["sockets"] = sockets
             nodes[n.name] = node_props
@@ -261,30 +241,12 @@ def export_to_json(trees, path="", write_file=True, only_selected=False):
 
         in_sockets = {}
         out_sockets = {}
-        # new_tree_items = {}
 
         in_node = {"name":"MANTIS_AUTOGEN_GROUP_INPUT", "bl_idname":"NodeGroupInput", "sockets":in_sockets}
         out_node = {"name":"MANTIS_AUTOGEN_GROUP_OUTPUT", "bl_idname":"NodeGroupOutput", "sockets":out_sockets}
 
 
         add_input_node, add_output_node = False, False
-        
-#
-# dict_keys(['Driver Variable', 'second', 'main', 'drivers and such', 'Copy Location', 'Float', 'Reroute', 'Reroute.001', 'Reroute.002'])
-# bl_idname, name, label, location, 
-
-# Variable Type {'name': 'Variable Type', 'bl_idname': 'EnumDriverVariableType', 'is_output': False, 'is_multi_input': False, 'default_value': 'SINGLE_PROP', 'index': 0}
-# Property {'name': 'Property', 'bl_idname': 'ParameterStringSocket', 'is_output': False, 'is_multi_input': False, 'default_value': 'slide', 'index': 1}
-# Property Index {'name': 'Property Index', 'bl_idname': 'IntSocket', 'is_output': False, 'is_multi_input': False, 'default_value': 0, 'index': 2}
-# Evaluation Space {'name': 'Evaluation Space', 'bl_idname': 'EnumDriverVariableEvaluationSpace', 'is_output': False, 'is_multi_input': False, 'default_value': 'WORLD_SPACE', 'index': 3}
-# Rotation Mode {'name': 'Rotation Mode', 'bl_idname': 'EnumDriverRotationMode', 'is_output': False, 'is_multi_input': False, 'default_value': 'AUTO', 'index': 4}
-# xForm 1 {'name': 'xForm 1', 'bl_idname': 'xFormSocket', 'is_output': False, 'is_multi_input': False, 'index': 5}
-# xForm 2 {'name': 'xForm 2', 'bl_idname': 'xFormSocket', 'is_output': False, 'is_multi_input': False, 'index': 6}
-# Driver Variable {'name': 'Driver Variable', 'bl_idname': 'DriverVariableSocket', 'is_output': True, 'is_multi_input': False, 'index': 0}
-
-
-# Socket_254
-# index 16
 
         unique_sockets_from={}
         unique_sockets_to={}
@@ -295,7 +257,6 @@ def export_to_json(trees, path="", write_file=True, only_selected=False):
             c, d = l.to_node.name, l.to_socket.identifier
 
             # get the indices of the sockets to be absolutely sure
-
             for e, outp in enumerate(l.from_node.outputs):
                 # for some reason, 'is' does not return True no matter what...
                 # so we are gonn compare the memory address directly, this is stupid
@@ -316,8 +277,6 @@ def export_to_json(trees, path="", write_file=True, only_selected=False):
                 if (only_selected and l.from_node.select) and (not l.to_node.select):
                     # handle an output in the tree
                     add_output_node=True
-
-
                     if not (sock_name := unique_sockets_to.get(l.to_socket.node.name+l.to_socket.identifier)):
                         sock_name = l.to_socket.name; name_stub = sock_name
                         used_names = list(tree_in_out.keys()); i=0
@@ -352,7 +311,6 @@ def export_to_json(trees, path="", write_file=True, only_selected=False):
 
                 elif (only_selected and (not l.from_node.select)) and l.to_node.select:
                     add_input_node=True
-
                     # we need to get a unique name for this
                     # use the Tree IN/Out because we are dealing with Group in/out
                     if not (sock_name := unique_sockets_from.get(l.from_socket.node.name+l.from_socket.identifier)):
@@ -418,8 +376,6 @@ def export_to_json(trees, path="", write_file=True, only_selected=False):
             out_node["location"] = Vector((all_nodes_bounding_box[1].x+400, all_nodes_bounding_box[0].lerp(all_nodes_bounding_box[1], 0.5).y))
             nodes["MANTIS_AUTOGEN_GROUP_OUTPUT"]=out_node
 
-        # f_curves = {}
-
         export_data[tree.name] = (tree_info, tree_in_out, nodes, links,) # f_curves)
     import json
 
@@ -429,7 +385,6 @@ def export_to_json(trees, path="", write_file=True, only_selected=False):
     with open(path, "w") as file:
         print(wrapWhite("Writing mantis tree data to: "), wrapGreen(file.name))
         file.write( json.dumps(export_data, indent = 4) )
-    
     # I'm gonna do this in a totally naive way, because this should already be sorted properly
     #   for the sake of dependency satisfaction. So the current "tree" should be the "main" tree
     tree.filepath = path
@@ -449,7 +404,6 @@ def do_import_from_file(filepath, context):
         data = json.load(f)
         do_import(data,context)
 
-        # repeat this because we left the with, this is bad and ugly but I don't care
         for tree in all_trees:
             tree.do_live_update = True
 
@@ -459,6 +413,10 @@ def do_import_from_file(filepath, context):
         except AttributeError: # not hovering over the Node Editor
             pass
         return {'FINISHED'}
+    # otherwise:
+    # repeat this because we left the with, this is bad and ugly but I don't care
+    for tree in all_trees:
+        tree.do_live_update = True
     return {'CANCELLED'}
 
 def do_import(data, context):
@@ -912,10 +870,6 @@ class MantisReloadNodeTree(Operator):
             return {'CANCELLED'}
         self.report({'INFO'}, "reloading tree")
         return do_import_from_file(base_tree.filepath, context)
-
-
-
-
 
 # todo:
 #  - export metarig and option to import it

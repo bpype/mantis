@@ -72,26 +72,16 @@ class MantisNodeCategory(NodeCategory):
 class SchemaNodeCategory(NodeCategory):
     @classmethod
     def poll(cls, context):
-        # doesn't seem to work tho
-        try:
-            return (context.space_data.path[len(path)-1].node_tree.bl_idname == 'SchemaTree')
-        except:
-            return True
+        return (context.space_data.path[len(context.space_data.path)-1].node_tree.bl_idname == 'SchemaTree')
 
 
 input_category=[
             NodeItem("InputFloatNode"),
             NodeItem("InputVectorNode"),
             NodeItem("InputBooleanNode"),
-            # NodeItem("InputBooleanThreeTupleNode"),
-            # NodeItem("InputRotationOrderNode"),
-            # NodeItem("InputTransformSpaceNode"),
             NodeItem("InputStringNode"),
             NodeItem("InputIntNode"),
-            # NodeItem("InputQuaternionNode"),
-            # NodeItem("InputQuaternionNodeAA"),
             NodeItem("InputMatrixNode"),
-            # NodeItem("InputLayerMaskNode"), # DEPRECATED since we have Bone Collections now
             NodeItem("InputExistingGeometryObject"),
             NodeItem("InputExistingGeometryData"),
     ]
@@ -122,9 +112,7 @@ link_relationship_category = [
 deformer_category=[NodeItem(cls.bl_idname) for cls in deformer_definitions.TellClasses()]
 xForm_category = [
          NodeItem("xFormGeometryObject"),
-        # NodeItem("xFormNullNode"), # REMOVED since GeometryObject makes an empty if it has no Geometry
         NodeItem("xFormBoneNode"),
-        # NodeItem("xFormRootNode"), # REMOVED since it is a no-op
         NodeItem("xFormArmatureNode"),
     ]
 driver_category = [
@@ -173,12 +161,10 @@ groups_category = [
         NodeItem("MantisSchemaGroup"),
     ]
 
-# THIS is stupid, should be filled out automatically
+
 node_categories = [
     # identifier, label, items list
     MantisNodeCategory('INPUT', "Input", items=input_category),
-    # MantisNodeCategory('LINK', "Link", items=[]),
-    # MantisNodeCategory('LINK_TRACKING', "Link", items=[]),
     MantisNodeCategory('LINK_TRANSFORM', "Link (Transform)", items=link_transform_category),
     MantisNodeCategory('LINK_TRACKING', "Link (Tracking)", items=link_tracking_category),
     MantisNodeCategory('LINK_RELATIONSHIP', "Link (Inheritance)", items=link_relationship_category),
@@ -192,7 +178,6 @@ node_categories = [
 ]
 
 schema_category=[NodeItem(cls.bl_idname) for cls in schema_definitions.TellClasses()]
-
 schema_categories = [
     SchemaNodeCategory('SCHEMA_SCHEMA', "Schema", items=schema_category),
 ]
@@ -222,9 +207,51 @@ def init_keymaps():
 
 addon_keymaps = []
 
+# handlers!
+#annoyingly these have to be persistent
+from bpy.app.handlers import persistent
+@persistent
+def update_handler(scene):
+    context=bpy.context
+    if context.space_data:
+        if not hasattr(context.space_data, "path"):
+            return
+        trees = [p.node_tree for p in context.space_data.path]
+        if not trees: return
+        if (node_tree := trees[0]).bl_idname in ['MantisTree']:
+            if node_tree.do_live_update and not (node_tree.is_executing or node_tree.is_exporting):
+                prev_links = node_tree.num_links
+                node_tree.num_links = len(node_tree.links)
+                if (prev_links == -1):
+                    return
+                if prev_links != node_tree.num_links:
+                    node_tree.tree_valid = False
+                if node_tree.tree_valid == False:
+                        scene.render.use_lock_interface = True
+                        node_tree.update_tree(context)
+                        scene.render.use_lock_interface = False
+
+@persistent
+def execute_handler(scene):
+    context = bpy.context
+    if context.space_data:
+        if not hasattr(context.space_data, "path"):
+            return
+        trees = [p.node_tree for p in context.space_data.path]
+        if not trees: return
+        if (node_tree := trees[0]).bl_idname in ['MantisTree']:
+            if node_tree.tree_valid and node_tree.do_live_update and not (node_tree.is_executing or node_tree.is_exporting):
+                scene.render.use_lock_interface = True
+                node_tree.execute_tree(context)
+                scene.render.use_lock_interface = False
+                node_tree.tree_valid = False
+
 
 
 def register():
+    if bpy.app.version >= (4, 4):
+        raise NotImplementedError("Blender 4.4 is not supported at this time.")
+
     from bpy.utils import register_class
     
     for cls in classes:
@@ -238,11 +265,14 @@ def register():
     nodeitems_utils.register_node_categories('SchemaNodeCategories', schema_categories)
 
 
-    if (not bpy.app.background):
-        km, kmi = init_keymaps()
-        for k in kmi:
-            k.active = True
-            addon_keymaps.append((km, k))
+    km, kmi = init_keymaps()
+    for k in kmi:
+        k.active = True
+        addon_keymaps.append((km, k))
+    # add the handlers
+    bpy.app.handlers.depsgraph_update_pre.append(update_handler)
+    bpy.app.handlers.depsgraph_update_post.append(execute_handler)
+
 
     
 

@@ -12,7 +12,6 @@ def TellClasses():
     return [
         # xFormNullNode,
         xFormBoneNode,
-        xFormRootNode,
         xFormArmatureNode,
         xFormGeometryObjectNode,
         ]
@@ -55,18 +54,6 @@ def check_if_connected(start, end, line):
     else:
         return False
     return True
-
-class xFormRootNode(Node, xFormNode):
-    '''A node representing the world node'''
-    bl_idname = 'xFormRootNode'
-    bl_label = "World Root"
-    bl_icon = 'WORLD'
-    initialized : bpy.props.BoolProperty(default = False)
-
-    def init(self, context):
-        self.outputs.new('RelationshipSocket', "World Out")
-        self.initialized=True
-
 
 
 # I had chat gpt flip these so they may be a little innacurate
@@ -225,7 +212,8 @@ class xFormBoneNode(Node, xFormNode):
         # return
         layout.operator("mantis.add_custom_property", text='+Add Custom Parameter')
         # layout.label(text="Edit Parameter ... not implemented")
-        if (len(self.inputs) >= self.socket_count):
+        if (len(self.inputs) > self.socket_count):
+            layout.operator("mantis.edit_custom_property", text=' Edit Custom Parameter')
             layout.operator("mantis.remove_custom_property", text='-Remove Custom Parameter')
         else:
             layout.label(text="")
@@ -308,16 +296,6 @@ class xFormBoneNode(Node, xFormNode):
             for name in bbone_names.keys():
                 if name in ['BBone Segments']: continue
                 self.inputs[name].hide = not self.display_bb_settings
-            
-
-    # def update(self):
-    #     self.display_update()
-
-        
-    
-    # def copy(ectype, archtype):
-        # # TODO: automatically avoid duplicating names
-        # ectype.inputs["Name"].default_value = ""
 
 
 class xFormArmatureNode(Node, xFormNode):

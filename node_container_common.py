@@ -2,7 +2,7 @@ from .utilities import (prRed, prGreen, prPurple, prWhite,
                               prOrange,
                               wrapRed, wrapGreen, wrapPurple, wrapWhite,
                               wrapOrange,)
-from .base_definitions import GraphError, CircularDependencyError
+from .base_definitions import GraphError
 # BE VERY CAREFUL
 # the x_containers files import * from this file
 # so all the top-level imports are carried over
@@ -164,38 +164,6 @@ def trace_all_lines_up(nc, output_name):
     check_me = type('', (object,), copy_items)
     return get_depth_lines(check_me)[1]
 
-# KEEP THIS
-# don't modify this.... until the other one actually works.
-# def original_get_depth_lines(root):
-#     path, seek, nc_path = [0,], root, [root,]
-#     lines, nc_paths = {}, {}
-#     nc_len = len(root.hierarchy_connections)-1
-#     curheight=0
-#     while (path[0] <= nc_len):
-#         nc_path.append(nc_path[-1].hierarchy_connections[path[-1]])
-#         if (not (node_lines  := lines.get(nc_path[-1].signature, None))):
-#             node_lines = lines[nc_path[-1].signature] = set()
-#         if (not (node_paths  := nc_paths.get(nc_path[-1].signature, None))):
-#             node_paths = nc_paths[nc_path[-1].signature] = set()
-#         node_lines.add(tuple(path)); node_paths.add(tuple(nc_path))
-#         if not hasattr(nc_path[-1], "hierarchy_connections"):
-#             # TODO even though I am going to completely rewrite this function, I need to fix this
-#             prRed(f"{nc_path[-1]} has some sort of stupid hierarchy problem. Ignoring...")
-#             nc_path[-1].hierarchy_connections = []; nc_path[-1].connected_to = 0
-#         if nc_path[-1].hierarchy_connections:
-#             path.append(0); curheight+=1
-#         else:
-#             path[curheight] = path[curheight] + 1
-#             nc_path.pop()
-#             connected_nodes = nc_path[-1].hierarchy_connections
-#             if ( path[-1] <= len(connected_nodes)-1 ):
-#                 seek = connected_nodes[path[-1]]
-#             elif curheight > 0:
-#                 while(len(path) > 1):
-#                     path.pop(); curheight -= 1; path[curheight]+=1; nc_path.pop()
-#                     if ( (len(nc_path)>1) and path[-1] < len(nc_path[-1].hierarchy_connections) ):
-#                         break 
-#     return lines, nc_paths
 
 
 
@@ -733,11 +701,6 @@ class DummyLink:
         return(self.nc_from.__repr__()+":"+self.from_socket.name + " -> " + self.nc_to.__repr__()+":"+self.to_socket.name)
 
 
-
-
-
-
-
 # Here we setup some properties that we want every class to have
 # I am not using inheritance because I don't like it, I think it adds a bunch of weird complexity
 # This, on the otherhand, is basically just extending the class definitions I have with some boilerplate
@@ -751,26 +714,6 @@ class DummyLink:
 # I've looked in to using an interface or abstract metaclass but all of those seem more complicated than doing this.
 def setup_container(some_class):
     # NOTE: DO NOT use default properties except for None, we don't want to share data between classes.
-    # @property
-    # def dependencies(self):
-    #     c = []
-    #     for i in nc.inputs.values():
-    #         for l in i.links:
-    #             if l.is_hierarchy:
-    #             c.append(l.from_node)
-
-    # def default_prepare(self, bContext=None):
-    #     for dep in self.dependencies:
-
-    # def del_me(self):
-    #     from itertools import chain
-    #     links = []
-    #     for socket in chain(self.inputs, self.outputs):
-    #         for i in len(socket.links):
-    #             links.append(l)
-    #     for l in links:
-    #         del l
-    #     # just make sure to clean up links.
 
     def flush_links(self):
         for inp in self.inputs.values():
@@ -779,20 +722,13 @@ def setup_container(some_class):
             out.flush_links()
 
     functions = {
-        # "dependencies": dependencies,
-        # "num_dependencies": property(lambda self: len(self.dependencies)),
-        # "connections": some-property, # this one is potentially better as a property tho
-        # "hierarchy_connections": some-property, # I tried making this a getter property but it was a bit slower.
         # importantly: these below are not properties.
         "evaluate_input" :  lambda self, input_name, index=0 : evaluate_input(self, input_name, index),
         "fill_parameters" : lambda self : fill_parameters(self),
         'flush_links': flush_links,
-        # then I am not sure I want these because it is really easy to check
-        #   and it may be helpful to know if a node doesn't have one of these properties.
         "bPrepare" : lambda self, bContext=None : None,
         "bExecute" : lambda self, bContext=None : None,
         "bFinalize" : lambda self, bContext=None : None,
-        # "__del__" : del_me,
     }
     for n, f in functions.items():
         if not hasattr(some_class, n):

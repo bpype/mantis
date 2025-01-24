@@ -21,9 +21,6 @@ def TellClasses():
         SchemaConstOutput,
         SchemaOutgoingConnection,
         SchemaIncomingConnection,
-        # # iterators
-        # SchemaIntMath,
-        # SchemaDeclarationValidWhen,
         ]
 
 
@@ -231,94 +228,3 @@ class SchemaIncomingConnection(Node, SchemaNode):
             self.outputs.new('WildcardSocket', '', identifier='__extend__')
         self.initialized = True
 
-
-
-# have a string for name
-# assign/get
-# and a fallback if none
-# get should take an integer: 0 = index, -1 = index -1, etc., no positive ints allowed
-# class SchemaLocalVariable(Node, SchemaNode):
-#     '''Constant Inputs'''
-#     bl_idname = 'SchemaIncomingConnection'
-#     bl_label = "Incoming Connection"
-#     bl_icon = 'GIZMO'
-    
-#     def init(self, context):
-#         # self.outputs.new("IntSocket", "Index")
-#         pass
-
-
-# class SchemaIntMath(Node, SchemaNode):
-#     '''Int Math'''
-#     bl_idname = 'SchemaIntMath'
-#     bl_label = "Int Math"
-#     bl_icon = 'GIZMO'
-    
-#     # def init(self, context):
-#     #     self.update()
-
-
-# class SchemaDeclarationValidWhen(Node, SchemaNode):
-#     '''Declaration Valid When'''
-#     bl_idname = 'SchemaDeclarationValidWhen'
-#     bl_label = "Declaration Valid When"
-#     bl_icon = 'GIZMO'
-    
-#     def init(self, context):
-#         self.inputs.new('IntSocket', 'Valid From')
-#         self.inputs.new('IntSocket', 'Valid Until')
-#         self.inputs.new('IntSocket', 'Add to N') # +
-#         self.inputs.new('IntSocket', 'Multiply N') # *
-#         self.inputs.new('IntSocket', 'Modulo of N') # %
-#         # self.inputs.new('IntSocket', 'n')
-
-
-# I need to figure out what to do with this right here...
-# There are a few options:
-#  - an actual control flow (if, then) -- but I don' like that because it's not declarative
-#  - "declaration valid when" statement that is basically a range with simple math rules
-#      - this is funcionally almost entirely the same
-#      - perhaps this sort of range plugs into the end of the schema?
-#      - but I want it to operate kind of like a frame or simulation zone
-#  - Begin / End declaration makes it more like a framed region
-#      - hypothetically I don't need to have any begin and I can just imply it
-#      - I don't wanna have to develop a bunch of code for dealing with new links that are only there for the sake of schema
-#  - then I ran into the problem that the in/out connections are relevant to a specific declaration
-#  - what I need is a way to modify the declaration in the loop, not a way to construct a bunch of different iterators....
-#  - so maybe I can get away with basic maths only
-
-# so I need a way to control a declaration by the index
-#   - a switch node, maybe one with an arbitrary socket type like wildcard that just adapts
-#   - it should be possible to do math with the index and len(schema)
-#       - example, for naming a bone 'Center' if index == len(schema)//2
-#            - the "if" is what annoys me about this
-#       - making numbers and chiral identifiers for names
-#       - array gets
-#   - 
-
-
-
-# class SchemaChoose(Node, SchemaNode):
-#     '''Choose'''
-#     bl_idname = 'SchemaChoose'
-#     bl_label = "Choose"
-#     bl_icon = 'GIZMO'
-#     initialized : bpy.props.BoolProperty(default = False)
-    
-#     def init(self, context):
-#         self.inputs.new('IntSocket', 'Number of Choices')
-#         self.inputs.new('IntSocket', 'Choose Index')
-#         self.outputs.new('WildcardSocket', 'Choice')
-#         self.update()
-
-#     def update(self):
-#         self.initialized = False
-#         input_map = get_socket_maps(self)[0]
-#         # print (input_map)
-#         self.inputs.clear()
-#         self.inputs.new('IntSocket', 'Number of Choices')
-#         self.inputs.new('IntSocket', 'Choose Index')
-#         #
-#         # update on this one requires being able to read the tree!
-#             # self.inputs.new("WildcardSocket", "")
-#         self.initialized = True
