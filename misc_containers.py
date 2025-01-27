@@ -243,13 +243,7 @@ class InputMatrix:
         self.dependencies = []
         self.prepared = True
         self.executed = True
-        
-    def evaluate_input(self, input_name):
-        return self.parameters["Matrix"]
-    
-    def fill_parameters(self):
-        # this node is peculiar for how its data is input
-        # It uses node properties that are not addressable as sockets.
+        #
         from mathutils import Matrix
         from .utilities import get_node_prototype
         node_prototype = get_node_prototype(self.signature, self.base_tree)
@@ -259,7 +253,12 @@ class InputMatrix:
                    node_prototype.third_row[ 0], node_prototype.third_row[ 1], node_prototype.third_row[ 2], node_prototype.third_row[ 3],
                    node_prototype.fourth_row[0], node_prototype.fourth_row[1], node_prototype.fourth_row[2], node_prototype.fourth_row[3], )
         self.parameters["Matrix"] = Matrix([matrix[0:4], matrix[4:8], matrix[8:12], matrix[12:16]])
-        # print (self.parameters["Matrix"])
+        
+    def evaluate_input(self, input_name):
+        return self.parameters["Matrix"]
+    
+    def fill_parameters(self):
+        return
 
 class UtilityMatrixFromCurve:
     '''Get a matrix from a curve'''
