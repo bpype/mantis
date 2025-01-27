@@ -760,6 +760,7 @@ class UtilityTransformationMatrix(Node, MantisNode):
 
 
     def display_update(self, parsed_tree, context):
+        from .base_definitions import get_signature_from_edited_tree
         operation = self.inputs['Operation'].default_value
         if self.inputs['Operation'].is_linked:
             if context.space_data:

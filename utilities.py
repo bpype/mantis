@@ -15,6 +15,8 @@ def prPurple(*args): print (*[wrapPurple(arg) for arg in args])
 def prWhite(*args): print (*[wrapWhite(arg) for arg in args])
 def prOrange(*args): print (*[wrapOrange(arg) for arg in args])
 
+
+
 # add THIS to the top of a file for easy access:
 # from mantis.utilities import (prRed, prGreen, prPurple, prWhite,
 #                               prOrange,
@@ -426,6 +428,7 @@ def link_node_containers(tree_path_names, link, local_nc, from_suffix='', to_suf
         raise RuntimeError(wrapRed("Link not connected: %s -> %s in tree %s" % (from_name, to_name, tree_path_names[-1])))
     
 def get_all_dependencies(nc):
+    from .base_definitions import GraphError
     """ Given a NC, find all dependencies for the NC as a dict of nc.signature:nc"""
     nodes = []
     can_descend = True
