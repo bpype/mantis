@@ -102,34 +102,34 @@ def export_to_json(trees, path="", write_file=True, only_selected=False):
         #     pass
             
         
-        for sock in tree.interface.items_tree:
-            sock_data={}
+        if not only_selected: # we'll handle this later with the links
+            for sock in tree.interface.items_tree:
+                sock_data={}
 
-            if sock.item_type == 'PANEL':
-                sock_data["name"] = sock.name
-                sock_data["item_type"] = sock.item_type
-                sock_data["description"] = sock.description
-                sock_data["default_closed"] = sock.default_closed
-                tree_in_out[sock.name] = sock_data
+                if sock.item_type == 'PANEL':
+                    sock_data["name"] = sock.name
+                    sock_data["item_type"] = sock.item_type
+                    sock_data["description"] = sock.description
+                    sock_data["default_closed"] = sock.default_closed
+                    tree_in_out[sock.name] = sock_data
 
-            # if it is a socket....
-            else:
-                sock_parent = None
-                if sock.parent:
-                    sock_parent = sock.parent.name
-                for propname  in dir(sock):
-                    if (propname in prop_ignore) or ( callable(v) ):
-                        continue
-                    if (propname == "parent"):
-                        sock_data[propname] = sock_parent
-                        continue
-                    v = getattr(sock, propname)
-                    if not is_jsonable( v ):
-                        raise RuntimeError(f"{propname}, {type(v)}")
-                    sock_data[propname] = v
-            
-                tree_in_out[sock.identifier] = sock_data
-
+                # if it is a socket....
+                else:
+                    sock_parent = None
+                    if sock.parent:
+                        sock_parent = sock.parent.name
+                    for propname  in dir(sock):
+                        if (propname in prop_ignore) or ( callable(v) ):
+                            continue
+                        if (propname == "parent"):
+                            sock_data[propname] = sock_parent
+                            continue
+                        v = getattr(sock, propname)
+                        if not is_jsonable( v ):
+                            raise RuntimeError(f"{propname}, {type(v)}")
+                        sock_data[propname] = v
+                
+                    tree_in_out[sock.identifier] = sock_data
 
         nodes = {}
         for n in tree.nodes:
@@ -277,12 +277,12 @@ def export_to_json(trees, path="", write_file=True, only_selected=False):
                 if (only_selected and l.from_node.select) and (not l.to_node.select):
                     # handle an output in the tree
                     add_output_node=True
-                    if not (sock_name := unique_sockets_to.get(l.to_socket.node.name+l.to_socket.identifier)):
+                    if not (sock_name := unique_sockets_to.get(l.from_socket.node.name+l.from_socket.identifier)):
                         sock_name = l.to_socket.name; name_stub = sock_name
                         used_names = list(tree_in_out.keys()); i=0
                         while sock_name in used_names:
                             sock_name=name_stub+'.'+str(i).zfill(3); i+=1
-                        unique_sockets_to[l.to_socket.node.name+l.to_socket.identifier]=sock_name
+                        unique_sockets_to[l.from_socket.node.name+l.from_socket.identifier]=sock_name
 
                     out_sock = out_sockets.get(sock_name)
                     if not out_sock:

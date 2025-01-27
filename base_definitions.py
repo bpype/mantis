@@ -165,6 +165,9 @@ def poll_node_tree(self, object):
 
 # TODO: try to check identifiers instead of name.
 def node_group_update(node):
+    if (node.id_data.do_live_update == False) or (node.id_data.is_executing == True):
+        return
+    # note: if (node.id_data.is_exporting == True) I need to be able to update so I can make links.
     toggle_update = node.id_data.do_live_update
     node.id_data.do_live_update = False
 

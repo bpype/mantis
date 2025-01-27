@@ -29,7 +29,6 @@ classLists = [module.TellClasses() for module in [
  i_o,
  schema_definitions,
 ]]
-# lol
 classLists.append( [GenerateMantisTree] )
 #
 classes = []
@@ -38,28 +37,6 @@ while (classLists):
 
 interface_classes = []
 from bpy import app
-# if app.version[0]  == 3:
-#     for cls in [cls for cls in socket_definitions.TellClasses() if issubclass(cls, NodeSocket)]:
-#         name = cls.__name__+"Interface"
-#         from bpy.types import NodeSocketInterface
-#         def default_draw_color(self, context,):
-#             return self.color
-#         def default_draw(self, context, layout):
-#             return
-#         interface = type(
-#                       name,
-#                       (NodeSocketInterface,),
-#                       {
-#                           "color"            : cls.color,
-#                           "draw_color"       : default_draw_color,
-#                           "draw"             : default_draw,
-#                           "bl_idname"        : name,
-#                           "bl_socket_idname" : cls.__name__,
-#                       },
-#                   )
-#         interface_classes.append(interface)
-
-#     classes.extend(interface_classes)
 
 import nodeitems_utils
 from nodeitems_utils import NodeCategory, NodeItem
@@ -207,8 +184,7 @@ def init_keymaps():
 
 addon_keymaps = []
 
-# handlers!
-#annoyingly these have to be persistent
+# handlers! these have to be persistent
 from bpy.app.handlers import persistent
 @persistent
 def update_handler(scene):

@@ -53,13 +53,15 @@ class MantisGroupNodes(Operator):
 
     def execute(self, context):
         base_tree=context.space_data.path[-1].node_tree
-        base_tree.is_exporting = True
+        for path_item in context.space_data.path:
+            path_item.node_tree.is_exporting = True
 
         from .i_o import export_to_json, do_import
         from random import random
         grp_name = "".join([chr(int(random()*30)+35) for i in range(20)])
         trees=[base_tree]
         selected_nodes=export_to_json(trees, write_file=False, only_selected=True)
+        # this snippet of confusing indirection edits the name of the base tree in the JSON data
         selected_nodes[base_tree.name][0]["name"]=grp_name
         do_import(selected_nodes, context)
 
@@ -72,16 +74,25 @@ class MantisGroupNodes(Operator):
         delete_me = []
         all_nodes_bounding_box=[Vector((float("inf"),float("inf"))), Vector((-float("inf"),-float("inf")))]
         for n in base_tree.nodes:
-            if n.select: 
-                if n.location.x < all_nodes_bounding_box[0].x:
-                    all_nodes_bounding_box[0].x = n.location.x
-                if n.location.y < all_nodes_bounding_box[0].y:
-                    all_nodes_bounding_box[0].y = n.location.y
+            if n.select:
+                node_loc = (0,0,0)
+                if bpy.app.version <= (4, 4):
+                    node_loc = n.location
+                    parent = n.parent
+                    while (parent): # accumulate parent offset
+                        node_loc += parent.location
+                        parent = parent.parent
+                else: # there is a new location_absolute property in 4.4
+                    node_loc = n.location_absolute
+                if node_loc.x < all_nodes_bounding_box[0].x:
+                    all_nodes_bounding_box[0].x = node_loc.x
+                if node_loc.y < all_nodes_bounding_box[0].y:
+                    all_nodes_bounding_box[0].y = node_loc.y
                 #
-                if n.location.x > all_nodes_bounding_box[1].x:
-                    all_nodes_bounding_box[1].x = n.location.x
-                if n.location.y > all_nodes_bounding_box[1].y:
-                    all_nodes_bounding_box[1].y = n.location.y
+                if node_loc.x > all_nodes_bounding_box[1].x:
+                    all_nodes_bounding_box[1].x = node_loc.x
+                if node_loc.y > all_nodes_bounding_box[1].y:
+                    all_nodes_bounding_box[1].y = node_loc.y
                 delete_me.append(n)
         grp_node = base_tree.nodes.new('MantisNodeGroup')
         grp_node.node_tree = bpy.data.node_groups[grp_name]
@@ -91,9 +102,9 @@ class MantisGroupNodes(Operator):
 
         grp_node.location = Vector((all_nodes_bounding_box[0].x+200, all_nodes_bounding_box[0].lerp(all_nodes_bounding_box[1], 0.5).y))
 
-
+        # for each node in the JSON
         for n in selected_nodes[base_tree.name][2].values():
-            for s in n["sockets"].values():
+            for s in n["sockets"].values(): # for each socket in the node
                 if source := s.get("source"):
                     prGreen (s["name"], source[0], source[1])
                     base_tree_node=base_tree.nodes.get(source[0])
@@ -115,7 +126,8 @@ class MantisGroupNodes(Operator):
         for n in delete_me: base_tree.nodes.remove(n)
         base_tree.nodes.active = grp_node
 
-        base_tree.is_exporting = False
+        for path_item in context.space_data.path:
+            path_item.node_tree.is_exporting = False
         grp_node.node_tree.name = "Group_Node.000"
         return {'FINISHED'}
 
