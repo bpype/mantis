@@ -64,6 +64,8 @@ class MantisTree(NodeTree):
             self.tree_valid = False
             self.is_executing = False
             raise e
+        finally:
+            self.is_executing = False
 
     
     def display_update(self, context):
