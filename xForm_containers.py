@@ -443,21 +443,16 @@ class xFormBone:
         tailoffset = Vector((0,length,0)) #Vector((0,self.tailoffset, 0))
         tailoffset = matrix.copy().to_3x3() @ tailoffset
         eb.tail    = eb.head + tailoffset
-
-        if eb.head == eb.tail:
-            raise RuntimeError(wrapRed(f"Could not create edit bone: {name} because bone head was located in the same place as bone tail."))
-
-        
         if (eb.name != name):
             raise RuntimeError("Could not create edit bone: ", name)
         assert (eb.name), "Bone must have a name."
         self.bObject = eb.name
         # The bone should have relationships going in at this point.
         
-        assert (self.bObject), "eh? %s" % eb.name
-        
         self.bSetParent(eb)
-        
+
+        if eb.head == eb.tail:
+            raise RuntimeError(wrapRed(f"Could not create edit bone: {name} because bone head was located in the same place as bone tail."))
         
         # Setup Deform attributes...
         eb.use_deform            = self.evaluate_input("Deform")
