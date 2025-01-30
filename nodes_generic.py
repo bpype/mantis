@@ -280,6 +280,7 @@ class UtilityMatrixFromCurve(Node, MantisNode):
         curv = self.inputs.new("EnumCurveSocket", "Curve")
         curv.icon = "OUTLINER_OB_CURVE"
         self.inputs.new('IntSocket', 'Total Divisions')
+        self.inputs.new('IntSocket', 'Matrix Index')
         self.outputs.new("MatrixSocket", "Matrix")
         self.initialized = True
 
@@ -889,13 +890,13 @@ class UtilityCompare(Node, MantisNode):
 
     def insert_link(self, link):
         if link.to_socket.identifier == self.inputs['A'].identifier:
-            self.inputs['A'].color = from_socket.color_simple
-            if hasattr(from_socket, "color"):
-                self.inputs['A'].color = from_socket.color
+            self.inputs['A'].color = link.from_socket.color_simple
+            if hasattr(link.from_socket, "color"):
+                self.inputs['A'].color = link.from_socket.color
         if link.to_socket.identifier == self.inputs['B'].identifier:
-            self.inputs['B'].color = from_socket.color_simple
-            if hasattr(from_socket, "color"):
-                self.inputs['B'].color = from_socket.color
+            self.inputs['B'].color = link.from_socket.color_simple
+            if hasattr(link.from_socket, "color"):
+                self.inputs['B'].color = link.from_socket.color
 
 class UtilityChoose(Node, MantisNode):
     """Chooses an output"""
