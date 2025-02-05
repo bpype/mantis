@@ -52,6 +52,11 @@ class SchemaNodeCategory(NodeCategory):
         return (context.space_data.path[len(context.space_data.path)-1].node_tree.bl_idname == 'SchemaTree')
 
 
+class MantisGroupCategory(NodeCategory):
+    @classmethod
+    def poll(cls, context):
+        return (context.space_data.path[len(context.space_data.path)-1].node_tree.bl_idname in ['MantisTree'] and len(context.space_data.path)>1)
+
 input_category=[
             NodeItem("InputFloatNode"),
             NodeItem("InputVectorNode"),
@@ -137,7 +142,10 @@ groups_category = [
         NodeItem("MantisNodeGroup"),
         NodeItem("MantisSchemaGroup"),
     ]
-
+group_interface_category = [
+        NodeItem("NodeGroupInput"),
+        NodeItem("NodeGroupOutput"),
+    ]
 
 node_categories = [
     # identifier, label, items list
@@ -152,6 +160,7 @@ node_categories = [
     MantisNodeCategory('UTILITIES', "Utility", items=utility_category),
     MantisNodeCategory('MATRIX', "Matrix", items=matrix_category),
     MantisNodeCategory('GROUPS', "Groups", items=groups_category),
+    MantisGroupCategory('GROUP_INTERFACE', "Group In/Out", items=group_interface_category),
 ]
 
 schema_category=[NodeItem(cls.bl_idname) for cls in schema_definitions.TellClasses()]
