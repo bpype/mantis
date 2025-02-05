@@ -106,9 +106,11 @@ class SchemaTree(NodeTree):
     bl_idname = 'SchemaTree'
     bl_label = "Rigging Nodes Schema"
     bl_icon = 'RIGID_BODY_CONSTRAINT'
-    
-    do_live_update:BoolProperty(default=False) # this is only needed for consistency, it is never used.
 
+    # these are only needed for consistent interface, but should not be used
+    do_live_update:BoolProperty(default=True) # default to true so that updates work
+    is_executing:BoolProperty(default=False)
+    is_exporting:BoolProperty(default=False)
 
     if bpy.app.version >= (3, 2):  # in 3.1 this can lead to a crash
         @classmethod
