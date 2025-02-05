@@ -722,6 +722,8 @@ class UtilityKeyframe:
         key = self.parameters["Keyframe"]
         from mathutils import Vector
         key["co"]= Vector( (self.evaluate_input("Frame"), self.evaluate_input("Value"),))
+        key["type"]="GENERATED"
+        key["interpolation"] = "LINEAR"
         # eventually this will have the right data, TODO
         # self.parameters["Keyframe"] = key
         self.prepared = True
@@ -768,10 +770,10 @@ class UtilityFCurve:
         if True: #np.use_kf_nodes:
             for k in self.inputs.keys():
                 # print (self.inputs[k])
-                key = self.evaluate_input(k)
-                key["type"]="GENERATED"
-                key["interpolation"] = "LINEAR"
-                keys.append(key)
+                if (key := self.evaluate_input(k)) is None:
+                    prOrange(f"WARN: No enough keyframes connected to {self}:{k}. Skipping Link.")
+                else:
+                    keys.append(key)
 
         else:
             raise NotImplementedError("Getting the keys from an fCurve isn't really working anymore lol need to fix")
@@ -793,6 +795,8 @@ class UtilityFCurve:
                 link.to_node.parameters[link.to_socket] = keys
         # the above was a HACK. I don't want nodes modiying their descenedents.
         # If the above was necessary, I want to get an error from it so I can fix it in the descendent's class
+        if len(keys) <1:
+            prOrange(f"WARN: no keys in fCurve {self}.")
         self.prepared = True
         self.executed = True
                 
@@ -833,20 +837,27 @@ class UtilityDriver:
         from .drivers import MantisDriver
         #prPurple("Executing Driver Node")
         my_vars = []
-        
+        if (keys := self.evaluate_input("fCurve")) is None:
+            keys={}
+            prWhite(f"INFO: no fCurve connected to {self}; using default fCurve.")
+            from mathutils import Vector
+            keys = [
+                {"co":Vector( (0, 0,)), "type":"GENERATED", "interpolation":"LINEAR" },
+                {"co":Vector( (1, 1,)), "type":"GENERATED", "interpolation":"LINEAR" },
+            ]
         for inp in list(self.inputs.keys() )[3:]:
             if (new_var := self.evaluate_input(inp)):
                 new_var["name"] = inp
                 my_vars.append(new_var)
             else:
-                raise RuntimeError("Failed to initialize Driver variable")
+                raise RuntimeError(f"Failed to initialize Driver variable for {self}")
         my_driver ={ "owner"      :  None,
                      "prop"       :  None, # will be filled out in the node that uses the driver
                      "expression" :  self.evaluate_input("Expression"),
                      "ind"        :  -1, # same here
                      "type"       :  self.evaluate_input("Driver Type"),
                      "vars"       :  my_vars,
-                     "keys"       :  self.evaluate_input("fCurve"), }
+                     "keys"       :  keys, }
         
         my_driver = MantisDriver(my_driver)
         
@@ -1113,7 +1124,11 @@ class InputExistingGeometryObject:
     
     def bPrepare(self, bContext=None):
         from bpy import data
-        self.bObject = data.objects.get( self.evaluate_input("Name") )
+        name = self.evaluate_input("Name")
+        if name:
+          self.bObject = data.objects.get( name  )
+        else:
+          self.bObject = None
         if self is None and (name := self.evaluate_input("Name")):
           prRed(f"No object found with name {name} in {self}")
         self.prepared = True; self.executed = True
