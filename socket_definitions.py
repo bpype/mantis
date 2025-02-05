@@ -2114,12 +2114,6 @@ class EnumKeyframeBezierHandleTypeSocket(NodeSocket):
 
 
 
-
-
-
-
-
-
 enumFloatOperations = (('ADD', 'Add', 'Add'),
                       ('SUBTRACT', "Subtract", "Subtract"),
                       ('MULTIPLY', "Multiply", "Multiply"),
@@ -2131,7 +2125,8 @@ enumFloatOperations = (('ADD', 'Add', 'Add'),
                       ('MAXIMUM', "Maximum", "Maximum"),
                       ('MINIMUM', "Minimum", "Minimum"),
                       ('GREATER THAN', "Greater Than", "Greater Than"),
-                      ('LESS THAN', "Less Than", "Less Than"),)
+                      ('LESS THAN', "Less Than", "Less Than"),
+                      ('ARCTAN2', "atan2", "2-argument arctan function"),)
 
 class MathFloatOperation(NodeSocket):
     """Float Math Operation"""

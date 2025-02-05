@@ -65,7 +65,6 @@ class MathStaticInt:
         if self.evaluate_input("Operation") == "LESS THAN":
             result = int(a < b)
         self.parameters["Result Int"] = result
-
         self.prepared = True
         self.executed = True
 
@@ -125,6 +124,9 @@ class MathStaticFloat:
             result = float(a > b)
         if self.evaluate_input("Operation") == "LESS THAN":
             result = float(a < b)
+        if self.evaluate_input("Operation") == "ARCTAN2":
+            from math import atan2
+            result = atan2(a,b)
         self.parameters["Result Float"] = result
         self.prepared = True
         self.executed = True
