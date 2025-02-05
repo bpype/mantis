@@ -769,7 +769,7 @@ class xFormGeometryObject:
         self.drivers = {}
 
     def bSetParent(self):
-        from bpy.types import Object, Bone
+        from bpy.types import Object
         parent_nc = get_parent(self, type='LINK')
         if (parent_nc):
             parent = None
@@ -780,8 +780,10 @@ class xFormGeometryObject:
                     if (node.node_type == 'XFORM'):
                         parent = node; break
                 if parent is None:
-                    raise GraphError(f"Could not get parent node for {self}")
-                if parent.bObject is None:
+                    prWhite(f"INFO: no parent set for {self}.")
+                    return
+                
+                if (parent_object := parent.bGetObject()) is None:
                     raise GraphError(f"Could not get parent object from node {parent} for {self}")
                 if isinstance(parent, xFormBone):
                     armOb= parent.bGetParentArmature()
@@ -789,7 +791,7 @@ class xFormGeometryObject:
                     self.bObject.parent_type = 'BONE'
                     self.bObject.parent_bone = parent.bObject
                     # self.bObject.matrix_parent_inverse = parent.parameters["Matrix"].inverted()
-                elif isinstance(parent, xFormArmature):
+                elif isinstance(parent_object, Object):
                     self.bObject.parent = parent.bGetObject()
 
     def bPrepare(self, bContext = None,):
