@@ -482,6 +482,9 @@ def do_import(data, context):
                 n.inputs.remove(n.inputs[1]) # get rid of the wildcard
             # prPurple(n.bl_idname)
 
+            # if propslist["bl_idname"] in ["MantisNodeGroup"]:
+            #     n.node_tree = bpy.data.node_groups[propslist["node_tree"]]
+
             if n.bl_idname in [ "SchemaArrayInput",
                                 "SchemaArrayInputGet",
                                 "SchemaArrayOutput",
@@ -496,9 +499,8 @@ def do_import(data, context):
             if sub_tree := propslist.get("node_tree"):
                 in_group_node = True
                 n.node_tree = bpy.data.node_groups.get(sub_tree)
-                # for s_name, s_val in propslist["sockets"].items():
-                #     print( wrapRed(s_name), wrapWhite(s_val))
-                # we have to do this first or the sockets won't exist to set their data.
+                from .base_definitions import node_group_update
+                node_group_update(n, force = True)
             #
 
             for i, (s_id, s_val) in enumerate(propslist["sockets"].items()):
