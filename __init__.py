@@ -15,6 +15,10 @@ from bpy.types import NodeSocket
 
 from .utilities import prRed
 
+MANTIS_VERSION_MAJOR=0
+MANTIS_VERSION_MINOR=9
+MANTIS_VERSION_SUB=4
+
 
 classLists = [module.TellClasses() for module in [
  link_definitions,
@@ -232,6 +236,36 @@ def execute_handler(scene):
                 node_tree.tree_valid = False
 
 
+@persistent
+def version_update_handler(filename):
+    from .base_definitions import NODES_REMOVED, SOCKETS_REMOVED
+    for node_tree in bpy.data.node_groups:
+        if node_tree.bl_idname in ["MantisTree", "SchemaTree"]:
+            if (node_tree.mantis_version[0] < MANTIS_VERSION_MAJOR) or \
+               (node_tree.mantis_version[1] < MANTIS_VERSION_MINOR) or \
+               (node_tree.mantis_version[2] < MANTIS_VERSION_SUB):
+                print (f"Updating tree {node_tree.name} to {MANTIS_VERSION_MAJOR}.{MANTIS_VERSION_MINOR}.{MANTIS_VERSION_SUB}")
+                node_tree.mantis_version[0] = MANTIS_VERSION_MAJOR
+                node_tree.mantis_version[1] = MANTIS_VERSION_MINOR
+                node_tree.mantis_version[2] = MANTIS_VERSION_SUB
+                for n in node_tree.nodes:
+                    if n.bl_idname in NODES_REMOVED:
+                        print(f"INFO: removing node {n.name} of type {n.bl_idname} because it has been deprecated.")
+                        n.inputs.remove(socket)
+                        continue
+                    for socket in n.inputs.values():
+                        if (n.bl_idname, socket.identifier) in SOCKETS_REMOVED:
+                            print(f"INFO: removing socket {socket.identifier} of node {n.name} of type {n.bl_idname} because it has been deprecated.")
+                            n.inputs.remove(socket)
+                    for socket in n.outputs.values():
+                        if (n.bl_idname, socket.identifier) in SOCKETS_REMOVED:
+                            print(f"INFO: removing socket {socket.identifier} of node {n.name} of type {n.bl_idname} because it has been deprecated.")
+                            n.outputs.remove(socket)
+                
+                
+
+
+
 
 def register():
     if bpy.app.version >= (4, 4):
@@ -257,6 +291,7 @@ def register():
     # add the handlers
     bpy.app.handlers.depsgraph_update_pre.append(update_handler)
     bpy.app.handlers.depsgraph_update_post.append(execute_handler)
+    bpy.app.handlers.load_post.append(version_update_handler)
 
 
     

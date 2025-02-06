@@ -345,9 +345,9 @@ class UtilityMetaRigNode(Node, MantisNode):
             self.inputs["Meta-Bone"].hide=True
         else:
             self.inputs["Meta-Bone"].hide=False
-        if self.inputs["Meta-Armature"].is_connected:
+        if self.inputs["Meta-Armature"].is_linked:
             self.inputs["Meta-Armature"].search_prop = None
-        if self.inputs["Meta-Bone"].is_connected:
+        if self.inputs["Meta-Bone"].is_linked:
             self.inputs["Meta-Bone"].search_prop = None
 
 class UtilityBonePropertiesNode(Node, MantisNode):
@@ -385,17 +385,13 @@ class UtilityDriverVariableNode(Node, MantisNode):
         self.inputs.new("EnumDriverVariableType", "Variable Type")                 # 0
         self.inputs.new("ParameterStringSocket", "Property")                       # 1
         self.inputs.new("IntSocket", "Property Index")                             # 2
-        self.inputs.new("EnumDriverVariableTransformChannel", "Transform Channel") # 3
-        self.inputs.new("EnumDriverVariableEvaluationSpace", "Evaluation Space")   # 4
-        self.inputs.new("EnumDriverRotationMode", "Rotation Mode")                 # 5
-        self.inputs.new("xFormSocket", "xForm 1")                                  # 6
-        self.inputs.new("xFormSocket", "xForm 2")                                  # 7
+        self.inputs.new("EnumDriverVariableEvaluationSpace", "Evaluation Space")   # 3
+        self.inputs.new("EnumDriverRotationMode", "Rotation Mode")                 # 4
+        self.inputs.new("xFormSocket", "xForm 1")                                  # 5
+        self.inputs.new("xFormSocket", "xForm 2")                                  # 6
         self.outputs.new("DriverVariableSocket", "Driver Variable")
         self.inputs[3].hide = True
         self.initialized = True
-        
-    # def update_on_socket_change(self, context):
-    #     self.update()
     
     def display_update(self, parsed_tree, context):
         from .base_definitions import get_signature_from_edited_tree
@@ -410,36 +406,31 @@ class UtilityDriverVariableNode(Node, MantisNode):
         if driver_type == 'SINGLE_PROP':
             self.inputs[1].hide = False
             self.inputs[2].hide = False
-            self.inputs[3].hide = True
+            self.inputs[3].hide = False
             self.inputs[4].hide = False
             self.inputs[5].hide = False
-            self.inputs[6].hide = False
-            self.inputs[7].hide = True
+            self.inputs[6].hide = True
         elif driver_type == 'LOC_DIFF':
             self.inputs[1].hide = True
             self.inputs[2].hide = True
             self.inputs[3].hide = True
             self.inputs[4].hide = True
-            self.inputs[5].hide = True
+            self.inputs[5].hide = False
             self.inputs[6].hide = False
-            self.inputs[7].hide = False
         elif driver_type == 'ROTATION_DIFF':
             self.inputs[1].hide = True
             self.inputs[2].hide = True
             self.inputs[3].hide = True
-            self.inputs[4].hide = True
+            self.inputs[4].hide = False
             self.inputs[5].hide = False
             self.inputs[6].hide = False
-            self.inputs[7].hide = False
         elif driver_type == 'TRANSFORMS':
             self.inputs[1].hide = True
             self.inputs[2].hide = True
             self.inputs[3].hide = False
             self.inputs[4].hide = False
             self.inputs[5].hide = False
-            self.inputs[6].hide = False
-            self.inputs[7].hide = True
-        self.inputs[3].hide = True
+            self.inputs[6].hide = True
     
 
 # TODO: make a way to edit the fCurve directly.
@@ -478,25 +469,17 @@ class UtilityDriverNode(Node, MantisNode):
         self.outputs.new("DriverSocket", "Driver")
         self.initialized = True
         
-    def update(self):
-        return
-        context = bpy.context
-        try:
-            tree = context.space_data.path[0].node_tree
-            proceed = True
-        except AttributeError:
-            proceed = False
-        if proceed:
-            from .f_nodegraph import (GetDownstreamXFormNodes, get_node_container)
-            if (node_container := get_node_container(self, context)[0]):
-                dType = node_container.evaluate_input("Driver Type")
-            else:
-                dType = self.inputs[0].default_value
-            
-            if dType == 'SCRIPTED':
-                self.inputs["Expression"].hide = False
-            else:
-                self.inputs["Expression"].hide = True
+    def display_update(self, parsed_tree, context):
+        if not self.inputs["Driver Type"].is_linked:
+            dType = self.inputs["Driver Type"].default_value
+        from .base_definitions import get_signature_from_edited_tree
+        nc = parsed_tree.get(get_signature_from_edited_tree(self, context))
+        if nc:
+            dType = nc.evaluate_input("Driver Type")
+        if dType == 'SCRIPTED':
+            self.inputs["Expression"].hide = False
+        else:
+            self.inputs["Expression"].hide = True
     
     def draw_buttons(self, context, layout):
         # return

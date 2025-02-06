@@ -1,6 +1,7 @@
 #Mantis Nodes Base
 import bpy
-from bpy.props import BoolProperty, StringProperty, EnumProperty, CollectionProperty, IntProperty, PointerProperty, BoolVectorProperty
+from bpy.props import (BoolProperty, StringProperty, EnumProperty, CollectionProperty, \
+    IntProperty, IntVectorProperty, PointerProperty, BoolVectorProperty)
 from . import ops_nodegroup
 from bpy.types import NodeTree, Node, PropertyGroup, Operator, UIList, Panel
 
@@ -35,6 +36,7 @@ class MantisTree(NodeTree):
     is_executing:BoolProperty(default=False)
     is_exporting:BoolProperty(default=False)
     execution_id:StringProperty(default='')
+    mantis_version:IntVectorProperty(default=[0,9,2])
     
     parsed_tree={}
 
@@ -71,6 +73,7 @@ class MantisTree(NodeTree):
     def display_update(self, context):
         if self.is_exporting:
             return
+        self.is_executing = True
         current_tree = bpy.context.space_data.path[-1].node_tree
         for node in current_tree.nodes:
             if hasattr(node, "display_update"):
@@ -78,7 +81,7 @@ class MantisTree(NodeTree):
                     node.display_update(self.parsed_tree, context)
                 except Exception as e:
                     print("Node \"%s\" failed to update display with error: %s" %(wrapGreen(node.name), wrapRed(e)))
-                    # raise e
+        self.is_executing = False
         
         # TODO: deal with invalid links properly.
         #    - Non-hierarchy links should be ignored in the circle-check and so the links should be marked valid in such a circle
@@ -111,6 +114,8 @@ class SchemaTree(NodeTree):
     do_live_update:BoolProperty(default=True) # default to true so that updates work
     is_executing:BoolProperty(default=False)
     is_exporting:BoolProperty(default=False)
+
+    mantis_version:IntVectorProperty(default=[0,9,2])
 
     if bpy.app.version >= (3, 2):  # in 3.1 this can lead to a crash
         @classmethod
@@ -336,6 +341,11 @@ class SchemaGroup(Node, MantisNode):
         self.is_updating = False
 
 
+
+NODES_REMOVED=["xFormRootNode"]
+SOCKETS_REMOVED=[("UtilityDriverVariable","Transform Channel"),
+                 ("xFormRootNode","World Out"),
+                 ("UtilitySwitch","xForm")]
 
 # replace names with bl_idnames for reading the tree and solving schemas.
 replace_types = ["NodeGroupInput", "NodeGroupOutput", "SchemaIncomingConnection",

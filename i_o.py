@@ -7,7 +7,7 @@ from .utilities import (prRed, prGreen, prPurple, prWhite,
 
 from mathutils import  Vector
 
-
+from .base_definitions import NODES_REMOVED, SOCKETS_REMOVED
 
 
 # this works but it is really ugly and probably quite inneficient
@@ -485,8 +485,12 @@ def do_import(data, context):
         
 #        from mantis.utilities import prRed, prWhite, prOrange, prGreen
         for name, propslist in nodes.items():
-            n = tree.nodes.new(propslist["bl_idname"])
-            if propslist["bl_idname"] in ["DeformerMorphTargetDeform"]:
+            bl_idname = propslist["bl_idname"]
+            if bl_idname in NODES_REMOVED:
+                prWhite(f"INFO: Ignoring import of node {name} of type {bl_idname}; it has been removed.")
+                continue
+            n = tree.nodes.new(bl_idname)
+            if bl_idname in ["DeformerMorphTargetDeform"]:
                 n.inputs.remove(n.inputs[1]) # get rid of the wildcard
 
             if n.bl_idname in [ "SchemaArrayInput",
@@ -503,8 +507,15 @@ def do_import(data, context):
                 n.node_tree = bpy.data.node_groups.get(sub_tree)
                 from .base_definitions import node_group_update
                 node_group_update(n, force = True)
-
+            
+            sockets_removed = []
             for i, (s_id, s_val) in enumerate(propslist["sockets"].items()):
+                for socket_removed in SOCKETS_REMOVED:
+                    if n.bl_idname == socket_removed[0] and s_id == socket_removed[1]:
+                        prWhite(f"INFO: Ignoring import of socket {s_id}; it has been removed.")
+                        sockets_removed.append(s_val["index"])
+                        sockets_removed.sort()
+                        continue
                 try:
                     if s_val["is_output"]: # for some reason it thinks the index is a string?
                         # try:
@@ -513,6 +524,9 @@ def do_import(data, context):
                         else:
                             socket = n.outputs[int(s_val["index"])]
                     else:
+                        for removed_index in sockets_removed:
+                            if s_val["index"] > removed_index:
+                                s_val["index"]-=1
                         if s_val["index"] >= len(n.inputs):
                             if n.bl_idname == "UtilityDriver":
                                 with bpy.context.temp_override(**{'node':n}):
@@ -538,6 +552,9 @@ def do_import(data, context):
                             elif n.bl_idname == "DeformerMorphTargetDeform": # this one doesn't use an operator since I figure out how to do dynamic node stuff
                                 socket = n.inputs.new(s_val["bl_idname"], s_val["name"], identifier=s_id)
                             else:
+                                prWhite(n.name, s_val["name"], s_id)
+                                for k,v in propslist["sockets"].items():
+                                    print(k,v)
                                 prRed(s_val["index"], len(n.inputs))
                                 raise NotImplementedError(wrapRed(f"{n.bl_idname} needs to be handled in JSON load."))
                             # if n.bl_idname in ['']
@@ -614,13 +631,14 @@ def do_import(data, context):
 #            print (wrapGreen(k), "   ", wrapPurple(v))
         
         for l in links:
+
             id1 = l[1]
             id2 = l[3]
             #
             name1=l[6]
             name2=l[7]
             
-            prWhite(l[0], l[1], " --> ", l[2], l[3])
+            # prWhite(l[0], l[1], " --> ", l[2], l[3])
             
             # l has...
             # node 1
@@ -628,7 +646,11 @@ def do_import(data, context):
             # node 2
             # identifier 2
             
-            from_node = tree.nodes[l[0]]
+            # if the from/to socket or node has been removed, continue
+            from_node = tree.nodes.get(l[0])
+            if not from_node:
+                prWhite(f"INFO: cannot create link {l[0]}:{l[1]} -->  {l[2]}:{l[3]}")
+                continue
             if hasattr(from_node, "node_tree"): # now we have to map by name actually
                 try:
                     id1 = from_node.outputs[l[4]].identifier
