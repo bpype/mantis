@@ -421,32 +421,25 @@ def do_import_from_file(filepath, context):
 
 def do_import(data, context):
     trees = []
-    
-    for tree_name, tree_data in data.items():
-        print ("Importing sub-graph: %s with %s nodes" % (wrapGreen(tree_name), wrapPurple(len(tree_data[2]))) )
-        # print (tree_data)
+    tree_sock_id_maps = {}
 
+    # First: init the interface of the node graph
+    for tree_name, tree_data in data.items():
         tree_info = tree_data[0]
         tree_in_out = tree_data[1]
-        nodes = tree_data[2]
-        links = tree_data[3]
-        
-        parent_me = []
 
-        # need to make a new tree:
-        #
-        # first, try to get it:
+        # need to make a new tree; first, try to get it:
         tree = bpy.data.node_groups.get(tree_info["name"])
         if tree is None:
             tree = bpy.data.node_groups.new(tree_info["name"], tree_info["bl_idname"])
         tree.nodes.clear(); tree.links.clear(); tree.interface.clear()
         # this may be a bad bad thing to do without some kind of warning TODO TODO
-
         tree.is_executing = True
         tree.do_live_update = False
         trees.append(tree)
-
-        tree_sock_id_map={}
+        
+        tree_sock_id_map = {}
+        tree_sock_id_maps[tree.name] = tree_sock_id_map
         
         interface_parent_me = {}
 
@@ -470,20 +463,31 @@ def do_import(data, context):
                                     tree.interface.items_tree.get(panel),
                                     index,
                                     )
-        for k,v in tree_sock_id_map.items():
-            prRed(k,v)
-        # at this point, the identifiers may not match
-        # so we have to map them back
+    # Now go and do nodes and links
+    for tree_name, tree_data in data.items():
+        print ("Importing sub-graph: %s with %s nodes" % (wrapGreen(tree_name), wrapPurple(len(tree_data[2]))) )
+
+        tree_info = tree_data[0]
+        nodes = tree_data[2]
+        links = tree_data[3]
+        
+        parent_me = []
+
+        tree = bpy.data.node_groups.get(tree_info["name"])
+
+        tree.is_executing = True
+        tree.do_live_update = False
+        trees.append(tree)
+
+        tree_sock_id_map=tree_sock_id_maps[tree.name]
+        
+        interface_parent_me = {}
         
 #        from mantis.utilities import prRed, prWhite, prOrange, prGreen
         for name, propslist in nodes.items():
             n = tree.nodes.new(propslist["bl_idname"])
             if propslist["bl_idname"] in ["DeformerMorphTargetDeform"]:
                 n.inputs.remove(n.inputs[1]) # get rid of the wildcard
-            # prPurple(n.bl_idname)
-
-            # if propslist["bl_idname"] in ["MantisNodeGroup"]:
-            #     n.node_tree = bpy.data.node_groups[propslist["node_tree"]]
 
             if n.bl_idname in [ "SchemaArrayInput",
                                 "SchemaArrayInputGet",
@@ -495,13 +499,10 @@ def do_import(data, context):
                 n.update()
 
             
-            in_group_node = False
             if sub_tree := propslist.get("node_tree"):
-                in_group_node = True
                 n.node_tree = bpy.data.node_groups.get(sub_tree)
                 from .base_definitions import node_group_update
                 node_group_update(n, force = True)
-            #
 
             for i, (s_id, s_val) in enumerate(propslist["sockets"].items()):
                 try:
@@ -509,13 +510,8 @@ def do_import(data, context):
                         # try:
                         if n.bl_idname == "MantisSchemaGroup":
                             socket = n.outputs.new(s_val["bl_idname"], s_val["name"], identifier=s_id)
-                        elif n.bl_idname in ["NodeGroupInput"]:
-                            pass
                         else:
                             socket = n.outputs[int(s_val["index"])]
-                        # except Exception as e:
-                        #     prRed(n.name, s_id)
-                        #     raise e
                     else:
                         if s_val["index"] >= len(n.inputs):
                             if n.bl_idname == "UtilityDriver":
@@ -561,7 +557,6 @@ def do_import(data, context):
 #                       prRed("Not Found: %s" % (s_id))
 #                       prOrange(propslist["sockets"][s_id])
 #                       socket = fix_custom_parameter(n, propslist["sockets"][s_id]
-                
                 for s_p, s_v in s_val.items():
                     if s_p not in ["default_value"]:
                         if s_p == "search_prop" and n.bl_idname == 'UtilityMetaRig':
