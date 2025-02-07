@@ -94,12 +94,11 @@ def export_to_json(trees, path="", write_file=True, only_selected=False):
             #     pass
             if (propname in prop_ignore) or ( callable(getattr(tree, propname)) ):
                 continue
-            if not is_jsonable( v := getattr(tree, propname)):
-                try:
-                    tree_info[propname] = tuple(v)
-                except Exception as e:
-                    print (e)
-                    raise RuntimeError(f"Not JSON-able: {propname}, type: {type(v)}")
+            v = getattr(tree, propname)
+            if isinstance(getattr(tree, propname), bpy.types.bpy_prop_array):
+                v = tuple(getattr(tree, propname))
+            if not is_jsonable( v  ):
+                raise RuntimeError(f"Not JSON-able: {propname}, type: {type(v)}")
             tree_info[propname] = v
         tree_info["name"] = tree.name
 
@@ -131,6 +130,8 @@ def export_to_json(trees, path="", write_file=True, only_selected=False):
                             sock_data[propname] = sock_parent
                             continue
                         v = getattr(sock, propname)
+                        if isinstance(getattr(sock, propname), bpy.types.bpy_prop_array):
+                            v = tuple(getattr(sock, propname))
                         if not is_jsonable( v ):
                             raise RuntimeError(f"{propname}, {type(v)}")
                         sock_data[propname] = v
