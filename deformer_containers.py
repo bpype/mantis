@@ -276,13 +276,11 @@ class DeformerHook:
         if isinstance(target, Bone) or isinstance(target, PoseBone):
             subtarget = target.name; target = target.id_data
         ob=self.GetxForm().bGetObject()
-        prOrange(self.GetxForm().bGetObject())
         reuse = False
         for m in ob.modifiers:
-            if False and m.type == 'HOOK' and m.object == target and m.subtarget == subtarget:
-                d = m; reuse = True; prOrange("REUSE"); break
+            if  m.type == 'HOOK' and m.object == target and m.subtarget == subtarget:
+                d = m; reuse = True; break
         else:
-            # don't reuse it
             d = ob.modifiers.new(mod_name, type='HOOK')
             if d is None:
                 raise RuntimeError(f"Modifier was not created in node {self} -- the object is invalid.")
@@ -296,10 +294,7 @@ class DeformerHook:
         # now we add the selected vertex to the list, too
         vertices_used.append(self.evaluate_input("Index"))
         d.vertex_indices_set(vertices_used)
-        # props_sockets = {
-        # 'vertex_group'               : ("Blend Vertex Group", ""),
-        # }
-        # evaluate_sockets(self, d, props_sockets)
+        # todo: this should be able to take many indices in the future.
 
 
 class DeformerMorphTarget:
