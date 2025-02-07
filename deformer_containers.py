@@ -12,11 +12,21 @@ def TellClasses():
              
     return [ 
              DeformerArmature,
+             DeformerHook,
              DeformerMorphTarget,
              DeformerMorphTargetDeform,
            ]
 
 
+def trace_xForm_back(nc, socket):
+    from .xForm_containers import xFormGeometryObject
+    from .misc_containers import InputExistingGeometryObject
+    from bpy.types import Object
+    if (trace := trace_single_line(nc, socket)[0] ) :
+        for i in range(len(trace)): # have to look in reverse, actually
+            if ( isinstance(trace[ i ], xFormGeometryObject ) ) or ( isinstance(trace[ i ], InputExistingGeometryObject ) ):
+                return trace[ i ].bGetObject()
+        raise GraphError(wrapRed(f"No other object found for {nc}."))
 
 def default_evaluate_input(nc, input_name):
     # duped from link_containers... should be common?
@@ -89,14 +99,7 @@ class DeformerArmature:
         if socket == "Deformer":
             return GetxForm(self)
         else:
-            from .xForm_containers import xFormGeometryObject
-            from .misc_containers import InputExistingGeometryObject
-            from bpy.types import Object
-            if (trace := trace_single_line(self, socket)[0] ) :
-                for i in range(len(trace)): # have to look in reverse, actually
-                    if ( isinstance(trace[ i ], xFormGeometryObject ) ) or ( isinstance(trace[ i ], InputExistingGeometryObject ) ):
-                        return trace[ i ].bGetObject()
-                raise GraphError(wrapRed(f"No other object found for {self}."))
+            trace_xForm_back(self, socket)
     
     # DUPLICATED FROM xForm_containers::xFormBone 
     # DEDUP HACK HACK HACK HACK HACK
@@ -164,14 +167,11 @@ class DeformerArmature:
                 bpy.ops.object.datalayout_transfer(data_type='VGROUP_WEIGHTS')
                 bpy.ops.object.data_transfer(data_type='VGROUP_WEIGHTS')
             bpy.ops.object.mode_set(mode=original_mode)
-    
+         
     def bFinalize(self, bContext=None):
         prGreen("Executing Armature Deform Node")
         mod_name = self.evaluate_input("Name")
-        try:
-            d = self.GetxForm().bGetObject().modifiers[mod_name]
-        except KeyError:
-            d = self.GetxForm().bGetObject().modifiers.new(mod_name, type='ARMATURE')
+        d = self.GetxForm().bGetObject().modifiers.new(mod_name, type='ARMATURE')
         if d is None:
             raise RuntimeError(f"Modifier was not created in node {self} -- the object is invalid.")
         self.bObject = d
@@ -225,6 +225,81 @@ class DeformerArmature:
         elif skin_method == "COPY_FROM_OBJECT":
             self.initialize_vgroups()
             self.copy_weights()
+
+
+class DeformerHook:
+    '''A node representing a hook deformer'''
+
+    def __init__(self, signature, base_tree):
+        self.base_tree=base_tree
+        self.signature = signature
+        self.inputs = {
+          "Hook Target"    : NodeSocket(is_input = True, name = "Hook Target", node = self,),
+          "Index"          : NodeSocket(is_input = True, name = "Index", node = self),
+          "Deformer"       : NodeSocket(is_input = True, name = "Deformer", node = self),
+        }
+        self.outputs = {
+          "Deformer" : NodeSocket(is_input = False, name = "Deformer", node=self), }
+        self.parameters = {
+          "Hook Target"     : None,
+          "Index"           : None,
+          "Deformer"        : None,
+          "Name"            : None,
+        }
+        # now set up the traverse target...
+        self.inputs["Deformer"].set_traverse_target(self.outputs["Deformer"])
+        self.outputs["Deformer"].set_traverse_target(self.inputs["Deformer"])
+        self.node_type = "LINK"
+        self.hierarchy_connections, self.connections = [], []
+        self.hierarchy_dependencies, self.dependencies = [], []
+        self.prepared = True
+        self.executed = False
+
+    def evaluate_input(self, input_name):
+        return default_evaluate_input(self, input_name)
+
+    def GetxForm(self, socket="Deformer"):
+        if socket == "Deformer":
+            return GetxForm(self)
+        else:
+            trace_xForm_back(self, socket)
+            
+    def bExecute(self, bContext = None,):
+        self.executed = True
+
+    def bFinalize(self, bContext=None):
+        from bpy.types import Bone, PoseBone, Object
+        prGreen(f"Executing Hook Deform Node: {self}")
+        mod_name = self.evaluate_input("Name")
+        target_node = self.evaluate_input('Hook Target')
+        target = target_node.bGetObject(); subtarget = ""
+        if isinstance(target, Bone) or isinstance(target, PoseBone):
+            subtarget = target.name; target = target.id_data
+        ob=self.GetxForm().bGetObject()
+        prOrange(self.GetxForm().bGetObject())
+        reuse = False
+        for m in ob.modifiers:
+            if False and m.type == 'HOOK' and m.object == target and m.subtarget == subtarget:
+                d = m; reuse = True; prOrange("REUSE"); break
+        else:
+            # don't reuse it
+            d = ob.modifiers.new(mod_name, type='HOOK')
+            if d is None:
+                raise RuntimeError(f"Modifier was not created in node {self} -- the object is invalid.")
+        get_target_and_subtarget(self, d, input_name="Hook Target")
+        vertices_used=[]
+        if reuse: # Get the verts in the list... filter out all the unneeded 0's
+            vertices_used = list(d.vertex_indices)
+            include_0 = 0 in vertices_used
+            vertices_used = list(filter(lambda a : a != 0, vertices_used))
+            if include_0: vertices_used.append(0)
+        # now we add the selected vertex to the list, too
+        vertices_used.append(self.evaluate_input("Index"))
+        d.vertex_indices_set(vertices_used)
+        # props_sockets = {
+        # 'vertex_group'               : ("Blend Vertex Group", ""),
+        # }
+        # evaluate_sockets(self, d, props_sockets)
 
 
 class DeformerMorphTarget:
@@ -323,10 +398,7 @@ class DeformerMorphTargetDeform:
 
     def gen_morph_target_modifier(self):
         mod_name = self.evaluate_input("Name")
-        try:
-            m = self.GetxForm().bGetObject().modifiers[mod_name]
-        except KeyError:
-            m = self.GetxForm().bGetObject().modifiers.new(mod_name, type='NODES')
+        m = self.GetxForm().bGetObject().modifiers.new(mod_name, type='NODES')
         self.bObject = m
         # at this point we make the node tree
         from bpy import data

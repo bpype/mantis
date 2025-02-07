@@ -10,6 +10,7 @@ from .utilities import (prRed, prGreen, prPurple, prWhite, prOrange,
 def TellClasses():
     return [
              DeformerArmatureNode,
+             DeformerHook,
              DeformerMorphTargetDeform,
              DeformerMorphTarget,
            ]
@@ -58,6 +59,25 @@ class DeformerArmatureNode(Node, DeformerNode):
         if nc:
             self.inputs["Copy Skin Weights From"].hide = not (nc.evaluate_input("Skinning Method") == "COPY_FROM_OBJECT")
                 
+
+class DeformerHook(Node, DeformerNode):
+    '''A node representing a Hook Deformer'''
+    bl_idname = 'DeformerHook'
+    bl_label = "Hook Deform"
+    bl_icon = 'HOOK'
+    initialized : bpy.props.BoolProperty(default = False)
+
+    def init(self, context):
+        self.inputs.new("DeformerSocket", "Deformer")
+        self.inputs.new('xFormSocket', "Hook Target")
+        self.inputs.new('IntSocket', "Index")
+        # self.inputs.new('StringSocket', "Blend Vertex Group")
+        # self.inputs.new('BooleanSocket', "Invert Vertex Group")
+        self.outputs.new('DeformerSocket', "Deformer")
+        self.initialized = True
+    
+    # def display_update(self, parsed_tree, context):
+
 
 from .utilities import get_socket_maps, relink_socket_map
 

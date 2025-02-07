@@ -335,7 +335,7 @@ def get_parent(node_container, type = 'XFORM'):
     # it is OK to generate a new, "fake" node container for this!
 
 def get_target_and_subtarget(node_container, linkOb, input_name = "Target"):
-    from bpy.types import PoseBone, Object, SplineIKConstraint, ArmatureModifier
+    from bpy.types import PoseBone, Object, SplineIKConstraint, ArmatureModifier, HookModifier
     subtarget = ''; target = node_container.evaluate_input(input_name)
     if target:
         if (isinstance(target.bGetObject(), PoseBone)):
@@ -350,16 +350,16 @@ def get_target_and_subtarget(node_container, linkOb, input_name = "Target"):
             if target and target.type not in ["CURVE"]:
                 raise GraphError(wrapRed("Error: %s requires a Curve input, not %s" %
                                  (node_container, type(target))))
-            # don't get a subtarget
-            linkOb.target = target
-    elif (isinstance(linkOb, ArmatureModifier)):
-        linkOb.object = target
-    elif (input_name == 'Target'): # this is sloppy, but it werks
-        linkOb.target, linkOb.subtarget = target, subtarget
-    elif (input_name == 'Pole Target'):
+            linkOb.target = target# don't get a subtarget
+    if (input_name == 'Pole Target'):
         linkOb.pole_target, linkOb.pole_subtarget = target, subtarget
-    else: # this is really just for Armature Constraint targets...
-        linkOb.target, linkOb.subtarget = target, subtarget
+    else:
+        if hasattr(linkOb, "target"):
+            linkOb.target = target
+        if hasattr(linkOb, "object"):
+            linkOb.object = target
+        if hasattr(linkOb, "subtarget"):
+            linkOb.subtarget = subtarget
 
 
 def setup_custom_props(nc):
