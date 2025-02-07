@@ -90,10 +90,16 @@ def export_to_json(trees, path="", write_file=True, only_selected=False):
 
         tree_info, tree_in_out = {}, {}
         for propname  in dir(tree):
+            # if getattr(tree, propname):
+            #     pass
             if (propname in prop_ignore) or ( callable(getattr(tree, propname)) ):
                 continue
             if not is_jsonable( v := getattr(tree, propname)):
-                raise RuntimeError(f"Not JSON-able: {propname}, type: {type(v)}")
+                try:
+                    tree_info[propname] = tuple(v)
+                except Exception as e:
+                    print (e)
+                    raise RuntimeError(f"Not JSON-able: {propname}, type: {type(v)}")
             tree_info[propname] = v
         tree_info["name"] = tree.name
 
