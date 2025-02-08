@@ -338,6 +338,9 @@ def get_target_and_subtarget(node_container, linkOb, input_name = "Target"):
     from bpy.types import PoseBone, Object, SplineIKConstraint, ArmatureModifier, HookModifier
     subtarget = ''; target = node_container.evaluate_input(input_name)
     if target:
+        if not hasattr(target, "bGetObject"):
+            prRed(f"No {input_name} target found for {linkOb.name} in {node_container} because there is no connected node, or node is wrong type")
+            return 
         if (isinstance(target.bGetObject(), PoseBone)):
             subtarget = target.bGetObject().name
             target = target.bGetParentArmature()
