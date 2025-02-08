@@ -507,7 +507,7 @@ class xFormBone:
             # 'bbone_curveoutz'            : ("BBone Z Curve-Out", pb.bone.bbone_curveoutz),
             # TODO this section should be done with props-socket thing
             b.bbone_handle_use_scale_start = self.evaluate_input("BBone Start Handle Scale")
-            b.bbone_handle_use_scale_start = self.evaluate_input("BBone End Handle Scale")
+            b.bbone_handle_use_scale_end = self.evaluate_input("BBone End Handle Scale")
 
             
         import bpy
