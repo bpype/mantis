@@ -101,6 +101,8 @@ class MantisGroupNodes(Operator):
             n.location -= bb_center
 
         grp_node.location = Vector((all_nodes_bounding_box[0].x+200, all_nodes_bounding_box[0].lerp(all_nodes_bounding_box[1], 0.5).y))
+        from .base_definitions import node_group_update
+        node_group_update(grp_node, force=True)
 
         # for each node in the JSON
         for n in selected_nodes[base_tree.name][2].values():

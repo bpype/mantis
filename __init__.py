@@ -17,7 +17,7 @@ from .utilities import prRed
 
 MANTIS_VERSION_MAJOR=0
 MANTIS_VERSION_MINOR=9
-MANTIS_VERSION_SUB=4
+MANTIS_VERSION_SUB=7
 
 
 classLists = [module.TellClasses() for module in [
@@ -238,7 +238,7 @@ def execute_handler(scene):
 
 @persistent
 def version_update_handler(filename):
-    from .base_definitions import NODES_REMOVED, SOCKETS_REMOVED
+    from .base_definitions import NODES_REMOVED, SOCKETS_REMOVED, SOCKETS_RENAMED, SOCKETS_ADDED
     for node_tree in bpy.data.node_groups:
         if node_tree.bl_idname in ["MantisTree", "SchemaTree"]:
             if (node_tree.mantis_version[0] < MANTIS_VERSION_MAJOR) or \
@@ -261,6 +261,13 @@ def version_update_handler(filename):
                         if (n.bl_idname, socket.identifier) in SOCKETS_REMOVED:
                             print(f"INFO: removing socket {socket.identifier} of node {n.name} of type {n.bl_idname} because it has been deprecated.")
                             n.outputs.remove(socket)
+                    for bl_idname, in_out, socket_type, socket_name, index in SOCKETS_ADDED:
+                        if n.bl_idname != bl_idname:
+                            continue
+                        if in_out == 'INPUT' and n.inputs.get(socket_name) is None:
+                            print(f"INFO: adding socket \"{socket_name}\" of type {socket_type} to node {n.name} of type {n.bl_idname}.")
+                            s = n.inputs.new(socket_type, socket_name)
+                            # n.inputs.move(len(n.inputs), index)
                 
                 
 

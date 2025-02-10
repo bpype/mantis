@@ -286,11 +286,16 @@ class MantisNodeGroup(Node, MantisNode):
     is_updating:BoolProperty(default=False)
     
     def update(self):
+        live_update = self.id_data.do_live_update
         if self.is_updating: # update() can be called from update() and that leads to an infinite loop.
             return           # so we check if an update is currently running.
-        self.is_updating = True
-        node_group_update(self)
-        self.is_updating = False
+        try:
+            self.is_updating = True
+            node_group_update(self)
+            self.is_updating = False
+        finally: # we need to reset this regardless of whether or not the operation succeeds!
+            self.is_updating = False
+            self.id_data.do_live_update = live_update # ensure this remains the same
 
     def draw_buttons(self, context, layout):
         row = layout.row(align=True)
@@ -328,17 +333,21 @@ class SchemaGroup(Node, MantisNode):
         row.operator("mantis.edit_group", text="", icon='NODETREE', emboss=True)
 
     def update(self):
+        live_update = self.id_data.do_live_update
         if self.is_updating: # update() can be called from update() and that leads to an infinite loop.
             return           # so we check if an update is currently running.
         self.is_updating = True
-        node_group_update(self)
-        # reset things if necessary:
-        if self.node_tree:
-            if len(self.inputs) == 0:
-                self.inputs.new("IntSocket", "Schema Length", identifier='Schema Length')
-            if self.inputs[-1].bl_idname != "WildcardSocket":
-                self.inputs.new("WildcardSocket", "", identifier="__extend__")
-        self.is_updating = False
+        try:
+            node_group_update(self)
+            # reset things if necessary:
+            if self.node_tree:
+                if len(self.inputs) == 0:
+                    self.inputs.new("IntSocket", "Schema Length", identifier='Schema Length')
+                if self.inputs[-1].bl_idname != "WildcardSocket":
+                    self.inputs.new("WildcardSocket", "", identifier="__extend__")
+        finally: # we need to reset this regardless of whether or not the operation succeeds!
+            self.is_updating = False
+            self.id_data.do_live_update = live_update # ensure this remains the same
 
 
 
@@ -346,6 +355,8 @@ NODES_REMOVED=["xFormRootNode"]
 SOCKETS_REMOVED=[("UtilityDriverVariable","Transform Channel"),
                  ("xFormRootNode","World Out"),
                  ("UtilitySwitch","xForm")]
+SOCKETS_RENAMED=[]
+SOCKETS_ADDED=[("DeformerMorphTargetDeform", 'INPUT', 'BooleanSocket', "Use Shape Key", 1),]
 
 # replace names with bl_idnames for reading the tree and solving schemas.
 replace_types = ["NodeGroupInput", "NodeGroupOutput", "SchemaIncomingConnection",
