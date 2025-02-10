@@ -46,6 +46,7 @@ class MantisGroupNodes(Operator):
     """Create node-group from selected nodes"""
     bl_idname = "mantis.group_nodes"
     bl_label = "Group Nodes"
+    bl_options = {'REGISTER', 'UNDO'}
 
     @classmethod
     def poll(cls, context):
@@ -137,6 +138,7 @@ class MantisEditGroup(Operator):
     """Edit the group referenced by the active node (or exit the current node-group)"""
     bl_idname = "mantis.edit_group"
     bl_label = "Edit Group"
+    bl_options = {'REGISTER', 'UNDO'}
 
     @classmethod
     def poll(cls, context):
@@ -165,6 +167,7 @@ class ExecuteNodeTree(Operator):
     """Execute this node tree"""
     bl_idname = "mantis.execute_node_tree"
     bl_label = "Execute Node Tree"
+    bl_options = {'REGISTER', 'UNDO'}
 
     @classmethod
     def poll(cls, context):
@@ -207,6 +210,7 @@ class QueryNodeSockets(Operator):
     """Utility Operator for querying the data in a socket"""
     bl_idname = "mantis.query_sockets"
     bl_label = "Query Node Sockets"
+    bl_options = {'REGISTER', 'UNDO'}
 
     @classmethod
     def poll(cls, context):
@@ -225,6 +229,7 @@ class ForceDisplayUpdate(Operator):
     """Utility Operator for querying the data in a socket"""
     bl_idname = "mantis.force_display_update"
     bl_label = "Force Mantis Display Update"
+    bl_options = {'REGISTER', 'UNDO'}
 
     @classmethod
     def poll(cls, context):
@@ -261,6 +266,7 @@ class MantisMuteNode(Operator):
     """Mantis Test Operator"""
     bl_idname = "mantis.mute_node"
     bl_label = "Mute Node"
+    bl_options = {'REGISTER', 'UNDO'}
 
     @classmethod
     def poll(cls, context):
@@ -295,6 +301,7 @@ class AddCustomProperty(bpy.types.Operator):
     """Add Custom Property to xForm Node"""
     bl_idname = "mantis.add_custom_property"
     bl_label = "Add Custom Property"
+    bl_options = {'REGISTER', 'UNDO'}
 
 
     prop_type : bpy.props.EnumProperty(
@@ -379,6 +386,7 @@ class EditCustomProperty(bpy.types.Operator):
     """Edit Custom Property"""
     bl_idname = "mantis.edit_custom_property"
     bl_label = "Edit Custom Property"
+    bl_options = {'REGISTER', 'UNDO'}
 
     def get_existing_custom_properties(self, context):
         return main_get_existing_custom_properties(self, context)
@@ -434,6 +442,7 @@ class RemoveCustomProperty(bpy.types.Operator):
     """Remove a Custom Property from an xForm Node"""
     bl_idname = "mantis.remove_custom_property"
     bl_label = "Remove Custom Property"
+    bl_options = {'REGISTER', 'UNDO'}
 
     def get_existing_custom_properties(self, context):
         return main_get_existing_custom_properties(self, context)
@@ -495,7 +504,7 @@ class FcurveAddKeyframeInput(bpy.types.Operator):
     """Add a keyframe input to the fCurve node"""
     bl_idname = "mantis.fcurve_node_add_kf"
     bl_label = "Add Keyframe"
-    bl_options = {'INTERNAL'}
+    bl_options = {'INTERNAL', 'REGISTER', 'UNDO'}
     
     @classmethod
     def poll(cls, context):
@@ -510,7 +519,7 @@ class FcurveRemoveKeyframeInput(bpy.types.Operator):
     """Remove a keyframe input from the fCurve node"""
     bl_idname = "mantis.fcurve_node_remove_kf"
     bl_label = "Remove Keyframe"
-    bl_options = {'INTERNAL'}
+    bl_options = {'INTERNAL', 'REGISTER', 'UNDO'}
         
     @classmethod
     def poll(cls, context):
@@ -525,7 +534,7 @@ class DriverAddDriverVariableInput(bpy.types.Operator):
     """Add a Driver Variable input to the Driver node"""
     bl_idname = "mantis.driver_node_add_variable"
     bl_label = "Add Driver Variable"
-    bl_options = {'INTERNAL'}
+    bl_options = {'INTERNAL', 'REGISTER', 'UNDO'}
     
     @classmethod
     def poll(cls, context):
@@ -541,7 +550,7 @@ class DriverRemoveDriverVariableInput(bpy.types.Operator):
     """Remove a DriverVariable input from the active Driver node"""
     bl_idname = "mantis.driver_node_remove_variable"
     bl_label = "Remove Driver Variable"
-    bl_options = {'INTERNAL'}
+    bl_options = {'INTERNAL', 'REGISTER', 'UNDO'}
         
     @classmethod
     def poll(cls, context):
@@ -556,7 +565,7 @@ class LinkArmatureAddTargetInput(bpy.types.Operator):
     """Add a Driver Variable input to the Driver node"""
     bl_idname = "mantis.link_armature_node_add_target"
     bl_label = "Add Target"
-    bl_options = {'INTERNAL'}
+    bl_options = {'INTERNAL', 'REGISTER', 'UNDO'}
     
     @classmethod
     def poll(cls, context):
@@ -573,7 +582,7 @@ class LinkArmatureRemoveTargetInput(bpy.types.Operator):
     """Remove a DriverVariable input from the active Driver node"""
     bl_idname = "mantis.link_armature_node_remove_target"
     bl_label = "Remove Target"
-    bl_options = {'INTERNAL'}
+    bl_options = {'INTERNAL', 'REGISTER', 'UNDO'}
         
     @classmethod
     def poll(cls, context):
