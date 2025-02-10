@@ -122,7 +122,8 @@ class DeformerMorphTargetDeform(Node, DeformerNode):
 
     def init(self, context):
         self.id_data.do_live_update = False
-        self.inputs.new('DeformerSocket', 'Previous Deformer', )
+        self.inputs.new('DeformerSocket', 'Deformer', )
+        self.inputs.new('BooleanSocket', 'Use Shape Key', )
         self.inputs.new('WildcardSocket', '', identifier='__extend__')
         self.outputs.new('DeformerSocket', "Deformer")
         self.update()
@@ -147,7 +148,8 @@ class DeformerMorphTargetDeform(Node, DeformerNode):
         if self.inputs[-1].is_linked and self.inputs[-1].bl_idname == 'WildcardSocket':
             self.num_targets+=1
         self.inputs.clear()
-        self.inputs.new('DeformerSocket', 'Previous Deformer', )
+        self.inputs.new('DeformerSocket', 'Deformer', )
+        self.inputs.new('BooleanSocket', 'Use Shape Key', )
         # have to do this manually to avoid making things harder elsewhere
         # input_map
         for i in range(self.num_targets):
@@ -155,9 +157,19 @@ class DeformerMorphTargetDeform(Node, DeformerNode):
             self.inputs.new("FloatSocket", "Value."+str(i).zfill(3))
         # if self.num_targets > 0:
         simple_do_relink(self, input_map, in_out='INPUT')
-        if len(self.inputs)<1 or self.inputs[-1].bl_idname not in ["WildcardSocket"]:
+        if len(self.inputs)<2 or self.inputs[-1].bl_idname not in ["WildcardSocket"]:
             self.inputs.new('WildcardSocket', '', identifier='__extend__')
         self.initialized = True
+    
+    def display_update(self, parsed_tree, context):
+        if self.inputs["Deformer"].is_linked:
+            if self.inputs["Deformer"].links[0].from_node.bl_idname != self.bl_idname:
+                self.inputs["Use Shape Key"].default_value = False
+                self.inputs["Use Shape Key"].hide = True
+            elif self.inputs["Deformer"].links[0].from_node.inputs["Use Shape Key"].default_value == False:
+                self.inputs["Use Shape Key"].default_value = False
+                self.inputs["Use Shape Key"].hide = True
+
 
 # TODO: there is no reason for this to be a separate node!
 class DeformerMorphTarget(Node, DeformerNode):

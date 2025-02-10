@@ -338,14 +338,13 @@ class DeformerMorphTarget:
 
     def bExecute(self, bContext = None,):
         prGreen("Executing Morph Target Node")
-        name = ''
 
         ob = None; relative = None
+        # do NOT check if the object exists here. Just let the next node deal with that.
         try:
             ob = self.GetxForm().bGetObject().name 
         except Exception as e: # this will and should throw an error if it fails
-            prRed(f"Execution failed at {self}: no object found for morph target.")
-            raise e
+            ob = self.GetxForm().evaluate_input("Name")
         if self.inputs["Relative to"].is_linked:
             try:
                 relative = self.GetxForm("Relative to").bGetObject().name
@@ -358,6 +357,7 @@ class DeformerMorphTarget:
         mt={"object":ob, "vertex_group":vg, "relative_shape":relative}
 
         self.parameters["Morph Target"] = mt
+        self.parameters["Name"] = ob # this is redundant but it's OK since accessing the mt is tedious
         self.executed = True
 
 
@@ -370,12 +370,15 @@ class DeformerMorphTargetDeform:
         self.signature = signature
         self.inputs = {
           "Deformer"            : NodeSocket(is_input = True, name = "Deformer", node = self),
+          "Use Shape Key"       : NodeSocket(is_input = True, name = "Use Shape Key", node = self),
         }
         self.outputs = {
           "Deformer" : NodeSocket(is_input = False, name = "Deformer", node=self), }
         self.parameters = {
           "Name"                : None,
-          "Deformer"            : None,}
+          "Deformer"            : None,
+          "Deformer"            : None,
+          "Use Shape Key"       : None,}
         # now set up the traverse target...
         self.inputs["Deformer"].set_traverse_target(self.outputs["Deformer"])
         self.outputs["Deformer"].set_traverse_target(self.inputs["Deformer"])
@@ -390,12 +393,25 @@ class DeformerMorphTargetDeform:
     def GetxForm(self):
         return GetxForm(self)
     
+    # bpy.data.node_groups["Morph Deform.045"].nodes["Named Attribute.020"].data_type = 'FLOAT_VECTOR'
+    # bpy.context.object.add_rest_position_attribute = True
 
-    def gen_morph_target_modifier(self):
+
+    def gen_morph_target_modifier(self, context):
+        # first let's see if this is a no-op
+        targets = []
+        for k,v in self.inputs.items():
+            if "Target" in k:
+                targets.append(v)
+        if not targets:
+            return # nothing to do here.
+        
         mod_name = self.evaluate_input("Name")
-        m = self.GetxForm().bGetObject().modifiers.new(mod_name, type='NODES')
+        self_ob = self.GetxForm().bGetObject()
+        m = self_ob.modifiers.new(mod_name, type='NODES')
         self.bObject = m
         # at this point we make the node tree
+        self_ob.add_rest_position_attribute = True
         from bpy import data
         ng = data.node_groups.new(mod_name, "GeometryNodeTree")
         m.node_group = ng
@@ -406,19 +422,23 @@ class DeformerMorphTargetDeform:
         # TODO CLEANUP here
         if (position := ng.nodes.get("Position")) is None: position = ng.nodes.new("GeometryNodeInputPosition")
         if (index := ng.nodes.get("Index")) is None: index = ng.nodes.new("GeometryNodeInputIndex")
-        rest_position = position
+        rest_position = ng.nodes.new("GeometryNodeInputNamedAttribute")
+        rest_position.inputs["Name"].default_value="rest_position"
+        rest_position.data_type = 'FLOAT_VECTOR'
+        # rest_position = position
         add_these = []
 
         props_sockets={}
         object_map = {}
 
-        targets = []
-        for k,v in self.inputs.items():
-            if "Target" in k:
-                targets.append(v)
         for i, t in enumerate(targets):
             mt_node = t.links[0].from_node
-            mt_name = mt_node.GetxForm().bGetObject().name
+            mt_ob = mt_node.GetxForm().bGetObject()
+            if mt_ob is None: # create it
+                mt_ob = data.objects.new(mt_node.evaluate_input("Name"), data.meshes.new_from_object(self_ob))
+                context.collection.objects.link(mt_ob)
+                prOrange(f"WARN: no object found for f{mt_node}; creating duplicate of current object ")
+            mt_name = mt_ob.name
             vg = mt_node.parameters["Morph Target"]["vertex_group"]
             if vg: mt_name = mt_name+"."+vg
             try:
@@ -448,8 +468,8 @@ class DeformerMorphTargetDeform:
                 ng.links.new(input=ob_node1.outputs["Geometry"], output=sample_index1.inputs["Geometry"])
                 ng.links.new(input=sample_index1.outputs["Value"], output=subtract.inputs[1])
             else:
-                # ng.links.new(input=rest_position.outputs["Attribute"], output=subtract.inputs[1])
-                ng.links.new(input=rest_position.outputs["Position"], output=subtract.inputs[1])
+                # ng.links.new(input=rest_position.outputs["Attribute"], output=subtract.inputs[1])                
+                ng.links.new(input=rest_position.outputs[0], output=subtract.inputs[1])
 
             ng.links.new(input=subtract.outputs["Vector"], output=scale1.inputs[0])
 
@@ -467,17 +487,22 @@ class DeformerMorphTargetDeform:
             props_sockets["Socket_"+str((i+1)*2+1)]= ("Value."+str(i).zfill(3), 1.0)
         
         set_position = ng.nodes.new("GeometryNodeSetPosition")
+        bake = ng.nodes.new("GeometryNodeBake")
         ng.links.new(inp.outputs["Geometry"], output=set_position.inputs["Geometry"])
-        ng.links.new(set_position.outputs["Geometry"], output=out.inputs["Geometry"])
+        ng.links.new(set_position.outputs["Geometry"], output=bake.inputs[0])
+        ng.links.new(bake.outputs[0], output=out.inputs[0])
 
         
-        prev_node = rest_position
+        # prev_node = ng.nodes.new("ShaderNodeVectorMath"); prev_node.operation="SUBTRACT"
+        # ng.links.new(position.outputs[0], output=prev_node.inputs[0])
+        # ng.links.new(rest_position.outputs[0], output=prev_node.inputs[1])
+        prev_node = ng.nodes.new("FunctionNodeInputVector")
         for i, node in enumerate(add_these):
             add = ng.nodes.new("ShaderNodeVectorMath"); add.operation="ADD"
             ng.links.new(prev_node.outputs[0], output=add.inputs[0])
             ng.links.new(node.outputs[0], output=add.inputs[1])
             prev_node = add
-        ng.links.new(add.outputs[0], output=set_position.inputs["Position"])
+        ng.links.new(add.outputs[0], output=set_position.inputs["Offset"])
         
         from .utilities import SugiyamaGraph
         SugiyamaGraph(ng, 12)
@@ -488,89 +513,102 @@ class DeformerMorphTargetDeform:
             m[socket]=ob
         finish_drivers(self)
 
-    def gen_shape_key(self): # TODO: make this a feature of the node definition that appears only when there are no prior deformers - and shows a warning!
+    def gen_shape_key(self, context): # TODO: make this a feature of the node definition that appears only when there are no prior deformers - and shows a warning!
         # TODO: the below works well, but it is quite slow. It does not seem to have better performence. Its only advantage is export to FBX.
         # there are a number of things I need to fix here
         #   - reuse shape keys if possible
         #   - figure out how to make this a lot faster
         #   - edit the xForm stuff to delete drivers from shape key ID's, since they belong to the Key, not the Object.
-        from time import time
-        start_time = time()
-        from bpy import data
-        ob = self.GetxForm().bGetObject()
-        m = data.meshes.new_from_object(ob, preserve_all_data_layers=True)
-        ob.data = m
-        ob.add_rest_position_attribute = True
-        ob.shape_key_clear()
-
+        # first check if we need to do anythign
         targets = []
         for k,v in self.inputs.items():
             if "Target" in k:
                 targets.append(v)
-        for i, t in enumerate(targets):
-            mt_node = t.links[0].from_node
-            mt_name = "Morph Target."+str(i).zfill(3)
+        if not targets:
+            return # nothing to do here
+        from time import time
+        start_time = time()
+        from bpy import data
+        xf = self.GetxForm()
+        ob = xf.bGetObject()
+        dg = context.view_layer.depsgraph
+        dg.update()
+        if xf.has_shape_keys == False:
+            m = data.meshes.new_from_object(ob, preserve_all_data_layers=True, depsgraph=dg)
+            ob.data = m
+            ob.add_rest_position_attribute = True
+            ob.shape_key_clear()
+            ob.shape_key_add(name='Basis', from_mix=False)
+        else:
+            m = ob.data
+        xf.has_shape_keys = True
         
         # using the built-in shapekey feature is actually a lot harder in terms of programming because I need...
             # min/max, as it is just not a feature of the GN version
             # to carry info from the morph target node regarding relative shapes and vertex groups and all that
             # the drivers may be more difficult to apply, too.
             # hafta make new geometry for the object and add shape keys and all that
-            # the benefit to all this being maybe better performence and exporting to game engines via .fbx
+            # the benefit to all this being exporting to game engines via .fbx
 
         # first make a basis shape key
-        ob.shape_key_add(name='Basis', from_mix=False)
         keys={}
         props_sockets={}
         for i, t in enumerate(targets):
-            mt_node = t.links[0].from_node
-            # mt_name = "Morph Target."+str(i).zfill(3)
-            sk_ob = mt_node.GetxForm().bGetObject()
+            mt_node = t.links[0].from_node; sk_ob = mt_node.GetxForm().bGetObject()
+            if sk_ob is None:
+                sk_ob = data.objects.new(mt_node.evaluate_input("Name"), data.meshes.new_from_object(ob))
+                context.collection.objects.link(sk_ob)
+                prOrange(f"WARN: no object found for f{mt_node}; creating duplicate of current object ")
+            sk_ob = dg.id_eval_get(sk_ob)
             mt_name = sk_ob.name
             vg = mt_node.parameters["Morph Target"]["vertex_group"]
             if vg: mt_name = mt_name+"."+vg
             
             sk = ob.shape_key_add(name=mt_name, from_mix=False)
             # the shapekey data is absolute point data for each vertex, in order, very simple
+
+            # SERIOUSLY IMPORTANT:
+               # use the current position of the vertex AFTER SHAPE KEYS AND DEFORMERS
+               # easiest way to do it is to eval the depsgraph
+               # TODO: try and get it without depsgraph update, since that may be (very) slow
+            sk_m = sk_ob.data#data.meshes.new_from_object(sk_ob, preserve_all_data_layers=True, depsgraph=dg)
             for j in range(len(m.vertices)):
-                sk.data[j].co = sk_ob.data.vertices[j].co # assume they match
+                sk.data[j].co = sk_m.vertices[j].co # assume they match
+            # data.meshes.remove(sk_m)
             sk.vertex_group = vg
             sk.slider_min = -10
             sk.slider_max = 10
             keys[mt_name]=sk
             props_sockets[mt_name]= ("Value."+str(i).zfill(3), 1.0)
         for i, t in enumerate(targets):
-            mt_node = t.links[0].from_node
-            # mt_name = "Morph Target."+str(i).zfill(3)
-            sk_ob = mt_node.GetxForm().bGetObject()
-            mt_name = sk_ob.name
-            vg = mt_node.parameters["Morph Target"]["vertex_group"]
-            if vg: mt_name = mt_name+"."+vg
+            mt_node = t.links[0].from_node; sk_ob = mt_node.GetxForm().bGetObject()
+            if sk_ob is None: continue
             if rel := mt_node.parameters["Morph Target"]["relative_shape"]:
                 sk = keys.get(mt_name)
                 sk.relative_key = keys.get(rel)
         
-        # for k,v in props_sockets.items():
-        #     print(wrapWhite(k), wrapOrange(v), wrapRed(self.evaluate_input(v)))
         self.bObject = sk.id_data
         evaluate_sockets(self, sk.id_data, props_sockets)
         finish_drivers(self)
         prWhite(f"Initializing morph target took {time() -start_time} seconds")
-        # then we need to get all the data from the morph targets, pull all the relative shapes first and add them, vertex groups and properties
-        # next we add all the shape keys that are left, and their vertex groups
-        # set the slider ranges to -10 and 10
-        # then set up the drivers
         
 
     def bFinalize(self, bContext=None):
-        # let's find out if there is a prior deformer.
-        # if not, then there should be an option to use plain 'ol shape keys
-        # GN is always desirable as an option though because it can be baked.
-        if self.inputs["Deformer"].is_linked and True:
-            # for now we won't do Blender Shape Keys
-            self.gen_morph_target_modifier()
-        else: # TODO: give the user the option to do this via a node property.
-            self.gen_shape_key()
+        prGreen(f"Executing Morph Deform node {self}")
+        # if there is a not a prior deformer then there should be an option to use plain 'ol shape keys
+        # GN is always desirable as an option though because it can be baked & many other reasons
+        use_shape_keys = self.evaluate_input("Use Shape Key")
+        if use_shape_keys: # check and see if we can.
+            if (links := self.inputs["Deformer"].links):
+                if not links[0].from_node.inputs.get("Use Shape Key"):
+                    use_shape_keys = False
+                elif links[0].from_node.parameters.get("Use Shape Key") == False:
+                    use_shape_keys = False
+        self.parameters["Use Shape Key"] = use_shape_keys
+        if use_shape_keys:
+            self.gen_shape_key(bContext)
+        else:
+            self.gen_morph_target_modifier(bContext)
 
 
         

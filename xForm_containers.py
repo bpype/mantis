@@ -766,6 +766,7 @@ class xFormGeometryObject:
         self.bObject = None
         self.prepared = False
         self.executed = False
+        self.has_shape_keys = False
         self.drivers = {}
 
     def bSetParent(self):
@@ -835,6 +836,7 @@ class xFormGeometryObject:
         self.prepared = True
 
     def bExecute(self, bContext = None,):
+        self.has_shape_keys = False
         # putting this in bExecute simply prevents it from being run more than once.
         # maybe I should do that with the rest of bPrepare, too.
         props_sockets = {
