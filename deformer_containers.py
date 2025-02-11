@@ -599,11 +599,12 @@ class DeformerMorphTargetDeform:
         # GN is always desirable as an option though because it can be baked & many other reasons
         use_shape_keys = self.evaluate_input("Use Shape Key")
         if use_shape_keys: # check and see if we can.
-            if (links := self.inputs["Deformer"].links):
-                if not links[0].from_node.inputs.get("Use Shape Key"):
-                    use_shape_keys = False
-                elif links[0].from_node.parameters.get("Use Shape Key") == False:
-                    use_shape_keys = False
+            if self.inputs.get("Deformer"): # I guess this isn't available in some node group contexts... bad. FIXME
+                if (links := self.inputs["Deformer"].links):
+                    if not links[0].from_node.parameters.get("Use Shape Key"):
+                        use_shape_keys = False
+                    elif links[0].from_node.parameters.get("Use Shape Key") == False:
+                        use_shape_keys = False
         self.parameters["Use Shape Key"] = use_shape_keys
         if use_shape_keys:
             self.gen_shape_key(bContext)
