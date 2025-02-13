@@ -24,7 +24,8 @@ def TellClasses():
              # InputGeometryNode,
              InputExistingGeometryObjectNode,
              InputExistingGeometryDataNode,
-             
+             UtilityGeometryOfXForm,
+             UtilityNameOfXForm,
             #  ComposeMatrixNode,
              MetaRigMatrixNode,
              UtilityMatrixFromCurve,
@@ -589,6 +590,31 @@ class InputExistingGeometryDataNode(Node, MantisNode):
     def init(self, context):
         self.inputs.new("StringSocket", "Name")
         self.outputs.new("GeometrySocket", "Geometry")
+        self.initialized = True
+
+class UtilityGeometryOfXForm(Node, MantisNode):
+    """Retrieves a mesh or curve datablock from an xForm."""
+    bl_idname = "UtilityGeometryOfXForm"
+    bl_label = "Geometry of xForm"
+    bl_icon = "NODE"
+    initialized : bpy.props.BoolProperty(default = False)
+    
+    def init(self, context):
+        self.inputs.new("xFormSocket", "xForm")
+        self.outputs.new("GeometrySocket", "Geometry")
+        self.initialized = True
+
+
+class UtilityNameOfXForm(Node, MantisNode):
+    """Retrieves the name of a xForm."""
+    bl_idname = "UtilityNameOfXForm"
+    bl_label = "Name of xForm"
+    bl_icon = "NODE"
+    initialized : bpy.props.BoolProperty(default = False)
+    
+    def init(self, context):
+        self.inputs.new("xFormSocket", "xForm")
+        self.outputs.new("StringSocket", "Name")
         self.initialized = True
 
 class UtilityGetBoneLength(Node, MantisNode):

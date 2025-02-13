@@ -20,6 +20,8 @@ def TellClasses():
              InputMatrix,
              InputExistingGeometryObject,
              InputExistingGeometryData,
+             UtilityGeometryOfXForm,
+             UtilityNameOfXForm,
              UtilityPointFromCurve,
              UtilityMatrixFromCurve,
              UtilityMatricesFromCurve,
@@ -622,10 +624,11 @@ class UtilityDriverVariable:
         
     def evaluate_input(self, input_name):
         if input_name == 'Property':
-            if self.inputs['Property'].is_linked:
-            # get the name instead...
-                trace = trace_single_line(self, input_name)
-                return trace[1].name # the name of the socket
+            if self.inputs.get('Property'):
+                if self.inputs['Property'].is_linked:
+                # get the name instead...
+                    trace = trace_single_line(self, input_name)
+                    return trace[1].name # the name of the socket
             return self.parameters["Property"]
         return evaluate_input(self, input_name)
         
@@ -1170,7 +1173,73 @@ class InputExistingGeometryData:
         if bObject is None:
             raise RuntimeError(f"Could not find a mesh or curve datablock named \"{self.evaluate_input('Name')}\" for node {self}")
         return bObject
-        
+
+class UtilityGeometryOfXForm:
+    '''A node representing existing object data'''
+    def __init__(self, signature, base_tree):
+        self.base_tree=base_tree
+        self.executed = False
+        self.signature = signature
+        self.inputs = {
+          "xForm"   : NodeSocket(is_input = True, name = "xForm", node = self),
+        }
+        self.outputs = {
+          "Geometry" : NodeSocket(is_input = False, name = "Geometry", node=self),
+        }
+        self.parameters = {
+
+          "xForm":None, 
+          "Geometry":None, 
+        }
+        self.node_type = "UTILITY"
+        self.hierarchy_connections, self.connections = [], []
+        self.hierarchy_dependencies,self.dependencies = [], []
+        self.prepared, self.executed = True, True
+
+    # mode for interface consistency
+    def bGetObject(self, mode=''):
+        if not (self.inputs.get('xForm') and self.inputs['xForm'].links):
+            prOrange(f"WARN: Cannot retrieve data from {self}, there is no xForm node connected.")
+            return None
+        xf = self.inputs["xForm"].links[0].from_node
+        if xf.node_type == 'XFORM':
+            xf_ob = xf.bGetObject()
+            if xf_ob.type in ['MESH', 'CURVE']:
+                return xf_ob.data
+        prOrange(f"WARN: Cannot retrieve data from {self}, the connected xForm is not a mesh or curve.")
+        return None
+
+
+class UtilityNameOfXForm:
+    '''A node representing existing object data'''
+    def __init__(self, signature, base_tree):
+        self.base_tree=base_tree
+        self.executed = False
+        self.signature = signature
+        self.inputs = {
+          "xForm"   : NodeSocket(is_input = True, name = "xForm", node = self),
+        }
+        self.outputs = {
+          "Name" : NodeSocket(is_input = False, name = "Name", node=self),
+        }
+        self.parameters = {
+
+          "xForm":None, 
+          "Name":'', 
+        }
+        self.node_type = "UTILITY"
+        self.hierarchy_connections, self.connections = [], []
+        self.hierarchy_dependencies,self.dependencies = [], []
+        self.prepared, self.executed = False, False
+
+    # mode for interface consistency
+    def bPrepare(self, bContext = None,):
+        if not (self.inputs.get('xForm') and self.inputs['xForm'].links):
+            prOrange(f"WARN: Cannot retrieve data from {self}, there is no xForm node connected.")
+            return ''
+        xf = self.inputs["xForm"].links[0].from_node
+        self.parameters["Name"] = xf.evaluate_input('Name')
+        self.prepared, self.executed = True, True
 
 class UtilityGetBoneLength:
     '''A node to get the length of a bone matrix'''
