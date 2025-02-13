@@ -124,6 +124,8 @@ class DeformerMorphTargetDeform(Node, DeformerNode):
         self.id_data.do_live_update = False
         self.inputs.new('DeformerSocket', 'Deformer', )
         self.inputs.new('BooleanSocket', 'Use Shape Key', )
+        s = self.inputs.new('BooleanSocket', 'Use Offset', )
+        s.default_value = True
         self.inputs.new('WildcardSocket', '', identifier='__extend__')
         self.outputs.new('DeformerSocket', "Deformer")
         self.update()
@@ -132,6 +134,7 @@ class DeformerMorphTargetDeform(Node, DeformerNode):
         if self.id_data.is_executing:
             return # so that we don't update it while saving/loading the tree
         self.initialized = False
+        # use_offset = self.inputs["Use Offset"].default_value
         input_map = get_socket_maps(self)[0]
         # checc to see if targets have been removed... then modify the input map if necessary
         targets_deleted = 0 # this should usually be either 0 or 1
@@ -150,6 +153,8 @@ class DeformerMorphTargetDeform(Node, DeformerNode):
         self.inputs.clear()
         self.inputs.new('DeformerSocket', 'Deformer', )
         self.inputs.new('BooleanSocket', 'Use Shape Key', )
+        self.inputs.new('BooleanSocket', 'Use Offset', )
+        # s.default_value = use_offset
         # have to do this manually to avoid making things harder elsewhere
         # input_map
         for i in range(self.num_targets):
@@ -157,18 +162,21 @@ class DeformerMorphTargetDeform(Node, DeformerNode):
             self.inputs.new("FloatSocket", "Value."+str(i).zfill(3))
         # if self.num_targets > 0:
         simple_do_relink(self, input_map, in_out='INPUT')
-        if len(self.inputs)<2 or self.inputs[-1].bl_idname not in ["WildcardSocket"]:
+        if self.inputs[-1].bl_idname not in ["WildcardSocket"]:
             self.inputs.new('WildcardSocket', '', identifier='__extend__')
         self.initialized = True
     
     def display_update(self, parsed_tree, context):
         if self.inputs["Deformer"].is_linked:
-            if self.inputs["Deformer"].links[0].from_node.bl_idname != self.bl_idname:
+            if self.inputs["Deformer"].links[0].from_node.bl_idname not in [self.bl_idname, "NodeGroupInput"]:
                 self.inputs["Use Shape Key"].default_value = False
                 self.inputs["Use Shape Key"].hide = True
             elif self.inputs["Deformer"].links[0].from_node.inputs["Use Shape Key"].default_value == False:
                 self.inputs["Use Shape Key"].default_value = False
                 self.inputs["Use Shape Key"].hide = True
+        if self.inputs["Use Offset"] == False:
+                self.inputs["Use Shape Key"].hide = True
+                self.inputs["Use Shape Key"].default_value = False
 
 
 # TODO: there is no reason for this to be a separate node!

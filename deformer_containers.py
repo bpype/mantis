@@ -207,18 +207,22 @@ class DeformerArmature:
                                   'active_pose_bone':deform_bones[0],
                                   'selected_pose_bones':deform_bones,}
             #
-            with bContext.temp_override(**{'active_object':armOb}):
-                bpy.ops.object.mode_set(mode='POSE')
-                bpy.ops.pose.select_all(action='SELECT')
+            # with bContext.temp_override(**{'active_object':armOb}):
+            #     bpy.ops.object.mode_set(mode='POSE')
+            #     bpy.ops.pose.select_all(action='SELECT')
+            for b in armOb.data.bones:
+                b.select = True
             with bContext.temp_override(**context_override):
                 bpy.ops.paint.weight_paint_toggle()
                 bpy.ops.paint.weight_from_bones(type='AUTOMATIC')
                 bpy.ops.paint.weight_paint_toggle()
+            for b in armOb.data.bones:
+                b.select = False
                 #
-            with bContext.temp_override(**{'active_object':armOb}):
-                bpy.ops.object.mode_set(mode='POSE')
-                bpy.ops.pose.select_all(action='DESELECT') 
-                bpy.ops.object.mode_set(mode='OBJECT')
+            # with bContext.temp_override(**{'active_object':armOb}):
+            #     bpy.ops.object.mode_set(mode='POSE')
+            #     bpy.ops.pose.select_all(action='DESELECT') 
+            #     bpy.ops.object.mode_set(mode='OBJECT')
             # TODO: modify Blender to make this available as a Python API function.
         elif skin_method == "EXISTING_GROUPS":
             pass
@@ -371,6 +375,7 @@ class DeformerMorphTargetDeform:
         self.inputs = {
           "Deformer"            : NodeSocket(is_input = True, name = "Deformer", node = self),
           "Use Shape Key"       : NodeSocket(is_input = True, name = "Use Shape Key", node = self),
+          "Use Offset"          : NodeSocket(is_input = True, name = "Use Offset", node = self),
         }
         self.outputs = {
           "Deformer" : NodeSocket(is_input = False, name = "Deformer", node=self), }
@@ -378,7 +383,9 @@ class DeformerMorphTargetDeform:
           "Name"                : None,
           "Deformer"            : None,
           "Deformer"            : None,
-          "Use Shape Key"       : None,}
+          "Use Shape Key"       : None,
+          "Use Offset"          : None,
+          }
         # now set up the traverse target...
         self.inputs["Deformer"].set_traverse_target(self.outputs["Deformer"])
         self.outputs["Deformer"].set_traverse_target(self.inputs["Deformer"])
@@ -425,7 +432,8 @@ class DeformerMorphTargetDeform:
         rest_position = ng.nodes.new("GeometryNodeInputNamedAttribute")
         rest_position.inputs["Name"].default_value="rest_position"
         rest_position.data_type = 'FLOAT_VECTOR'
-        # rest_position = position
+        if self.evaluate_input("Use Offset") == False:
+            rest_position = position
         add_these = []
 
         props_sockets={}
@@ -496,13 +504,20 @@ class DeformerMorphTargetDeform:
         # prev_node = ng.nodes.new("ShaderNodeVectorMath"); prev_node.operation="SUBTRACT"
         # ng.links.new(position.outputs[0], output=prev_node.inputs[0])
         # ng.links.new(rest_position.outputs[0], output=prev_node.inputs[1])
-        prev_node = ng.nodes.new("FunctionNodeInputVector")
+
+        if self.evaluate_input("Use Offset") == True:
+            prev_node = ng.nodes.new("FunctionNodeInputVector")
+        else:
+            prev_node = position
         for i, node in enumerate(add_these):
             add = ng.nodes.new("ShaderNodeVectorMath"); add.operation="ADD"
             ng.links.new(prev_node.outputs[0], output=add.inputs[0])
             ng.links.new(node.outputs[0], output=add.inputs[1])
             prev_node = add
-        ng.links.new(add.outputs[0], output=set_position.inputs["Offset"])
+        if self.evaluate_input("Use Offset") == True:
+            ng.links.new(add.outputs[0], output=set_position.inputs["Offset"])
+        else:
+            ng.links.new(add.outputs[0], output=set_position.inputs["Position"])
         
         from .utilities import SugiyamaGraph
         SugiyamaGraph(ng, 12)
