@@ -431,7 +431,6 @@ def get_all_dependencies(nc):
     from .base_definitions import GraphError
     """ Given a NC, find all dependencies for the NC as a dict of nc.signature:nc"""
     nodes = []
-    can_descend = True
     check_nodes = [nc]
     while (len(check_nodes) > 0):
         node = check_nodes.pop()
@@ -439,6 +438,17 @@ def get_all_dependencies(nc):
         for new_node in connected_nodes:
             if new_node in nodes: raise GraphError() 
             nodes.append(new_node)
+    return nodes
+                
+def get_all_nodes_of_type(base_tree, bl_idname):
+    nodes = []
+    check_nodes = list(base_tree.nodes)
+    while (len(check_nodes) > 0):
+        node = check_nodes.pop()
+        if node.bl_idname in bl_idname:
+            nodes.append(node)
+        if hasattr(node, "node_tree"):
+            check_nodes.extend(list(node.node_tree.nodes))
     return nodes
             
 ##################################################################################################

@@ -158,9 +158,26 @@ class MantisEditGroup(Operator):
                 return {"FINISHED"}
         elif len(path) > 1:
             path.pop()
-            path[0].node_tree.display_update(context)
             # get the active node in the current path
-            path[len(path)-1].node_tree.nodes.active.update() # call update to force the node group to check if its tree has changed
+            active = path[len(path)-1].node_tree.nodes.active
+            from .base_definitions import node_group_update
+            active.is_updating = True
+            node_group_update(active, force = True)
+            active.is_updating = False
+            base_tree = path[0].node_tree
+            base_tree.do_live_update = False
+            # call update to force the node group to check if its tree has changed
+            # now we need to loop through the tree and update all node groups of this type.
+            from .utilities import get_all_nodes_of_type
+            for g in get_all_nodes_of_type(base_tree, "MantisNodeGroup"):
+                if g.node_tree == active.node_tree:
+                    g.is_updating = False
+                    node_group_update(g, force = True)
+                    g.is_updating = True
+            path[0].node_tree.display_update(context)
+            base_tree.do_live_update = True
+            return {"FINISHED"}
+
         return {"CANCELLED"}
 
 class ExecuteNodeTree(Operator):
