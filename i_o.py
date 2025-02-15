@@ -498,7 +498,7 @@ def do_import(data, context):
                 continue
             n = tree.nodes.new(bl_idname)
             if bl_idname in ["DeformerMorphTargetDeform"]:
-                n.inputs.remove(n.inputs[1]) # get rid of the wildcard
+                n.inputs.remove(n.inputs[-1]) # get rid of the wildcard
 
             if n.bl_idname in [ "SchemaArrayInput",
                                 "SchemaArrayInputGet",
