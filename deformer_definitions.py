@@ -109,8 +109,6 @@ def simple_do_relink(node, map, in_out='INPUT'):
 # Dynamic
 #   - each Morph Target gets a MT input
 #   - each Morph Target gets an influence input
-# this node creates a GN deformer that ADDS the position deltas (from the base position)
-# Value has to scale the delta
 class DeformerMorphTargetDeform(Node, DeformerNode):
     '''A node representing a Morph Target Deformer'''
     bl_idname = 'DeformerMorphTargetDeform'
@@ -128,11 +126,9 @@ class DeformerMorphTargetDeform(Node, DeformerNode):
         s.default_value = True
         self.inputs.new('WildcardSocket', '', identifier='__extend__')
         self.outputs.new('DeformerSocket', "Deformer")
-        self.update()
+        self.update_morph_deformer()
 
-    def update(self):
-        if self.id_data.is_executing:
-            return # so that we don't update it while saving/loading the tree
+    def update_morph_deformer(self, force=False):
         self.initialized = False
         # use_offset = self.inputs["Use Offset"].default_value
         input_map = get_socket_maps(self)[0]
@@ -154,17 +150,17 @@ class DeformerMorphTargetDeform(Node, DeformerNode):
         self.inputs.new('DeformerSocket', 'Deformer', )
         self.inputs.new('BooleanSocket', 'Use Shape Key', )
         self.inputs.new('BooleanSocket', 'Use Offset', )
-        # s.default_value = use_offset
-        # have to do this manually to avoid making things harder elsewhere
-        # input_map
         for i in range(self.num_targets):
             self.inputs.new("MorphTargetSocket", "Target."+str(i).zfill(3))
             self.inputs.new("FloatSocket", "Value."+str(i).zfill(3))
-        # if self.num_targets > 0:
         simple_do_relink(self, input_map, in_out='INPUT')
         if self.inputs[-1].bl_idname not in ["WildcardSocket"]:
             self.inputs.new('WildcardSocket', '', identifier='__extend__')
         self.initialized = True
+
+    def update(self):
+        if self.id_data.is_executing:
+            return # so that we don't update it while saving/loading the tree
     
     def display_update(self, parsed_tree, context):
         if self.inputs["Deformer"].is_linked:
