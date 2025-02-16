@@ -14,6 +14,7 @@ def TellClasses():
         xFormBoneNode,
         xFormArmatureNode,
         xFormGeometryObjectNode,
+        xFormObjectInstance,
         ]
 
 def default_traverse(self, socket):
@@ -329,6 +330,30 @@ class xFormGeometryObjectNode(Node, xFormNode):
     def init(self, context):
         self.inputs.new('StringSocket', "Name")
         self.inputs.new('GeometrySocket', "Geometry")
+        self.inputs.new('MatrixSocket', "Matrix")
+        self.inputs.new('RelationshipSocket', "Relationship")
+        self.inputs.new('DeformerSocket', "Deformer")
+        self.inputs.new ("HideSocket", "Hide in Viewport")
+        self.inputs.new ("BooleanSocket", "Hide in Render")
+        self.outputs.new('xFormSocket', "xForm Out")
+
+        # color
+        self.use_custom_color = True
+        self.color = xFormColor
+
+        self.initialized=True
+
+class xFormObjectInstance(Node, xFormNode):
+    """Represents an instance of an existing geometry object."""
+    bl_idname = "xFormObjectInstance"
+    bl_label = "Object Instance"
+    bl_icon = "EMPTY_AXIS"
+    initialized : bpy.props.BoolProperty(default = False)
+    
+    def init(self, context):
+        self.inputs.new('StringSocket', "Name")
+        self.inputs.new('xFormSocket', "Source Object")
+        self.inputs.new('BooleanSocket', "As Instance",)
         self.inputs.new('MatrixSocket', "Matrix")
         self.inputs.new('RelationshipSocket', "Relationship")
         self.inputs.new('DeformerSocket', "Deformer")

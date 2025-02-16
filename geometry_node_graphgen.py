@@ -8,6 +8,7 @@ def gen_morph_target_nodes(mod_name, mod_ob, targets, context, use_offset=True):
     modifier = mod_ob.modifiers.new(mod_name, type='NODES')
     mod_ob.add_rest_position_attribute = True
     ng = data.node_groups.new(mod_name, "GeometryNodeTree")
+    modifier.node_group = ng
     ng.interface.new_socket("Geometry", in_out="INPUT", socket_type="NodeSocketGeometry")
     ng.interface.new_socket("Geometry", in_out="OUTPUT", socket_type="NodeSocketGeometry")
     inp = ng.nodes.new("NodeGroupInput")
@@ -109,3 +110,19 @@ def gen_morph_target_nodes(mod_name, mod_ob, targets, context, use_offset=True):
     for socket, ob in object_map.items():
         modifier[socket]=ob
     return modifier, props_sockets
+
+def gen_object_instance_node_group():
+    from bpy import data
+    ng = data.node_groups.new("Object Instance", "GeometryNodeTree")
+    ng.interface.new_socket("Object", in_out = "INPUT", socket_type="NodeSocketObject")
+    ng.interface.new_socket("As Instance", in_out = "INPUT", socket_type="NodeSocketBool")
+    ng.interface.new_socket("Object Instance", in_out="OUTPUT", socket_type="NodeSocketGeometry")
+    inp = ng.nodes.new("NodeGroupInput")
+    ob_node = ng.nodes.new("GeometryNodeObjectInfo")
+    out = ng.nodes.new("NodeGroupOutput")
+    ng.links.new(input=inp.outputs["Object"], output=ob_node.inputs["Object"])
+    ng.links.new(input=inp.outputs["As Instance"], output=ob_node.inputs["As Instance"])
+    ng.links.new(input=ob_node.outputs["Geometry"], output=out.inputs["Object Instance"])
+    inp.location = (-200, 0)
+    out.location = ( 200, 0)
+    return ng

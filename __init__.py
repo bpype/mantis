@@ -97,9 +97,10 @@ link_relationship_category = [
     ]
 deformer_category=[NodeItem(cls.bl_idname) for cls in deformer_definitions.TellClasses()]
 xForm_category = [
-         NodeItem("xFormGeometryObject"),
+        NodeItem("xFormGeometryObject"),
         NodeItem("xFormBoneNode"),
         NodeItem("xFormArmatureNode"),
+        NodeItem("xFormObjectInstance"),
     ]
 driver_category = [
         NodeItem("LinkDrivenParameter"),

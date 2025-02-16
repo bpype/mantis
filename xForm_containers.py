@@ -9,12 +9,18 @@ def TellClasses():
              xFormArmature,
              xFormBone,
              xFormGeometryObject,
+             xFormObjectInstance,
            ]
 
 #*#-------------------------------#++#-------------------------------#*#
 # X - F O R M   N O D E S
 #*#-------------------------------#++#-------------------------------#*#
 
+def reset_object_data(ob):
+    # moving this to a common function so I can figure out the details later
+    ob.constraints.clear()
+    ob.animation_data_clear() # this is a little dangerous. TODO find a better solution since this can wipe animation the user wants to keep
+    ob.modifiers.clear() # I would also like a way to copy modifiers and their settings, or bake them down. oh well
 
 class xFormArmature:
     '''A node representing an armature object'''
@@ -732,9 +738,6 @@ class xFormBone:
 
 class xFormGeometryObject:
     '''A node representing an armature object'''
-
-    bObject = None
-
     def __init__(self, signature, base_tree):
         self.base_tree=base_tree
         self.signature = signature
@@ -824,18 +827,15 @@ class xFormGeometryObject:
             self.bObject = bpy.data.objects.new(self.evaluate_input("Name"), data)
         if self.bObject and (self.inputs["Geometry"].is_linked and self.bObject.type  in ["MESH", "CURVE"]):
             self.bObject.data = trace[-1].node.bGetObject()
-        # clear it
-        self.bObject.constraints.clear()
-        self.bObject.animation_data_clear() # this is a little dangerous. TODO find a better solution since this can wipe animation the user wants to keep
-        self.bObject.modifiers.clear() # I would also like a way to copy modifiers and their settings, or bake them down. oh well
-                    
-        try:
-            bpy.context.collection.objects.link(self.bObject)
-        except RuntimeError: #already in; but a dangerous thing to pass.
-            pass
+        
+        reset_object_data(self.bObject)
         self.prepared = True
 
     def bExecute(self, bContext = None,):
+        try:
+            bContext.collection.objects.link(self.bObject)
+        except RuntimeError: #already in; but a dangerous thing to pass.
+            pass
         self.has_shape_keys = False
         # putting this in bExecute simply prevents it from being run more than once.
         # maybe I should do that with the rest of bPrepare, too.
@@ -859,6 +859,135 @@ class xFormGeometryObject:
         
     def bGetObject(self, mode = 'POSE'):
         return self.bObject
+
+
+class xFormObjectInstance:
+    """Represents an instance of an existing geometry object."""
+    def __init__(self, signature, base_tree):
+        self.base_tree=base_tree
+        self.signature = signature
+        self.inputs = {
+          "Name"             : NodeSocket(is_input = True, name = "Name", node = self),
+          "Source Object"    : NodeSocket(is_input = True, name = "Source Object", node = self),
+          "As Instance"      : NodeSocket(is_input = True, name = "As Instance", node = self),
+          "Matrix"           : NodeSocket(is_input = True, name = "Matrix", node = self),
+          "Relationship"     : NodeSocket(is_input = True, name = "Relationship", node = self),
+          "Deformer"         : NodeSocket(is_input = True, name = "Relationship", node = self),
+          "Hide in Viewport" : NodeSocket(is_input = True, name = "Hide in Viewport", node = self),
+          "Hide in Render"   : NodeSocket(is_input = True, name = "Hide in Render", node = self),
+        }
+        self.outputs = {
+          "xForm Out" : NodeSocket(is_input = False, name="xForm Out", node = self), }
+        self.parameters = {
+          "Name":None, 
+          "Source Object":None, 
+          "As Instance": None,
+          "Matrix":None, 
+          "Relationship":None, 
+          "Deformer":None,
+          "Hide in Viewport":None,
+          "Hide in Render":None,
+        }
+        self.links = {} # leave this empty for now!
+        # now set up the traverse target...
+        self.inputs["Relationship"].set_traverse_target(self.outputs["xForm Out"])
+        self.outputs["xForm Out"].set_traverse_target(self.inputs["Relationship"])
+        self.node_type = "XFORM"
+        self.bObject = None
+        self.prepared, self.executed = False, False
+        self.has_shape_keys = False # Shape Keys will make a dupe so this is OK
+        self.drivers = {}
+
+    def bSetParent(self):
+        from bpy.types import Object
+        parent_nc = get_parent(self, type='LINK')
+        if (parent_nc):
+            parent = None
+            if self.inputs["Relationship"].is_linked:
+                trace = trace_single_line(self, "Relationship")
+                for node in trace[0]:
+                    if node is self: continue # lol
+                    if (node.node_type == 'XFORM'):
+                        parent = node; break
+                if parent is None:
+                    prWhite(f"INFO: no parent set for {self}.")
+                    return
+                
+                if (parent_object := parent.bGetObject()) is None:
+                    raise GraphError(f"Could not get parent object from node {parent} for {self}")
+                if isinstance(parent, xFormBone):
+                    armOb= parent.bGetParentArmature()
+                    self.bObject.parent = armOb
+                    self.bObject.parent_type = 'BONE'
+                    self.bObject.parent_bone = parent.bObject
+                    # self.bObject.matrix_parent_inverse = parent.parameters["Matrix"].inverted()
+                elif isinstance(parent_object, Object):
+                    self.bObject.parent = parent.bGetObject()
+
+    def bPrepare(self, bContext = None,):
+        from bpy import data
+        empty_mesh = data.meshes.get("MANTIS_EMPTY_MESH")
+        if not empty_mesh:
+            empty_mesh = data.meshes.new("MANTIS_EMPTY_MESH")
+        if not self.evaluate_input("Name"):
+            self.prepared = True
+            self.executed = True
+            # and return an error if there are any dependencies:
+            if self.hierarchy_connections:
+                raise GraphError(wrapRed(f"Cannot Generate object {self} because the chosen name is empty or invalid."))
+            return
+        self.bObject = data.objects.get(self.evaluate_input("Name"))
+        if (not self.bObject):
+                self.bObject = data.objects.new(self.evaluate_input("Name"), empty_mesh)
+        reset_object_data(self.bObject)
+        self.prepared = True
+
+    def bExecute(self, bContext = None,):
+        try:
+            bContext.collection.objects.link(self.bObject)
+        except RuntimeError: #already in; but a dangerous thing to pass.
+            pass
+        self.has_shape_keys = False
+        # putting this in bExecute simply prevents it from being run more than once.
+        # maybe I should do that with the rest of bPrepare, too.
+        props_sockets = {
+            'hide_viewport'    : ("Hide in Viewport", False),
+            'hide_render'      : ("Hide in Render", False),
+        }
+        evaluate_sockets(self, self.bObject, props_sockets)
+        self.executed = True
+
+    def bFinalize(self, bContext = None):
+        # now we need to set the object instance up.
+        from bpy import data
+        trace = trace_single_line(self, "Source Object")
+        for node in trace[0]:
+            if node is self: continue # lol
+            if (node.node_type == 'XFORM'):
+                source_ob = node.bGetObject(); break
+        modifier = self.bObject.modifiers.new("Object Instance", type='NODES')
+        ng = data.node_groups.get("Object Instance")
+        if ng is None:
+            from .geometry_node_graphgen import gen_object_instance_node_group
+            ng = gen_object_instance_node_group()
+        modifier.node_group = ng
+        modifier["Socket_0"] = source_ob
+        modifier["Socket_1"] = self.evaluate_input("As Instance")
+        self.bSetParent()
+        matrix = self.evaluate_input("Matrix") # has to be done after parenting
+        self.parameters['Matrix'] = matrix
+        self.bObject.matrix_world = matrix
+        for i, (driver_key, driver_item) in enumerate(self.drivers.items()):
+            print (wrapGreen(i), wrapWhite(self), wrapPurple(driver_key))
+            prOrange(driver_item)
+        finish_drivers(self)
+            
+        
+    def bGetObject(self, mode = 'POSE'):
+        return self.bObject
+
+
+
 
 
 for c in TellClasses():
