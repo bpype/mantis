@@ -399,7 +399,7 @@ def setup_vp_settings(bone_node, pb, do_after, node_tree):
                 node_tree.links.new(shape_xform_n.outputs["xForm"], bone_node.inputs['Custom Object xForm Override'])
                 break
         else: # make it a task
-            do_after.append( ("Custom Object xForm Override", bone_node.name , shape_xform_ob.name ) )
+            do_after.add( ("Custom Object xForm Override", bone_node.name , shape_xform_ob.name ) )
     # all the above should be in a function.
 
 
@@ -742,15 +742,18 @@ def do_generate_armature(context, node_tree):
         armature.location = ( 0, 0)
         
         
-        do_after = []
+        do_after = set()
+
+        meta_rig_nodes = {}
         
         
+        bones = []
         for root in armOb.data.bones:
             if root.parent is None:
                 iter_start= time()
-                lines = []
-                lines = walk_edit_bone(armOb, root)
-                lines.append([]) # add the root itself HACK ugly
+                # lines = []
+                # lines = walk_edit_bone(armOb, root)
+                # lines.append([]) # add the root itself HACK ugly
                 milestone=time()
                 prPurple("got the bone paths", time() - milestone); milestone=time()
                 # set up some properties:
@@ -762,146 +765,158 @@ def do_generate_armature(context, node_tree):
                 
                 # do short lines first bc longer lines rely on their results
                 sort_by_len = lambda elem : len(elem)
-                lines.sort(key=sort_by_len)
+                # lines.sort(key=sort_by_len)
+                bones.extend([root])
+
+
+            
+        # for bone_path in lines:
+        for bone in bones:
+            # prGreen("for bone_path in lines", time() - milestone); milestone=time()
+            # first go through the bone path and find relevant information
+            # bone = get_bone_from_path(root, bone_path)
+            bone_node = node_tree.nodes.new("xFormBoneNode")
+            bone_node.inputs["Name"].default_value = bone.name
+            bone_node.name, bone_node.label = bone.name, bone.name
+            matrix = bone.matrix_local.copy()
+            bone_node.inputs["Matrix"].default_value = [
+                    matrix[0][0], matrix[0][1], matrix[0][2], matrix[0][3],
+                    matrix[1][0], matrix[1][1], matrix[1][2], matrix[1][3],
+                    matrix[2][0], matrix[2][1], matrix[2][2], matrix[2][3], # last element is bone length, for mantis
+                    matrix[3][0], matrix[3][1], matrix[3][2], bone.length ] #matrix[3][3], ]
+            mr_node_name = armOb.name+":"+bone.name
+            if not (mr_node:= meta_rig_nodes.get(mr_node_name)):    
+                mr_node = node_tree.nodes.new("UtilityMetaRig")
+                meta_rig_nodes[mr_node_name] = mr_node
+                mr_node.inputs[0].search_prop=armOb
+                mr_node.inputs[1].search_prop=armOb
+                mr_node.inputs[1].bone=bone.name
+                mr_node.inputs[1].default_value=bone.name
+            node_tree.links.new(input=mr_node.outputs[0], output=bone_node.inputs["Matrix"])
+            x_distance, y_distance = 0, 0
+            pb = armOb.pose.bones[bone.name]
+            possible_parent_nodes = []
+            
+            if bone.parent: # not a root
+                possible_parent_nodes = bone_inherit_node.get(bone.parent.name)
+                # Set the parent
+                parent_node = None
                 
-                for bone_path in lines:
-                    prGreen("for bone_path in lines", time() - milestone); milestone=time()
-                    # first go through the bone path and find relevant information
-                    bone = get_bone_from_path(root, bone_path)
-                    bone_node = node_tree.nodes.new("xFormBoneNode")
-                    bone_node.inputs["Name"].default_value = bone.name
-                    bone_node.name, bone_node.label = bone.name, bone.name
-                    matrix = bone.matrix_local.copy()
-                    bone_node.inputs["Matrix"].default_value = [
-                           matrix[0][0], matrix[0][1], matrix[0][2], matrix[0][3],
-                           matrix[1][0], matrix[1][1], matrix[1][2], matrix[1][3],
-                           matrix[2][0], matrix[2][1], matrix[2][2], matrix[2][3], # last element is bone length, for mantis
-                           matrix[3][0], matrix[3][1], matrix[3][2], bone.length ] #matrix[3][3], ]
-                    x_distance, y_distance = 0, 0
-                    pb = armOb.pose.bones[bone.name]
-                    possible_parent_nodes = []
-                    
-                    if bone_path: # not a root
-                        x_distance, y_distance = len(bone_path), bone_path[-1]
-                        possible_parent_nodes = bone_inherit_node.get(bone.parent.name)
-                        # Set the parent
-                        parent_node = None
-                        
-                        if not (possible_parent_nodes):
-                            parent_node = create_inheritance_node(pb, bone.parent.name, bone_inherit_node, node_tree)
-                        else:
-                            for ppn in possible_parent_nodes:
-                                # check if it has the right connected, inherit scale, inherit rotation
-                                if ppn.inputs["Connected"].default_value  != pb.bone.use_connect:
-                                    continue
-                                if ppn.inputs["Inherit Scale"].default_value != pb.bone.inherit_scale:
-                                    continue
-                                if ppn.inputs["Inherit Rotation"].default_value != pb.bone.use_inherit_rotation:
-                                    continue
-                                parent_node = ppn; break
-                            else:
-                                parent_node = create_inheritance_node(pb, bone.parent.name, bone_inherit_node, node_tree)
-                        
-                        print("Got parent node", time() - milestone); milestone=time()
-                        if parent_node is None:
-                            raise RuntimeError("No parent node?")
-                    else: # This is a root
-                        prOrange("else this is a root",time() - milestone); milestone=time()
-                        parent_node = node_tree.nodes.new("linkInherit")
-                        # root_child = node_tree.nodes.new("linkInherit")
-                        node_tree.links.new(parent_node.outputs["Inheritance"], bone_node.inputs['Relationship'])
-                        # node_tree.links.new(bone_node.outputs["xForm Out"], root_child.inputs['Parent'])
-                        node_tree.links.new(armature.outputs["xForm Out"], parent_node.inputs['Parent'])
+                if not (possible_parent_nodes):
+                    parent_node = create_inheritance_node(pb, bone.parent.name, bone_inherit_node, node_tree)
+                else:
+                    for ppn in possible_parent_nodes:
+                        # check if it has the right connected, inherit scale, inherit rotation
+                        if ppn.inputs["Connected"].default_value  != pb.bone.use_connect:
+                            continue
+                        if ppn.inputs["Inherit Scale"].default_value != pb.bone.inherit_scale:
+                            continue
+                        if ppn.inputs["Inherit Rotation"].default_value != pb.bone.use_inherit_rotation:
+                            continue
+                        parent_node = ppn; break
+                    else:
+                        parent_node = create_inheritance_node(pb, bone.parent.name, bone_inherit_node, node_tree)
                 
-                        parent_node.inputs["Inherit Rotation"].default_value = True
-                        parent_node.location = (200, 0)
-                        bone_node.location = (400, 0)
-                        # root_child.location = (600, 0)
-                        
-                        # bone_inherit_node[bone_node.name]=[root_child]
+                print("Got parent node", time() - milestone); milestone=time()
+                if parent_node is None:
+                    raise RuntimeError("No parent node?")
+            else: # This is a root
+                prOrange("else this is a root",time() - milestone); milestone=time()
+                parent_node = node_tree.nodes.new("linkInherit")
+                # root_child = node_tree.nodes.new("linkInherit")
+                node_tree.links.new(parent_node.outputs["Inheritance"], bone_node.inputs['Relationship'])
+                # node_tree.links.new(bone_node.outputs["xForm Out"], root_child.inputs['Parent'])
+                node_tree.links.new(armature.outputs["xForm Out"], parent_node.inputs['Parent'])
+        
+                parent_node.inputs["Inherit Rotation"].default_value = True
+                parent_node.location = (200, 0)
+                bone_node.location = (400, 0)
+                # root_child.location = (600, 0)
+                
+                # bone_inherit_node[bone_node.name]=[root_child]
+            
+
+            bone_node.inputs["Lock Location"].default_value = pb.lock_location
+            bone_node.inputs["Lock Rotation"].default_value = pb.lock_rotation
+            bone_node.inputs["Lock Scale"].default_value    = pb.lock_scale
+
+            setup_custom_properties(bone_node, pb)
+            setup_ik_settings(bone_node, pb)
+            setup_vp_settings(bone_node, pb, do_after, node_tree)
+            setup_df_settings(bone_node, pb)
+
+            # BBONES
+            bone_node.inputs["BBone X Size"].default_value = pb.bone.bbone_x
+            bone_node.inputs["BBone Z Size"].default_value = pb.bone.bbone_z
+            bone_node.inputs["BBone Segments"].default_value = pb.bone.bbone_segments
+            if pb.bone.bbone_mapping_mode == "CURVED":
+                bone_node.inputs["BBone HQ Deformation"].default_value = True
+            bone_node.inputs["BBone Start Handle Type"].default_value = pb.bone.bbone_handle_type_start
+            bone_node.inputs["BBone End Handle Type"].default_value = pb.bone.bbone_handle_type_end
+            bone_node.inputs["BBone Custom Start Handle"].default_value = pb.bone.bbone_handle_type_start
+            bone_node.inputs["BBone Custom End Handle"].default_value = pb.bone.bbone_handle_type_end
+            
+            bone_node.inputs["BBone X Curve-In"].default_value = pb.bone.bbone_curveinx
+            bone_node.inputs["BBone Z Curve-In"].default_value = pb.bone.bbone_curveinz
+            bone_node.inputs["BBone X Curve-Out"].default_value = pb.bone.bbone_curveoutx
+            bone_node.inputs["BBone Z Curve-Out"].default_value = pb.bone.bbone_curveoutz
+
+            prRed("BBone Implementation is not complete, expect errors and missing features for now")
+
+            
+            #
+            for c in pb.constraints:
+                prWhite("constraint %s for %s" % (c.name, pb.name), time() - milestone); milestone=time()
+                # make relationship nodes and set up links...
+                if ( c_node := create_relationship_node_for_constraint(node_tree, c)):
+                    c_node.label = c.name
+                    # this node definitely has a parent inherit node.
+                    c_node.location = parent_node.location; c_node.location.x += 200
                     
-
-                    bone_node.inputs["Lock Location"].default_value = pb.lock_location
-                    bone_node.inputs["Lock Rotation"].default_value = pb.lock_rotation
-                    bone_node.inputs["Lock Scale"].default_value    = pb.lock_scale
-
-                    setup_custom_properties(bone_node, pb)
-                    setup_ik_settings(bone_node, pb)
-                    setup_vp_settings(bone_node, pb, do_after, node_tree)
-                    setup_df_settings(bone_node, pb)
-
-                    # BBONES
-                    bone_node.inputs["BBone X Size"].default_value = pb.bone.bbone_x
-                    bone_node.inputs["BBone Z Size"].default_value = pb.bone.bbone_z
-                    bone_node.inputs["BBone Segments"].default_value = pb.bone.bbone_segments
-                    if pb.bone.bbone_mapping_mode == "CURVED":
-                        bone_node.inputs["BBone HQ Deformation"].default_value = True
-                    bone_node.inputs["BBone Start Handle Type"].default_value = pb.bone.bbone_handle_type_start
-                    bone_node.inputs["BBone End Handle Type"].default_value = pb.bone.bbone_handle_type_end
-                    bone_node.inputs["BBone Custom Start Handle"].default_value = pb.bone.bbone_handle_type_start
-                    bone_node.inputs["BBone Custom End Handle"].default_value = pb.bone.bbone_handle_type_end
-                    
-                    bone_node.inputs["BBone X Curve-In"].default_value = pb.bone.bbone_curveinx
-                    bone_node.inputs["BBone Z Curve-In"].default_value = pb.bone.bbone_curveinz
-                    bone_node.inputs["BBone X Curve-Out"].default_value = pb.bone.bbone_curveoutx
-                    bone_node.inputs["BBone Z Curve-Out"].default_value = pb.bone.bbone_curveoutz
-
-                    prRed("BBone Implementation is not complete, expect errors and missing features for now")
-
-                    
-                    #
-                    for c in pb.constraints:
-                        prWhite("constraint %s for %s" % (c.name, pb.name), time() - milestone); milestone=time()
-                        # make relationship nodes and set up links...
-                        if ( c_node := create_relationship_node_for_constraint(node_tree, c)):
-                            c_node.label = c.name
-                            # this node definitely has a parent inherit node.
-                            c_node.location = parent_node.location; c_node.location.x += 200
-                            
-                            try:
-                                node_tree.links.new(parent_node.outputs["Inheritance"], c_node.inputs['Input Relationship'])
-                            except KeyError: # not a inherit node anymore
-                                node_tree.links.new(parent_node.outputs["Output Relationship"], c_node.inputs['Input Relationship'])
-                            parent_node = c_node
-                            
-                            #Target Tasks:
-                            if (hasattr(c, "target") and not hasattr(c, "subtarget")):
-                                do_after.append( ("Object Target", c_node.name , c.target.name ) )
-                            if (hasattr(c, "subtarget")):
-                                if c.target and c.subtarget: # this node has a target, find the node associated with it... 
-                                    do_after.append( ("Target", c_node.name , c.subtarget ) )
-                                else:
-                                    do_after.append( ("Object Target", c_node.name , c.target.name ) )
-                            if (hasattr(c, "pole_subtarget")):
-                                if c.pole_target and c.pole_subtarget: # this node has a pole target, find the node associated with it... 
-                                    do_after.append( ("Pole Target", c_node.name , c.pole_subtarget ) )
-                            fill_parameters(c_node, c, context)
-                            if (hasattr(c, "targets")): # Armature Modifier, annoying.
-                                for i in range(len(c.targets)):
-                                    if (c.targets[i].subtarget):
-                                        do_after.append( ("Target."+str(i).zfill(3), c_node.name , c.targets[i].subtarget ) )
-                            # Driver Tasks
-                            if armOb.animation_data:
-                                for fc in armOb.animation_data.drivers:
-                                    pb_string = fc.data_path.split("[\"")[1]; pb_string = pb_string.split("\"]")[0]
-                                    try:
-                                        c_string = fc.data_path.split("[\"")[2]; c_string = c_string.split("\"]")[0]
-                                        do_after.append ( ("driver", bone_node.name, c_node.name) )
-                                    except IndexError: # the above expects .pose.bones["some name"].constraints["some constraint"]
-                                        do_after.append ( ("driver", bone_node.name, bone_node.name) ) # it's a property I guess
                     try:
-                        node_tree.links.new(parent_node.outputs["Inheritance"], bone_node.inputs['Relationship'])
-                    except KeyError: # may have changed, see above
-                        node_tree.links.new(parent_node.outputs["Output Relationship"], bone_node.inputs['Relationship'])
-                    bone_node.location = (400 + parent_node.location.x, -200*y_distance + parent_node.location.y)
-                    prPurple("iteration: ", time() - iter_start)
-                finished_drivers = set()
-                switches, driver_vars, fcurves, drivers = [],[],[],[]
+                        node_tree.links.new(parent_node.outputs["Inheritance"], c_node.inputs['Input Relationship'])
+                    except KeyError: # not a inherit node anymore
+                        node_tree.links.new(parent_node.outputs["Output Relationship"], c_node.inputs['Input Relationship'])
+                    parent_node = c_node
+                    
+                    #Target Tasks:
+                    if (hasattr(c, "target") and not hasattr(c, "subtarget")):
+                        do_after.add( ("Object Target", c_node.name , c.target.name ) )
+                    if (hasattr(c, "subtarget")):
+                        if c.target and c.subtarget: # this node has a target, find the node associated with it... 
+                            do_after.add( ("Target", c_node.name , c.subtarget ) )
+                        else:
+                            do_after.add( ("Object Target", c_node.name , c.target.name ) )
+                    if (hasattr(c, "pole_subtarget")):
+                        if c.pole_target and c.pole_subtarget: # this node has a pole target, find the node associated with it... 
+                            do_after.add( ("Pole Target", c_node.name , c.pole_subtarget ) )
+                    fill_parameters(c_node, c, context)
+                    if (hasattr(c, "targets")): # Armature Modifier, annoying.
+                        for i in range(len(c.targets)):
+                            if (c.targets[i].subtarget):
+                                do_after.add( ("Target."+str(i).zfill(3), c_node.name , c.targets[i].subtarget ) )
+                    # Driver Tasks
+                    if armOb.animation_data:
+                        for fc in armOb.animation_data.drivers:
+                            pb_string = fc.data_path.split("[\"")[1]; pb_string = pb_string.split("\"]")[0]
+                            try:
+                                c_string = fc.data_path.split("[\"")[2]; c_string = c_string.split("\"]")[0]
+                                do_after.add ( ("driver", bone_node.name, c_node.name) )
+                            except IndexError: # the above expects .pose.bones["some name"].constraints["some constraint"]
+                                do_after.add ( ("driver", bone_node.name, bone_node.name) ) # it's a property I guess
+            try:
+                node_tree.links.new(parent_node.outputs["Inheritance"], bone_node.inputs['Relationship'])
+            except KeyError: # may have changed, see above
+                node_tree.links.new(parent_node.outputs["Output Relationship"], bone_node.inputs['Relationship'])
+            prPurple("iteration: ", time() - iter_start)
+            bones.extend(bone.children)
+        finished_drivers = set()
+        switches, driver_vars, fcurves, drivers = [],[],[],[]
         
         # Now do the tasks.
         for (task, in_node_name, out_node_name) in do_after:
             prOrange(task, in_node_name, out_node_name)
-            prPurple(len(node_tree.nodes))
+            # prPurple(len(node_tree.nodes))
             if task in ['Object Target']:
                 in_node  = node_tree.nodes[ in_node_name ]
                 out_node= node_tree.nodes.new("InputExistingGeometryObject")
