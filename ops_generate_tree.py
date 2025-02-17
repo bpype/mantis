@@ -13,15 +13,21 @@ def mantis_poll_op(context):
     return False
 
 def create_inheritance_node(pb, parent_name, bone_inherit_node, node_tree):
+    from bpy.types import PoseBone
     parent_node = node_tree.nodes.new("linkInherit")
     parent_bone_node = node_tree.nodes.get(parent_name)
     if not parent_bone_node:
         raise RuntimeError("Can't Find parent node!!")
     parent_node.location = parent_bone_node.location; parent_node.location.x+=200
     node_tree.links.new(parent_bone_node.outputs["xForm Out"], parent_node.inputs['Parent'])
-    parent_node.inputs["Connected"].default_value        = pb.bone.use_connect
-    parent_node.inputs["Inherit Scale"].default_value    = pb.bone.inherit_scale
-    parent_node.inputs["Inherit Rotation"].default_value = pb.bone.use_inherit_rotation
+    if isinstance(pb, PoseBone):
+        parent_node.inputs["Connected"].default_value        = pb.bone.use_connect
+        parent_node.inputs["Inherit Scale"].default_value    = pb.bone.inherit_scale
+        parent_node.inputs["Inherit Rotation"].default_value = pb.bone.use_inherit_rotation
+    else:
+        parent_node.inputs["Connected"].default_value        = False
+        parent_node.inputs["Inherit Scale"].default_value    = "FULL"
+        parent_node.inputs["Inherit Rotation"].default_value = True
     if (bone_inherit_node.get(parent_bone_node.name)):
         bone_inherit_node[parent_bone_node.name].append(parent_node)
     else:
@@ -726,55 +732,126 @@ def create_driver(in_node_name, out_node_name, armOb, finished_drivers, switches
                     prWhite( "parameter: %s" % parameter)
                     prRed ("   couldn't find: ", property, out_node.label, out_node.name)
 
+def set_parent_from_node(pb, bone_inherit_node, node_tree):
+        bone = pb.bone
+        possible_parent_nodes = bone_inherit_node.get(bone.parent.name)
+        # Set the parent
+        parent = None
 
-def do_generate_armature(context, node_tree):
+        if not (possible_parent_nodes):
+            parent = create_inheritance_node(pb, bone.parent.name, bone_inherit_node, node_tree)
+        else:
+            for ppn in possible_parent_nodes:
+                # check if it has the right connected, inherit scale, inherit rotation
+                if ppn.inputs["Connected"].default_value  != pb.bone.use_connect:
+                    continue
+                if ppn.inputs["Inherit Scale"].default_value != pb.bone.inherit_scale:
+                    continue
+                if ppn.inputs["Inherit Rotation"].default_value != pb.bone.use_inherit_rotation:
+                    continue
+                parent = ppn; break
+            else:
+                parent = create_inheritance_node(pb, bone.parent.name, bone_inherit_node, node_tree)
+        return parent
+
+def do_generate_geom(ob, node_tree, parent_node=None):
+    ob_node = node_tree.nodes.new("xFormGeometryObject")
+    ob_node.name = ob.name; ob_node.label = ob.name
+    ob_node.inputs["Name"].default_value=ob.name+"_MANTIS"
+    if ob.data:
+        geometry_node = node_tree.nodes.new("InputExistingGeometryData")
+        geometry_node.inputs[0].default_value=ob.data.name
+        node_tree.links.new(input=geometry_node.outputs[0], output=ob_node.inputs["Geometry"])
+    matrix_of = node_tree.nodes.new("UtilityMatrixFromXForm")
+    existing_ob = node_tree.nodes.new("InputExistingGeometryObject")
+
+    existing_ob.inputs["Name"].default_value = ob.name
+    node_tree.links.new(input=existing_ob.outputs[0], output=matrix_of.inputs[0])
+    node_tree.links.new(input=matrix_of.outputs[0], output=ob_node.inputs["Matrix"])
+
+    # Generate Deformers
+    prev_def_node = None
+    for m in ob.modifiers:
+        if m.type == "ARMATURE":
+            def_node = node_tree.nodes.new("DeformerArmature")
+            def_node.inputs["Blend Vertex Group"].default_value = m.vertex_group
+            def_node.inputs["Invert Vertex Group"].default_value = m.invert_vertex_group
+            def_node.inputs["Preserve Volume"].default_value = m.use_deform_preserve_volume
+            def_node.inputs["Use Multi Modifier"].default_value = m.use_multi_modifier
+            def_node.inputs["Use Envelopes"].default_value = m.use_bone_envelopes
+            def_node.inputs["Use Vertex Groups"].default_value = m.use_vertex_groups
+            # def_node.inputs["Copy Skin Weights From"]
+            def_node.inputs["Skinning Method"].default_value="EXISTING_GROUPS"
+            def_ob = node_tree.nodes.get(m.object.name)
+            # get the deformer's target object...
+            if def_ob:
+                node_tree.links.new(input=def_ob.outputs["xForm Out"], output=def_node.inputs["Armature Object"])
+            if prev_def_node:
+                node_tree.links.new(input=prev_def_node.outputs["Deformer"], inputs=def_node.inputs["Deformer"])
+            prev_def_node = def_node
     
+    if prev_def_node:
+        node_tree.links.new(input=prev_def_node.outputs["Deformer"], output=ob_node.inputs["Deformer"])
+
+    if parent_node:
+        node_tree.links.new(input=parent_node.outputs["Inheritance"], output=ob_node.inputs["Relationship"])
+            
+
+    # not doing this
+    # matrix_node = node_tree.nodes.new("InputMatrix")
+    # matrix_node.first_row=ob.matrix_world[0:3]
+    # matrix_node.second_row=ob.matrix_world[4:7]
+    # matrix_node.third_row=ob.matrix_world[8:11]
+    # matrix_node.fourth_row=ob.matrix_world[12:15]
+    # node_tree.links.new(input=matrix_node.outputs[0], output=ob_node.inputs["Matrix"])
+
+    
+
+
+
+
+def do_generate_armature(armOb, context, node_tree, parent_node=None):
         from time import time
         start = time()
-        node_tree.do_live_update = False
         
-        armOb = bpy.context.active_object
-        
-        #This will generate it in the current node tree and OVERWRITE!
-        node_tree.nodes.clear()
-        
-        armature = node_tree.nodes.new("xFormArmatureNode")
-        armature.location = ( 0, 0)
-        
-        
+        meta_rig_nodes = {}
+        bone_inherit_node = {}
         do_after = set()
 
-        meta_rig_nodes = {}
+
+        armature = node_tree.nodes.new("xFormArmatureNode")
+        mr_node_name = armOb.name
+        if not (mr_node:= meta_rig_nodes.get(mr_node_name)):    
+            mr_node = node_tree.nodes.new("UtilityMetaRig")
+            meta_rig_nodes[mr_node_name] = mr_node
+            mr_node.inputs[0].search_prop=armOb
+        node_tree.links.new(input=mr_node.outputs[0], output=armature.inputs["Matrix"])
+        if parent_node:
+            node_tree.links.new()
+        
+
         
         
         bones = []
         for root in armOb.data.bones:
             if root.parent is None:
                 iter_start= time()
-                # lines = []
-                # lines = walk_edit_bone(armOb, root)
-                # lines.append([]) # add the root itself HACK ugly
                 milestone=time()
                 prPurple("got the bone paths", time() - milestone); milestone=time()
-                # set up some properties:
-                armature.inputs["Name"].default_value = armOb.name
+                armature.inputs["Name"].default_value = armOb.name + "_MANTIS"
                 armature.name = armOb.name; armature.label = armOb.name
                 
-                # for getting parent nodes
-                bone_inherit_node = {}
-                
-                # do short lines first bc longer lines rely on their results
-                sort_by_len = lambda elem : len(elem)
-                # lines.sort(key=sort_by_len)
                 bones.extend([root])
+        
+        if parent_node:
+            node_tree.links.new(input=parent_node.outputs["Inheritance"], output=armature.inputs["Relationship"])
 
 
             
         # for bone_path in lines:
         for bone in bones:
-            # prGreen("for bone_path in lines", time() - milestone); milestone=time()
+            prGreen(time() - milestone); milestone=time()
             # first go through the bone path and find relevant information
-            # bone = get_bone_from_path(root, bone_path)
             bone_node = node_tree.nodes.new("xFormBoneNode")
             bone_node.inputs["Name"].default_value = bone.name
             bone_node.name, bone_node.label = bone.name, bone.name
@@ -793,52 +870,29 @@ def do_generate_armature(context, node_tree):
                 mr_node.inputs[1].bone=bone.name
                 mr_node.inputs[1].default_value=bone.name
             node_tree.links.new(input=mr_node.outputs[0], output=bone_node.inputs["Matrix"])
-            x_distance, y_distance = 0, 0
             pb = armOb.pose.bones[bone.name]
-            possible_parent_nodes = []
             
             if bone.parent: # not a root
-                possible_parent_nodes = bone_inherit_node.get(bone.parent.name)
-                # Set the parent
-                parent_node = None
                 
-                if not (possible_parent_nodes):
-                    parent_node = create_inheritance_node(pb, bone.parent.name, bone_inherit_node, node_tree)
-                else:
-                    for ppn in possible_parent_nodes:
-                        # check if it has the right connected, inherit scale, inherit rotation
-                        if ppn.inputs["Connected"].default_value  != pb.bone.use_connect:
-                            continue
-                        if ppn.inputs["Inherit Scale"].default_value != pb.bone.inherit_scale:
-                            continue
-                        if ppn.inputs["Inherit Rotation"].default_value != pb.bone.use_inherit_rotation:
-                            continue
-                        parent_node = ppn; break
-                    else:
-                        parent_node = create_inheritance_node(pb, bone.parent.name, bone_inherit_node, node_tree)
+                parent = set_parent_from_node(pb, bone_inherit_node, node_tree)
                 
                 print("Got parent node", time() - milestone); milestone=time()
-                if parent_node is None:
+                if parent is None:
                     raise RuntimeError("No parent node?")
             else: # This is a root
-                prOrange("else this is a root",time() - milestone); milestone=time()
-                parent_node = node_tree.nodes.new("linkInherit")
-                # root_child = node_tree.nodes.new("linkInherit")
-                node_tree.links.new(parent_node.outputs["Inheritance"], bone_node.inputs['Relationship'])
-                # node_tree.links.new(bone_node.outputs["xForm Out"], root_child.inputs['Parent'])
-                node_tree.links.new(armature.outputs["xForm Out"], parent_node.inputs['Parent'])
-        
-                parent_node.inputs["Inherit Rotation"].default_value = True
-                parent_node.location = (200, 0)
-                bone_node.location = (400, 0)
-                # root_child.location = (600, 0)
+                if (parent := bone_inherit_node.get(armOb.name)) is None:
+                    parent = node_tree.nodes.new("linkInherit")
+                    bone_inherit_node[armOb.name] = [parent]
+                    node_tree.links.new(armature.outputs["xForm Out"], parent.inputs['Parent'])
+                    parent.inputs["Inherit Rotation"].default_value = True
+                node_tree.links.new(parent.outputs["Inheritance"], bone_node.inputs['Relationship'])
                 
-                # bone_inherit_node[bone_node.name]=[root_child]
             
 
             bone_node.inputs["Lock Location"].default_value = pb.lock_location
             bone_node.inputs["Lock Rotation"].default_value = pb.lock_rotation
             bone_node.inputs["Lock Scale"].default_value    = pb.lock_scale
+            bone_node.inputs["Rotation Order"].default_value = pb.rotation_mode
 
             setup_custom_properties(bone_node, pb)
             setup_ik_settings(bone_node, pb)
@@ -871,13 +925,13 @@ def do_generate_armature(context, node_tree):
                 if ( c_node := create_relationship_node_for_constraint(node_tree, c)):
                     c_node.label = c.name
                     # this node definitely has a parent inherit node.
-                    c_node.location = parent_node.location; c_node.location.x += 200
+                    c_node.location = parent.location; c_node.location.x += 200
                     
                     try:
-                        node_tree.links.new(parent_node.outputs["Inheritance"], c_node.inputs['Input Relationship'])
+                        node_tree.links.new(parent.outputs["Inheritance"], c_node.inputs['Input Relationship'])
                     except KeyError: # not a inherit node anymore
-                        node_tree.links.new(parent_node.outputs["Output Relationship"], c_node.inputs['Input Relationship'])
-                    parent_node = c_node
+                        node_tree.links.new(parent.outputs["Output Relationship"], c_node.inputs['Input Relationship'])
+                    parent = c_node
                     
                     #Target Tasks:
                     if (hasattr(c, "target") and not hasattr(c, "subtarget")):
@@ -905,9 +959,9 @@ def do_generate_armature(context, node_tree):
                             except IndexError: # the above expects .pose.bones["some name"].constraints["some constraint"]
                                 do_after.add ( ("driver", bone_node.name, bone_node.name) ) # it's a property I guess
             try:
-                node_tree.links.new(parent_node.outputs["Inheritance"], bone_node.inputs['Relationship'])
+                node_tree.links.new(parent.outputs["Inheritance"], bone_node.inputs['Relationship'])
             except KeyError: # may have changed, see above
-                node_tree.links.new(parent_node.outputs["Output Relationship"], bone_node.inputs['Relationship'])
+                node_tree.links.new(parent.outputs["Output Relationship"], bone_node.inputs['Relationship'])
             prPurple("iteration: ", time() - iter_start)
             bones.extend(bone.children)
         finished_drivers = set()
@@ -950,14 +1004,38 @@ def do_generate_armature(context, node_tree):
                         
             # annoyingly, Rigify uses f-modifiers to setup its fcurves
             # I do not intend to support fcurve modifiers in Mantis at this time
+        
 
+        for child in armOb.children:
+            its_parent = None
+            parent_name = armOb.name
+            if child.parent_type == "BONE":
+                parent_name = child.parent_bone
+            if not (possible_parent_nodes := bone_inherit_node.get(parent_name)):
+                its_parent = create_inheritance_node(child, parent_name, bone_inherit_node, node_tree)
+            else:
+                for ppn in possible_parent_nodes: # check if it has the right connected, inherit scale, inherit rotation
+                    if ppn.inputs["Connected"].default_value  != False: continue
+                    if ppn.inputs["Inherit Scale"].default_value != "FULL": continue
+                    if ppn.inputs["Inherit Rotation"].default_value != True: continue
+                    its_parent = ppn; break
+                else:
+                    its_parent = create_inheritance_node(pb, parent_name, bone_inherit_node, node_tree)
+                    
+            if child.type in ["MESH", "CURVE", "EMPTY"]:
+                do_generate_geom(child, node_tree, its_parent)
+            if child.type in ["ARMATURE"]:
+                do_generate_armature(armOb, context, node_tree, parent_node=its_parent)
         
         for node in node_tree.nodes:
             node.select = False
         
         prGreen("Finished generating %d nodes in %f seconds." % (len(node_tree.nodes), time() - start))
-        #bpy.ops.node.cleanup()
-        node_tree.do_live_update = True
+
+
+
+
+        return armature
 
 
 
@@ -976,6 +1054,10 @@ class GenerateMantisTree(Operator):
         node_tree = space.path[len(path)-1].node_tree
         
         do_profile=False
+
+        
+        #This will generate it in the current node tree and OVERWRITE!
+        node_tree.nodes.clear() # is this wise?
         
         import cProfile
         from os import environ
@@ -983,12 +1065,20 @@ class GenerateMantisTree(Operator):
         if environ.get("DOPROFILE"):
             do_profile=True
         if do_profile:
-            cProfile.runctx("do_generate_armature(context, node_tree)", None, locals())
+            cProfile.runctx("do_generate_armature(context.active_object, context, node_tree)", None, locals())
         else:
-            do_generate_armature(context, node_tree)
+            node_tree.do_live_update = False
+            do_generate_armature(context.active_object, context, node_tree)
+
+        
+        from .utilities import SugiyamaGraph
+        try:
+            SugiyamaGraph(node_tree, 16)
+        except ImportError:
+            pass
+        node_tree.do_live_update = True
+
         return {"FINISHED"}
         
-        
-        return {"FINISHED"}
 
 
