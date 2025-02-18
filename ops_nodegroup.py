@@ -17,6 +17,8 @@ def TellClasses():
         ForceDisplayUpdate,
         CleanUpNodeGraph,
         MantisMuteNode,
+        SelectNodesOfType,
+        ConnectNodeToInput,
         # xForm
         AddCustomProperty,
         EditCustomProperty,
@@ -39,6 +41,11 @@ def mantis_tree_poll_op(context):
             return (space.tree_type in ["MantisTree", "SchemaTree"])
     return False
 
+def any_tree_poll(context):
+    space = context.space_data
+    if hasattr(space, "node_tree"):
+        return True
+    return False
 
 #########################################################################3
 
@@ -223,21 +230,122 @@ class ExecuteNodeTree(Operator):
         prGreen("Finished executing tree in %f seconds" % (time() - start_time))
         return {"FINISHED"}
 
+
+class SelectNodesOfType(Operator):
+    """Selects all nodes of same type as active node."""
+    bl_idname = "mantis.select_nodes_of_type"
+    bl_label = "Select Nodes of Same Type as Active"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    @classmethod
+    def poll(cls, context):
+        return (any_tree_poll(context))
+
+    def execute(self, context):
+        active_node = context.active_node
+        tree = active_node.id_data
+        if not hasattr(active_node, "node_tree"):
+            for node in tree.nodes:
+                node.select = (active_node.bl_idname == node.bl_idname)
+        else:
+            for node in tree.nodes:
+                node.select = (active_node.bl_idname == node.bl_idname) and (active_node.node_tree == node.node_tree)
+
+        return {"FINISHED"}
+
+
+def get_parent_tree_interface_enum(operator, context):
+    ret = []; i = -1
+    tree = bpy.data.node_groups[operator.tree_invoked]
+    for sock in tree.interface.items_tree:
+        if sock.item_type == 'PANEL': continue
+        if sock.in_out == "OUTPUT": continue
+        ret.append( (sock.identifier, sock.name, "Socket from Node Group Input", i := i + 1), )
+    return ret
+
+def get_node_inputs_enum(operator, context):
+    ret = []; i = -1
+    n = bpy.data.node_groups[operator.tree_invoked].nodes[operator.node_invoked]
+    for inp in n.inputs:
+        ret.append( (inp.identifier, inp.name, "Socket of node to connect to.", i := i + 1), )
+    return ret
+
+class ConnectNodeToInput(Operator):
+    """Connects a Node Group Input socket to specified socket of active node and all selected same-type nodes."""
+    bl_idname = "mantis.connect_nodes_to_input"
+    bl_label = "Connect Socket to Input for Selected Nodes"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    group_output : bpy.props.EnumProperty(
+        items=get_parent_tree_interface_enum,
+        name="Node Group Input Socket",
+        description="Select which socket from the Node Group Input to connect to this node",)
+    node_input : bpy.props.EnumProperty(
+        items=get_node_inputs_enum,
+        name="Node Input Socket",
+        description="Select which of this node's sockets to recieve the connection",)
+    tree_invoked : bpy.props.StringProperty(options ={'HIDDEN'})
+    node_invoked : bpy.props.StringProperty(options ={'HIDDEN'})
+
+    @classmethod
+    def poll(cls, context):
+        return (any_tree_poll(context))
+
+    def invoke(self, context, event):
+        self.tree_invoked = context.active_node.id_data.name
+        self.node_invoked = context.active_node.name
+        # we use active_node here ^ because we are comparing the active node to the selection.
+        wm = context.window_manager
+        return wm.invoke_props_dialog(self)
+    
+    def execute(self, context):
+        t = bpy.data.node_groups[self.tree_invoked]
+        if hasattr(t, "is_executing"): # for Mantis trees, but this function should just work anywhere.
+            t.is_executing = True
+        n = t.nodes[self.node_invoked]
+        for node in t.nodes:
+            if n.bl_idname == node.bl_idname and node.select:
+                # the bl_idname is the same so they both have node_tree
+                if hasattr(n, "node_tree") and n.node_tree != node.node_tree: continue
+                # TODO: maybe I should try and find a nearby input node and reuse it
+                # doing these identifier lookups again and again is slow, whatever. faster than doing it by hand
+                for connect_to_me in node.inputs:
+                    if connect_to_me.identifier == self.node_input: break
+                if connect_to_me.is_linked: connect_to_me = None
+                if connect_to_me: # only make the node if the socket is there and free
+                    inp = t.nodes.new("NodeGroupInput")
+                    connect_me = None
+                    for s in inp.outputs:
+                        if s.identifier != self.group_output: s.hide = True
+                        else: connect_me = s
+                        inp.location = node.location
+                        inp.location.x-=200
+                    t.links.new(input=connect_me, output=connect_to_me)
+
+        if hasattr(t, "is_executing"):
+            t.is_executing = False
+        return {"FINISHED"}
+
+
 class QueryNodeSockets(Operator):
     """Utility Operator for querying the data in a socket"""
     bl_idname = "mantis.query_sockets"
     bl_label = "Query Node Sockets"
     bl_options = {'REGISTER', 'UNDO'}
 
+
+
     @classmethod
     def poll(cls, context):
         return (mantis_tree_poll_op(context))
 
     def execute(self, context):
-        node = context.active_node
-        print ("Node type: ", node.bl_idname)
-        
-        # This is useful. Todo: reimplement this eventually.
+        active_node = context.active_node
+        tree = active_node.id_data
+        for node in tree.nodes:
+            if not node.select: continue
+
+
         
         return {"FINISHED"}
 
