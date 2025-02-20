@@ -311,7 +311,10 @@ def ChooseDraw(self, context, layout, node, text, icon = "NONE", use_enum=True, 
             layout.label(text=text)
         # ENUM VALUES (this is a HACK, fix it later)
         elif ('Enum' in self.bl_idname) and (use_enum):
-            layout.prop_tabs_enum(self, "default_value",)
+            if not (self.is_output or self.is_linked):
+                layout.prop_tabs_enum(self, "default_value",)
+            else:
+                layout.label(text=text)
         # for OUTPUT sockets that take INPUT (confusing name!)
         elif ((hasattr(self, "default_value")) and hasattr(self, "input") and getattr(self, "input")):
             # for simple input nodes
@@ -1280,16 +1283,16 @@ class EnumRotationStretchTo(NodeSocket):
 
 # Track-To
 
-eTrackAxis = (('TRACK_X', "X", "X", 1),
-               ('TRACK_Y', "Y", "Y", 2),
-               ('TRACK_Z', "Z", "Z", 4),
-               ('TRACK_NEGATIVE_X', "-X", "-X", 8),
-               ('TRACK_NEGATIVE_Y', "-Y", "-Y", 16),
-               ('TRACK_NEGATIVE_Z', "-Z", "-Z", 32,))
+eTrackAxis = ( ('TRACK_X', "X", "X", 0),
+               ('TRACK_Y', "Y", "Y", 1),
+               ('TRACK_Z', "Z", "Z", 2),
+               ('TRACK_NEGATIVE_X', "-X", "-X", 3),
+               ('TRACK_NEGATIVE_Y', "-Y", "-Y", 4),
+               ('TRACK_NEGATIVE_Z', "-Z", "-Z", 5,))
 
-eUpAxis = (('UP_X', "X", "X", 1),
-           ('UP_Y', "Y", "Y", 2),
-           ('UP_Z', "Z", "Z", 4),)
+eUpAxis = (('UP_X', "X", "X", 0),
+           ('UP_Y', "Y", "Y", 1),
+           ('UP_Z', "Z", "Z", 2),)
 
 class EnumTrackAxis(NodeSocket):
     '''Custom node socket type'''
