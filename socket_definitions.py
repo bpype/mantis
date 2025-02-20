@@ -1284,16 +1284,17 @@ class EnumRotationStretchTo(NodeSocket):
 
 # Track-To
 
-eTrackAxis = ( ('TRACK_X', "X", "X", 0),
-               ('TRACK_Y', "Y", "Y", 1),
-               ('TRACK_Z', "Z", "Z", 2),
-               ('TRACK_NEGATIVE_X', "-X", "-X", 3),
-               ('TRACK_NEGATIVE_Y', "-Y", "-Y", 4),
-               ('TRACK_NEGATIVE_Z', "-Z", "-Z", 5,))
+eTrackAxis = (('TRACK_X', "X", "X", 1),
+               ('TRACK_Y', "Y", "Y", 2),
+               ('TRACK_Z', "Z", "Z", 4),
+               ('TRACK_NEGATIVE_X', "-X", "-X", 8),
+               ('TRACK_NEGATIVE_Y', "-Y", "-Y", 16),
+               ('TRACK_NEGATIVE_Z', "-Z", "-Z", 32,))
 
-eUpAxis = (('UP_X', "X", "X", 0),
-           ('UP_Y', "Y", "Y", 1),
-           ('UP_Z', "Z", "Z", 2),)
+eUpAxis = (('UP_X', "X", "X", 1),
+           ('UP_Y', "Y", "Y", 2),
+           ('UP_Z', "Z", "Z", 4),)
+# ugly but I can't change it easily without messing up versioning
 
 class EnumTrackAxis(NodeSocket):
     '''Custom node socket type'''
