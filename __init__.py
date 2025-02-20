@@ -17,7 +17,7 @@ from .utilities import prRed
 
 MANTIS_VERSION_MAJOR=0
 MANTIS_VERSION_MINOR=9
-MANTIS_VERSION_SUB=9
+MANTIS_VERSION_SUB=10
 
 
 classLists = [module.TellClasses() for module in [
@@ -128,6 +128,7 @@ utility_category = [
         NodeItem("UtilityChoose"),
         NodeItem("UtilityCompare"),
         NodeItem("UtilityPrint"),
+        NodeItem("UtilitySeparateVector"),
     ]
 matrix_category = [
         NodeItem("UtilityMetaRig"),
@@ -239,39 +240,80 @@ def execute_handler(scene):
                 node_tree.tree_valid = False
 
 
+
+def do_version_update(node_tree):
+    from .base_definitions import NODES_REMOVED, SOCKETS_REMOVED, SOCKETS_RENAMED, SOCKETS_ADDED
+    node_tree.mantis_version[0] = MANTIS_VERSION_MAJOR
+    node_tree.mantis_version[1] = MANTIS_VERSION_MINOR
+    node_tree.mantis_version[2] = MANTIS_VERSION_SUB
+    for n in node_tree.nodes:
+        rename_jobs = []
+
+        if n.bl_idname in NODES_REMOVED:
+            print(f"INFO: removing node {n.name} of type {n.bl_idname} because it has been deprecated.")
+            n.inputs.remove(socket)
+            continue
+        for i, socket in enumerate(n.inputs.values()):
+            if (n.bl_idname, socket.identifier) in SOCKETS_REMOVED:
+                print(f"INFO: removing socket {socket.identifier} of node {n.name} of type {n.bl_idname} because it has been deprecated.")
+                n.inputs.remove(socket)
+            for old_class, old_bl_idname, old_name, new_bl_idname, new_name, multi in SOCKETS_RENAMED:
+                if (n.bl_idname == old_class and socket.bl_idname == old_bl_idname and socket.name == old_name):
+                    rename_jobs.append((socket, i, new_bl_idname, new_name, multi))
+        for i, socket in enumerate(n.outputs.values()):
+            if (n.bl_idname, socket.identifier) in SOCKETS_REMOVED:
+                print(f"INFO: removing socket {socket.identifier} of node {n.name} of type {n.bl_idname} because it has been deprecated.")
+                n.outputs.remove(socket)
+            for old_class, old_bl_idname, old_name, new_bl_idname, new_name, multi in SOCKETS_RENAMED:
+                if (n.bl_idname == old_class and socket.bl_idname == old_bl_idname and socket.name == old_name):
+                    rename_jobs.append((socket, i, new_bl_idname, new_name, multi))
+
+        for bl_idname, in_out, socket_type, socket_name, index, use_multi_input, default_val in SOCKETS_ADDED:
+            if n.bl_idname != bl_idname:
+                continue
+            if in_out == 'INPUT' and n.inputs.get(socket_name) is None:
+                print(f"INFO: adding socket \"{socket_name}\" of type {socket_type} to node {n.name} of type {n.bl_idname}.")
+                s = n.inputs.new(socket_type, socket_name, use_multi_input=use_multi_input)
+                s.default_value = default_val
+                n.inputs.move(len(n.inputs), index)
+        socket_map = None
+        if rename_jobs:
+            from .utilities import get_socket_maps
+            socket_maps = get_socket_maps(n)
+        for socket, socket_index, new_bl_idname, new_name, multi in rename_jobs:
+            old_id = socket.identifier
+            print (f"Renaming socket {socket.identifier} to {new_name} in node {n.name}")
+            from .utilities import do_relink
+            if socket.is_output:
+                index = 1
+                in_out = "OUTPUT"
+                n.outputs.remove(socket)
+                s = n.outputs.new(new_bl_idname, new_name, identifier=new_name, use_multi_input=multi)
+                n.outputs.move(len(n.outputs)-1, socket_index)
+                socket_map = socket_maps[1]
+            else:
+                index = 0
+                in_out = "INPUT"
+                n.inputs.remove(socket)
+                s = n.inputs.new(new_bl_idname, new_name, identifier=new_name, use_multi_input=multi)
+                n.inputs.move(len(n.inputs)-1, socket_index)
+                socket_map = socket_maps[0]
+
+            socket_map[new_name] = socket_map[old_id]; del socket_map[old_id]
+
+            do_relink(n, s, socket_map)
+
+
+
 @persistent
 def version_update_handler(filename):
-    from .base_definitions import NODES_REMOVED, SOCKETS_REMOVED, SOCKETS_RENAMED, SOCKETS_ADDED
     for node_tree in bpy.data.node_groups:
         if node_tree.bl_idname in ["MantisTree", "SchemaTree"]:
             if (node_tree.mantis_version[0] < MANTIS_VERSION_MAJOR) or \
                (node_tree.mantis_version[1] < MANTIS_VERSION_MINOR) or \
                (node_tree.mantis_version[2] < MANTIS_VERSION_SUB):
                 print (f"Updating tree {node_tree.name} to {MANTIS_VERSION_MAJOR}.{MANTIS_VERSION_MINOR}.{MANTIS_VERSION_SUB}")
-                node_tree.mantis_version[0] = MANTIS_VERSION_MAJOR
-                node_tree.mantis_version[1] = MANTIS_VERSION_MINOR
-                node_tree.mantis_version[2] = MANTIS_VERSION_SUB
-                for n in node_tree.nodes:
-                    if n.bl_idname in NODES_REMOVED:
-                        print(f"INFO: removing node {n.name} of type {n.bl_idname} because it has been deprecated.")
-                        n.inputs.remove(socket)
-                        continue
-                    for socket in n.inputs.values():
-                        if (n.bl_idname, socket.identifier) in SOCKETS_REMOVED:
-                            print(f"INFO: removing socket {socket.identifier} of node {n.name} of type {n.bl_idname} because it has been deprecated.")
-                            n.inputs.remove(socket)
-                    for socket in n.outputs.values():
-                        if (n.bl_idname, socket.identifier) in SOCKETS_REMOVED:
-                            print(f"INFO: removing socket {socket.identifier} of node {n.name} of type {n.bl_idname} because it has been deprecated.")
-                            n.outputs.remove(socket)
-                    for bl_idname, in_out, socket_type, socket_name, index, use_multi_input, default_val in SOCKETS_ADDED:
-                        if n.bl_idname != bl_idname:
-                            continue
-                        if in_out == 'INPUT' and n.inputs.get(socket_name) is None:
-                            print(f"INFO: adding socket \"{socket_name}\" of type {socket_type} to node {n.name} of type {n.bl_idname}.")
-                            s = n.inputs.new(socket_type, socket_name, use_multi_input=use_multi_input)
-                            s.default_value = default_val
-                            n.inputs.move(len(n.inputs), index)
+                do_version_update(node_tree)
                 
                 
 

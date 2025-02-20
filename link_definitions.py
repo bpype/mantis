@@ -684,7 +684,7 @@ class LinkDrivenParameterNode(Node, LinkNode):
     
     def init(self, context):
         self.inputs.new ( "RelationshipSocket", "Input Relationship" )
-        self.inputs.new ( "DriverSocket", "Driver" )
+        self.inputs.new ( "FloatSocket", "Value" )
         self.inputs.new ( "ParameterStringSocket", "Parameter" )
         self.inputs.new ( "IntSocket", "Index" )
         self.inputs.new ('EnableSocket', "Enable")

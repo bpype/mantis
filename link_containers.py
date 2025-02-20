@@ -1649,29 +1649,26 @@ class LinkDrivenParameter:
         self.executed = False
         self.signature = signature
         self.inputs = {
-        "Input Relationship" : NodeSocket(is_input = True, name = "Input Relationship", node = self,),
-          "Driver"      : NodeSocket(is_input = True, name = "Driver", node = self),
-          "Parameter"   : NodeSocket(is_input = True, name = "Parameter", node = self),
-          "Index"       : NodeSocket(is_input = True, name = "Index", node = self),
+            "Input Relationship" : NodeSocket(is_input = True, name = "Input Relationship", node = self,),
+            "Value"      : NodeSocket(is_input = True, name = "Value", node = self),
+            "Parameter"   : NodeSocket(is_input = True, name = "Parameter", node = self),
+            "Index"       : NodeSocket(is_input = True, name = "Index", node = self),
         }
         self.outputs = {
-          "Output Relationship" : NodeSocket(name = "Output Relationship", node=self), }
+            "Output Relationship" : NodeSocket(name = "Output Relationship", node=self), }
         self.parameters = {
-          "Input Relationship":None, 
-          "Driver":None, 
-          "Parameter":None,
-          "Index":None,
+            "Input Relationship":None, 
+            "Value":None, 
+            "Parameter":None,
+            "Index":None,
         }
         # now set up the traverse target...
         self.inputs["Input Relationship"].set_traverse_target(self.outputs["Output Relationship"])
         self.outputs["Output Relationship"].set_traverse_target(self.inputs["Input Relationship"])
         self.node_type = "LINK"
-        self.hierarchy_connections = []
-        self.connections = []
-        self.hierarchy_dependencies = []
-        self.dependencies = []
-        self.prepared = True
-        self.executed = False
+        self.hierarchy_connections,self.connections = [], []
+        self.hierarchy_dependencies, self.dependencies = [], []
+        self.prepared, self.executed = True, False
 
     def GetxForm(self):
         return GetxForm(self)
@@ -1682,28 +1679,48 @@ class LinkDrivenParameter:
     def bExecute(self, bContext = None,):
         prepare_parameters(self)
         prGreen("Executing Driven Parameter node")
-        
-        # example_ driver ={
-                    # "owner":None,
-                    # "prop":None, # will be filled out in the node that uses the driver
-                    # "ind":-1, # same here
-                    # "type": self.evaluate_input("Driver Type"),
-                    # "vars": my_vars,
-                    # "keys": self.evaluate_input("fCurve"),}
-                    
-        driver = self.evaluate_input("Driver")
-        driver["owner"] = self.GetxForm().bGetObject()
-        driver["prop"] = self.evaluate_input("Parameter")
-        driver["ind"] = self.evaluate_input("Index")
-        
-        self.parameters["Driver"] = driver
+        prop = self.evaluate_input("Parameter")
+        index = self.evaluate_input("Index")
+        value = self.evaluate_input("Value")
+        xf = self.GetxForm()
+        ob = xf.bGetObject(mode="POSE")
+        # IMPORTANT: this node only works on pose bone attributes.
+        self.bObject = ob
+        length=1
+        if hasattr(ob, prop):
+            try:
+                length = len(getattr(ob, prop))
+            except TypeError:
+                pass
+            except AttributeError:
+                pass
+        else:
+            raise AttributeError(f"Cannot Set value {prop} on object because it does not exist.")
+        def_value = 0.0
+        if length>1:
+            def_value=[0.0]*length
+            self.parameters["Value"] = tuple( 0.0 if i != index else value for i in range(length))
+
+        props_sockets = {
+            prop: ("Value", def_value)
+        }
+        evaluate_sockets(self, ob, props_sockets)
+
         self.executed = True
 
     def bFinalize(self, bContext = None):
-        # TODO HACK BUG
-        # This probably no longer works
-        from .drivers import CreateDrivers
-        CreateDrivers( [ self.parameters["Driver"] ] )
+        driver = self.evaluate_input("Value")
+        try:
+            for i, val in enumerate(self.parameters["Value"]):
+                from .drivers import MantisDriver
+                if isinstance(val, MantisDriver):
+                    driver["ind"] = i
+                    val = driver
+        except AttributeError:
+            self.parameters["Value"] = driver
+        except TypeError:
+            self.parameters["Value"] = driver
+        finish_drivers(self)
         
 
         
@@ -1737,12 +1754,9 @@ class LinkArmature:
         self.outputs["Output Relationship"].set_traverse_target(self.inputs["Input Relationship"])
         self.node_type = "LINK"
         setup_custom_props(self)
-        self.hierarchy_connections = []
-        self.connections = []
-        self.hierarchy_dependencies = []
-        self.dependencies = []
-        self.prepared = True
-        self.executed = False
+        self.hierarchy_connections,self.connections = [], []
+        self.hierarchy_dependencies, self.dependencies = [], []
+        self.prepared, self.executed = True, False
 
 
     def GetxForm(self):
@@ -1831,12 +1845,9 @@ class LinkSplineIK:
         self.inputs["Input Relationship"].set_traverse_target(self.outputs["Output Relationship"])
         self.outputs["Output Relationship"].set_traverse_target(self.inputs["Input Relationship"])
         self.node_type = "LINK"
-        self.hierarchy_connections = []
-        self.connections = []
-        self.hierarchy_dependencies = []
-        self.dependencies = []
-        self.prepared = True
-        self.executed = False
+        self.hierarchy_connections,self.connections = [], []
+        self.hierarchy_dependencies, self.dependencies = [], []
+        self.prepared, self.executed = True, False
 
     def evaluate_input(self, input_name):
         return default_evaluate_input(self, input_name)

@@ -260,17 +260,17 @@ def update_interface(interface, name, in_out, sock_type, parent_name):
     else:
         raise RuntimeError(wrapRed("Cannot add interface item to tree without specifying type."))
 
-def relink_socket_map(node, node_collection, map, item, in_out=None):
+def relink_socket_map(node, socket_collection, map, item, in_out=None):
     from bpy.types import NodeSocket
     if not in_out: in_out=item.in_out
     if node.bl_idname in ['MantisSchemaGroup'] and item.parent and item.parent.name == 'Array':
         multi = False
         if in_out == 'INPUT':
             multi=True
-        s = node_collection.new(type=item.socket_type, name=item.name, identifier=item.identifier,  use_multi_input=multi)
+        s = socket_collection.new(type=item.socket_type, name=item.name, identifier=item.identifier,  use_multi_input=multi)
         # s.link_limit = node.schema_length TODO
     else:
-        s = node_collection.new(type=item.socket_type, name=item.name, identifier=item.identifier)
+        s = socket_collection.new(type=item.socket_type, name=item.name, identifier=item.identifier)
     if item.parent.name == 'Array': s.display_shape = 'SQUARE_DOT'
     do_relink(node, s, map)
 
