@@ -34,6 +34,7 @@ def TellClasses():
              UtilitySwitch,
              UtilityCombineThreeBool,
              UtilityCombineVector,
+             UtilitySeparateVector,
              UtilityCatStrings,
              UtilityGetBoneLength,
              UtilityPointFromBoneMatrix,
@@ -1041,6 +1042,40 @@ class UtilityCombineVector:
           self.evaluate_input("X"),
           self.evaluate_input("Y"),
           self.evaluate_input("Z"), )
+        self.prepared = True
+        self.executed = True
+  
+
+  # TODO
+class UtilitySeparateVector:
+    '''A node for separating a vector into three floats'''
+
+    def __init__(self, signature, base_tree):
+        self.base_tree=base_tree
+        self.executed = False
+        self.signature = signature
+        self.inputs = {
+          "Vector" : NodeSocket(is_input = True, name = "Vector", node=self),
+        }
+        self.outputs = {
+          "X"   : NodeSocket(name = "X", node = self),
+          "Y"   : NodeSocket(name = "Y", node = self),
+          "Z"   : NodeSocket(name = "Z", node = self),
+        }
+        self.parameters = {
+          "X"   : None,
+          "Y"   : None,
+          "Z"   : None, }
+        self.node_type = "UTILITY"
+        self.hierarchy_connections, self.connections = [], []
+        self.hierarchy_dependencies, self.dependencies = [], []
+        self.prepared, self.executed = False, False
+
+    def bPrepare(self, bContext = None,):
+        # prepare_parameters(self)
+        self.parameters["X"] = self.evaluate_input("Vector")[0]
+        self.parameters["Y"] = self.evaluate_input("Vector")[1]
+        self.parameters["Z"] = self.evaluate_input("Vector")[2]
         self.prepared = True
         self.executed = True
 

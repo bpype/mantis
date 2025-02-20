@@ -41,6 +41,7 @@ def TellClasses():
              UtilityKeyframe,
              UtilityCombineThreeBoolNode,
              UtilityCombineVectorNode,
+             UtilitySeparateVector,
              UtilityCatStringsNode,
              UtilityGetBoneLength,
              UtilityPointFromBoneMatrix,
@@ -515,9 +516,8 @@ class UtilityCombineThreeBoolNode(Node, MantisNode):
         self.inputs.new("BooleanSocket", "Y")
         self.inputs.new("BooleanSocket", "Z")
         self.outputs.new("BooleanThreeTupleSocket", "Three-Bool")
-        # this node should eventually just be a Combine Boolean Three-Tuple node
-        # and the "Driver" output will need to be figured out some other way
         self.initialized = True
+
 class UtilityCombineVectorNode(Node, MantisNode):
     """Combines three floats into a vector."""
     bl_idname = "UtilityCombineVector"
@@ -530,8 +530,20 @@ class UtilityCombineVectorNode(Node, MantisNode):
         self.inputs.new("FloatSocket", "Y")
         self.inputs.new("FloatSocket", "Z")
         self.outputs.new("VectorSocket", "Vector")
-        # this node should eventually just be a Combine Boolean Three-Tuple node
-        # and the "Driver" output will need to be figured out some other way
+        self.initialized = True
+        
+class UtilitySeparateVector(Node, MantisNode):
+    """Separates a vector into three floats"""
+    bl_idname = "UtilitySeparateVector"
+    bl_label = "Separate Vector"
+    bl_icon = "NODE"
+    initialized : bpy.props.BoolProperty(default = False)
+    
+    def init(self, context):
+        self.inputs.new("VectorSocket", "Vector")
+        self.outputs.new("FloatSocket", "X")
+        self.outputs.new("FloatSocket", "Y")
+        self.outputs.new("FloatSocket", "Z")
         self.initialized = True
         
 class UtilityCatStringsNode(Node, MantisNode):
