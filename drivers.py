@@ -69,6 +69,8 @@ def CreateDrivers(drivers):
         if (expr := driver.get("expression")) and isinstance(expr, str):
             drv.expression = expr
         
+        fc.extrapolation = driver["extrapolation"]
+
         # logic for handling type can go here
         
         # start by clearing

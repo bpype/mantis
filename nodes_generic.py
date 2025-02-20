@@ -448,12 +448,13 @@ class UtilityFCurveNode(Node, MantisNode):
     initialized : bpy.props.BoolProperty(default = False)
     
     def init(self, context):
+        self.inputs.new("eFCrvExtrapolationMode", "Extrapolation Mode")
         self.outputs.new("FCurveSocket", "fCurve")
         self.initialized = True
             
     def draw_buttons(self, context, layout):
         layout.operator( 'mantis.fcurve_node_add_kf' )
-        if (len(self.inputs) > 0):
+        if (len(self.inputs) > 1):
             layout.operator( 'mantis.fcurve_node_remove_kf' )
 
 

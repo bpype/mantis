@@ -163,6 +163,7 @@ def TellClasses():
              KeyframeSocket,
              EnumKeyframeInterpolationTypeSocket,
              EnumKeyframeBezierHandleTypeSocket,
+             eFCrvExtrapolationMode,
              
              # Math
              MathFloatOperation,
@@ -2114,7 +2115,31 @@ class EnumKeyframeBezierHandleTypeSocket(NodeSocket):
         return self.color_simple
 
 
+enumExtrapolationMode = (('CONSTANT', 'Constant', 'Constant'),
+                         ('LINEAR', "Linear", "Linear"),)
 
+
+class eFCrvExtrapolationMode(NodeSocket):
+    '''FCurve Extrapolation Mode'''
+    bl_idname = 'eFCrvExtrapolationMode'
+    bl_label = "Extrapolation Mode"
+    default_value :bpy.props.EnumProperty(
+        name="",
+        description="Handle Type",
+        items=enumExtrapolationMode,
+        default='CONSTANT',
+        update = update_socket,)
+    
+    color_simple = cString
+    color : bpy.props.FloatVectorProperty(default=cString, size=4)
+    input : bpy.props.BoolProperty(default =False, update = update_socket)
+    def draw(self, context, layout, node, text):
+        ChooseDraw(self, context, layout, node, text)
+    def draw_color(self, context, node):
+        return self.color
+    @classmethod
+    def draw_color_simple(self):
+        return self.color_simple
 
 
 enumFloatOperations = (('ADD', 'Add', 'Add'),

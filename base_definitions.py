@@ -362,7 +362,8 @@ SOCKETS_RENAMED=[ ("LinkDrivenParameter", "DriverSocket",   "Driver",     "Float
 
                 # NODE CLASS NAME             IN_OUT    SOCKET TYPE     SOCKET NAME     INDEX   MULTI     DEFAULT
 SOCKETS_ADDED=[("DeformerMorphTargetDeform", 'INPUT', 'BooleanSocket', "Use Shape Key", 1,      False,    False),
-               ("DeformerMorphTargetDeform", 'INPUT', 'BooleanSocket', "Use Offset", 2,         False,     True),]
+               ("DeformerMorphTargetDeform", 'INPUT', 'BooleanSocket', "Use Offset", 2,         False,     True),
+               ("UtilityFCurve",             'INPUT',  "eFCrvExtrapolationMode", "Extrapolation Mode", 0, False, 'CONSTANT')]
 
 # replace names with bl_idnames for reading the tree and solving schemas.
 replace_types = ["NodeGroupInput", "NodeGroupOutput", "SchemaIncomingConnection",

@@ -741,12 +741,14 @@ class UtilityFCurve:
         self.base_tree=base_tree
         self.executed = False
         self.signature = signature
-        self.inputs = {}
+        self.inputs = {
+            "Extrapolation Mode" : NodeSocket(is_input = True, name = "Extrapolation Mode", node = self),
+        }
         self.outputs = {
           "fCurve" : NodeSocket(name = "fCurve", node=self),
         }
         self.parameters = {
-          "Use_KeyFrame_Nodes": True, # HACK
+          "Extrapolation Mode":None,
           "fCurve":None, 
         }
         self.node_type = "UTILITY"
@@ -765,31 +767,22 @@ class UtilityFCurve:
         prepare_parameters(self)
         from .utilities import get_node_prototype
         np = get_node_prototype(self.signature, self.base_tree)
-
-
-        keys = []
+        extrap_mode = self.evaluate_input("Extrapolation Mode")
+        keys = [] # ugly but whatever
         #['amplitude', 'back', 'bl_rna', 'co', 'co_ui', 'easing', 'handle_left', 'handle_left_type', 'handle_right', 'handle_right_type',
         # 'interpolation', 'period', 'rna_type', 'select_control_point', 'select_left_handle', 'select_right_handle', 'type']
-
-        if True: #np.use_kf_nodes:
-            for k in self.inputs.keys():
-                # print (self.inputs[k])
-                if (key := self.evaluate_input(k)) is None:
-                    prOrange(f"WARN: No enough keyframes connected to {self}:{k}. Skipping Link.")
-                else:
-                    keys.append(key)
-
-        else:
-            raise NotImplementedError("Getting the keys from an fCurve isn't really working anymore lol need to fix")
-            fc_ob = np.fake_fcurve_ob
-            fc = fc_ob.animation_data.action.fcurves[0]
-            for k in fc.keyframe_points:
-                key = {}
-                for prop in dir(k):
-                    if ("__" in prop) or ("bl_" in prop): continue
-                    #it's __name__ or bl_rna or something
-                    key[prop] = getattr(k, prop)
+        for k in self.inputs.keys():
+            if k == 'Extrapolation Mode' : continue
+            # print (self.inputs[k])
+            if (key := self.evaluate_input(k)) is None:
+                prOrange(f"WARN: No enough keyframes connected to {self}:{k}. Skipping Link.")
+            else:
                 keys.append(key)
+        if len(keys) <1:
+            prOrange(f"WARN: no keys in fCurve {self}.")
+        keys.append(extrap_mode)
+        
+
         
         # Push parameter to downstream connected node.connected:
         # TODO: find out if this is necesary, even
@@ -799,8 +792,6 @@ class UtilityFCurve:
                 link.to_node.parameters[link.to_socket] = keys
         # the above was a HACK. I don't want nodes modiying their descenedents.
         # If the above was necessary, I want to get an error from it so I can fix it in the descendent's class
-        if len(keys) <1:
-            prOrange(f"WARN: no keys in fCurve {self}.")
         self.prepared = True
         self.executed = True
                 
@@ -841,27 +832,33 @@ class UtilityDriver:
         from .drivers import MantisDriver
         #prPurple("Executing Driver Node")
         my_vars = []
-        if (keys := self.evaluate_input("fCurve")) is None:
+        if len(keys := self.evaluate_input("fCurve")) <2:
             keys={}
             prWhite(f"INFO: no fCurve connected to {self}; using default fCurve.")
             from mathutils import Vector
             keys = [
                 {"co":Vector( (0, 0,)), "type":"GENERATED", "interpolation":"LINEAR" },
                 {"co":Vector( (1, 1,)), "type":"GENERATED", "interpolation":"LINEAR" },
+                "CONSTANT",
             ]
+        try:
+            extrap_mode = keys.pop() # this is a silly way of doing things but it maintains the interface
+        except IndexError:
+            extrap_mode = 'CONSTANT'
         for inp in list(self.inputs.keys() )[3:]:
             if (new_var := self.evaluate_input(inp)):
                 new_var["name"] = inp
                 my_vars.append(new_var)
             else:
                 raise RuntimeError(f"Failed to initialize Driver variable for {self}")
-        my_driver ={ "owner"      :  None,
-                     "prop"       :  None, # will be filled out in the node that uses the driver
-                     "expression" :  self.evaluate_input("Expression"),
-                     "ind"        :  -1, # same here
-                     "type"       :  self.evaluate_input("Driver Type"),
-                     "vars"       :  my_vars,
-                     "keys"       :  keys, }
+        my_driver ={ "owner"         :  None,
+                     "prop"          :  None, # will be filled out in the node that uses the driver
+                     "expression"    :  self.evaluate_input("Expression"),
+                     "ind"           :  -1, # same here
+                     "type"          :  self.evaluate_input("Driver Type"),
+                     "vars"          :  my_vars,
+                     "keys"          :  keys,
+                     "extrapolation" : extrap_mode }
         
         my_driver = MantisDriver(my_driver)
         
@@ -938,7 +935,8 @@ class UtilitySwitch:
                                    "type":"KEYFRAME",}, #display type
                                  { "co":(1,1),
                                    "interpolation": "LINEAR",
-                                   "type":"KEYFRAME",},], }
+                                   "type":"KEYFRAME",},],
+                      "extrapolation": 'CONSTANT', }
         my_driver   ["expression"] = "a"
         
         my_driver = MantisDriver(my_driver)
