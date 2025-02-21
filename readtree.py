@@ -697,5 +697,8 @@ def execute_tree(nodes, base_tree, context):
     finally:
         context.view_layer.objects.active = active
         for ob in select_me:
-            ob.select_set(True)
+            try:
+                ob.select_set(True)
+            except RuntimeError: # it isn't in the view layer
+                pass
 
