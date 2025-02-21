@@ -537,8 +537,52 @@ def sort_tree_into_layers(nodes, context):
             prWhite (p, p.dependencies)
     return layers
 
-def error_popup_draw(self, context):
-    self.layout.label(text="Error executing tree. There is an illegal cycle somewhere in the tree.")
+
+def switch_mode(mode='OBJECT', objects = []):
+    active = None
+    if objects:
+        from bpy import context, ops
+        active = objects[-1]
+        context.view_layer.objects.active = active
+        if (active):
+            with context.temp_override(**{'active_object':active, 'selected_objects':objects}):
+                ops.object.mode_set(mode=mode)
+    return active
+
+def execution_error_cleanup(node, exception, switch_objects = [] ):
+    from bpy import  context
+    if node:
+        # this stuff that is commented out is good and useful but I fear to enable it by default.
+        # TODO: see about this zoom-to-node stuff.
+        base_tree = node.base_tree
+        tree = base_tree
+        try:
+            pass
+            space = context.space_data
+            # path = space.path
+            # path.clear()
+            # path.start(base_tree)
+            for name in node.signature[1:]:
+                for n in tree.nodes: n.select = False
+                n = tree.nodes[name]
+                n.select = True
+                tree.nodes.active = n
+                if hasattr(n, "node_tree"):
+                    tree = n.node_tree
+                    # path.append(tree, node=n)
+        except AttributeError: # not being run in node graph
+            pass
+        finally:
+            def error_popup_draw(self, context):
+                self.layout.label(text=f"Error: {exception}")
+                self.layout.label(text=f"see node: {node.signature[1:]}.")
+            context.window_manager.popup_menu(error_popup_draw, title="Error", icon='ERROR')
+    switch_mode(mode='OBJECT', objects=switch_objects)
+    for ob in switch_objects:
+        ob.data.pose_position = 'POSE'
+    prRed(f"Error: {exception} in node {node}")
+    return exception
+
 
 #execute tree is really slow overall, but still completes 1000s of nodes in only 
 def execute_tree(nodes, base_tree, context):
@@ -546,7 +590,6 @@ def execute_tree(nodes, base_tree, context):
     import bpy
     from time import time
     from .node_container_common import GraphError
-    from uuid import uuid4
     original_active = context.view_layer.objects.active
     start_execution_time = time()
 
@@ -557,8 +600,6 @@ def execute_tree(nodes, base_tree, context):
         nc.executed = False
         check_and_add_root(nc, xForm_pass)
 
-    execute_pass = xForm_pass.copy()
-    # exe_order = {}; i=0
     executed = []
 
     # check for cycles here by keeping track of the number of times a node has been visited.
@@ -566,95 +607,95 @@ def execute_tree(nodes, base_tree, context):
     check_max_len=len(nodes)**2 # seems too high but safe. In a well-ordered graph, I guess this number should be less than the number of nodes.
     max_iterations = len(nodes)**2
     i = 0
+    switch_me = [] # switch the mode on these objects
+    active = None # only need it for switching modes
+    select_me = []
+    try:
+        while(xForm_pass):
+            if i >= max_iterations:
+                raise GraphError("There is probably a cycle somewhere in the graph.")
+            i+=1    
+            n = xForm_pass.pop()
+            if visited.get(n.signature):
+                visited[n.signature]+=1
+            else:
+                visited[n.signature]=0
+            if visited[n.signature] > check_max_len:
+                raise GraphError("There is a probably a cycle in the graph somewhere. Fix it!")
+                # we're trying to solve the halting problem at this point.. don't do that.
+                # TODO find a better way! there are algo's for this but they will require using a different solving algo, too
+            if n.prepared:
+                continue
+            if n.node_type not in ['XFORM', 'UTILITY']:
+                for dep in n.hierarchy_dependencies:
+                    if not dep.prepared:
+                        xForm_pass.appendleft(n) # hold it
+                        break
+                else:
+                    n.prepared=True
+                    executed.append(n)
+                    for conn in n.hierarchy_connections:
+                        if  not conn.prepared:
+                            xForm_pass.appendleft(conn)
+            else:
+                for dep in n.hierarchy_dependencies:
+                    if not dep.prepared:
+                        break
+                else:
+                    try:
+                        n.bPrepare(context)
+                        if not n.executed:
+                            n.bExecute(context)
+                        if (n.__class__.__name__ == "xFormArmature" ):
+                            ob = n.bGetObject()
+                            switch_me.append(ob)
+                            active = ob
+                        if not (n.__class__.__name__ == "xFormBone" ) and hasattr(n, "bGetObject"):
+                            ob = n.bGetObject()
+                            if isinstance(ob, bpy.types.Object):
+                                select_me.append(ob)
+                    except Exception as e:
+                        raise execution_error_cleanup(n, e,)
+                    n.prepared=True
+                    executed.append(n)
+                    for conn in n.hierarchy_connections:
+                        if  not conn.prepared:
+                            xForm_pass.appendleft(conn)
+        
 
-    while(xForm_pass):
-        if i >= max_iterations:
-            raise GraphError("There is a cycle somewhere in the graph.")
-            bpy.context.window_manager.popup_menu(error_popup_draw, title="Error", icon='ERROR')
-            break
-        i+=1    
-        n = xForm_pass.pop()
-        if visited.get(n.signature):
-            visited[n.signature]+=1
-        else:
-            visited[n.signature]=0
-        if visited[n.signature] > check_max_len:
-            raise GraphError("There is a cycle in the graph somewhere. Fix it!")
-            bpy.context.window_manager.popup_menu(error_popup_draw, title="Error", icon='ERROR')
-            break
-            # we're trying to solve the halting problem at this point.. don't do that.
-            # TODO find a better way! there are algo's for this but they will require using a different solving algo, too
-        if n.prepared:
-            continue
-        if n.node_type not in ['XFORM', 'UTILITY']:
-            for dep in n.hierarchy_dependencies:
-                if not dep.prepared:
-                    xForm_pass.appendleft(n) # hold it
-                    break
-            else:
-                n.prepared=True
-                executed.append(n)
-                for conn in n.hierarchy_connections:
-                    if  not conn.prepared:
-                        xForm_pass.appendleft(conn)
-        else:
-            for dep in n.hierarchy_dependencies:
-                if not dep.prepared:
-                    break
-            else:
+        switch_mode(mode='POSE', objects=switch_me)
+        if (active):
+            with context.temp_override(**{'active_object':active, 'selected_objects':switch_me}):
+                bpy.ops.object.mode_set(mode='POSE')
+
+        for n in executed:
+            try:
                 n.bPrepare(context)
                 if not n.executed:
                     n.bExecute(context)
-                n.prepared=True
-                executed.append(n)
-                for conn in n.hierarchy_connections:
-                    if  not conn.prepared:
-                        xForm_pass.appendleft(conn)
-    
-    active = None
-    switch_me = []
-    for n in nodes.values():
-        # if it is a armature, switch modes
-        # total hack                   #kinda dumb
-        if ((hasattr(n, "bGetObject")) and (n.__class__.__name__ == "xFormArmature" )):
+            except Exception as e:
+                raise execution_error_cleanup(n, e,)
+
+        for n in executed:
             try:
-                ob = n.bGetObject()
-            except KeyError: # for bones
-                ob = None
-            # TODO this will be a problem if and when I add mesh/curve stuff
-            if (hasattr(ob, 'mode') and ob.mode == 'EDIT'):
-                switch_me.append(ob)
-                active = ob
-                context.view_layer.objects.active = ob# need to have an active ob, not None, to switch modes.
-            # we override selected_objects to prevent anyone else from mode-switching
-    # TODO it's possible but unlikely that the user will try to run a 
-    #    graph with no armature nodes in it.
-    if (active):
-        with context.temp_override(**{'active_object':active, 'selected_objects':switch_me}):
-            bpy.ops.object.mode_set(mode='POSE')
+                n.bFinalize(context)
+            except Exception as e:
+                raise execution_error_cleanup(n, e,)
 
-    for n in executed:
-        n.bPrepare(context)
-        if not n.executed:
-            n.bExecute(context)
-
-    for n in executed:
-        n.bFinalize(context)
-
-    
-    for n in nodes.values(): # if it is a armature, switch modes
-        if ((hasattr(n, "bGetObject")) and (n.__class__.__name__ == "xFormArmature" )):
-            if (hasattr(ob, 'mode') and ob.mode == 'POSE'):
-                switch_me.append(ob)
-                active = ob
-    if (active):
-        with context.temp_override(**{'active_object':active, 'selected_objects':switch_me}):
-            bpy.ops.object.mode_set(mode='OBJECT')
-    for ob in switch_me:
-        ob.data.pose_position = 'POSE'
-    tot_time = (time() - start_execution_time)
-    prGreen(f"Executed tree of {len(executed)} nodes in {tot_time} seconds")
-    if (original_active):
-        context.view_layer.objects.active = original_active
-        original_active.select_set(True)
+        switch_mode(mode='OBJECT', objects=switch_me)
+        for ob in switch_me:
+            ob.data.pose_position = 'POSE'
+        
+        tot_time = (time() - start_execution_time)
+        prGreen(f"Executed tree of {len(executed)} nodes in {tot_time} seconds")
+        if (original_active):
+            context.view_layer.objects.active = original_active
+            original_active.select_set(True)
+    except Exception as e:
+        execution_error_cleanup(None, e, switch_me)
+        # this will PASS the error! that's better for UI/UX
+    finally:
+        context.view_layer.objects.active = active
+        for ob in select_me:
+            ob.select_set(True)
 
