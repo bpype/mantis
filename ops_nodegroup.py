@@ -61,83 +61,85 @@ class MantisGroupNodes(Operator):
 
     def execute(self, context):
         base_tree=context.space_data.path[-1].node_tree
-        for path_item in context.space_data.path:
-            path_item.node_tree.is_exporting = True
+        try:
+            for path_item in context.space_data.path:
+                path_item.node_tree.is_exporting = True
 
-        from .i_o import export_to_json, do_import
-        from random import random
-        grp_name = "".join([chr(int(random()*30)+35) for i in range(20)])
-        trees=[base_tree]
-        selected_nodes=export_to_json(trees, write_file=False, only_selected=True)
-        # this snippet of confusing indirection edits the name of the base tree in the JSON data
-        selected_nodes[base_tree.name][0]["name"]=grp_name
-        do_import(selected_nodes, context)
+            from .i_o import export_to_json, do_import
+            from random import random
+            grp_name = "".join([chr(int(random()*30)+35) for i in range(20)])
+            trees=[base_tree]
+            selected_nodes=export_to_json(trees, write_file=False, only_selected=True)
+            # this snippet of confusing indirection edits the name of the base tree in the JSON data
+            selected_nodes[base_tree.name][0]["name"]=grp_name
+            do_import(selected_nodes, context)
 
-        affected_links_in = []
-        affected_links_out = []
+            affected_links_in = []
+            affected_links_out = []
 
-        for l in base_tree.links:
-            if l.from_node.select and not l.to_node.select: affected_links_out.append(l)
-            if not l.from_node.select and l.to_node.select: affected_links_in.append(l)
-        delete_me = []
-        all_nodes_bounding_box=[Vector((float("inf"),float("inf"))), Vector((-float("inf"),-float("inf")))]
-        for n in base_tree.nodes:
-            if n.select:
-                node_loc = (0,0,0)
-                if bpy.app.version <= (4, 4):
-                    node_loc = n.location
-                    parent = n.parent
-                    while (parent): # accumulate parent offset
-                        node_loc += parent.location
-                        parent = parent.parent
-                else: # there is a new location_absolute property in 4.4
-                    node_loc = n.location_absolute
-                if node_loc.x < all_nodes_bounding_box[0].x:
-                    all_nodes_bounding_box[0].x = node_loc.x
-                if node_loc.y < all_nodes_bounding_box[0].y:
-                    all_nodes_bounding_box[0].y = node_loc.y
-                #
-                if node_loc.x > all_nodes_bounding_box[1].x:
-                    all_nodes_bounding_box[1].x = node_loc.x
-                if node_loc.y > all_nodes_bounding_box[1].y:
-                    all_nodes_bounding_box[1].y = node_loc.y
-                delete_me.append(n)
-        grp_node = base_tree.nodes.new('MantisNodeGroup')
-        grp_node.node_tree = bpy.data.node_groups[grp_name]
-        bb_center = all_nodes_bounding_box[0].lerp(all_nodes_bounding_box[1],0.5)
-        for n in grp_node.node_tree.nodes:
-            n.location -= bb_center
+            for l in base_tree.links:
+                if l.from_node.select and not l.to_node.select: affected_links_out.append(l)
+                if not l.from_node.select and l.to_node.select: affected_links_in.append(l)
+            delete_me = []
+            all_nodes_bounding_box=[Vector((float("inf"),float("inf"))), Vector((-float("inf"),-float("inf")))]
+            for n in base_tree.nodes:
+                if n.select:
+                    node_loc = (0,0,0)
+                    if bpy.app.version <= (4, 4):
+                        node_loc = n.location
+                        parent = n.parent
+                        while (parent): # accumulate parent offset
+                            node_loc += parent.location
+                            parent = parent.parent
+                    else: # there is a new location_absolute property in 4.4
+                        node_loc = n.location_absolute
+                    if node_loc.x < all_nodes_bounding_box[0].x:
+                        all_nodes_bounding_box[0].x = node_loc.x
+                    if node_loc.y < all_nodes_bounding_box[0].y:
+                        all_nodes_bounding_box[0].y = node_loc.y
+                    #
+                    if node_loc.x > all_nodes_bounding_box[1].x:
+                        all_nodes_bounding_box[1].x = node_loc.x
+                    if node_loc.y > all_nodes_bounding_box[1].y:
+                        all_nodes_bounding_box[1].y = node_loc.y
+                    delete_me.append(n)
+            grp_node = base_tree.nodes.new('MantisNodeGroup')
+            grp_node.node_tree = bpy.data.node_groups[grp_name]
+            bb_center = all_nodes_bounding_box[0].lerp(all_nodes_bounding_box[1],0.5)
+            for n in grp_node.node_tree.nodes:
+                n.location -= bb_center
 
-        grp_node.location = Vector((all_nodes_bounding_box[0].x+200, all_nodes_bounding_box[0].lerp(all_nodes_bounding_box[1], 0.5).y))
-        from .base_definitions import node_group_update
-        node_group_update(grp_node, force=True)
+            grp_node.location = Vector((all_nodes_bounding_box[0].x+200, all_nodes_bounding_box[0].lerp(all_nodes_bounding_box[1], 0.5).y))
+            from .base_definitions import node_group_update
+            node_group_update(grp_node, force=True)
 
-        # for each node in the JSON
-        for n in selected_nodes[base_tree.name][2].values():
-            for s in n["sockets"].values(): # for each socket in the node
-                if source := s.get("source"):
-                    prGreen (s["name"], source[0], source[1])
-                    base_tree_node=base_tree.nodes.get(source[0])
-                    if s["is_output"]:
-                        for output in base_tree_node.outputs:
-                            if output.identifier == source[1]:
-                                break
+            # for each node in the JSON
+            for n in selected_nodes[base_tree.name][2].values():
+                for s in n["sockets"].values(): # for each socket in the node
+                    if source := s.get("source"):
+                        prGreen (s["name"], source[0], source[1])
+                        base_tree_node=base_tree.nodes.get(source[0])
+                        if s["is_output"]:
+                            for output in base_tree_node.outputs:
+                                if output.identifier == source[1]:
+                                    break
+                            else:
+                                raise RuntimeError(wrapRed("Socket not found when grouping"))
+                            base_tree.links.new(input=output, output=grp_node.inputs[s["name"]])
                         else:
-                            raise RuntimeError(wrapRed("Socket not found when grouping"))
-                        base_tree.links.new(input=output, output=grp_node.inputs[s["name"]])
-                    else:
-                        for s_input in base_tree_node.inputs:
-                            if s_input.identifier == source[1]:
-                                break
-                        else:
-                            raise RuntimeError(wrapRed("Socket not found when grouping"))
-                        base_tree.links.new(input=grp_node.outputs[s["name"]], output=s_input)
+                            for s_input in base_tree_node.inputs:
+                                if s_input.identifier == source[1]:
+                                    break
+                            else:
+                                raise RuntimeError(wrapRed("Socket not found when grouping"))
+                            base_tree.links.new(input=grp_node.outputs[s["name"]], output=s_input)
 
-        for n in delete_me: base_tree.nodes.remove(n)
-        base_tree.nodes.active = grp_node
-
-        for path_item in context.space_data.path:
-            path_item.node_tree.is_exporting = False
+            for n in delete_me: base_tree.nodes.remove(n)
+            base_tree.nodes.active = grp_node
+        finally: # MAKE SURE to turn it back to not exporting
+            for path_item in context.space_data.path:
+                path_item.node_tree.is_exporting = False
+        
         grp_node.node_tree.name = "Group_Node.000"
         return {'FINISHED'}
 
@@ -157,35 +159,48 @@ class MantisEditGroup(Operator):
         space = context.space_data
         path = space.path
         node = path[len(path)-1].node_tree.nodes.active
-
-        if hasattr(node, "node_tree"):
-            if (node.node_tree):
-                path.append(node.node_tree, node=node)
-                path[0].node_tree.display_update(context)
-                return {"FINISHED"}
-        elif len(path) > 1:
-            path.pop()
-            # get the active node in the current path
-            active = path[len(path)-1].node_tree.nodes.active
-            from .base_definitions import node_group_update
-            active.is_updating = True
-            node_group_update(active, force = True)
-            active.is_updating = False
-            base_tree = path[0].node_tree
-            base_tree.do_live_update = False
-            # call update to force the node group to check if its tree has changed
-            # now we need to loop through the tree and update all node groups of this type.
-            from .utilities import get_all_nodes_of_type
-            for g in get_all_nodes_of_type(base_tree, "MantisNodeGroup"):
-                if g.node_tree == active.node_tree:
-                    g.is_updating = False
-                    node_group_update(g, force = True)
-                    g.is_updating = True
-            path[0].node_tree.display_update(context)
+        base_tree = path[0].node_tree
+        base_tree.do_live_update = False
+        base_tree.is_executing = True
+        try:
+            if hasattr(node, "node_tree"):
+                if (node.node_tree):
+                    path.append(node.node_tree, node=node)
+                    path[0].node_tree.display_update(context)
+                    return {"FINISHED"}
+            elif len(path) > 1:
+                path.pop()
+                # get the active node in the current path
+                active = path[len(path)-1].node_tree.nodes.active
+                from .base_definitions import node_group_update
+                active.is_updating = True
+                try:
+                    node_group_update(active, force = True)
+                finally:
+                    active.is_updating = False
+                # call update to force the node group to check if its tree has changed
+                # now we need to loop through the tree and update all node groups of this type.
+                from .utilities import get_all_nodes_of_type
+                for g in get_all_nodes_of_type(base_tree, "MantisNodeGroup"):
+                    if g.node_tree == active.node_tree:
+                        g.is_updating = True
+                        try:
+                            node_group_update(g, force = True)
+                        finally:
+                            g.is_updating = False
+                base_tree.display_update(context)
+                base_tree.is_executing = True
+                # base_tree.is_executing = True # because it seems display_update unsets this.
+        finally:
             base_tree.do_live_update = True
+            base_tree.is_executing = False
+            # HACK
+            base_tree.handler_flip = True # HACK
+            # HACK
+            # I have no idea why but the operator finishing causes the exeuction handler to fire
+            # I have no control over this since it happens after the execution returns...
+            # so I have to do this ridiculous hack with a Boolean flip bit.
             return {"FINISHED"}
-
-        return {"CANCELLED"}
 
 class ExecuteNodeTree(Operator):
     """Execute this node tree"""
