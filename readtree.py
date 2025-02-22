@@ -585,7 +585,7 @@ def execution_error_cleanup(node, exception, switch_objects = [] ):
 
 
 #execute tree is really slow overall, but still completes 1000s of nodes in only 
-def execute_tree(nodes, base_tree, context):
+def execute_tree(nodes, base_tree, context, error_popups = False):
     # return
     import bpy
     from time import time
@@ -655,7 +655,10 @@ def execute_tree(nodes, base_tree, context):
                             if isinstance(ob, bpy.types.Object):
                                 select_me.append(ob)
                     except Exception as e:
-                        raise execution_error_cleanup(n, e,)
+                        if error_popups:
+                            raise execution_error_cleanup(n, e,)
+                        else:
+                            raise e
                     n.prepared=True
                     executed.append(n)
                     for conn in n.hierarchy_connections:
@@ -674,13 +677,19 @@ def execute_tree(nodes, base_tree, context):
                 if not n.executed:
                     n.bExecute(context)
             except Exception as e:
-                raise execution_error_cleanup(n, e,)
+                if error_popups:
+                    raise execution_error_cleanup(n, e,)
+                else:
+                    raise e
 
         for n in executed:
             try:
                 n.bFinalize(context)
             except Exception as e:
-                raise execution_error_cleanup(n, e,)
+                if error_popups:
+                    raise execution_error_cleanup(n, e,)
+                else:
+                    raise e
 
         switch_mode(mode='OBJECT', objects=switch_me)
         for ob in switch_me:

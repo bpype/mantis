@@ -230,7 +230,7 @@ class ExecuteNodeTree(Operator):
             from pstats import SortKey
             with cProfile.Profile() as pr:
                 tree.update_tree(context)
-                tree.execute_tree(context)
+                tree.execute_tree(context, error_popups = True)
                 # from the Python docs at https://docs.python.org/3/library/profile.html#module-cProfile
                 s = io.StringIO()
                 sortby = SortKey.TIME
@@ -241,7 +241,7 @@ class ExecuteNodeTree(Operator):
 
         else:
             tree.update_tree(context)
-            tree.execute_tree(context)
+            tree.execute_tree(context, error_popups = True)
         prGreen("Finished executing tree in %f seconds" % (time() - start_time))
         return {"FINISHED"}
 

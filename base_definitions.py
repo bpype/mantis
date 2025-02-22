@@ -93,7 +93,7 @@ class MantisTree(NodeTree):
 
         
     
-    def execute_tree(self,context):
+    def execute_tree(self,context, error_popups = False):
         self.handler_flip = False
         if self.is_exporting:
             return
@@ -102,7 +102,7 @@ class MantisTree(NodeTree):
         self.is_executing = True
         from . import readtree
         try:
-            readtree.execute_tree(self.parsed_tree, self, context)
+            readtree.execute_tree(self.parsed_tree, self, context, error_popups)
         except RecursionError as e:
             prRed("Recursion error while parsing tree.")
         finally:
