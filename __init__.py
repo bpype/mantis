@@ -241,13 +241,14 @@ def execute_handler(scene):
                 scene.render.use_lock_interface = False
                 node_tree.tree_valid = False
 
+versioning_node_tasks = [
+    #relevant bl_idnames      # task
+    #(['LinkTransformation'], transformation_constraint_radians_to_degrees)
+]
 
 
 def do_version_update(node_tree):
     from .base_definitions import NODES_REMOVED, SOCKETS_REMOVED, SOCKETS_RENAMED, SOCKETS_ADDED
-    node_tree.mantis_version[0] = MANTIS_VERSION_MAJOR
-    node_tree.mantis_version[1] = MANTIS_VERSION_MINOR
-    node_tree.mantis_version[2] = MANTIS_VERSION_SUB
     for n in node_tree.nodes:
         rename_jobs = []
 
@@ -304,6 +305,12 @@ def do_version_update(node_tree):
             socket_map[new_name] = socket_map[old_id]; del socket_map[old_id]
 
             do_relink(n, s, socket_map)
+        for bl_idname, task in versioning_node_tasks:
+            if n.bl_idname in bl_idname: task(n)
+    # increment the version at the end
+    node_tree.mantis_version[0] = MANTIS_VERSION_MAJOR
+    node_tree.mantis_version[1] = MANTIS_VERSION_MINOR
+    node_tree.mantis_version[2] = MANTIS_VERSION_SUB
 
 
 
