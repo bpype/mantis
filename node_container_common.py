@@ -480,7 +480,9 @@ def evaluate_sockets(nc, c, props_sockets):
             else:                    # 'mute' is better than 'enabled'
                 # UGLY HACK          # because it is available in older
                 if (prop == 'mute'): # Blenders.
-                    safe_setattr(c, prop, not nc.evaluate_input(sock))
+                    safe_setattr(c, prop, not bool(nc.evaluate_input(sock)))
+                elif (prop == 'hide'): # this will not cast it for me, annoying.
+                    safe_setattr(c, prop, bool(nc.evaluate_input(sock)))
                 else:
                     try:
                         # prRed(c.name, nc, prop, nc.evaluate_input(sock) )
