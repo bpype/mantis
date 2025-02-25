@@ -705,6 +705,12 @@ def execute_tree(nodes, base_tree, context, error_popups = False):
         # this will PASS the error! that's better for UI/UX
     finally:
         context.view_layer.objects.active = active
+        # clear the selection first.
+        for ob in context.selected_objects:
+            try:
+                ob.select_set(False)
+            except RuntimeError: # it isn't in the view layer
+                pass
         for ob in select_me:
             try:
                 ob.select_set(True)
