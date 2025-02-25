@@ -212,7 +212,7 @@ def update_handler(scene):
         trees = [p.node_tree for p in context.space_data.path]
         if not trees: return
         if (node_tree := trees[0]).bl_idname in ['MantisTree']:
-            if node_tree.handler_flip : pass
+            if node_tree.prevent_next_exec : pass
             elif node_tree.do_live_update and not (node_tree.is_executing or node_tree.is_exporting):
                 prev_links = node_tree.num_links
                 node_tree.num_links = len(node_tree.links)
@@ -234,7 +234,7 @@ def execute_handler(scene):
         trees = [p.node_tree for p in context.space_data.path]
         if not trees: return
         if (node_tree := trees[0]).bl_idname in ['MantisTree']:
-            if node_tree.handler_flip : node_tree.handler_flip = False
+            if node_tree.prevent_next_exec : node_tree.prevent_next_exec = False
             elif node_tree.tree_valid and node_tree.do_live_update and not (node_tree.is_executing or node_tree.is_exporting):
                 scene.render.use_lock_interface = True
                 node_tree.execute_tree(context)
@@ -324,9 +324,24 @@ def version_update_handler(filename):
                 print (f"Updating tree {node_tree.name} to {MANTIS_VERSION_MAJOR}.{MANTIS_VERSION_MINOR}.{MANTIS_VERSION_SUB}")
                 do_version_update(node_tree)
                 
-                
 
-
+# I'll need to do some fiddling here when it comes time to try
+#   and make rig definitions animatable.
+@persistent
+def on_animation_playback_pre_handler(scene,depsgraph):
+    for t in bpy.data.node_groups:
+        if t.bl_idname in ['MantisTree', 'SchemaTree']:
+            t.is_executing = True
+@persistent
+def on_animation_playback_post_handler(scene,depsgraph):
+    for t in bpy.data.node_groups:
+        if t.bl_idname in ['MantisTree', 'SchemaTree']:
+            t.is_executing = False
+@persistent
+def on_undo_pre_handler(scene): # the undo will still trigger a depsgraph update
+    for t in bpy.data.node_groups: # so we enable prevent_next_exec.
+        if t.bl_idname in ['MantisTree', 'SchemaTree']:
+            t.prevent_next_exec = True
 
 
 def register():
@@ -354,6 +369,9 @@ def register():
     bpy.app.handlers.depsgraph_update_pre.append(update_handler)
     bpy.app.handlers.depsgraph_update_post.append(execute_handler)
     bpy.app.handlers.load_post.append(version_update_handler)
+    bpy.app.handlers.animation_playback_pre.append(on_animation_playback_pre_handler)
+    bpy.app.handlers.animation_playback_post.append(on_animation_playback_post_handler)
+    bpy.app.handlers.undo_pre.append(on_undo_pre_handler)
 
 
     

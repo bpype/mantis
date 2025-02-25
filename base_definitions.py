@@ -37,10 +37,9 @@ class MantisTree(NodeTree):
     is_exporting:BoolProperty(default=False)
     execution_id:StringProperty(default='')
     mantis_version:IntVectorProperty(default=[0,9,2])
-    # this property is a HACK that I need to add to keep the handler from
-    #   executing for no reason after entering and exiting a node group
-    handler_flip:BoolProperty(default=False)
-    # this works, and I don't know why but it is 100% necessary
+    # this prevents the node group from executing on the next depsgraph update
+    # because I don't always have control over when the dg update happens.
+    prevent_next_exec:BoolProperty(default=False)
     
     parsed_tree={}
 
@@ -94,7 +93,7 @@ class MantisTree(NodeTree):
         
     
     def execute_tree(self,context, error_popups = False):
-        self.handler_flip = False
+        self.prevent_next_exec = False
         if self.is_exporting:
             return
         # return
