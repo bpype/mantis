@@ -228,43 +228,16 @@ class xFormBoneNode(Node, xFormNode):
                 if prev_node:
                     other_nc = parsed_tree.get(get_signature_from_edited_tree(prev_node, context))
             
+            if nc and (pb := nc.bGetObject(mode='POSE')):
+                self.display_ik_settings = pb.is_in_ik_chain
+                
             if nc and other_nc:
                 self.display_vp_settings = nc.inputs["Custom Object"].is_connected
                 self.display_def_settings = nc.evaluate_input("Deform")
                 self.display_bb_settings = nc.evaluate_input("BBone Segments") > 1
                 self.display_ik_settings = False
                 #
-                from .node_container_common import ( trace_all_lines_up,
-                                                     trace_single_line)
-                #TODO find a much faster way to do this
-                if False and self.id_data.do_live_update: #TODO this is extremely freaking slow
-                    trace = trace_all_lines_up(nc, "xForm Out")
 
-                    for key in trace.keys():
-                        if (ik_nc:= parsed_tree.get(key)):
-                            if ik_nc.__class__.__name__ in ["LinkInverseKinematics"]:
-                                # if the tree is invalid? This shouldn't be necessary.
-                                if ik_nc.inputs["Input Relationship"].is_connected:
-                                    chain_count = ik_nc.evaluate_input("Chain Length")
-                                    # if chain_count == 0: # this is wrong
-                                    #     self.display_ik_settings = True
-                                    # else:
-                                    if ik_nc.evaluate_input("Use Tail") == False:
-                                        chain_count+=1
-                                    for line in trace[key]:
-                                        # preprocess it to get rid of non-xForms:
-                                        xForm_line=[]
-                                        for path_nc in line:
-                                            if path_nc == ik_nc:
-                                                if ik_nc.inputs["Input Relationship"].links[0].from_node != prev_path_nc:
-                                                    break # not a constraint connection
-                                            if path_nc.node_type == 'XFORM':
-                                                xForm_line.append(path_nc)
-                                            prev_path_nc = path_nc
-                                        else: # if it can finish cleaning the line of non-xForms and still has a connection
-                                            if (len(xForm_line) < chain_count) or (chain_count == 0):
-                                                self.display_ik_settings = True
-                
                 inp = nc.inputs["Relationship"]
                 link = None
                 if inp.is_connected:
