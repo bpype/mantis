@@ -200,9 +200,6 @@ class InputMatrixNode(Node, MantisNode):
     def init(self, context):
         self.outputs.new('MatrixSocket', "Matrix")
         self.initialized = True
-        
-    def update_node(self, context):
-        self.outputs["Matrix"].default_value = self.set_matrix()
 
     def draw_buttons(self, context, layout):
         # return
@@ -254,16 +251,13 @@ class MetaRigMatrixNode(Node, MantisNode):
         self.initialized = True
     
     def traverse(self, context):
-        from mathutils import Matrix
+        # from mathutils import Matrix
         v = self.outputs[0].default_value
         # print( Matrix( ( ( v[ 0], v[ 1], v[ 2], v[ 3],),
         #                  ( v[ 4], v[ 5], v[ 6], v[ 7],),
         #                  ( v[ 8], v[ 9], v[10], v[11],),
         #                  ( v[12], v[13], v[14], v[15],), ) ) )
         return None
-    
-    def update_node(self, context):
-        self.outputs["Matrix"].default_value = self.set_matrix()
 
     def update(self):
         mat_sock = self.outputs[0]
@@ -559,6 +553,30 @@ class UtilityCatStringsNode(Node, MantisNode):
         self.inputs.new("StringSocket", "String_2")
         self.outputs.new("StringSocket", "OutputString")
         self.initialized = True
+
+    def draw_label(self): # this will prefer a user-set label, or return the evaluated name
+        if self.label:
+            return self.label
+        if self.outputs['OutputString'].display_text:
+            return self.outputs['OutputString'].display_text
+        return self.name
+        
+    def display_update(self, parsed_tree, context):
+        from .base_definitions import get_signature_from_edited_tree
+        if context.space_data:
+            nc = parsed_tree.get(get_signature_from_edited_tree(self, context))
+            self.inputs['String_1'].display_text = ""
+            self.inputs['String_2'].display_text = ""
+            self.outputs['OutputString'].display_text = ""
+            if nc:
+                try:
+                    self.inputs['String_1'].display_text = a = nc.evaluate_input("String_1")
+                    self.inputs['String_2'].display_text = b = nc.evaluate_input("String_2")
+                    # cat the strings here, since the node may not have run yet.
+                    self.outputs['OutputString'].display_text = a+b
+                except KeyError:
+                    return # the tree isn't ready yet.
+                
     
 class InputLayerMaskNode(Node, MantisNode):
     """Represents a layer mask for a bone."""

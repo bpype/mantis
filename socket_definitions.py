@@ -307,6 +307,8 @@ def ChooseDraw(self, context, layout, node, text, icon = "NONE", use_enum=True, 
     # TEXT ONLY
     if self.node.bl_idname in ["NodeGroupInput", "NodeGroupOutput"]:
         layout.label(text=text)
+    elif hasattr(self, "display_text") and self.display_text:
+            layout.label(text=self.display_text)
     else:
         if ( (hasattr(self, "text_only")) and (getattr(self, "text_only") ) ):
             layout.label(text=text)
@@ -706,11 +708,12 @@ class StringSocket(bpy.types.NodeSocketString):
     color : bpy.props.FloatVectorProperty(default=cString, size=4)
     icon : bpy.props.StringProperty(default = "NONE",)
     input : bpy.props.BoolProperty(default =False,)
+    display_text : bpy.props.StringProperty(default="")
     # def init(self):
         # if self.node.bl_idname == 'UtilityBoneProperties':
             # self.display_shape='CIRCLE_DOT'
     def draw(self, context, layout, node, text):
-        ChooseDraw(self, context, layout, node, text, icon=self.icon, icon_only=True)
+        ChooseDraw(self, context, layout, node, text, icon=self.icon, icon_only=True,)
     def draw_color(self, context, node):
         return self.color
     @classmethod
@@ -981,7 +984,6 @@ class EnumMetaRigSocket(NodeSocket):
             # which doesn't have this parameter. whatever.
         else:
             layout.label(text=self.name)
-        
         
     def draw_color(self, context, node):
         return self.color

@@ -364,6 +364,7 @@ class xFormBone:
         self.prepared = True
         self.executed = False
         self.input_length = len(self.inputs) # HACK HACK HACK 
+        self.bObject=None
     
     def bGetParentArmature(self):
         finished = False
@@ -715,6 +716,7 @@ class xFormBone:
                 pb.custom_shape = ob 
 
     def bGetObject(self, mode = 'POSE'):
+        if self.bObject is None: return None
         if mode in ["POSE", "OBJECT"] and self.bGetParentArmature().mode == "EDIT":
             raise RuntimeError("Cannot get Bone or PoseBone in Edit mode.")
         elif mode == "EDIT" and self.bGetParentArmature().mode != "EDIT":

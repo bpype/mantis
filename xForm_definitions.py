@@ -57,6 +57,14 @@ def check_if_connected(start, end, line):
     return True
 
 
+def main_draw_label(self): # this will prefer a user-set label, or return the evaluated name
+    if self.label:
+        return self.label
+    if self.inputs['Name'].display_text:
+        return self.inputs['Name'].display_text
+    return self.name
+
+
 # I had chat gpt flip these so they may be a little innacurate
 # always visible
 main_names = {
@@ -218,43 +226,27 @@ class xFormBoneNode(Node, xFormNode):
             layout.operator("mantis.remove_custom_property", text='-Remove Custom Parameter')
         else:
             layout.label(text="")
+    
+    def draw_label(self): # this will prefer a user-set label, or return the evaluated name
+        return main_draw_label(self)
+
         
     def display_update(self, parsed_tree, context):
         if context.space_data:
             nc = parsed_tree.get(get_signature_from_edited_tree(self, context))
-            other_nc = None
-            if len(self.inputs.get("Relationship").links)>0:
-                prev_node = self.inputs.get("Relationship").links[0].from_node
-                if prev_node:
-                    other_nc = parsed_tree.get(get_signature_from_edited_tree(prev_node, context))
-            
+            self.display_ik_settings = False
             if nc and (pb := nc.bGetObject(mode='POSE')):
                 self.display_ik_settings = pb.is_in_ik_chain
-                
-            if nc and other_nc:
-                self.display_vp_settings = nc.inputs["Custom Object"].is_connected
-                self.display_def_settings = nc.evaluate_input("Deform")
-                self.display_bb_settings = nc.evaluate_input("BBone Segments") > 1
-                self.display_ik_settings = False
-                #
-
-                inp = nc.inputs["Relationship"]
-                link = None
-                if inp.is_connected:
-                    link = inp.links[0]
-                while(link):
-                    if link.from_node.__class__.__name__ in ["LinkInverseKinematics"]:
-                        self.display_ik_settings = link.from_node.evaluate_input("Use Tail")
-                        break
-                    inp = link.from_node.outputs[link.from_socket]
-                    inp = inp.traverse_target
-                    if not inp:
-                        break
-                    if inp.links:
-                        link = inp.links[0]
-                    else:
-                        link = None
-        
+            
+            self.inputs['Name'].display_text = ""
+            if nc:
+                try:
+                    self.inputs['Name'].display_text = nc.evaluate_input("Name")
+                    self.display_vp_settings = nc.inputs["Custom Object"].is_connected
+                    self.display_def_settings = nc.evaluate_input("Deform")
+                    self.display_bb_settings = nc.evaluate_input("BBone Segments") > 1
+                except KeyError:
+                    return # the tree isn't ready yet.
             
             for name in ik_names.keys():
                 self.inputs[name].hide = not self.display_ik_settings
@@ -262,7 +254,7 @@ class xFormBoneNode(Node, xFormNode):
             for name in display_names.keys():
                 if name in ['Custom Object', 'Bone Collection']: continue
                 self.inputs[name].hide = not self.display_vp_settings
-
+            
             for name in deform_names.keys():
                 if name in ['Deform']: continue
                 self.inputs[name].hide = not self.display_def_settings
@@ -292,6 +284,16 @@ class xFormArmatureNode(Node, xFormNode):
 
         self.initialized=True
 
+    def draw_label(self): # this will prefer a user-set label, or return the evaluated name
+        return main_draw_label(self)
+    
+    def display_update(self, parsed_tree, context):
+        if context.space_data:
+            nc = parsed_tree.get(get_signature_from_edited_tree(self, context))
+            self.inputs['Name'].display_text = ""
+            if nc:
+                self.inputs['Name'].display_text = nc.evaluate_input("Name")
+
 
 class xFormGeometryObjectNode(Node, xFormNode):
     """Represents a curve or mesh object."""
@@ -316,6 +318,16 @@ class xFormGeometryObjectNode(Node, xFormNode):
 
         self.initialized=True
 
+    def draw_label(self): # this will prefer a user-set label, or return the evaluated name
+        return main_draw_label(self)
+    
+    def display_update(self, parsed_tree, context):
+        if context.space_data:
+            nc = parsed_tree.get(get_signature_from_edited_tree(self, context))
+            self.inputs['Name'].display_text = ""
+            if nc:
+                self.inputs['Name'].display_text = nc.evaluate_input("Name")
+
 class xFormObjectInstance(Node, xFormNode):
     """Represents an instance of an existing geometry object."""
     bl_idname = "xFormObjectInstance"
@@ -339,3 +351,13 @@ class xFormObjectInstance(Node, xFormNode):
         self.color = xFormColor
 
         self.initialized=True
+
+    def draw_label(self): # this will prefer a user-set label, or return the evaluated name
+        return main_draw_label(self)
+    
+    def display_update(self, parsed_tree, context):
+        if context.space_data:
+            nc = parsed_tree.get(get_signature_from_edited_tree(self, context))
+            self.inputs['Name'].display_text = ""
+            if nc:
+                self.inputs['Name'].display_text = nc.evaluate_input("Name")
