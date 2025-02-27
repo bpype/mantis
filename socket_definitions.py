@@ -307,7 +307,7 @@ def ChooseDraw(self, context, layout, node, text, icon = "NONE", use_enum=True, 
     # TEXT ONLY
     if self.node.bl_idname in ["NodeGroupInput", "NodeGroupOutput"]:
         layout.label(text=text)
-    elif hasattr(self, "display_text") and self.display_text:
+    elif hasattr(self, "display_text") and self.display_text and self.is_linked:
             layout.label(text=self.display_text)
     else:
         if ( (hasattr(self, "text_only")) and (getattr(self, "text_only") ) ):
