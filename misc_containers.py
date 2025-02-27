@@ -775,26 +775,17 @@ class UtilityFCurve:
             if k == 'Extrapolation Mode' : continue
             # print (self.inputs[k])
             if (key := self.evaluate_input(k)) is None:
-                prOrange(f"WARN: No enough keyframes connected to {self}:{k}. Skipping Link.")
+                prOrange(f"WARN: No keyframe connected to {self}:{k}. Skipping Link.")
             else:
                 keys.append(key)
         if len(keys) <1:
             prOrange(f"WARN: no keys in fCurve {self}.")
         keys.append(extrap_mode)
-        
-
-        
-        # Push parameter to downstream connected node.connected:
-        # TODO: find out if this is necesary, even
-        if (out := self.outputs["fCurve"]).is_linked:
-            self.parameters[out.name] = keys
-            for link in out.links:
-                link.to_node.parameters[link.to_socket] = keys
-        # the above was a HACK. I don't want nodes modiying their descenedents.
-        # If the above was necessary, I want to get an error from it so I can fix it in the descendent's class
+        print (keys)
+        self.parameters["fCurve"] = keys
         self.prepared = True
         self.executed = True
-                
+#TODO make the fCurve data a data class instead of a dict 
 
 class UtilityDriver:
     '''A node representing an armature object'''
@@ -832,19 +823,14 @@ class UtilityDriver:
         from .drivers import MantisDriver
         #prPurple("Executing Driver Node")
         my_vars = []
-        if len(keys := self.evaluate_input("fCurve")) <2:
-            keys={}
+        keys = self.evaluate_input("fCurve")
+        if len(keys) <2:
             prWhite(f"INFO: no fCurve connected to {self}; using default fCurve.")
             from mathutils import Vector
             keys = [
                 {"co":Vector( (0, 0,)), "type":"GENERATED", "interpolation":"LINEAR" },
                 {"co":Vector( (1, 1,)), "type":"GENERATED", "interpolation":"LINEAR" },
-                "CONSTANT",
-            ]
-        try:
-            extrap_mode = keys.pop() # this is a silly way of doing things but it maintains the interface
-        except IndexError:
-            extrap_mode = 'CONSTANT'
+                "CONSTANT",]
         for inp in list(self.inputs.keys() )[3:]:
             if (new_var := self.evaluate_input(inp)):
                 new_var["name"] = inp
@@ -857,8 +843,8 @@ class UtilityDriver:
                      "ind"           :  -1, # same here
                      "type"          :  self.evaluate_input("Driver Type"),
                      "vars"          :  my_vars,
-                     "keys"          :  keys,
-                     "extrapolation" : extrap_mode }
+                     "keys"          :  keys[:-1],
+                     "extrapolation" :  keys[-1] }
         
         my_driver = MantisDriver(my_driver)
         

@@ -69,7 +69,11 @@ def CreateDrivers(drivers):
         if (expr := driver.get("expression")) and isinstance(expr, str):
             drv.expression = expr
         
-        fc.extrapolation = driver["extrapolation"]
+        fc.extrapolation = "CONSTANT"
+        if (extrapolation_mode := driver.get("extrapolation")) in ("CONSTANT", "LINEAR"):
+            fc.extrapolation = extrapolation_mode
+        else:
+            prRed(f"Extrapolation Mode in driver has incorrect data: {extrapolation_mode}")
 
         # logic for handling type can go here
         
