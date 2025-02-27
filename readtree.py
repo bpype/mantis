@@ -314,8 +314,6 @@ def get_schema_length_dependencies(node):
     return deps
 
         
-
-
 def parse_tree(base_tree):
     from uuid import uuid4 # do this here?
     base_tree.execution_id = uuid4().__str__() # set this, it may be used by nodes during execution
@@ -453,89 +451,6 @@ def parse_tree(base_tree):
     prWhite(f"Parsing tree took {time.time()-start_time} seconds.")
     prWhite("Number of Nodes: %s" % (len(kept_nc)))
     return kept_nc
-
-def sort_tree_into_layers(nodes, context):
-    from time import time
-    from .node_container_common import (get_depth_lines,
-      node_depth)
-    # All this function needs to do is sort out the hierarchy and
-    #  get things working in order of their dependencies.
-    
-    roots, drivers = [], []
-    start = time()
-    
-    for n in nodes.values():
-        if n.node_type == 'DRIVER': drivers.append(n)
-        # ugly but necesary to ensure that drivers are always connected.
-        check_and_add_root(n, roots)
-        
-    
-    layers, nodes_heights = {}, {}
-    #Possible improvement: unify roots if they represent the same data
-    all_sorted_nodes = []
-    for root in roots:
-        nodes_heights[root.signature] = 0
-        depth_lines = get_depth_lines(root)[0]
-
-        
-        for n in nodes.values():
-            if n.signature not in (depth_lines.keys()):
-                continue #belongs to a different root
-            d = nodes_heights.get(n.signature, 0)
-            if (new_d := node_depth(depth_lines[n.signature])) > d:
-                d = new_d
-            nodes_heights[n.signature] = d
-    
-    for k, v in nodes_heights.items():
-        if (layer := layers.get(v, None)):
-            layer.append(nodes[k]) # add it to the existing layer
-        else: layers[v] = [nodes[k]] # or make a new layer with the node
-        all_sorted_nodes.append(nodes[k]) # add it to the sorted list
-    
-    # TODO: investigate whether I can treat driver conenctions as an inverted hierarchy connection
-    #     as in, a hieraarchy connection from the to_node to the from_node in the link instead of the other way around.
-    #     because it looks like I am just putting the driver node one layer higher than the other one
-    for drv in drivers:
-        for out in drv.outputs.values():
-            for l in out.links:
-                n = l.to_node
-                if n in all_sorted_nodes: continue
-                depth = nodes_heights[drv.signature] + 1
-                nodes_heights[n.signature] = depth
-                if (layer := layers.get(depth, None)):
-                    layer.append(n)
-                else: layers[v] = [n]
-    #
-        #
-    prGreen("Sorting depth for %d nodes finished in %s seconds" %
-               (len(nodes), time() - start))
-    
-    keys = list(layers.keys())
-    keys.sort()
-    
-    num_nodes=0
-
-    print_missed=nodes.copy()
-
-    for i in keys:
-        print_layer = [l_item for l_item in layers[i]]
-        for k  in print_layer:
-            if k.node_type == "DUMMY":
-                print (k, k.prototype.bl_idname, i)
-
-    if (False): # True to print the layers
-        for i in keys:
-            # print_layer = [l_item for l_item in layers[i] if l_item.node_type in ["XFORM",]]# "LINK", "DRIVER"]]
-            print_layer = [l_item for l_item in layers[i]]
-            for k  in print_layer:
-                num_nodes+=1
-                del print_missed[k.signature]
-            print(wrapGreen("%d: " % i), wrapWhite("%s" % print_layer))
-        prWhite(f"Final node count: {num_nodes}")
-        prOrange("The following nodes have been culled:")
-        for p in print_missed.values():
-            prWhite (p, p.dependencies)
-    return layers
 
 
 def switch_mode(mode='OBJECT', objects = []):
@@ -702,7 +617,8 @@ def execute_tree(nodes, base_tree, context, error_popups = False):
             original_active.select_set(True)
     except Exception as e:
         execution_error_cleanup(None, e, switch_me)
-        # this will PASS the error! that's better for UI/UX
+        if error_popups == False:
+            raise e
     finally:
         context.view_layer.objects.active = active
         # clear the selection first.
