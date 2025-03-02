@@ -142,7 +142,7 @@ def make_connections_to_ng_dummy(base_tree, tree_path_names, local_nc, all_nc, n
 
 def gen_node_containers(base_tree, current_tree, tree_path_names, all_nc, local_nc, dummy_nodes, group_nodes, schema_nodes ):
     from .internal_containers import DummyNode
-    from .base_definitions import SchemaNode
+    from .base_definitions import SchemaUINode
     for np in current_tree.nodes:
         # TODO: find out why I had to add this in. these should be taken care of already? BUG
         if np.bl_idname in ["NodeFrame", "NodeReroute"]:
@@ -150,7 +150,7 @@ def gen_node_containers(base_tree, current_tree, tree_path_names, all_nc, local_
         if (nc_cls := class_for_mantis_prototype_node(np)):
             sig = (None, *tree_path_names, np.name)
             # but I will probably choose to handle this elsewhere
-            # if isinstance(np, SchemaNode):
+            # if isinstance(np, SchemaUINode):
             #     continue # we won't do this one here.
             if np.bl_idname in replace_types:
                 # prPurple(np.bl_idname)

@@ -1,4 +1,5 @@
 from .node_container_common import *
+from .base_definitions import MantisNode
 
 def TellClasses():
     return [
@@ -10,7 +11,7 @@ def TellClasses():
 #*#-------------------------------#++#-------------------------------#*#
 # M A T H  N O D E S
 #*#-------------------------------#++#-------------------------------#*#
-class MathStaticInt:
+class MathStaticInt(MantisNode):
     '''A node representing an armature object'''
 
     def __init__(self, signature, base_tree):
@@ -68,7 +69,7 @@ class MathStaticInt:
         self.prepared = True
         self.executed = True
 
-class MathStaticFloat:
+class MathStaticFloat(MantisNode):
     '''A node representing an armature object'''
 
     def __init__(self, signature, base_tree):
@@ -131,7 +132,7 @@ class MathStaticFloat:
         self.prepared = True
         self.executed = True
 
-class MathStaticVector:
+class MathStaticVector(MantisNode):
     '''A node representing an armature object'''
 
     def __init__(self, signature, base_tree):
@@ -203,7 +204,3 @@ class MathStaticVector:
         self.parameters["Result Vector"] = v_result
         self.prepared = True
         self.executed = True
-
-
-for c in TellClasses():
-    setup_container(c)

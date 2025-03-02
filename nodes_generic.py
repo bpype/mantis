@@ -1,6 +1,6 @@
 import bpy
 from bpy.types import Node
-from .base_definitions import MantisNode
+from .base_definitions import MantisUINode
 
 
 from .utilities import (prRed, prGreen, prPurple, prWhite,
@@ -69,7 +69,7 @@ def default_traverse(self,socket):
     return None
 
 
-class InputFloatNode(Node, MantisNode):
+class InputFloatNode(Node, MantisUINode):
     '''A node representing inheritance'''
     bl_idname = 'InputFloatNode'
     bl_label = "Float"
@@ -80,7 +80,7 @@ class InputFloatNode(Node, MantisNode):
         self.outputs.new('FloatSocket', "Float Input").input = True
         self.initialized = True
 
-class InputIntNode(Node, MantisNode):
+class InputIntNode(Node, MantisUINode):
     '''A node representing inheritance'''
     bl_idname = 'InputIntNode'
     bl_label = "Integer"
@@ -91,7 +91,7 @@ class InputIntNode(Node, MantisNode):
         self.outputs.new('IntSocket', "Integer").input = True
         self.initialized = True
     
-class InputVectorNode(Node, MantisNode):
+class InputVectorNode(Node, MantisUINode):
     '''A node representing inheritance'''
     bl_idname = 'InputVectorNode'
     bl_label = "Vector"
@@ -102,7 +102,7 @@ class InputVectorNode(Node, MantisNode):
         self.outputs.new('VectorSocket', "").input = True
         self.initialized = True
 
-class InputBooleanNode(Node, MantisNode):
+class InputBooleanNode(Node, MantisUINode):
     '''A node representing inheritance'''
     bl_idname = 'InputBooleanNode'
     bl_label = "Boolean"
@@ -113,7 +113,7 @@ class InputBooleanNode(Node, MantisNode):
         self.outputs.new('BooleanSocket', "").input = True
         self.initialized = True
 
-class InputBooleanThreeTupleNode(Node, MantisNode):
+class InputBooleanThreeTupleNode(Node, MantisUINode):
     '''A node representing inheritance'''
     bl_idname = 'InputBooleanThreeTupleNode'
     bl_label = "Boolean Vector"
@@ -124,7 +124,7 @@ class InputBooleanThreeTupleNode(Node, MantisNode):
         self.outputs.new('BooleanThreeTupleSocket', "")
         self.initialized = True
 
-class InputRotationOrderNode(Node, MantisNode):
+class InputRotationOrderNode(Node, MantisUINode):
     '''A node representing inheritance'''
     bl_idname = 'InputRotationOrderNode'
     bl_label = "Rotation Order"
@@ -135,7 +135,7 @@ class InputRotationOrderNode(Node, MantisNode):
         self.outputs.new('RotationOrderSocket', "").input = True
         self.initialized = True
 
-class InputTransformSpaceNode(Node, MantisNode):
+class InputTransformSpaceNode(Node, MantisUINode):
     '''A node representing inheritance'''
     bl_idname = 'InputTransformSpaceNode'
     bl_label = "Transform Space"
@@ -146,7 +146,7 @@ class InputTransformSpaceNode(Node, MantisNode):
         self.outputs.new('TransformSpaceSocket', "").input = True
         self.initialized = True
 
-class InputStringNode(Node, MantisNode):
+class InputStringNode(Node, MantisUINode):
     '''A node representing inheritance'''
     bl_idname = 'InputStringNode'
     bl_label = "String"
@@ -157,7 +157,7 @@ class InputStringNode(Node, MantisNode):
         self.outputs.new('StringSocket', "").input = True
         self.initialized = True
 
-class InputQuaternionNode(Node, MantisNode):
+class InputQuaternionNode(Node, MantisUINode):
     '''A node representing inheritance'''
     bl_idname = 'InputQuaternionNode'
     bl_label = "Quaternion"
@@ -168,7 +168,7 @@ class InputQuaternionNode(Node, MantisNode):
         self.outputs.new('QuaternionSocket', "").input = True
         self.initialized = True
 
-class InputQuaternionNodeAA(Node, MantisNode):
+class InputQuaternionNodeAA(Node, MantisUINode):
     '''A node representing inheritance'''
     bl_idname = 'InputQuaternionNodeAA'
     bl_label = "Axis Angle"
@@ -180,7 +180,7 @@ class InputQuaternionNodeAA(Node, MantisNode):
         self.initialized = True
 
 
-class InputMatrixNode(Node, MantisNode):
+class InputMatrixNode(Node, MantisUINode):
     '''A node representing inheritance'''
     bl_idname = 'InputMatrixNode'
     bl_label = "Matrix"
@@ -212,7 +212,7 @@ class InputMatrixNode(Node, MantisNode):
         mat_sock = self.outputs[0]
         mat_sock.default_value = self.set_matrix()
 
-class ScaleBoneLengthNode(Node, MantisNode):
+class ScaleBoneLengthNode(Node, MantisUINode):
     '''Scale Bone Length'''
     bl_idname = 'ScaleBoneLength'
     bl_label = "Scale Bone Length"
@@ -228,7 +228,7 @@ class ScaleBoneLengthNode(Node, MantisNode):
 
 
 
-class MetaRigMatrixNode(Node, MantisNode):
+class MetaRigMatrixNode(Node, MantisUINode):
     # Identical to the above, except
     '''A node representing a bone's matrix'''
     bl_idname = 'MetaRigMatrixNode'
@@ -264,7 +264,7 @@ class MetaRigMatrixNode(Node, MantisNode):
         mat_sock.default_value = self.set_matrix()
 
 
-class UtilityMatrixFromCurve(Node, MantisNode):
+class UtilityMatrixFromCurve(Node, MantisUINode):
     """Gets a matrix from a curve."""
     bl_idname = "UtilityMatrixFromCurve"
     bl_label = "Matrix from Curve"
@@ -281,7 +281,7 @@ class UtilityMatrixFromCurve(Node, MantisNode):
         self.initialized = True
 
 
-class UtilityPointFromCurve(Node, MantisNode):
+class UtilityPointFromCurve(Node, MantisUINode):
     """Gets a point from a curve."""
     bl_idname = "UtilityPointFromCurve"
     bl_label = "Point from Curve"
@@ -296,7 +296,7 @@ class UtilityPointFromCurve(Node, MantisNode):
         self.outputs.new("VectorSocket", "Point")
         self.initialized = True
 
-class UtilityMatricesFromCurve(Node, MantisNode):
+class UtilityMatricesFromCurve(Node, MantisUINode):
     """Gets a matrix from a curve."""
     bl_idname = "UtilityMatricesFromCurve"
     bl_label = "Matrices from Curve"
@@ -312,7 +312,7 @@ class UtilityMatricesFromCurve(Node, MantisNode):
         o.display_shape = 'SQUARE_DOT'
         self.initialized = True
 
-class UtilityMetaRigNode(Node, MantisNode):
+class UtilityMetaRigNode(Node, MantisUINode):
     """Gets a matrix from a meta-rig bone."""
     bl_idname = "UtilityMetaRig"
     bl_label = "Meta-Rig"
@@ -346,7 +346,7 @@ class UtilityMetaRigNode(Node, MantisNode):
         if self.inputs["Meta-Bone"].is_linked:
             self.inputs["Meta-Bone"].search_prop = None
 
-class UtilityBonePropertiesNode(Node, MantisNode):
+class UtilityBonePropertiesNode(Node, MantisUINode):
     """Provides as sockets strings identifying bone transform properties."""
     bl_idname = "UtilityBoneProperties"
     bl_label = "Bone Properties"
@@ -369,7 +369,7 @@ class UtilityBonePropertiesNode(Node, MantisNode):
         for o in self.outputs:
             o.text_only = True
 
-class UtilityDriverVariableNode(Node, MantisNode):
+class UtilityDriverVariableNode(Node, MantisUINode):
     """Creates a variable for use in a driver."""
     bl_idname = "UtilityDriverVariable"
     bl_label = "Driver Variable"
@@ -432,7 +432,7 @@ class UtilityDriverVariableNode(Node, MantisNode):
 # TODO: make a way to edit the fCurve directly.
 # I had a working version of this in the past, but it required doing sinful things like
 # keeping track of the RAM address of the window.
-class UtilityFCurveNode(Node, MantisNode):
+class UtilityFCurveNode(Node, MantisUINode):
     """Creates an fCurve for use with a driver."""
     bl_idname = "UtilityFCurve"
     bl_label = "fCurve"
@@ -452,7 +452,7 @@ class UtilityFCurveNode(Node, MantisNode):
             layout.operator( 'mantis.fcurve_node_remove_kf' )
 
 
-class UtilityDriverNode(Node, MantisNode):
+class UtilityDriverNode(Node, MantisUINode):
     """Represents a Driver relationship"""
     bl_idname = "UtilityDriver"
     bl_label = "Driver"
@@ -484,7 +484,7 @@ class UtilityDriverNode(Node, MantisNode):
         if (len(self.inputs) > 3):
             layout.operator( 'mantis.driver_node_remove_variable' )
 
-class UtilitySwitchNode(Node, MantisNode):
+class UtilitySwitchNode(Node, MantisUINode):
     """Represents a switch relationship between one driver property and one or more driven properties."""
     bl_idname = "UtilitySwitch"
     bl_label = "Switch"
@@ -499,7 +499,7 @@ class UtilitySwitchNode(Node, MantisNode):
         self.outputs.new("DriverSocket", "Driver")
         self.initialized = True
 
-class UtilityCombineThreeBoolNode(Node, MantisNode):
+class UtilityCombineThreeBoolNode(Node, MantisUINode):
     """Combines three booleans into a three-bool."""
     bl_idname = "UtilityCombineThreeBool"
     bl_label = "CombineThreeBool"
@@ -513,7 +513,7 @@ class UtilityCombineThreeBoolNode(Node, MantisNode):
         self.outputs.new("BooleanThreeTupleSocket", "Three-Bool")
         self.initialized = True
 
-class UtilityCombineVectorNode(Node, MantisNode):
+class UtilityCombineVectorNode(Node, MantisUINode):
     """Combines three floats into a vector."""
     bl_idname = "UtilityCombineVector"
     bl_label = "CombineVector"
@@ -527,7 +527,7 @@ class UtilityCombineVectorNode(Node, MantisNode):
         self.outputs.new("VectorSocket", "Vector")
         self.initialized = True
         
-class UtilitySeparateVector(Node, MantisNode):
+class UtilitySeparateVector(Node, MantisUINode):
     """Separates a vector into three floats"""
     bl_idname = "UtilitySeparateVector"
     bl_label = "Separate Vector"
@@ -541,7 +541,7 @@ class UtilitySeparateVector(Node, MantisNode):
         self.outputs.new("FloatSocket", "Z")
         self.initialized = True
         
-class UtilityCatStringsNode(Node, MantisNode):
+class UtilityCatStringsNode(Node, MantisUINode):
     """Adds a suffix to a string"""
     bl_idname = "UtilityCatStrings"
     bl_label = "Concatenate Strings"
@@ -578,7 +578,7 @@ class UtilityCatStringsNode(Node, MantisNode):
                     return # the tree isn't ready yet.
                 
     
-class InputLayerMaskNode(Node, MantisNode):
+class InputLayerMaskNode(Node, MantisUINode):
     """Represents a layer mask for a bone."""
     bl_idname = "InputLayerMaskNode"
     bl_label = "Layer Mask"
@@ -589,7 +589,7 @@ class InputLayerMaskNode(Node, MantisNode):
         self.outputs.new("LayerMaskInputSocket", "Layer Mask")
         self.initialized = True
 
-class InputExistingGeometryObjectNode(Node, MantisNode):
+class InputExistingGeometryObjectNode(Node, MantisUINode):
     """Represents an existing geometry object from within the scene."""
     bl_idname = "InputExistingGeometryObject"
     bl_label = "Existing Object"
@@ -611,7 +611,7 @@ class InputExistingGeometryObjectNode(Node, MantisNode):
     
 # TODO: maybe I should hold a data reference here, too.
 #       but it is complicated by the fact that Mantis does not distinguish b/tw geo types
-class InputExistingGeometryDataNode(Node, MantisNode):
+class InputExistingGeometryDataNode(Node, MantisUINode):
     """Represents a mesh or curve datablock from the scene."""
     bl_idname = "InputExistingGeometryData"
     bl_label = "Existing Geometry"
@@ -623,7 +623,7 @@ class InputExistingGeometryDataNode(Node, MantisNode):
         self.outputs.new("GeometrySocket", "Geometry")
         self.initialized = True
 
-class UtilityGeometryOfXForm(Node, MantisNode):
+class UtilityGeometryOfXForm(Node, MantisUINode):
     """Retrieves a mesh or curve datablock from an xForm."""
     bl_idname = "UtilityGeometryOfXForm"
     bl_label = "Geometry of xForm"
@@ -636,7 +636,7 @@ class UtilityGeometryOfXForm(Node, MantisNode):
         self.initialized = True
 
 
-class UtilityNameOfXForm(Node, MantisNode):
+class UtilityNameOfXForm(Node, MantisUINode):
     """Retrieves the name of a xForm."""
     bl_idname = "UtilityNameOfXForm"
     bl_label = "Name of xForm"
@@ -648,7 +648,7 @@ class UtilityNameOfXForm(Node, MantisNode):
         self.outputs.new("StringSocket", "Name")
         self.initialized = True
 
-class UtilityGetBoneLength(Node, MantisNode):
+class UtilityGetBoneLength(Node, MantisUINode):
     """Returns the length of the bone from its matrix."""
     bl_idname = "UtilityGetBoneLength"
     bl_label = "Get Bone Length"
@@ -661,7 +661,7 @@ class UtilityGetBoneLength(Node, MantisNode):
         self.initialized = True
 
 # TODO: make it work with BBones!
-class UtilityPointFromBoneMatrix(Node, MantisNode):
+class UtilityPointFromBoneMatrix(Node, MantisUINode):
     """Returns a point representing the location along a bone, given a matrix representing that bone's shape."""
     bl_idname = "UtilityPointFromBoneMatrix"
     bl_label = "Point from Bone Matrix"
@@ -673,7 +673,7 @@ class UtilityPointFromBoneMatrix(Node, MantisNode):
         self.inputs.new("FloatFactorSocket", "Head/Tail")
         self.outputs.new("VectorSocket", "Point")
         self.initialized = True
-class UtilitySetBoneLength(Node, MantisNode):
+class UtilitySetBoneLength(Node, MantisUINode):
     """Sets the length of a bone matrix."""
     bl_idname = "UtilitySetBoneLength"
     bl_label = "Set Bone Matrix Length"
@@ -688,7 +688,7 @@ class UtilitySetBoneLength(Node, MantisNode):
 
 # TODO: more keyframe types should be supported in the future.
 # Some of the code that can do this is commented out here until I can implement it properly.
-class UtilityKeyframe(Node, MantisNode):
+class UtilityKeyframe(Node, MantisUINode):
     """A keyframe for a FCurve"""
     bl_idname = "UtilityKeyframe"
     bl_label = "KeyFrame"
@@ -728,7 +728,7 @@ class UtilityKeyframe(Node, MantisNode):
         self.initialized = True
 
 
-class UtilityBoneMatrixHeadTailFlip(Node, MantisNode):
+class UtilityBoneMatrixHeadTailFlip(Node, MantisUINode):
     """Flips a bone matrix so that the head is where the tail was and visa versa."""
     bl_idname = "UtilityBoneMatrixHeadTailFlip"
     bl_label = "Flip Head/Tail"
@@ -740,7 +740,7 @@ class UtilityBoneMatrixHeadTailFlip(Node, MantisNode):
         self.outputs.new("MatrixSocket", "Bone Matrix")
         self.initialized = True
 
-class UtilityMatrixTransform(Node, MantisNode):
+class UtilityMatrixTransform(Node, MantisUINode):
     """Transforms a matrix by another."""
     bl_idname = "UtilityMatrixTransform"
     bl_label = "Matrix Transform"
@@ -753,7 +753,7 @@ class UtilityMatrixTransform(Node, MantisNode):
         self.outputs.new("MatrixSocket", "Out Matrix")
         self.initialized = True
 
-class UtilityMatrixSetLocation(Node, MantisNode):
+class UtilityMatrixSetLocation(Node, MantisUINode):
     """Sets a matrix's location."""
     bl_idname = "UtilityMatrixSetLocation"
     bl_label = "Set Matrix Location"
@@ -766,7 +766,7 @@ class UtilityMatrixSetLocation(Node, MantisNode):
         self.outputs.new("MatrixSocket", "Matrix")
         self.initialized = True
 
-class UtilityMatrixGetLocation(Node, MantisNode):
+class UtilityMatrixGetLocation(Node, MantisUINode):
     """Gets a matrix's location."""
     bl_idname = "UtilityMatrixGetLocation"
     bl_label = "Get Matrix Location"
@@ -778,7 +778,7 @@ class UtilityMatrixGetLocation(Node, MantisNode):
         self.outputs.new("VectorSocket", "Location")
         self.initialized = True
 
-class UtilityTransformationMatrix(Node, MantisNode):
+class UtilityTransformationMatrix(Node, MantisUINode):
     """Constructs a matrix representing a transformation"""
     bl_idname = "UtilityTransformationMatrix"
     bl_label = "Transformation Matrix"
@@ -822,7 +822,7 @@ class UtilityTransformationMatrix(Node, MantisNode):
 # So instead, we need to avoid calculating the roll for now.
 # but I want to make that its own node and add roll-recalc to this node, too.
 
-class UtilitySetBoneMatrixTail(Node, MantisNode):
+class UtilitySetBoneMatrixTail(Node, MantisUINode):
     """Constructs a matrix representing a transformation"""
     bl_idname = "UtilitySetBoneMatrixTail"
     bl_label = "Set Bone Matrix Tail"
@@ -836,7 +836,7 @@ class UtilitySetBoneMatrixTail(Node, MantisNode):
         self.initialized = True
 
 
-class UtilityMatrixFromXForm(Node, MantisNode):
+class UtilityMatrixFromXForm(Node, MantisUINode):
     """Returns the matrix of the given xForm node."""
     bl_idname = "UtilityMatrixFromXForm"
     bl_label = "Matrix of xForm"
@@ -848,7 +848,7 @@ class UtilityMatrixFromXForm(Node, MantisNode):
         self.outputs.new("MatrixSocket", "Matrix")
         self.initialized = True
 
-class UtilityAxesFromMatrix(Node, MantisNode):
+class UtilityAxesFromMatrix(Node, MantisUINode):
     """Returns the axes of the matrix."""
     bl_idname = "UtilityAxesFromMatrix"
     bl_label = "Axes of Matrix"
@@ -862,7 +862,7 @@ class UtilityAxesFromMatrix(Node, MantisNode):
         self.outputs.new("VectorSocket", "Z Axis")
         self.initialized = True
 
-class UtilityIntToString(Node, MantisNode):
+class UtilityIntToString(Node, MantisUINode):
     """Converts a number to a string"""
     bl_idname = "UtilityIntToString"
     bl_label = "Number String"
@@ -877,7 +877,7 @@ class UtilityIntToString(Node, MantisNode):
         self.initialized = True
 
 
-class UtilityArrayGet(Node, MantisNode):
+class UtilityArrayGet(Node, MantisUINode):
     """Gets a value from an array at a specified index."""
     bl_idname = "UtilityArrayGet"
     bl_label  = "Array Get"
@@ -909,7 +909,7 @@ class UtilityArrayGet(Node, MantisNode):
                 self.outputs['Output'].color = from_socket.color
 
 
-class UtilityCompare(Node, MantisNode):
+class UtilityCompare(Node, MantisUINode):
     """Compares two inputs and produces a boolean output"""
     bl_idname = "UtilityCompare"
     bl_label = "Compare"
@@ -940,7 +940,7 @@ class UtilityCompare(Node, MantisNode):
             if hasattr(link.from_socket, "color"):
                 self.inputs['B'].color = link.from_socket.color
 
-class UtilityChoose(Node, MantisNode):
+class UtilityChoose(Node, MantisUINode):
     """Chooses an output"""
     bl_idname = "UtilityChoose"
     bl_label = "Choose"
@@ -988,7 +988,7 @@ class UtilityChoose(Node, MantisNode):
 
 
 
-class UtilityPrint(Node, MantisNode):
+class UtilityPrint(Node, MantisUINode):
     """A utility used to print arbitrary values."""
     bl_idname = "UtilityPrint"
     bl_label  = "Print"

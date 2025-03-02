@@ -1,5 +1,5 @@
 import bpy
-from .base_definitions import MantisNode
+from .base_definitions import MantisUINode
 from bpy.types import Node
 from .utilities import (prRed, prGreen, prPurple, prWhite,
                               prOrange,
@@ -18,7 +18,7 @@ def TellClasses():
 
         
 
-class MathStaticInt(Node, MantisNode):
+class MathStaticInt(Node, MantisUINode):
     """A node that performs mathematical operations on float numbers as a preprocess step before generating the rig."""
     bl_idname = "MathStaticInt"
     bl_label = "Static Int Math"
@@ -45,7 +45,7 @@ class MathStaticInt(Node, MantisNode):
                 self.inputs["Int B"].hide = False
 
 # do... make the operations now
-class MathStaticFloatNode(Node, MantisNode):
+class MathStaticFloatNode(Node, MantisUINode):
     """A node that performs mathematical operations on float numbers as a preprocess step before generating the rig."""
     bl_idname = "MathStaticFloat"
     bl_label = "Static Float Math"
@@ -71,7 +71,7 @@ class MathStaticFloatNode(Node, MantisNode):
             else:
                 self.inputs["Float B"].hide = False
 
-class MathStaticVectorNode(Node, MantisNode):
+class MathStaticVectorNode(Node, MantisUINode):
     """Performs a vector math operation as a preprocess before executing the tree."""
     bl_idname = "MathStaticVector"
     bl_label = "Static Vector Math"

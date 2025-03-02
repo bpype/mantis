@@ -1,7 +1,6 @@
 from .node_container_common import *
 from .xForm_containers import xFormGeometryObject
 from .misc_containers import InputExistingGeometryObject
-from bpy.types import Node
 from .base_definitions import MantisNode
 
 from .utilities import (prRed, prGreen, prPurple, prWhite, prOrange,
@@ -49,7 +48,7 @@ def GetxForm(nc):
             return node
     raise GraphError("%s is not connected to a downstream xForm" % nc)
 
-class DeformerArmature:
+class DeformerArmature(MantisNode):
     '''A node representing an armature deformer'''
 
     def __init__(self, signature, base_tree):
@@ -92,8 +91,6 @@ class DeformerArmature:
         self.prepared = True
         self.executed = False
 
-    def evaluate_input(self, input_name):
-        return default_evaluate_input(self, input_name)
 
     def GetxForm(self, socket="Deformer"):
         if socket == "Deformer":
@@ -231,7 +228,7 @@ class DeformerArmature:
             self.copy_weights()
 
 
-class DeformerHook:
+class DeformerHook(MantisNode):
     '''A node representing a hook deformer'''
 
     def __init__(self, signature, base_tree):
@@ -259,8 +256,7 @@ class DeformerHook:
         self.prepared = True
         self.executed = False
 
-    def evaluate_input(self, input_name):
-        return default_evaluate_input(self, input_name)
+
 
     def GetxForm(self, socket="Deformer"):
         if socket == "Deformer":
@@ -299,9 +295,12 @@ class DeformerHook:
         vertices_used.append(self.evaluate_input("Index"))
         d.vertex_indices_set(vertices_used)
         # todo: this should be able to take many indices in the future.
+        # since this only takes a single index, I can always hack together a shape-key solution to tilt...
+        # GN solution would work too, provided a separate object is made for it
+        # I like this, it is perhaps a little innefficient but can be improved later on
 
 
-class DeformerMorphTarget:
+class DeformerMorphTarget(MantisNode):
     '''A node representing an armature deformer'''
     def __init__(self, signature, base_tree):
         self.base_tree=base_tree
@@ -366,7 +365,7 @@ class DeformerMorphTarget:
 
 
 
-class DeformerMorphTargetDeform:
+class DeformerMorphTargetDeform(MantisNode):
     '''A node representing an armature deformer'''
 
     def __init__(self, signature, base_tree):
@@ -522,13 +521,3 @@ class DeformerMorphTargetDeform:
             self.gen_shape_key(bContext)
         else:
             self.gen_morph_target_modifier(bContext)
-
-
-        
-        
-            
-
-        
-
-for c in TellClasses():
-    setup_container(c)

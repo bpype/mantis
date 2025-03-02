@@ -1,5 +1,5 @@
 import bpy
-from .base_definitions import SchemaNode
+from .base_definitions import SchemaUINode
 from bpy.types import Node
 from .utilities import (prRed, prGreen, prPurple, prWhite,
                               prOrange,
@@ -28,7 +28,7 @@ def TellClasses():
 # - check what happens when these get plugged into each other
 # - probably disallow all or most of these connections in insert_link or update
 
-class SchemaIndex(Node, SchemaNode):
+class SchemaIndex(Node, SchemaUINode):
     '''The current index of the schema execution'''
     bl_idname = 'SchemaIndex'
     bl_label = "Index"
@@ -41,7 +41,7 @@ class SchemaIndex(Node, SchemaNode):
         self.initialized = True
 
 
-class SchemaArrayInput(Node, SchemaNode):
+class SchemaArrayInput(Node, SchemaUINode):
     '''Array Inputs'''
     bl_idname = 'SchemaArrayInput'
     bl_label = "Array Input"
@@ -65,7 +65,7 @@ class SchemaArrayInput(Node, SchemaNode):
             self.outputs.new('WildcardSocket', '', identifier='__extend__')
         # self.initialized = True
 
-class SchemaArrayInputGet(Node, SchemaNode):
+class SchemaArrayInputGet(Node, SchemaUINode):
     '''Array Inputs'''
     bl_idname = 'SchemaArrayInputGet'
     bl_label = "Array Input at Index"
@@ -91,7 +91,7 @@ class SchemaArrayInputGet(Node, SchemaNode):
             self.outputs.new('WildcardSocket', '', identifier='__extend__')
         # self.initialized = True
 
-class SchemaArrayOutput(Node, SchemaNode):
+class SchemaArrayOutput(Node, SchemaUINode):
     '''Array Inputs'''
     bl_idname = 'SchemaArrayOutput'
     bl_label = "Array Output"
@@ -117,7 +117,7 @@ class SchemaArrayOutput(Node, SchemaNode):
             s.input= True
         self.initialized = True
 
-class SchemaConstInput(Node, SchemaNode):
+class SchemaConstInput(Node, SchemaUINode):
     '''Constant Inputs'''
     bl_idname = 'SchemaConstInput'
     bl_label = "Constant Input"
@@ -143,7 +143,7 @@ class SchemaConstInput(Node, SchemaNode):
 
 
 
-class SchemaConstOutput(Node, SchemaNode):
+class SchemaConstOutput(Node, SchemaUINode):
     '''Constant Outputs'''
     bl_idname = 'SchemaConstOutput'
     bl_label = "Constant Output"
@@ -174,7 +174,7 @@ class SchemaConstOutput(Node, SchemaNode):
 
 
 
-class SchemaOutgoingConnection(Node, SchemaNode):
+class SchemaOutgoingConnection(Node, SchemaUINode):
     '''Outgoing Connections'''
     bl_idname = 'SchemaOutgoingConnection'
     bl_label = "Outgoing Connection"
@@ -204,7 +204,7 @@ class SchemaOutgoingConnection(Node, SchemaNode):
 
 
 
-class SchemaIncomingConnection(Node, SchemaNode):
+class SchemaIncomingConnection(Node, SchemaUINode):
     '''Incoming Connections'''
     bl_idname = 'SchemaIncomingConnection'
     bl_label = "Incoming Connection"

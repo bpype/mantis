@@ -1,7 +1,6 @@
 from .node_container_common import *
+from .base_definitions import MantisNode
 
-# The fact that I need this means that some of these classes should
-#  probably be moved to link_containers.py
 from .xForm_containers import xFormArmature, xFormBone
 
 from math import pi, tau
@@ -68,7 +67,7 @@ def matrix_from_head_tail(head, tail):
 # U T I L I T Y   N O D E S
 #*#-------------------------------#++#-------------------------------#*#
 
-class InputFloat:
+class InputFloat(MantisNode):
     '''A node representing float input'''
     
     def __init__(self, signature, base_tree):
@@ -88,7 +87,7 @@ class InputFloat:
     def evaluate_input(self, input_name):
         return self.parameters["Float Input"]
 
-class InputIntNode:
+class InputIntNode(MantisNode):
     '''A node representing integer input'''
     
     def __init__(self, signature, base_tree):
@@ -108,7 +107,7 @@ class InputIntNode:
     def evaluate_input(self, input_name):
         return self.parameters["Integer"]
     
-class InputVector:
+class InputVector(MantisNode):
     '''A node representing vector input'''
     
     def __init__(self, signature, base_tree):
@@ -129,7 +128,7 @@ class InputVector:
         return self.parameters[""]
     
 
-class InputBoolean:
+class InputBoolean(MantisNode):
     '''A node representing boolean input'''
     
     def __init__(self, signature, base_tree):
@@ -149,7 +148,7 @@ class InputBoolean:
     def evaluate_input(self, input_name):
         return self.parameters[""]
 
-class InputBooleanThreeTuple:
+class InputBooleanThreeTuple(MantisNode):
     '''A node representing a tuple of three booleans'''
         
     def __init__(self, signature, base_tree):
@@ -169,7 +168,7 @@ class InputBooleanThreeTuple:
     def evaluate_input(self, input_name):
         return self.parameters[""]
     
-class InputRotationOrder:
+class InputRotationOrder(MantisNode):
     '''A node representing string input for rotation order'''
         
     def __init__(self, signature, base_tree):
@@ -190,7 +189,7 @@ class InputRotationOrder:
         return self.parameters[""]
     
 
-class InputTransformSpace:
+class InputTransformSpace(MantisNode):
     '''A node representing string input for transform space'''
         
     def __init__(self, signature, base_tree):
@@ -210,7 +209,7 @@ class InputTransformSpace:
     def evaluate_input(self, input_name):
         return self.parameters[""]
     
-class InputString:
+class InputString(MantisNode):
     '''A node representing string input'''
         
     def __init__(self, signature, base_tree):
@@ -230,7 +229,7 @@ class InputString:
     def evaluate_input(self, input_name):
         return self.parameters[""]
     
-class InputMatrix:
+class InputMatrix(MantisNode):
     '''A node representing axis-angle quaternion input'''
         
     def __init__(self, signature, base_tree):
@@ -263,7 +262,7 @@ class InputMatrix:
     def fill_parameters(self):
         return
 
-class UtilityMatrixFromCurve:
+class UtilityMatrixFromCurve(MantisNode):
     '''Get a matrix from a curve'''
 
     def __init__(self, signature, base_tree):
@@ -333,11 +332,8 @@ class UtilityMatrixFromCurve:
         if (mesh := bpy.data.meshes.get(m_name)):
             bpy.data.meshes.remove(mesh)
 
-    def fill_parameters(self):
-        fill_parameters(self)
 
-
-class UtilityPointFromCurve:
+class UtilityPointFromCurve(MantisNode):
     '''Get a point from a curve'''
 
     def __init__(self, signature, base_tree):
@@ -394,10 +390,7 @@ class UtilityPointFromCurve:
         if (mesh := bpy.data.meshes.get(m_name)):
             bpy.data.meshes.remove(mesh)
 
-    def fill_parameters(self):
-        fill_parameters(self)
-
-class UtilityMatricesFromCurve:
+class UtilityMatricesFromCurve(MantisNode):
     '''Get matrices from a curve'''
 
     def __init__(self, signature, base_tree):
@@ -478,10 +471,7 @@ class UtilityMatricesFromCurve:
             prGreen(f"Freeing mesh data {m_name}...")
             bpy.data.meshes.remove(mesh)
 
-    def fill_parameters(self):
-        fill_parameters(self)
-
-class UtilityMetaRig:
+class UtilityMetaRig(MantisNode):
     '''A node representing an armature object'''
 
     def __init__(self, signature, base_tree):
@@ -537,13 +527,9 @@ class UtilityMetaRig:
         self.prepared = True
         self.executed = True
 
-    def fill_parameters(self):
-        fill_parameters(self)
-        # self.parameters["Matrix"] = None # why in the
 
-
-class UtilityBoneProperties:
-    '''A node representing an armature object'''
+class UtilityBoneProperties(MantisNode):
+    '''A node representing a bone's gettable properties'''
 
     def __init__(self, signature, base_tree):
         self.base_tree=base_tree
@@ -583,10 +569,10 @@ class UtilityBoneProperties:
         self.executed = True
 
     def fill_parameters(self):
-        pass#fill_parameters(self)
+        return
         
 # TODO this should probably be moved to Links
-class UtilityDriverVariable:
+class UtilityDriverVariable(MantisNode):
     '''A node representing an armature object'''
 
     def __init__(self, signature, base_tree):
@@ -631,7 +617,7 @@ class UtilityDriverVariable:
                     trace = trace_single_line(self, input_name)
                     return trace[1].name # the name of the socket
             return self.parameters["Property"]
-        return evaluate_input(self, input_name)
+        return super().evaluate_input(input_name)
         
     def GetxForm(self, index=1):
         trace = trace_single_line(self, "xForm 1" if index == 1 else "xForm 2")
@@ -693,7 +679,7 @@ class UtilityDriverVariable:
 
 
 
-class UtilityKeyframe:
+class UtilityKeyframe(MantisNode):
     '''A node representing a keyframe for a F-Curve'''
 
     def __init__(self, signature, base_tree):
@@ -734,7 +720,7 @@ class UtilityKeyframe:
         self.executed = True
 
 
-class UtilityFCurve:
+class UtilityFCurve(MantisNode):
     '''A node representing an armature object'''
 
     def __init__(self, signature, base_tree):
@@ -761,7 +747,7 @@ class UtilityFCurve:
         self.executed = False
 
     def evaluate_input(self, input_name):
-        return evaluate_input(self, input_name)
+        return super().evaluate_input(input_name)
 
     def bExecute(self, bContext = None,):
         prepare_parameters(self)
@@ -787,7 +773,7 @@ class UtilityFCurve:
         self.executed = True
 #TODO make the fCurve data a data class instead of a dict 
 
-class UtilityDriver:
+class UtilityDriver(MantisNode):
     '''A node representing an armature object'''
 
     def __init__(self, signature, base_tree):
@@ -824,7 +810,7 @@ class UtilityDriver:
         #prPurple("Executing Driver Node")
         my_vars = []
         keys = self.evaluate_input("fCurve")
-        if len(keys) <2:
+        if keys is None or len(keys) <2:
             prWhite(f"INFO: no fCurve connected to {self}; using default fCurve.")
             from mathutils import Vector
             keys = [
@@ -853,7 +839,7 @@ class UtilityDriver:
         self.executed = True
 
 
-class UtilitySwitch:
+class UtilitySwitch(MantisNode):
     '''A node representing an armature object'''
 
     def __init__(self, signature, base_tree):
@@ -891,7 +877,7 @@ class UtilitySwitch:
                 trace = trace_single_line(self, input_name)
                 return trace[1].name # the name of the socket
             return self.parameters["Parameter"]
-        return evaluate_input(self, input_name)
+        return super().evaluate_input(input_name)
 
     def GetxForm(self,):
         trace = trace_single_line(self, "Parameter" )
@@ -946,7 +932,7 @@ class UtilitySwitch:
 
 
 
-class UtilityCombineThreeBool:
+class UtilityCombineThreeBool(MantisNode):
     '''A node for combining three booleans into a boolean three-tuple'''
 
     def __init__(self, signature, base_tree):
@@ -992,7 +978,7 @@ class UtilityCombineThreeBool:
 # Note this is a copy of the above. This needs to be de-duplicated into
   # a simpler CombineVector node_container.
   # TODO
-class UtilityCombineVector:
+class UtilityCombineVector(MantisNode):
     '''A node for combining three floats into a vector'''
 
     def __init__(self, signature, base_tree):
@@ -1031,7 +1017,7 @@ class UtilityCombineVector:
   
 
   # TODO
-class UtilitySeparateVector:
+class UtilitySeparateVector(MantisNode):
     '''A node for separating a vector into three floats'''
 
     def __init__(self, signature, base_tree):
@@ -1063,7 +1049,7 @@ class UtilitySeparateVector:
         self.prepared = True
         self.executed = True
 
-class UtilityCatStrings:
+class UtilityCatStrings(MantisNode):
     '''A node representing an armature object'''
 
     def __init__(self, signature, base_tree):
@@ -1094,7 +1080,7 @@ class UtilityCatStrings:
         self.prepared = True
         self.executed = True
 
-class InputLayerMask:
+class InputLayerMask(MantisNode):
     '''A node representing an armature object'''
 
     def __init__(self, signature, base_tree):
@@ -1119,7 +1105,7 @@ class InputLayerMask:
         self.executed = True
 
 
-class InputExistingGeometryObject:
+class InputExistingGeometryObject(MantisNode):
     '''A node representing an existing object'''
 
     def __init__(self, signature, base_tree):
@@ -1157,7 +1143,7 @@ class InputExistingGeometryObject:
     def bGetObject(self, mode=''):
         return self.bObject
 
-class InputExistingGeometryData:
+class InputExistingGeometryData(MantisNode):
     '''A node representing existing object data'''
 
     def __init__(self, signature, base_tree):
@@ -1193,7 +1179,7 @@ class InputExistingGeometryData:
             raise RuntimeError(f"Could not find a mesh or curve datablock named \"{self.evaluate_input('Name')}\" for node {self}")
         return bObject
 
-class UtilityGeometryOfXForm:
+class UtilityGeometryOfXForm(MantisNode):
     '''A node representing existing object data'''
     def __init__(self, signature, base_tree):
         self.base_tree=base_tree
@@ -1229,7 +1215,7 @@ class UtilityGeometryOfXForm:
         return None
 
 
-class UtilityNameOfXForm:
+class UtilityNameOfXForm(MantisNode):
     '''A node representing existing object data'''
     def __init__(self, signature, base_tree):
         self.base_tree=base_tree
@@ -1260,7 +1246,7 @@ class UtilityNameOfXForm:
         self.parameters["Name"] = xf.evaluate_input('Name')
         self.prepared, self.executed = True, True
 
-class UtilityGetBoneLength:
+class UtilityGetBoneLength(MantisNode):
     '''A node to get the length of a bone matrix'''
 
     def __init__(self, signature, base_tree):
@@ -1292,7 +1278,7 @@ class UtilityGetBoneLength:
         self.prepared = True
         self.executed = True
 
-class UtilityPointFromBoneMatrix:
+class UtilityPointFromBoneMatrix(MantisNode):
     '''A node representing an armature object'''
 
     def __init__(self, signature, base_tree):
@@ -1331,7 +1317,7 @@ class UtilityPointFromBoneMatrix:
         self.executed = True
 
 
-class UtilitySetBoneLength:
+class UtilitySetBoneLength(MantisNode):
     '''Sets the length of a Bone's matrix'''
 
     def __init__(self, signature, base_tree):
@@ -1370,7 +1356,7 @@ class UtilitySetBoneLength:
         self.executed = True
 
   
-class UtilityMatrixSetLocation:
+class UtilityMatrixSetLocation(MantisNode):
     '''Sets the location of a matrix'''
 
     def __init__(self, signature, base_tree):
@@ -1405,7 +1391,7 @@ class UtilityMatrixSetLocation:
         self.prepared = True
         self.executed = True
 
-class UtilityMatrixGetLocation:
+class UtilityMatrixGetLocation(MantisNode):
     '''Gets the location of a matrix'''
     def __init__(self, signature, base_tree):
         self.base_tree=base_tree
@@ -1433,7 +1419,7 @@ class UtilityMatrixGetLocation:
         self.prepared = True; self.executed = True
 
 
-class UtilityMatrixFromXForm:
+class UtilityMatrixFromXForm(MantisNode):
     """Returns the matrix of the given xForm node."""
     def __init__(self, signature, base_tree):
         self.base_tree=base_tree
@@ -1473,7 +1459,7 @@ class UtilityMatrixFromXForm:
         self.prepared = True; self.executed = True
 
 
-class UtilityAxesFromMatrix:
+class UtilityAxesFromMatrix(MantisNode):
     """Returns the axes of the given matrix."""
     def __init__(self, signature, base_tree):
         self.base_tree=base_tree
@@ -1507,7 +1493,7 @@ class UtilityAxesFromMatrix:
         self.prepared = True; self.executed = True
 
 
-class UtilityBoneMatrixHeadTailFlip:
+class UtilityBoneMatrixHeadTailFlip(MantisNode):
     def __init__(self, signature, base_tree):
         self.base_tree=base_tree
         self.executed = False
@@ -1545,7 +1531,7 @@ class UtilityBoneMatrixHeadTailFlip:
         self.prepared, self.executed = True, True
 
 
-class UtilityMatrixTransform:
+class UtilityMatrixTransform(MantisNode):
     def __init__(self, signature, base_tree):
         self.base_tree=base_tree
         self.executed = False
@@ -1584,7 +1570,7 @@ class UtilityMatrixTransform:
 
 
 
-class UtilityTransformationMatrix:
+class UtilityTransformationMatrix(MantisNode):
     def __init__(self, signature, base_tree):
         self.base_tree=base_tree
         self.executed = False
@@ -1631,7 +1617,7 @@ class UtilityTransformationMatrix:
 
 
 
-class UtilityIntToString:
+class UtilityIntToString(MantisNode):
     def __init__(self, signature, base_tree):
         self.base_tree=base_tree
         self.executed = False
@@ -1665,7 +1651,7 @@ class UtilityIntToString:
         self.prepared = True
         self.executed = True
 
-class UtilityArrayGet:
+class UtilityArrayGet(MantisNode):
     def __init__(self, signature, base_tree):
         self.base_tree=base_tree
         self.executed = False
@@ -1733,7 +1719,7 @@ class UtilityArrayGet:
         self.prepared = True
         self.executed = True
 
-class UtilitySetBoneMatrixTail:
+class UtilitySetBoneMatrixTail(MantisNode):
     def __init__(self, signature, base_tree):
         self.base_tree=base_tree
         self.executed = False
@@ -1764,7 +1750,7 @@ class UtilitySetBoneMatrixTail:
 
 
 
-class UtilityPrint:
+class UtilityPrint(MantisNode):
     def __init__(self, signature, base_tree):
         self.base_tree=base_tree
         self.executed = False
@@ -1799,7 +1785,7 @@ class UtilityPrint:
         self.executed = True
 
 
-class UtilityCompare:
+class UtilityCompare(MantisNode):
     def __init__(self, signature, base_tree):
         self.base_tree=base_tree
         self.executed = False
@@ -1826,7 +1812,7 @@ class UtilityCompare:
         self.prepared = True; self.executed = True
 
 
-class UtilityChoose:
+class UtilityChoose(MantisNode):
     def __init__(self, signature, base_tree):
         self.base_tree=base_tree
         self.executed = False
@@ -1858,8 +1844,3 @@ class UtilityChoose:
             self.parameters["Result"] = self.evaluate_input("A")
         self.prepared = True
         self.executed = True
-
-
-
-for c in TellClasses():
-    setup_container(c)

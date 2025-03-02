@@ -1,5 +1,5 @@
 from .node_container_common import *
-from bpy.types import Node, Bone
+from bpy.types import Bone
 from .base_definitions import MantisNode, GraphError
 
 def TellClasses():
@@ -32,18 +32,17 @@ def TellClasses():
              LinkDrivenParameter,
             ]
 
-
-
-def default_evaluate_input(nc, input_name):
-    # should catch 'Target', 'Pole Target' and ArmatureConstraint targets, too
-    if ('Target' in input_name) and input_name not in  ["Target Space", "Use Target Z"]:
-        socket = nc.inputs.get(input_name)
-        if socket.is_linked:
-            return socket.links[0].from_node
-        return None
-        
-    else:
-        return evaluate_input(nc, input_name)
+class MantisLinkNode(MantisNode):
+    def evaluate_input(self, input_name, index=0):
+        # should catch 'Target', 'Pole Target' and ArmatureConstraint targets, too
+        if ('Target' in input_name) and input_name not in  ["Target Space", "Use Target Z"]:
+            socket = self.inputs.get(input_name)
+            if socket.is_linked:
+                return socket.links[0].from_node
+            return None
+            
+        else:
+            return super().evaluate_input(input_name)
 
 # set the name if it is available, otherwise just use the constraint's nice name
 set_constraint_name = lambda nc : nc.evaluate_input("Name") if nc.evaluate_input("Name") else nc.__class__.__name__
@@ -60,7 +59,7 @@ def GetxForm(nc):
             return node
     raise GraphError("%s is not connected to a downstream xForm" % nc)
 
-class LinkInherit:
+class LinkInherit(MantisLinkNode):
     '''A node representing inheritance'''
     
     def __init__(self, signature, base_tree):
@@ -93,10 +92,6 @@ class LinkInherit:
         self.prepared = True
         self.executed = True
     
-        
-    def evaluate_input(self, input_name):
-        return default_evaluate_input(self, input_name)
-        
     def GetxForm(self): # DUPLICATED, TODO fix this
         # I think this is only run in display update.
         trace = trace_single_line_up(self, "Inheritance")
@@ -109,7 +104,7 @@ class LinkInherit:
         
 
 
-class LinkCopyLocation:
+class LinkCopyLocation(MantisLinkNode):
     '''A node representing Copy Location'''
     
     def __init__(self, signature, base_tree):
@@ -155,8 +150,7 @@ class LinkCopyLocation:
         
         
         
-    def evaluate_input(self, input_name):
-        return default_evaluate_input(self, input_name)
+
     
     def GetxForm(self):
         return GetxForm(self)
@@ -215,7 +209,7 @@ class LinkCopyLocation:
         
         
 
-class LinkCopyRotation:
+class LinkCopyRotation(MantisLinkNode):
     '''A node representing Copy Rotation'''
     
     def __init__(self, signature, base_tree):
@@ -257,8 +251,7 @@ class LinkCopyRotation:
         self.prepared = True
         self.executed = False
         
-    def evaluate_input(self, input_name):
-        return default_evaluate_input(self, input_name)
+
     
     def GetxForm(self):
         return GetxForm(self)
@@ -324,7 +317,7 @@ class LinkCopyRotation:
     
         
         
-class LinkCopyScale:
+class LinkCopyScale(MantisLinkNode):
     '''A node representing Copy Scale'''
     
     def __init__(self, signature, base_tree):
@@ -367,8 +360,7 @@ class LinkCopyScale:
         self.prepared = True
         self.executed = False
         
-    def evaluate_input(self, input_name):
-        return default_evaluate_input(self, input_name)
+
     
     def GetxForm(self):
         return GetxForm(self)
@@ -422,7 +414,7 @@ class LinkCopyScale:
     
         
 
-class LinkCopyTransforms:
+class LinkCopyTransforms(MantisLinkNode):
     '''A node representing Copy Transfoms'''
     
     def __init__(self, signature, base_tree):
@@ -463,8 +455,7 @@ class LinkCopyTransforms:
         self.prepared = True
         self.executed = False
         
-    def evaluate_input(self, input_name):
-        return default_evaluate_input(self, input_name)
+
     
     def GetxForm(self):
         return GetxForm(self)
@@ -571,7 +562,7 @@ transformation_props_sockets = {
             'mute'                   : ("Enable", False),
         }
 
-class LinkTransformation:
+class LinkTransformation(MantisLinkNode):
     '''A node representing Copy Transfoms'''
     
     def __init__(self, signature, base_tree):
@@ -652,8 +643,7 @@ class LinkTransformation:
         self.prepared = True
         self.executed = False
         
-    def evaluate_input(self, input_name):
-        return default_evaluate_input(self, input_name)
+
     
     def GetxForm(self):
         return GetxForm(self)
@@ -697,7 +687,7 @@ class LinkTransformation:
     
         
 
-class LinkLimitLocation:
+class LinkLimitLocation(MantisLinkNode):
     def __init__(self, signature, base_tree):
         self.base_tree=base_tree
         self.signature = signature
@@ -751,8 +741,7 @@ class LinkLimitLocation:
         self.prepared = True
         self.executed = False
         
-    def evaluate_input(self, input_name):
-        return default_evaluate_input(self, input_name)
+
     
     def GetxForm(self):
         return GetxForm(self)
@@ -805,7 +794,7 @@ class LinkLimitLocation:
     
         
         
-class LinkLimitRotation:
+class LinkLimitRotation(MantisLinkNode):
     def __init__(self, signature, base_tree):
         self.base_tree=base_tree
         self.signature = signature
@@ -853,8 +842,7 @@ class LinkLimitRotation:
         self.prepared = True
         self.executed = False
         
-    def evaluate_input(self, input_name):
-        return default_evaluate_input(self, input_name)
+
     
     def GetxForm(self):
         return GetxForm(self)
@@ -903,7 +891,7 @@ class LinkLimitRotation:
     
         
         
-class LinkLimitScale:
+class LinkLimitScale(MantisLinkNode):
     def __init__(self, signature, base_tree):
         self.base_tree=base_tree
         self.signature = signature
@@ -957,8 +945,7 @@ class LinkLimitScale:
         self.prepared = True
         self.executed = False
         
-    def evaluate_input(self, input_name):
-        return default_evaluate_input(self, input_name)
+
     
     def GetxForm(self):
         return GetxForm(self)
@@ -1010,7 +997,7 @@ class LinkLimitScale:
     
         
         
-class LinkLimitDistance:
+class LinkLimitDistance(MantisLinkNode):
     def __init__(self, signature, base_tree):
         self.base_tree=base_tree
         self.signature = signature
@@ -1052,8 +1039,7 @@ class LinkLimitDistance:
         self.prepared = True
         self.executed = False
         
-    def evaluate_input(self, input_name):
-        return default_evaluate_input(self, input_name)
+
 
     def GetxForm(self):
         return GetxForm(self)
@@ -1113,7 +1099,7 @@ class LinkLimitDistance:
 
 # Tracking
 
-class LinkStretchTo:
+class LinkStretchTo(MantisLinkNode):
     def __init__(self, signature, base_tree):
         self.base_tree=base_tree
         self.signature = signature
@@ -1163,8 +1149,7 @@ class LinkStretchTo:
         self.prepared = True
         self.executed = False
         
-    def evaluate_input(self, input_name):
-        return default_evaluate_input(self, input_name)
+
 
     def GetxForm(self):
         return GetxForm(self)
@@ -1206,7 +1191,7 @@ class LinkStretchTo:
     
         
 
-class LinkDampedTrack:
+class LinkDampedTrack(MantisLinkNode):
     def __init__(self, signature, base_tree):
         self.base_tree=base_tree
         self.signature = signature
@@ -1240,8 +1225,7 @@ class LinkDampedTrack:
         self.prepared = True
         self.executed = False
         
-    def evaluate_input(self, input_name):
-        return default_evaluate_input(self, input_name)
+
 
     def GetxForm(self):
         return GetxForm(self)
@@ -1271,7 +1255,7 @@ class LinkDampedTrack:
         
         
 
-class LinkLockedTrack:
+class LinkLockedTrack(MantisLinkNode):
     def __init__(self, signature, base_tree):
         self.base_tree=base_tree
         self.signature = signature
@@ -1307,8 +1291,7 @@ class LinkLockedTrack:
         self.prepared = True
         self.executed = False
         
-    def evaluate_input(self, input_name):
-        return default_evaluate_input(self, input_name)
+
 
     def GetxForm(self):
         return GetxForm(self)
@@ -1339,7 +1322,7 @@ class LinkLockedTrack:
     
         
 
-class LinkTrackTo:
+class LinkTrackTo(MantisLinkNode):
     def __init__(self, signature, base_tree):
         self.base_tree=base_tree
         self.signature = signature
@@ -1377,8 +1360,7 @@ class LinkTrackTo:
         self.prepared = True
         self.executed = False
         
-    def evaluate_input(self, input_name):
-        return default_evaluate_input(self, input_name)
+
 
     def GetxForm(self):
         return GetxForm(self)
@@ -1412,7 +1394,7 @@ class LinkTrackTo:
 
 # relationships & misc.
 
-class LinkInheritConstraint:
+class LinkInheritConstraint(MantisLinkNode):
     def __init__(self, signature, base_tree):
         self.base_tree=base_tree
         self.signature = signature
@@ -1447,8 +1429,7 @@ class LinkInheritConstraint:
         self.prepared = True
         self.executed = False
         
-    def evaluate_input(self, input_name):
-        return default_evaluate_input(self, input_name)
+
 
     def GetxForm(self):
         return GetxForm(self)
@@ -1488,7 +1469,7 @@ class LinkInheritConstraint:
     def bFinalize(self, bContext = None):
         finish_drivers(self)
 
-class LinkInverseKinematics:
+class LinkInverseKinematics(MantisLinkNode):
     def __init__(self, signature, base_tree):
         self.base_tree=base_tree
         self.signature = signature
@@ -1530,8 +1511,7 @@ class LinkInverseKinematics:
         self.prepared = True
         self.executed = False
         
-    def evaluate_input(self, input_name):
-        return default_evaluate_input(self, input_name)
+
 
     def GetxForm(self):
         return GetxForm(self)
@@ -1642,7 +1622,7 @@ class LinkInverseKinematics:
         
 
 # This is kinda a weird design decision?
-class LinkDrivenParameter:
+class LinkDrivenParameter(MantisLinkNode):
     '''A node representing an armature object'''
     def __init__(self, signature, base_tree):
         self.base_tree=base_tree
@@ -1673,8 +1653,7 @@ class LinkDrivenParameter:
     def GetxForm(self):
         return GetxForm(self)
 
-    def evaluate_input(self, input_name):
-        return default_evaluate_input(self, input_name)
+
 
     def bExecute(self, bContext = None,):
         prepare_parameters(self)
@@ -1724,7 +1703,7 @@ class LinkDrivenParameter:
         
 
         
-class LinkArmature:
+class LinkArmature(MantisLinkNode):
     '''A node representing an armature object'''
 
     def __init__(self, signature, base_tree,):
@@ -1762,8 +1741,7 @@ class LinkArmature:
     def GetxForm(self):
         return GetxForm(self)
 
-    def evaluate_input(self, input_name):
-        return default_evaluate_input(self, input_name)
+
 
     def bExecute(self, bContext = None,):
         prGreen("Creating Armature Constraint for bone: \""+ self.GetxForm().bGetObject().name + "\"")
@@ -1808,7 +1786,7 @@ class LinkArmature:
 
 
 
-class LinkSplineIK:
+class LinkSplineIK(MantisLinkNode):
     '''A node representing an armature object'''
 
     def __init__(self, signature, base_tree):
@@ -1849,8 +1827,7 @@ class LinkSplineIK:
         self.hierarchy_dependencies, self.dependencies = [], []
         self.prepared, self.executed = True, False
 
-    def evaluate_input(self, input_name):
-        return default_evaluate_input(self, input_name)
+
 
     def GetxForm(self):
         return GetxForm(self)
@@ -1876,7 +1853,3 @@ class LinkSplineIK:
 
         evaluate_sockets(self, c, props_sockets)
         self.executed = True
-
-
-for c in TellClasses():
-    setup_container(c)

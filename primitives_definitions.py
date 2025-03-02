@@ -1,6 +1,6 @@
 import bpy
 from bpy.types import NodeTree, Node, NodeSocket
-from .base_definitions import MantisNode
+from .base_definitions import MantisUINode
 
 def TellClasses():
     return [
@@ -11,7 +11,7 @@ def default_traverse(self,socket):
     return None
 
 
-class GeometryCirclePrimitive(Node, MantisNode):
+class GeometryCirclePrimitive(Node, MantisUINode):
     '''A node representing a circle primitive'''
     bl_idname = 'GeometryCirclePrimitive'
     bl_label = "Circle Primitive"

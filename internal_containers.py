@@ -3,7 +3,7 @@ from bpy.types import Node
 from .base_definitions import MantisNode
 from uuid import uuid4
 
-class DummyNode:
+class DummyNode(MantisNode):
     def __init__(self, signature, base_tree, prototype = None, natural_signature=None):
         self.signature = signature
         self.base_tree = base_tree
@@ -27,20 +27,19 @@ class DummyNode:
                     continue
                 self.outputs[sock.identifier] = NodeSocket(is_input = False, name = sock.identifier, node = self)
                 self.parameters[sock.identifier]=None
-        #HACK
+        # keep track of the "natural signature" of Schema nodes - so that they are unambiguous
         if natural_signature:
             self.natural_signature=natural_signature
-        #HACK
+        # This is necessary for Schema to work if there are multiple Schema nodes using the same Schema tree.
+        # this is ugly and I hate it.
         self.hierarchy_connections = []
         self.connections = []
         self.hierarchy_dependencies = []
         self.dependencies = []
         self.executed = False
 
-setup_container(DummyNode)
 
-
-class NoOpNode:
+class NoOpNode(MantisNode):
     def __init__(self, signature, base_tree):
         self.signature = signature
         self.base_tree = base_tree
@@ -63,5 +62,3 @@ class NoOpNode:
         self.executed = True
     
     # this node is useful for me to insert in the tree and use for debugging especially connections.
-
-setup_container(NoOpNode)

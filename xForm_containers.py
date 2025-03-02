@@ -1,5 +1,4 @@
 from .node_container_common import *
-from bpy.types import Node
 from .base_definitions import MantisNode
 
 def TellClasses():
@@ -22,7 +21,7 @@ def reset_object_data(ob):
     ob.animation_data_clear() # this is a little dangerous. TODO find a better solution since this can wipe animation the user wants to keep
     ob.modifiers.clear() # I would also like a way to copy modifiers and their settings, or bake them down. oh well
 
-class xFormArmature:
+class xFormArmature(MantisNode):
     '''A node representing an armature object'''
     
     bObject = None
@@ -217,7 +216,7 @@ bone_inputs= [
          "Lock Rotation",
          "Lock Scale",
 ]
-class xFormBone:
+class xFormBone(MantisNode):
     '''A node representing a bone in an armature'''
     # DO: make a way to identify which armature this belongs to
     def __init__(self, signature, base_tree):
@@ -399,7 +398,7 @@ class xFormBone:
         eb.inherit_scale = parent_nc.evaluate_input("Inherit Scale")
         # otherwise, no need to do anything.
         
-         
+    
     def bExecute(self, bContext = None,): #possibly will need to pass context?
         import bpy
         from mathutils import Vector
@@ -735,10 +734,11 @@ class xFormBone:
     def fill_parameters(self):
         # this is the fill_parameters that is run if it isn't a schema
         setup_custom_props(self)
-        fill_parameters(self)
+        super().fill_parameters()
         # otherwise we will do this from the schema 
+        # LEGIBILITY TODO - why? explain this?
 
-class xFormGeometryObject:
+class xFormGeometryObject(MantisNode):
     '''A node representing an armature object'''
     def __init__(self, signature, base_tree):
         self.base_tree=base_tree
@@ -863,7 +863,7 @@ class xFormGeometryObject:
         return self.bObject
 
 
-class xFormObjectInstance:
+class xFormObjectInstance(MantisNode):
     """Represents an instance of an existing geometry object."""
     def __init__(self, signature, base_tree):
         self.base_tree=base_tree
@@ -987,10 +987,3 @@ class xFormObjectInstance:
         
     def bGetObject(self, mode = 'POSE'):
         return self.bObject
-
-
-
-
-
-for c in TellClasses():
-    setup_container(c)

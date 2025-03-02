@@ -1,5 +1,4 @@
 from .node_container_common import *
-from bpy.types import Node
 from .base_definitions import MantisNode
 
 def TellClasses():
@@ -14,8 +13,8 @@ def TellClasses():
 
 
 
-class CirclePrimitive:
-    '''A node representing float input'''
+class CirclePrimitive(MantisNode):
+    '''A node representing a Circle Primitive mesh'''
 
     def __init__(self, signature, base_tree):
         self.base_tree=base_tree
@@ -74,8 +73,3 @@ class CirclePrimitive:
         # done with this, push it to the data and free the bmesh.
         bm.to_mesh(data); bm.free()
         self.executed = True
-
-
-
-for c in TellClasses():
-    setup_container(c)

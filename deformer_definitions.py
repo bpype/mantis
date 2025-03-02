@@ -1,6 +1,6 @@
 import bpy
 from bpy.types import NodeTree, Node, NodeSocket
-from .base_definitions import MantisNode, DeformerNode, get_signature_from_edited_tree
+from .base_definitions import MantisUINode, DeformerNode, get_signature_from_edited_tree
 
 from .utilities import (prRed, prGreen, prPurple, prWhite, prOrange,
                         wrapRed, wrapGreen, wrapPurple, wrapWhite,

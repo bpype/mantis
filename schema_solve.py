@@ -4,8 +4,8 @@ from .utilities import (prRed, prGreen, prPurple, prWhite,
                               wrapOrange,)
 from .utilities import init_connections, init_dependencies
 from .utilities import class_for_mantis_prototype_node
-from .base_definitions import SchemaNode, replace_types, custom_props_types
-from .node_container_common import fill_parameters, setup_custom_props_from_np
+from .base_definitions import SchemaUINode, replace_types, custom_props_types
+from .node_container_common import setup_custom_props_from_np
 # a class that solves Schema nodes
 from uuid import uuid4
 
@@ -145,7 +145,7 @@ class SchemaSolver:
         # prGreen(self.tree_path_names)
 
         for n in self.tree.nodes:
-            if isinstance(n, SchemaNode):
+            if isinstance(n, SchemaUINode):
                 # first we need to fill the parameters of the schema nodes.
                 # the node is actually in the Schema group so we include the schema_dummy name
                 # and we use the bl_idname because I think all schema nodes should be single-instance
@@ -158,7 +158,7 @@ class SchemaSolver:
                 self.schema_nodes[signature] = nc
                 # nc.signature = signature # I don't really intend for this value to be mutable... but... HACK
                 # there is no need to mutate this. also I may need to reuse it later
-                fill_parameters(nc, n)
+                nc.fill_parameters(n)
                 # print (nc)
         
     
@@ -296,7 +296,7 @@ class SchemaSolver:
         frame_nc = {}
         # At this point, GENERATE all the nodes for the frame
         for n in self.tree.nodes:
-            if isinstance(n, SchemaNode) or isinstance(n, NodeFrame):
+            if isinstance(n, SchemaUINode) or isinstance(n, NodeFrame):
                 continue
             if n.bl_idname in ['NodeReroute']:
                 continue
@@ -330,7 +330,7 @@ class SchemaSolver:
             #
             if nc.__class__.__name__ in custom_props_types:
                 setup_custom_props_from_np(nc, n)
-            fill_parameters(nc, n) # this is the best place to do this..
+            nc.fill_parameters(n) # this is the best place to do this..
 
 
         # This is where we handle node connections BETWEEN frames

@@ -1,5 +1,6 @@
 from .node_container_common import *
 from math import pi, tau
+from .base_definitions import MantisNode
 
 def TellClasses():
     return [
@@ -34,7 +35,7 @@ def init_parameters(nc, is_input = True, in_out='INPUT', category=''):
 
 
 
-class SchemaIndex:
+class SchemaIndex(MantisNode):
     def __init__(self, signature, base_tree):
         self.base_tree=base_tree
         self.signature = signature
@@ -57,7 +58,7 @@ class SchemaIndex:
 
 
 
-class SchemaArrayInput:
+class SchemaArrayInput(MantisNode):
     def __init__(self, signature, base_tree):
         self.base_tree=base_tree
         self.signature = signature
@@ -74,7 +75,7 @@ class SchemaArrayInput:
         self.executed = True
 
 
-class SchemaArrayInputGet:
+class SchemaArrayInputGet(MantisNode):
     def __init__(self, signature, base_tree):
         self.base_tree=base_tree
         self.signature = signature
@@ -98,7 +99,7 @@ class SchemaArrayInputGet:
         self.executed = True
 
 
-class SchemaArrayOutput:
+class SchemaArrayOutput(MantisNode):
     def __init__(self, signature, base_tree):
         self.base_tree=base_tree
         self.signature = signature
@@ -117,7 +118,7 @@ class SchemaArrayOutput:
 
         
 
-class SchemaConstInput:
+class SchemaConstInput(MantisNode):
     def __init__(self, signature, base_tree):
         self.base_tree=base_tree
         self.signature = signature
@@ -137,7 +138,7 @@ class SchemaConstInput:
 
 
 
-class SchemaConstOutput:
+class SchemaConstOutput(MantisNode):
     def __init__(self, signature, base_tree):
         self.base_tree=base_tree
         self.signature = signature
@@ -155,7 +156,7 @@ class SchemaConstOutput:
 
 
         
-class SchemaOutgoingConnection:
+class SchemaOutgoingConnection(MantisNode):
     def __init__(self, signature, base_tree):
         self.base_tree=base_tree
         self.signature = signature
@@ -173,7 +174,7 @@ class SchemaOutgoingConnection:
 
 
         
-class SchemaIncomingConnection:
+class SchemaIncomingConnection(MantisNode):
     def __init__(self, signature, base_tree):
         self.base_tree=base_tree
         self.signature = signature
@@ -188,6 +189,3 @@ class SchemaIncomingConnection:
         self.dependencies = []
         self.prepared = True
         self.executed = True
-
-for c in TellClasses():
-    setup_container(c)
