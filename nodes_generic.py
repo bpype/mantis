@@ -899,6 +899,7 @@ class UtilityArrayGet(Node, MantisNode):
             self.outputs['Output'].color = wildcard_color
 
     def insert_link(self, link):
+        super().insert_link(link)
         prGreen(link.from_node.name, link.from_socket.identifier, link.to_node.name, link.to_socket.identifier)
         if link.to_socket.identifier == self.inputs['Array'].identifier:
             from_socket = link.from_socket
@@ -929,6 +930,7 @@ class UtilityCompare(Node, MantisNode):
             self.inputs['B'].color = wildcard_color
 
     def insert_link(self, link):
+        super().insert_link(link)
         if link.to_socket.identifier == self.inputs['A'].identifier:
             self.inputs['A'].color = link.from_socket.color_simple
             if hasattr(link.from_socket, "color"):
@@ -953,34 +955,36 @@ class UtilityChoose(Node, MantisNode):
         self.outputs.new("WildcardSocket", "Result")
         self.initialized = True
     
-    def update(self):
+    def display_update(self, parsed_tree, context):
         wildcard_color = (0.0,0.0,0.0,0.0)
-        if self.inputs['A'].is_linked == False:
+        if not self.inputs['A'].is_linked:
             self.inputs['A'].color = wildcard_color
-            self.outputs['Result'].color = (1.0,0.0,0.0,0.0) # red for Error
-        if self.inputs['B'].is_linked == False:
+        if not self.inputs['B'].is_linked:
             self.inputs['B'].color = wildcard_color
-            self.outputs['Result'].color = (1.0,0.0,0.0,0.0)
+        self.outputs['Result'].color = wildcard_color
         # if both inputs are the same color, then use that color for the result
-        if self.inputs['A'].is_linked and self.inputs['A'].color == self.inputs['B'].color:
+        if self.inputs['Condition'].is_linked:
+            from .base_definitions import get_signature_from_edited_tree
+            nc = parsed_tree.get(get_signature_from_edited_tree(self, context))
+            if nc:
+                condition = nc.evaluate_input('Condition')
+        else:
+            condition = self.inputs['Condition'].default_value
+        if condition == True:
+            self.outputs['Result'].color = self.inputs['B'].color
+        else:
             self.outputs['Result'].color = self.inputs['A'].color
-        #
-        if ((self.inputs['A'].is_linked and self.inputs['B'].is_linked) and
-            (self.inputs['A'].links[0].from_socket.bl_idname != self.inputs['B'].links[0].from_socket.bl_idname)):
-            self.inputs['A'].color = (1.0,0.0,0.0,0.0)
-            self.inputs['B'].color = (1.0,0.0,0.0,0.0)
-            self.outputs['Result'].color = (1.0,0.0,0.0,0.0)
 
     def insert_link(self, link):
+        super().insert_link(link)
         if link.to_socket.identifier == self.inputs['A'].identifier:
-            self.inputs['A'].color = from_socket.color_simple
-            if hasattr(from_socket, "color"):
-                self.inputs['A'].color = from_socket.color
+            self.inputs['A'].color = link.from_socket.color_simple
+            if hasattr(link.from_socket, "color"):
+                self.inputs['A'].color = link.from_socket.color
         if link.to_socket.identifier == self.inputs['B'].identifier:
-            self.inputs['B'].color = from_socket.color_simple
-            if hasattr(from_socket, "color"):
-                self.inputs['B'].color = from_socket.color
-
+            self.inputs['B'].color = link.from_socket.color_simple
+            if hasattr(link.from_socket, "color"):
+                self.inputs['B'].color = link.from_socket.color
 
 
 
