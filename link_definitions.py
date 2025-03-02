@@ -55,7 +55,7 @@ class LinkInheritNode(Node, LinkNode):
     bl_label = "Inherit"
     bl_icon = 'CONSTRAINT_BONE'
     initialized : bpy.props.BoolProperty(default = False)
-    useTarget : bpy.props.BoolProperty(default=False)
+    
     
     # bone_prev : bpy.props.BoolProperty(default=False)
     # bone_next : bpy.props.BoolProperty(default=False)
@@ -117,7 +117,7 @@ class LinkInverseKinematics(Node, LinkNode):
     bl_label = "Inverse Kinematics"
     bl_icon = 'CON_KINEMATIC'
     initialized : bpy.props.BoolProperty(default = False)
-    useTarget : bpy.props.BoolProperty(default=True)
+    
 
     def init(self, context):
         self.inputs.new('RelationshipSocket', "Input Relationship")
@@ -148,7 +148,7 @@ class LinkCopyLocationNode(Node, LinkNode):
     bl_idname = 'LinkCopyLocation'
     bl_label = "Copy Location"
     bl_icon = 'CON_LOCLIKE'
-    useTarget : bpy.props.BoolProperty(default=True)
+    
     initialized : bpy.props.BoolProperty(default = False)
 
     def init(self, context):
@@ -176,7 +176,7 @@ class LinkCopyRotationNode(Node, LinkNode):
     bl_idname = 'LinkCopyRotation'
     bl_label = "Copy Rotation"
     bl_icon = 'CON_ROTLIKE'
-    useTarget : bpy.props.BoolProperty(default=True)
+    
     initialized : bpy.props.BoolProperty(default = False)
 
     def init(self, context):
@@ -204,7 +204,7 @@ class LinkCopyScaleNode(Node, LinkNode):
     bl_idname = 'LinkCopyScale'
     bl_label = "Copy Scale"
     bl_icon = 'CON_SIZELIKE'
-    useTarget : bpy.props.BoolProperty(default=True)
+    
     initialized : bpy.props.BoolProperty(default = False)
 
     def init(self, context):
@@ -235,7 +235,7 @@ class LinkInheritConstraintNode(Node, LinkNode):
     bl_idname = 'LinkInheritConstraint'
     bl_label = "Inherit (constraint)"
     bl_icon = 'CON_CHILDOF'
-    useTarget : bpy.props.BoolProperty(default=True)
+    
     initialized : bpy.props.BoolProperty(default = False)
 
     # === Optional Functions ===
@@ -263,7 +263,7 @@ class LinkCopyTransformNode(Node, LinkNode):
     bl_idname = 'LinkCopyTransforms'
     bl_label = "Copy Transform"
     bl_icon = 'CON_TRANSLIKE'
-    useTarget : bpy.props.BoolProperty(default=True)
+    
     initialized : bpy.props.BoolProperty(default = False)
 
 
@@ -292,7 +292,7 @@ class LinkStretchToNode(Node, LinkNode):
     bl_idname = 'LinkStretchTo'
     bl_label = "Stretch To"
     bl_icon = 'CON_STRETCHTO'
-    useTarget : bpy.props.BoolProperty(default=True)
+    
     initialized : bpy.props.BoolProperty(default = False)
     def init(self, context):
         self.inputs.new ('RelationshipSocket', "Input Relationship")
@@ -325,7 +325,7 @@ class LinkDampedTrackNode(Node, LinkNode):
     bl_idname = 'LinkDampedTrack'
     bl_label = "Damped Track"
     bl_icon = 'CON_TRACKTO'
-    useTarget : bpy.props.BoolProperty(default=True)
+    
     initialized : bpy.props.BoolProperty(default = False)
     def init(self, context):
         self.inputs.new ('RelationshipSocket', "Input Relationship")
@@ -350,7 +350,7 @@ class LinkLockedTrackNode(Node, LinkNode):
     bl_idname = 'LinkLockedTrack'
     bl_label = "Locked Track"
     bl_icon = 'CON_LOCKTRACK'
-    useTarget : bpy.props.BoolProperty(default=True)
+    
     initialized : bpy.props.BoolProperty(default = False)
 
     def init(self, context):
@@ -377,7 +377,7 @@ class LinkTrackToNode(Node, LinkNode):
     bl_idname = 'LinkTrackTo'
     bl_label = "Track To"
     bl_icon = 'CON_TRACKTO'
-    useTarget : bpy.props.BoolProperty(default=True)
+    
     initialized : bpy.props.BoolProperty(default = False)
 
     def init(self, context):
@@ -407,7 +407,7 @@ class LinkLimitLocationNode(Node, LinkNode):
     bl_idname = 'LinkLimitLocation'
     bl_label = "Limit Location"
     bl_icon = 'CON_LOCLIMIT'
-    useTarget : bpy.props.BoolProperty(default=False)
+    
     initialized : bpy.props.BoolProperty(default = False)
 
     def init(self, context):
@@ -442,7 +442,7 @@ class LinkLimitScaleNode(Node, LinkNode):
     bl_idname = 'LinkLimitScale'
     bl_label = "Limit Scale"
     bl_icon = 'CON_SIZELIMIT'
-    useTarget : bpy.props.BoolProperty(default=False)
+    
     initialized : bpy.props.BoolProperty(default = False)
 
     def init(self, context):
@@ -479,7 +479,7 @@ class LinkLimitRotationNode(Node, LinkNode):
     bl_idname = 'LinkLimitRotation'
     bl_label = "Limit Rotation"
     bl_icon = 'CON_ROTLIMIT'
-    useTarget : bpy.props.BoolProperty(default=False)
+    
     initialized : bpy.props.BoolProperty(default = False)
 
     # === Optional Functions ===
@@ -512,7 +512,7 @@ class LinkLimitDistanceNode(Node, LinkNode):
     bl_idname = 'LinkLimitDistance'
     bl_label = "Limit Distance"
     bl_icon = 'CON_DISTLIMIT'
-    useTarget : bpy.props.BoolProperty(default=True)
+    
     initialized : bpy.props.BoolProperty(default = False)
 
     def init(self, context):
@@ -541,7 +541,7 @@ class LinkTransformationNode(Node, LinkNode):
     bl_idname = 'LinkTransformation'
     bl_label = "Transformation"
     bl_icon = 'CON_TRANSFORM'
-    useTarget : bpy.props.BoolProperty(default=True)
+    
     initialized : bpy.props.BoolProperty(default = False)
 
     def init(self, context):

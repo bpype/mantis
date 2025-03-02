@@ -155,7 +155,6 @@ class SchemaNode:
         return (ntree.bl_idname in ['SchemaTree'])
 
 class LinkNode(MantisNode):
-    useTarget : BoolProperty(default=False)
     @classmethod
     def poll(cls, ntree):
         return (ntree.bl_idname in ['MantisTree', 'SchemaTree'])
