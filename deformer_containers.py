@@ -27,18 +27,6 @@ def trace_xForm_back(nc, socket):
                 return trace[ i ].bGetObject()
         raise GraphError(wrapRed(f"No other object found for {nc}."))
 
-def default_evaluate_input(nc, input_name):
-    # duped from link_containers... should be common?
-    # should catch 'Target', 'Pole Target' and ArmatureConstraint targets, too
-    if ('Target' in input_name) and input_name != "Target Space":
-        socket = nc.inputs.get(input_name)
-        if socket.is_linked:
-            return socket.links[0].from_node
-        return None
-        
-    else:
-        return evaluate_input(nc, input_name)
-
 
 # semi-duplicated from link_containers
 def GetxForm(nc):
@@ -52,44 +40,29 @@ class DeformerArmature(MantisNode):
     '''A node representing an armature deformer'''
 
     def __init__(self, signature, base_tree):
-        self.base_tree=base_tree
-        self.signature = signature
-        self.inputs = {
-          "Input Relationship"     : NodeSocket(is_input = True, name = "Input Relationship", node = self,),
-          "Armature Object"        : NodeSocket(is_input = True, name = "Armature Object", node = self,),
-          "Blend Vertex Group"     : NodeSocket(is_input = True, name = "Blend Vertex Group", node = self),
-          "Invert Vertex Group"    : NodeSocket(is_input = True, name = "Invert Vertex Group", node = self),
-          "Preserve Volume"        : NodeSocket(is_input = True, name = "Preserve Volume", node = self),
-          "Use Multi Modifier"     : NodeSocket(is_input = True, name = "Use Multi Modifier", node = self),
-          "Use Envelopes"          : NodeSocket(is_input = True, name = "Use Envelopes", node = self),
-          "Use Vertex Groups"      : NodeSocket(is_input = True, name = "Use Vertex Groups", node = self),
-          "Skinning Method"        : NodeSocket(is_input = True, name = "Skinning Method", node = self),
-          "Deformer"               : NodeSocket(is_input = True, name = "Deformer", node = self),
-          "Copy Skin Weights From" : NodeSocket(is_input = True, name = "Copy Skin Weights From", node = self),
-        }
-        self.outputs = {
-          "Deformer" : NodeSocket(is_input = False, name = "Deformer", node=self), }
-        self.parameters = {
-          "Name"                   : None,
-          "Armature Object"        : None,
-          "Blend Vertex Group"     : None,
-          "Invert Vertex Group"    : None,
-          "Preserve Volume"        : None,
-          "Use Multi Modifier"     : None,
-          "Use Envelopes"          : None,
-          "Use Vertex Groups"      : None,
-          "Skinning Method"        : None,
-          "Deformer"               : None,
-          "Copy Skin Weights From" : None,
-        }
-        # now set up the traverse target...
-        self.inputs["Deformer"].set_traverse_target(self.outputs["Deformer"])
-        self.outputs["Deformer"].set_traverse_target(self.inputs["Deformer"])
+        super().__init__(signature, base_tree)
+        inputs = [
+            "Input Relationship",
+            "Armature Object",
+            "Blend Vertex Group",
+            "Invert Vertex Group",
+            "Preserve Volume",
+            "Use Multi Modifier",
+            "Use Envelopes",
+            "Use Vertex Groups",
+            "Skinning Method",
+            "Deformer",
+            "Copy Skin Weights From"
+        ]
+        outputs = [
+          "Deformer"
+        ]
+        self.outputs.init_sockets(outputs)
+        self.inputs.init_sockets(inputs)
+        self.init_parameters(additional_parameters={"Name":None})
+        self.set_traverse([("Deformer", "Deformer")])
         self.node_type = "LINK"
-        self.hierarchy_connections, self.connections = [], []
-        self.hierarchy_dependencies, self.dependencies = [], []
         self.prepared = True
-        self.executed = False
 
 
     def GetxForm(self, socket="Deformer"):
@@ -232,29 +205,22 @@ class DeformerHook(MantisNode):
     '''A node representing a hook deformer'''
 
     def __init__(self, signature, base_tree):
-        self.base_tree=base_tree
-        self.signature = signature
-        self.inputs = {
-          "Hook Target"    : NodeSocket(is_input = True, name = "Hook Target", node = self,),
-          "Index"          : NodeSocket(is_input = True, name = "Index", node = self),
-          "Deformer"       : NodeSocket(is_input = True, name = "Deformer", node = self),
-        }
-        self.outputs = {
-          "Deformer" : NodeSocket(is_input = False, name = "Deformer", node=self), }
-        self.parameters = {
-          "Hook Target"     : None,
-          "Index"           : None,
-          "Deformer"        : None,
-          "Name"            : None,
-        }
+        super().__init__(signature, base_tree)
+        inputs = [
+            "Hook Target",
+            "Index",
+            "Deformer",
+        ]
+        outputs = [
+          "Deformer"
+        ]
         # now set up the traverse target...
-        self.inputs["Deformer"].set_traverse_target(self.outputs["Deformer"])
-        self.outputs["Deformer"].set_traverse_target(self.inputs["Deformer"])
+        self.outputs.init_sockets(outputs)
+        self.inputs.init_sockets(inputs)
+        self.init_parameters(additional_parameters={"Name":None})
+        self.set_traverse([("Deformer", "Deformer")])
         self.node_type = "LINK"
-        self.hierarchy_connections, self.connections = [], []
-        self.hierarchy_dependencies, self.dependencies = [], []
         self.prepared = True
-        self.executed = False
 
 
 
@@ -303,33 +269,24 @@ class DeformerHook(MantisNode):
 class DeformerMorphTarget(MantisNode):
     '''A node representing an armature deformer'''
     def __init__(self, signature, base_tree):
-        self.base_tree=base_tree
-        self.signature = signature
-        self.inputs = {
-          "Relative to"  : NodeSocket(is_input = True, name = "Relative To", node = self,),
-          "Object"       : NodeSocket(is_input = True, name = "Object", node = self,),
-          "Deformer"     : NodeSocket(is_input = True, name = "Deformer", node = self),
-          "Vertex Group" : NodeSocket(is_input = True, name = "Vertex Group", node = self),
-        }
-        self.outputs = {
-          "Deformer" : NodeSocket(is_input = False, name = "Deformer", node=self),
-          "Morph Target" : NodeSocket(is_input = False, name = "Morph Target", node=self), }
-        self.parameters = {
-          "Name"               : None,
-          "Relative to"        : None,
-          "Object"             : None,
-          "Morph Target"       : None,
-          "Deformer"           : None,
-          "Vertex Group"       : None,
-        }
+        super().__init__(signature, base_tree)
+        inputs = [
+            "Relative to",
+            "Object",
+            "Deformer",
+            "Vertex Group",
+        ]
+        outputs = [
+          "Deformer",
+          "Morph Target",
+        ]
         # now set up the traverse target...
-        self.inputs["Deformer"].set_traverse_target(self.outputs["Deformer"])
-        self.outputs["Deformer"].set_traverse_target(self.inputs["Deformer"])
+        self.outputs.init_sockets(outputs)
+        self.inputs.init_sockets(inputs)
+        self.init_parameters(additional_parameters={"Name":None})
+        self.set_traverse([("Deformer", "Deformer")])
         self.node_type = "LINK"
-        self.hierarchy_connections, self.connections = [], []
-        self.hierarchy_dependencies, self.dependencies = [], []
         self.prepared = True
-        self.executed = False
     
     def GetxForm(self, trace_input="Object"):
         trace = trace_single_line(self, trace_input)
@@ -369,28 +326,20 @@ class DeformerMorphTargetDeform(MantisNode):
     '''A node representing an armature deformer'''
 
     def __init__(self, signature, base_tree):
-        self.base_tree=base_tree
-        self.signature = signature
-        self.inputs = {
-          "Deformer"            : NodeSocket(is_input = True, name = "Deformer", node = self),
-          "Use Shape Key"       : NodeSocket(is_input = True, name = "Use Shape Key", node = self),
-          "Use Offset"          : NodeSocket(is_input = True, name = "Use Offset", node = self),
-        }
-        self.outputs = {
-          "Deformer" : NodeSocket(is_input = False, name = "Deformer", node=self), }
-        self.parameters = {
-          "Name"                : None,
-          "Deformer"            : None,
-          "Deformer"            : None,
-          "Use Shape Key"       : None,
-          "Use Offset"          : None,
-          }
-        # now set up the traverse target...
-        self.inputs["Deformer"].set_traverse_target(self.outputs["Deformer"])
-        self.outputs["Deformer"].set_traverse_target(self.inputs["Deformer"])
+        super().__init__(signature, base_tree)
+        inputs = [
+            "Deformer",
+            "Use Shape Key",
+            "Use Offset",
+        ]
+        outputs = [
+          "Deformer",
+        ]
+        self.outputs.init_sockets(outputs)
+        self.inputs.init_sockets(inputs)
+        self.init_parameters(additional_parameters={"Name":None})
+        self.set_traverse([("Deformer", "Deformer")])
         self.node_type = "LINK"
-        self.hierarchy_connections, self.connections = [], []
-        self.hierarchy_dependencies, self.dependencies = [], []
         self.prepared = True
         self.executed = True
         self.bObject = None

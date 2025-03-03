@@ -1,5 +1,5 @@
 from .node_container_common import *
-from .base_definitions import MantisNode
+from .base_definitions import MantisNode, NodeSocket
 
 def TellClasses():
     return [
@@ -15,30 +15,20 @@ class MathStaticInt(MantisNode):
     '''A node representing an armature object'''
 
     def __init__(self, signature, base_tree):
-        self.base_tree=base_tree
-        self.executed = False
-        self.signature = signature
-        self.inputs = {
-          "Operation" : NodeSocket(is_input = True, name = "Operation", node = self),
-          "Int A"   : NodeSocket(is_input = True, name = "Int A", node = self),
-          "Int B"   : NodeSocket(is_input = True, name = "Int B", node = self),
-        }
-        self.outputs = {
-          "Result Int" : NodeSocket(name = "Result Int", node=self),
-        }
-        self.parameters = {
-          "Operation":None,
-          "Int A":None, 
-          "Int B":None, 
-          "Result Int":None, 
-        }
+        super().__init__(signature, base_tree)
+        inputs = [
+          "Operation",
+          "Int A",
+          "Int B",
+        ]
+        outputs = [
+          "Result Int",
+        ]
+        additional_parameters = {}
+        self.inputs.init_sockets(inputs)
+        self.outputs.init_sockets(outputs)
+        self.init_parameters(additional_parameters=additional_parameters)
         self.node_type = "UTILITY"
-        self.hierarchy_connections = []
-        self.connections = []
-        self.hierarchy_dependencies = []
-        self.dependencies = []
-        self.prepared = False
-        self.executed = False
 
     def bPrepare(self, bContext = None,):
         a = self.evaluate_input("Int A"); b = self.evaluate_input("Int B")
@@ -73,30 +63,20 @@ class MathStaticFloat(MantisNode):
     '''A node representing an armature object'''
 
     def __init__(self, signature, base_tree):
-        self.base_tree=base_tree
-        self.executed = False
-        self.signature = signature
-        self.inputs = {
-          "Operation" : NodeSocket(is_input = True, name = "Operation", node = self),
-          "Float A"   : NodeSocket(is_input = True, name = "Float A", node = self),
-          "Float B"   : NodeSocket(is_input = True, name = "Float B", node = self),
-        }
-        self.outputs = {
-          "Result Float" : NodeSocket(name = "Result Float", node=self),
-        }
-        self.parameters = {
-          "Operation":None,
-          "Float A":None, 
-          "Float B":None, 
-          "Result Float":None, 
-        }
+        super().__init__(signature, base_tree)
+        inputs = [
+          "Operation",
+          "Float A",
+          "Float B",
+        ]
+        outputs = [
+          "Result Float",
+        ]
+        additional_parameters = {}
+        self.inputs.init_sockets(inputs)
+        self.outputs.init_sockets(outputs)
+        self.init_parameters(additional_parameters=additional_parameters)
         self.node_type = "UTILITY"
-        self.hierarchy_connections = []
-        self.connections = []
-        self.hierarchy_dependencies = []
-        self.dependencies = []
-        self.prepared = False
-        self.executed = False
 
     def bPrepare(self, bContext = None,):
         a = self.evaluate_input("Float A"); b = self.evaluate_input("Float B")
@@ -136,34 +116,22 @@ class MathStaticVector(MantisNode):
     '''A node representing an armature object'''
 
     def __init__(self, signature, base_tree):
-        self.base_tree=base_tree
-        self.executed = False
-        self.signature = signature
-        self.inputs = {
-          "Operation"  : NodeSocket(is_input = True, name = "Operation", node = self),
-          "Vector A"   : NodeSocket(is_input = True, name = "Vector A", node = self),
-          "Vector B"   : NodeSocket(is_input = True, name = "Vector B", node = self),
-          "Scalar A"   : NodeSocket(is_input = True, name = "Scalar A", node = self),
-        }
-        self.outputs = {
-          "Result Vector" : NodeSocket(name = "Result Vector", node=self),
-          "Result Float" : NodeSocket(name = "Result Float", node=self),
-        }
-        self.parameters = {
-          "Operation":None,
-          "Vector A":None, 
-          "Vector B":None, 
-          "Scalar A":None, 
-          "Result Vector":None, 
-          "Result Float":None, 
-        }
+        super().__init__(signature, base_tree)
+        inputs = [
+          "Operation",
+          "Vector A",
+          "Vector B",
+          "Scalar A",
+        ]
+        outputs = [
+          "Result Vector",
+          "Result Float",
+        ]
+        additional_parameters = {}
+        self.inputs.init_sockets(inputs)
+        self.outputs.init_sockets(outputs)
+        self.init_parameters(additional_parameters=additional_parameters)
         self.node_type = "UTILITY"
-        self.hierarchy_connections = []
-        self.connections = []
-        self.hierarchy_dependencies = []
-        self.dependencies = []
-        self.prepared = False
-        self.executed = False
 
     def bPrepare(self, bContext = None,):
         from mathutils import Vector

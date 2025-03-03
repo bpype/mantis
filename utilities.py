@@ -151,7 +151,7 @@ def socket_seek(start_link, links):
 # this creates fake links that have the same interface as Blender's
 # so that I can bypass Reroutes
 def clear_reroutes(links):
-    from .node_container_common import DummyLink
+    from .base_definitions import DummyLink
     kept_links, rerouted_starts = [], []
     rerouted = []
     all_links = links.copy()

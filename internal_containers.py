@@ -5,12 +5,8 @@ from uuid import uuid4
 
 class DummyNode(MantisNode):
     def __init__(self, signature, base_tree, prototype = None, natural_signature=None):
-        self.signature = signature
-        self.base_tree = base_tree
+        super().__init__(signature, base_tree)
         self.prototype = prototype
-        self.inputs={}
-        self.outputs={}
-        self.parameters = {}
         self.node_type = 'DUMMY'
         self.prepared = True
         if prototype.bl_idname in ["MantisSchemaGroup"]:
@@ -32,33 +28,17 @@ class DummyNode(MantisNode):
             self.natural_signature=natural_signature
         # This is necessary for Schema to work if there are multiple Schema nodes using the same Schema tree.
         # this is ugly and I hate it.
-        self.hierarchy_connections = []
-        self.connections = []
-        self.hierarchy_dependencies = []
-        self.dependencies = []
-        self.executed = False
 
 
 class NoOpNode(MantisNode):
     def __init__(self, signature, base_tree):
-        self.signature = signature
-        self.base_tree = base_tree
-        self.inputs={
-          "Input"   : NodeSocket(is_input = True, name = "Input", node = self),
-        }
-        self.outputs = {
-          "Output" : NodeSocket(name = "Output", node=self),
-        }
-        self.parameters = {
-            "Input"  : None,
-            "Output" : None,
-        }
-        self.inputs["Input"].set_traverse_target(self.outputs["Output"])
-        self.outputs["Output"].set_traverse_target(self.inputs["Input"])
+        super().__init__(signature, base_tree)
+        self.inputs.init_sockets(["Input"])
+        self.outputs.init_sockets(["Output"])
+        self.init_parameters()
+        self.set_traverse([("Input", "Output")])
         self.node_type = 'UTILITY'
         self.prepared = True
-        self.hierarchy_connections = [];  self.connections = []
-        self.hierarchy_dependencies = []; self.dependencies = []
         self.executed = True
     
     # this node is useful for me to insert in the tree and use for debugging especially connections.

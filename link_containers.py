@@ -1,6 +1,6 @@
 from .node_container_common import *
 from bpy.types import Bone
-from .base_definitions import MantisNode, GraphError
+from .base_definitions import MantisNode, NodeSocket, GraphError
 
 def TellClasses():
     return [
@@ -33,6 +33,11 @@ def TellClasses():
             ]
 
 class MantisLinkNode(MantisNode):
+    def __init__(self, signature, base_tree):
+        super().__init__(signature, base_tree)
+        self.node_type = 'LINK'
+        self.prepared = True
+
     def evaluate_input(self, input_name, index=0):
         # should catch 'Target', 'Pole Target' and ArmatureConstraint targets, too
         if ('Target' in input_name) and input_name not in  ["Target Space", "Use Target Z"]:
@@ -63,33 +68,12 @@ class LinkInherit(MantisLinkNode):
     '''A node representing inheritance'''
     
     def __init__(self, signature, base_tree):
-        self.base_tree=base_tree
-        self.signature = signature
-        self.inputs = {
-         "Parent"           : NodeSocket(is_input = True, name = "Parent", node = self,),
-         # bone only:
-         "Inherit Rotation" : NodeSocket(is_input = True, name = "Inherit Rotation", node = self,),
-         "Inherit Scale"    : NodeSocket(is_input = True, name = "Inherit Scale", node = self,),
-         "Connected"        : NodeSocket(is_input = True, name = "Connected", node = self,),
-        }
-        self.outputs = { "Inheritance" : NodeSocket(name = "Inheritance", node = self) }
-        self.parameters = {
-         "Parent":None,
-         # bone only:
-         "Inherit Rotation":None,
-         "Inherit Scale":None,
-         "Connected":None,
-        }
-        self.links = {} # leave this empty for now!
-        # now set up the traverse target...
-        self.inputs["Parent"].set_traverse_target(self.outputs["Inheritance"])
-        self.outputs["Inheritance"].set_traverse_target(self.inputs["Parent"])
-        self.node_type = 'LINK'
-        self.hierarchy_connections = []
-        self.connections = []
-        self.hierarchy_dependencies = []
-        self.dependencies = []
-        self.prepared = True
+        super().__init__(signature, base_tree)
+        inputs = ["Parent", "Inherit Rotation", "Inherit Scale", "Connected"]
+        self.inputs.init_sockets(inputs)
+        self.outputs.init_sockets(["Inheritance"])
+        self.init_parameters()
+        self.set_traverse([('Parent', 'Inheritance')])
         self.executed = True
     
     def GetxForm(self): # DUPLICATED, TODO fix this
@@ -108,49 +92,26 @@ class LinkCopyLocation(MantisLinkNode):
     '''A node representing Copy Location'''
     
     def __init__(self, signature, base_tree):
-        self.base_tree=base_tree
-        self.signature = signature
-        self.inputs = {
-            "Input Relationship" : NodeSocket(is_input = True, name = "Input Relationship", node = self,),
-            "Head/Tail"          : NodeSocket(is_input = True, name = "Head/Tail", node = self,),
-            "UseBBone"           : NodeSocket(is_input = True, name = "UseBBone", node = self,),
-            "Axes"               : NodeSocket(is_input = True, name = "Axes", node = self,),
-            "Invert"             : NodeSocket(is_input = True, name = "Invert", node = self,),
-            "Target Space"       : NodeSocket(is_input = True, name = "Target Space", node = self,),
-            "Owner Space"        : NodeSocket(is_input = True, name = "Owner Space", node = self,),
-            "Offset"             : NodeSocket(is_input = True, name = "Offset", node = self,),
-            "Influence"          : NodeSocket(is_input = True, name = "Influence", node = self,),
-            "Target"             : NodeSocket(is_input = True, name = "Target", node = self,),
-            "Enable"             : NodeSocket(is_input = True, name = "Enable", node = self,), }
-        self.outputs = {
-            "Output Relationship" : NodeSocket(name = "Output Relationship", node=self) }
-        self.parameters = {
-            "Name":None,
-            "Input Relationship":None,
-            "Head/Tail":None,
-            "UseBBone":None,
-            "Axes":None,
-            "Invert":None,
-            "Target Space":None,
-            "Owner Space":None,
-            "Offset":None,
-            "Influence":None,
-            "Target":None,
-            "Enable":None, }
-        # now set up the traverse target...
-        self.inputs["Input Relationship"].set_traverse_target(self.outputs["Output Relationship"])
-        self.outputs["Output Relationship"].set_traverse_target(self.inputs["Input Relationship"])
-        self.node_type = 'LINK'
-        self.hierarchy_connections = []
-        self.connections = []
-        self.hierarchy_dependencies = []
-        self.dependencies = []
-        self.prepared = True
-        self.executed = False
+        super().__init__(signature, base_tree)
+        inputs = [
+            "Input Relationship",
+            "Head/Tail",
+            "UseBBone",
+            "Axes",
+            "Invert",
+            "Target Space",
+            "Owner Space",
+            "Offset",
+            "Influence",
+            "Target",
+            "Enable",
+        ]
+        additional_parameters = { "Name":None }
+        self.inputs.init_sockets(inputs)
+        self.outputs.init_sockets(["Output Relationship"])
+        self.init_parameters(additional_parameters=additional_parameters)
+        self.set_traverse([("Input Relationship", "Output Relationship")])
         
-        
-        
-
     
     def GetxForm(self):
         return GetxForm(self)
@@ -213,43 +174,25 @@ class LinkCopyRotation(MantisLinkNode):
     '''A node representing Copy Rotation'''
     
     def __init__(self, signature, base_tree):
-        self.base_tree=base_tree
-        self.signature = signature
-        self.inputs = {
-            "Input Relationship" : NodeSocket(is_input = True, name = "Input Relationship", node = self,),
-            "RotationOrder"      : NodeSocket(is_input = True, name = "RotationOrder", node = self,),
-            "Rotation Mix"       : NodeSocket(is_input = True, name = "Rotation Mix", node = self,),
-            "Axes"               : NodeSocket(is_input = True, name = "Axes", node = self,),
-            "Invert"             : NodeSocket(is_input = True, name = "Invert", node = self,),
-            "Target Space"       : NodeSocket(is_input = True, name = "Target Space", node = self,),
-            "Owner Space"        : NodeSocket(is_input = True, name = "Owner Space", node = self,),
-            "Influence"          : NodeSocket(is_input = True, name = "Influence", node = self,),
-            "Target"             : NodeSocket(is_input = True, name = "Target", node = self,),
-            "Enable"             : NodeSocket(is_input = True, name = "Enable", node = self,),  }
-        self.outputs = {
-            "Output Relationship" : NodeSocket(name = "Output Relationship", node=self) }
-        self.parameters = {
-            "Name":None,
-            "Input Relationship":None,
-            "RotationOrder":None,
-            "Rotation Mix":None,
-            "Axes":None,
-            "Invert":None,
-            "Target Space":None,
-            "Owner Space":None,
-            "Influence":None,
-            "Target":None,
-            "Enable":None, }
-        # now set up the traverse target...
-        self.inputs["Input Relationship"].set_traverse_target(self.outputs["Output Relationship"])
-        self.outputs["Output Relationship"].set_traverse_target(self.inputs["Input Relationship"])
-        self.node_type = 'LINK'
-        self.hierarchy_connections = []
-        self.connections = []
-        self.hierarchy_dependencies = []
-        self.dependencies = []
-        self.prepared = True
-        self.executed = False
+        super().__init__(signature, base_tree)
+        inputs = [
+            "Input Relationship",
+            "RotationOrder",
+            "Rotation Mix",
+            "Axes",
+            "Invert",
+            "Target Space",
+            "Owner Space",
+            "Influence",
+            "Target",
+            "Enable",
+        ]
+        additional_parameters = { "Name":None }
+        self.inputs.init_sockets(inputs)
+        self.outputs.init_sockets(["Output Relationship"])
+        self.init_parameters(additional_parameters=additional_parameters)
+        self.set_traverse([("Input Relationship", "Output Relationship")])
+        
         
 
     
@@ -321,46 +264,24 @@ class LinkCopyScale(MantisLinkNode):
     '''A node representing Copy Scale'''
     
     def __init__(self, signature, base_tree):
-        self.base_tree=base_tree
-        self.signature = signature
-        self.inputs = {
-            "Input Relationship" : NodeSocket(is_input = True, name = "Input Relationship", node = self,),
-            "Offset"             : NodeSocket(is_input = True, name = "Offset", node = self,),
-            "Average"            : NodeSocket(is_input = True, name = "Average", node = self,),
-            "Additive"           : NodeSocket(is_input = True, name = "Additive", node = self,),
-            "Axes"               : NodeSocket(is_input = True, name = "Axes", node = self,),
-            #"Invert"             : NodeSocket(is_input = True, name = "Invert", node = self,),
-            "Target Space"       : NodeSocket(is_input = True, name = "Target Space", node = self,),
-            "Owner Space"        : NodeSocket(is_input = True, name = "Owner Space", node = self,),
-            "Influence"          : NodeSocket(is_input = True, name = "Influence", node = self,),
-            "Target"             : NodeSocket(is_input = True, name = "Target", node = self,),
-            "Enable"             : NodeSocket(is_input = True, name = "Enable", node = self,), }
-        self.outputs = {
-            "Output Relationship" : NodeSocket(name = "Output Relationship", node=self) }
-        self.parameters = {
-            "Name":None,
-            "Input Relationship":None,
-            "Offset":None,
-            "Average":None,
-            "Axes":None,
-            #"Invert":None,
-            "Target Space":None,
-            "Owner Space":None,
-            "Influence":None,
-            "Target":None,
-            "Enable":None,}
-        # now set up the traverse target...
-        self.inputs["Input Relationship"].set_traverse_target(self.outputs["Output Relationship"])
-        self.outputs["Output Relationship"].set_traverse_target(self.inputs["Input Relationship"])
-        self.node_type = 'LINK'
-        self.hierarchy_connections = []
-        self.connections = []
-        self.hierarchy_dependencies = []
-        self.dependencies = []
-        self.prepared = True
-        self.executed = False
-        
-
+        super().__init__(signature, base_tree)
+        inputs = [
+            "Input Relationship",
+            "Offset",
+            "Average",
+            "Additive",
+            "Axes",
+            "Target Space",
+            "Owner Space",
+            "Influence",
+            "Target",
+            "Enable",
+        ]
+        additional_parameters = { "Name":None }
+        self.inputs.init_sockets(inputs)
+        self.outputs.init_sockets(["Output Relationship"])
+        self.init_parameters(additional_parameters=additional_parameters)
+        self.set_traverse([("Input Relationship", "Output Relationship")])
     
     def GetxForm(self):
         return GetxForm(self)
@@ -418,45 +339,25 @@ class LinkCopyTransforms(MantisLinkNode):
     '''A node representing Copy Transfoms'''
     
     def __init__(self, signature, base_tree):
-        self.base_tree=base_tree
-        self.signature = signature
-        self.inputs = {
-            "Input Relationship" : NodeSocket(is_input = True, name = "Input Relationship", node = self,),
-            "Head/Tail"          : NodeSocket(is_input = True, name = "Head/Tail", node = self,),
-            "UseBBone"           : NodeSocket(is_input = True, name = "UseBBone", node = self,),
-            "Additive"           : NodeSocket(is_input = True, name = "Additive", node = self,),
-            "Mix"                : NodeSocket(is_input = True, name = "Mix", node = self,),
-            "Target Space"       : NodeSocket(is_input = True, name = "Target Space", node = self,),
-            "Owner Space"        : NodeSocket(is_input = True, name = "Owner Space", node = self,),
-            "Influence"          : NodeSocket(is_input = True, name = "Influence", node = self,),
-            "Target"             : NodeSocket(is_input = True, name = "Target", node = self,),
-            "Enable"             : NodeSocket(is_input = True, name = "Enable", node = self,),  }
-        self.outputs = {
-            "Output Relationship" : NodeSocket(name = "Output Relationship", node=self) }
-        self.parameters = {
-            "Name":None,
-            "Input Relationship":None,
-            "Head/Tail":None,
-            "UseBBone":None,
-            "Mix":None,
-            "Target Space":None,
-            "Owner Space":None,
-            "Influence":None,
-            "Target":None,
-            "Enable":None,}
-        # now set up the traverse target...
-        self.inputs["Input Relationship"].set_traverse_target(self.outputs["Output Relationship"])
-        self.outputs["Output Relationship"].set_traverse_target(self.inputs["Input Relationship"])
-        self.node_type = 'LINK'
-        self.hierarchy_connections = []
-        self.connections = []
-        self.hierarchy_dependencies = []
-        self.dependencies = []
-        self.prepared = True
-        self.executed = False
+        super().__init__(signature, base_tree)
+        inputs = [
+            "Input Relationship",
+            "Head/Tail",
+            "UseBBone",
+            "Additive",
+            "Mix",
+            "Target Space",
+            "Owner Space",
+            "Influence",
+            "Target",
+            "Enable",
+        ]
+        additional_parameters = { "Name":None }
+        self.inputs.init_sockets(inputs)
+        self.outputs.init_sockets(["Output Relationship"])
+        self.init_parameters(additional_parameters=additional_parameters)
+        self.set_traverse([("Input Relationship", "Output Relationship")])
         
-
-    
     def GetxForm(self):
         return GetxForm(self)
 
@@ -566,82 +467,43 @@ class LinkTransformation(MantisLinkNode):
     '''A node representing Copy Transfoms'''
     
     def __init__(self, signature, base_tree):
-        self.base_tree=base_tree
-        self.signature = signature
-        self.inputs = {
-            "Input Relationship"     : NodeSocket(is_input = True, name = "Input Relationship", node = self,),
-            "Target Space"           : NodeSocket(is_input = True, name = "Target Space", node = self,),
-            "Owner Space"            : NodeSocket(is_input = True, name = "Owner Space", node = self,),
-            "Influence"              : NodeSocket(is_input = True, name = "Influence", node = self,),
-            "Target"                 : NodeSocket(is_input = True, name = "Target", node = self,),
-            "Enable"                 : NodeSocket(is_input = True, name = "Enable", node = self,),  
-            "Extrapolate"            : NodeSocket(is_input = True, name = "Extrapolate", node = self,),  
-            "Map From"               : NodeSocket(is_input = True, name = "Map From", node = self,),
-            "Rotation Mode"          : NodeSocket(is_input = True, name = "Rotation Mode", node = self,),
-            "X Min From"             : NodeSocket(is_input = True, name = "X Min From", node = self,),
-            "X Max From"             : NodeSocket(is_input = True, name = "X Max From", node = self,),
-            "Y Min From"             : NodeSocket(is_input = True, name = "Y Min From", node = self,),
-            "Y Max From"             : NodeSocket(is_input = True, name = "Y Max From", node = self,),
-            "Z Min From"             : NodeSocket(is_input = True, name = "Z Min From", node = self,),
-            "Z Max From"             : NodeSocket(is_input = True, name = "Z Max From", node = self,),
-            "Map To"                 : NodeSocket(is_input = True, name = "Map To", node = self,),
-            "X Source Axis"          : NodeSocket(is_input = True, name = "X Source Axis", node = self,),
-            "X Min To"               : NodeSocket(is_input = True, name = "X Min To", node = self,),
-            "X Max To"               : NodeSocket(is_input = True, name = "X Max To", node = self,),
-            "Y Source Axis"          : NodeSocket(is_input = True, name = "Y Source Axis", node = self,),
-            "Y Min To"               : NodeSocket(is_input = True, name = "Y Min To", node = self,),
-            "Y Max To"               : NodeSocket(is_input = True, name = "Y Max To", node = self,),
-            "Z Source Axis"          : NodeSocket(is_input = True, name = "Z Source Axis", node = self,),
-            "Z Min To"               : NodeSocket(is_input = True, name = "Z Min To", node = self,),
-            "Z Max To"               : NodeSocket(is_input = True, name = "Z Max To", node = self,),
-            "Rotation Mode"          : NodeSocket(is_input = True, name = "Rotation Mode", node = self,),
-            "Mix Mode (Translation)" : NodeSocket(is_input = True, name = "Mix Mode (Translation)", node = self,),
-            "Mix Mode (Rotation)"    : NodeSocket(is_input = True, name = "Mix Mode (Rotation)", node = self,),
-            "Mix Mode (Scale)"       : NodeSocket(is_input = True, name = "Mix Mode (Scale)", node = self,),
-            }
-        self.outputs = {
-            "Output Relationship"    : NodeSocket(name = "Output Relationship", node=self) }
-        self.parameters = {
-            "Name"                   : None,
-            "Input Relationship"     : None,
-            "Target Space"           : None,
-            "Owner Space"            : None,
-            "Influence"              : None,
-            "Target"                 : None,
-            "Enable"                 : None,
-            "Extrapolate"            : None,
-            "Map From"               : None,
-            "Rotation Mode"          : None,
-            "X Min From"             : None,
-            "X Max From"             : None,
-            "Y Min From"             : None,
-            "Y Max From"             : None,
-            "Z Min From"             : None,
-            "Z Max From"             : None,
-            "Map To"                 : None,
-            "X Source Axis"          : None,
-            "X Min To"               : None,
-            "X Max To"               : None,
-            "Y Source Axis"          : None,
-            "Y Min To"               : None,
-            "Y Max To"               : None,
-            "Z Source Axis"          : None,
-            "Z Min To"               : None,
-            "Z Max To"               : None,
-            "Rotation Order"         : None,
-            "Mix Mode (Translation)" : None,
-            "Mix Mode (Rotation)"    : None,
-            "Mix Mode (Scale)"       : None,}
-        # now set up the traverse target...
-        self.inputs["Input Relationship"].set_traverse_target(self.outputs["Output Relationship"])
-        self.outputs["Output Relationship"].set_traverse_target(self.inputs["Input Relationship"])
-        self.node_type = 'LINK'
-        self.hierarchy_connections = []
-        self.connections = []
-        self.hierarchy_dependencies = []
-        self.dependencies = []
-        self.prepared = True
-        self.executed = False
+        super().__init__(signature, base_tree)
+        inputs = [
+            "Input Relationship" ,
+            "Target Space" ,
+            "Owner Space" ,
+            "Influence" ,
+            "Target" ,
+            "Enable" ,
+            "Extrapolate" ,
+            "Map From" ,
+            "Rotation Mode" ,
+            "X Min From" ,
+            "X Max From" ,
+            "Y Min From" ,
+            "Y Max From" ,
+            "Z Min From" ,
+            "Z Max From" ,
+            "Map To" ,
+            "X Source Axis" ,
+            "X Min To" ,
+            "X Max To" ,
+            "Y Source Axis" ,
+            "Y Min To" ,
+            "Y Max To" ,
+            "Z Source Axis" ,
+            "Z Min To" ,
+            "Z Max To" ,
+            "Mix Mode (Translation)" ,
+            "Mix Mode (Rotation)" ,
+            "Mix Mode (Scale)" ,
+        ]
+        additional_parameters = { "Name":None }
+        self.inputs.init_sockets(inputs)
+        self.outputs.init_sockets(["Output Relationship"])
+        self.init_parameters(additional_parameters=additional_parameters)
+        self.set_traverse([("Input Relationship", "Output Relationship")])
+        
         
 
     
@@ -689,60 +551,32 @@ class LinkTransformation(MantisLinkNode):
 
 class LinkLimitLocation(MantisLinkNode):
     def __init__(self, signature, base_tree):
-        self.base_tree=base_tree
-        self.signature = signature
-        self.inputs = {
-            "Input Relationship" : NodeSocket(is_input = True, name = "Input Relationship", node = self,),
-            "Use Max X"          : NodeSocket(is_input = True, name = "Use Max X", node = self,),
-            "Max X"              : NodeSocket(is_input = True, name = "Max X", node = self,),
-            "Use Max Y"          : NodeSocket(is_input = True, name = "Use Max Y", node = self,),
-            "Max Y"              : NodeSocket(is_input = True, name = "Max Y", node = self,),
-            "Use Max Z"          : NodeSocket(is_input = True, name = "Use Max Z", node = self,),
-            "Max Z"              : NodeSocket(is_input = True, name = "Max Z", node = self,),
-            "Use Min X"          : NodeSocket(is_input       = True, name = "Use Min X", node = self,),
-            "Min X"              : NodeSocket(is_input = True, name = "Min X", node = self,),
-            "Use Min Y"          : NodeSocket(is_input = True, name = "Use Min Y", node = self,),
-            "Min Y"              : NodeSocket(is_input = True, name = "Min Y", node = self,),
-            "Use Min Z"          : NodeSocket(is_input = True, name = "Use Min Z", node = self,),
-            "Min Z"              : NodeSocket(is_input = True, name = "Min Z", node = self,),
-            "Affect Transform"   : NodeSocket(is_input = True, name = "Affect Transform", node = self,),
-            "Owner Space"        : NodeSocket(is_input = True, name = "Owner Space", node = self,),
-            "Influence"          : NodeSocket(is_input = True, name = "Influence", node = self,),
-            "Enable"             : NodeSocket(is_input = True, name = "Enable", node = self,),  }
-        self.outputs = {
-            "Output Relationship" : NodeSocket(name = "Output Relationship", node=self) }
-        self.parameters = {
-            "Name":None,
-            "Input Relationship":None,
-            "Use Max X":None,
-            "Max X":None,
-            "Use Max Y":None,
-            "Max Y":None,
-            "Use Max Z":None,
-            "Max Z":None,
-            "Use Min X":None,
-            "Min X":None,
-            "Use Min Y":None,
-            "Min Y":None,
-            "Use Min Z":None,
-            "Min Z":None,
-            "Affect Transform":None,
-            "Owner Space":None,
-            "Influence":None,
-            "Enable":None,}
-        # now set up the traverse target...
-        self.inputs["Input Relationship"].set_traverse_target(self.outputs["Output Relationship"])
-        self.outputs["Output Relationship"].set_traverse_target(self.inputs["Input Relationship"])
-        self.node_type = 'LINK'
-        self.hierarchy_connections = []
-        self.connections = []
-        self.hierarchy_dependencies = []
-        self.dependencies = []
-        self.prepared = True
-        self.executed = False
+        super().__init__(signature, base_tree)
+        inputs = [
+            "Input Relationship" ,
+            "Use Max X"          ,
+            "Max X"              ,
+            "Use Max Y"          ,
+            "Max Y"              ,
+            "Use Max Z"          ,
+            "Max Z"              ,
+            "Use Min X"          ,
+            "Min X"              ,
+            "Use Min Y"          ,
+            "Min Y"              ,
+            "Use Min Z"          ,
+            "Min Z"              ,
+            "Affect Transform"   ,
+            "Owner Space"        ,
+            "Influence"          ,
+            "Enable"             ,
+        ]
+        additional_parameters = { "Name":None }
+        self.inputs.init_sockets(inputs)
+        self.outputs.init_sockets(["Output Relationship"])
+        self.init_parameters(additional_parameters=additional_parameters)
+        self.set_traverse([("Input Relationship", "Output Relationship")])
         
-
-    
     def GetxForm(self):
         return GetxForm(self)
 
@@ -796,51 +630,29 @@ class LinkLimitLocation(MantisLinkNode):
         
 class LinkLimitRotation(MantisLinkNode):
     def __init__(self, signature, base_tree):
-        self.base_tree=base_tree
-        self.signature = signature
-        self.inputs = {
-            "Input Relationship" : NodeSocket(is_input = True, name = "Input Relationship", node = self,),
-            "Use X"              : NodeSocket(is_input = True, name = "Use X", node = self,),
-            "Use Y"              : NodeSocket(is_input = True, name = "Use Y", node = self,),
-            "Use Z"              : NodeSocket(is_input = True, name = "Use Z", node = self,),
-            "Max X"              : NodeSocket(is_input = True, name = "Max X", node = self,),
-            "Max Y"              : NodeSocket(is_input = True, name = "Max Y", node = self,),
-            "Max Z"              : NodeSocket(is_input = True, name = "Max Z", node = self,),
-            "Min X"              : NodeSocket(is_input = True, name = "Min X", node = self,),
-            "Min Y"              : NodeSocket(is_input = True, name = "Min Y", node = self,),
-            "Min Z"              : NodeSocket(is_input = True, name = "Min Z", node = self,),
-            "Affect Transform"   : NodeSocket(is_input = True, name = "Affect Transform", node = self,),
-            "Owner Space"        : NodeSocket(is_input = True, name = "Owner Space", node = self,),
-            "Influence"          : NodeSocket(is_input = True, name = "Influence", node = self,),
-            "Enable"             : NodeSocket(is_input = True, name = "Enable", node = self,),  }
-        self.outputs = {
-            "Output Relationship" : NodeSocket(name = "Output Relationship", node=self) }
-        self.parameters = {
-            "Name":None,
-            "Input Relationship":None,
-            "Use X":None,
-            "Use Y":None,
-            "Use Z":None,
-            "Max X":None,
-            "Max Y":None,
-            "Max Z":None,
-            "Min X":None,
-            "Min Y":None,
-            "Min Z":None,
-            "Affect Transform":None,
-            "Owner Space":None,
-            "Influence":None,
-            "Enable":None,}
-        # now set up the traverse target...
-        self.inputs["Input Relationship"].set_traverse_target(self.outputs["Output Relationship"])
-        self.outputs["Output Relationship"].set_traverse_target(self.inputs["Input Relationship"])
-        self.node_type = 'LINK'
-        self.hierarchy_connections = []
-        self.connections = []
-        self.hierarchy_dependencies = []
-        self.dependencies = []
-        self.prepared = True
-        self.executed = False
+        super().__init__(signature, base_tree)
+        inputs = [
+            "Input Relationship" ,
+            "Use X"              ,
+            "Use Y"              ,
+            "Use Z"              ,
+            "Max X"              ,
+            "Max Y"              ,
+            "Max Z"              ,
+            "Min X"              ,
+            "Min Y"              ,
+            "Min Z"              ,
+            "Affect Transform"   ,
+            "Owner Space"        ,
+            "Influence"          ,
+            "Enable"             ,
+        ]
+        additional_parameters = { "Name":None }
+        self.inputs.init_sockets(inputs)
+        self.outputs.init_sockets(["Output Relationship"])
+        self.init_parameters(additional_parameters=additional_parameters)
+        self.set_traverse([("Input Relationship", "Output Relationship")])
+        
         
 
     
@@ -893,57 +705,32 @@ class LinkLimitRotation(MantisLinkNode):
         
 class LinkLimitScale(MantisLinkNode):
     def __init__(self, signature, base_tree):
-        self.base_tree=base_tree
-        self.signature = signature
-        self.inputs = {
-            "Input Relationship" : NodeSocket(is_input = True, name = "Input Relationship", node = self,),
-            "Use Max X"          : NodeSocket(is_input = True, name = "Use Max X", node = self,),
-            "Max X"              : NodeSocket(is_input = True, name = "Max X", node = self,),
-            "Use Max Y"          : NodeSocket(is_input = True, name = "Use Max Y", node = self,),
-            "Max Y"              : NodeSocket(is_input = True, name = "Max Y", node = self,),
-            "Use Max Z"          : NodeSocket(is_input = True, name = "Use Max Z", node = self,),
-            "Max Z"              : NodeSocket(is_input = True, name = "Max Z", node = self,),
-            "Use Min X"          : NodeSocket(is_input = True, name = "Use Min X", node = self,),
-            "Min X"              : NodeSocket(is_input = True, name = "Min X", node = self,),
-            "Use Min Y"          : NodeSocket(is_input = True, name = "Use Min Y", node = self,),
-            "Min Y"              : NodeSocket(is_input = True, name = "Min Y", node = self,),
-            "Use Min Z"          : NodeSocket(is_input = True, name = "Use Min Z", node = self,),
-            "Min Z"              : NodeSocket(is_input = True, name = "Min Z", node = self,),
-            "Affect Transform"   : NodeSocket(is_input = True, name = "Affect Transform", node = self,),
-            "Owner Space"        : NodeSocket(is_input = True, name = "Owner Space", node = self,),
-            "Influence"          : NodeSocket(is_input = True, name = "Influence", node = self,),
-            "Enable"             : NodeSocket(is_input = True, name = "Enable", node = self,),  }
-        self.outputs = {
-            "Output Relationship" : NodeSocket(name = "Output Relationship", node=self) }
-        self.parameters = {
-            "Name":None,
-            "Input Relationship":None,
-            "Use Max X":None,
-            "Max X":None,
-            "Use Max Y":None,
-            "Max Y":None,
-            "Use Max Z":None,
-            "Max Z":None,
-            "Use Min X":None,
-            "Min X":None,
-            "Use Min Y":None,
-            "Min Y":None,
-            "Use Min Z":None,
-            "Min Z":None,
-            "Affect Transform":None,
-            "Owner Space":None,
-            "Influence":None,
-            "Enable":None,}
-        # now set up the traverse target...
-        self.inputs["Input Relationship"].set_traverse_target(self.outputs["Output Relationship"])
-        self.outputs["Output Relationship"].set_traverse_target(self.inputs["Input Relationship"])
-        self.node_type = 'LINK'
-        self.hierarchy_connections = []
-        self.connections = []
-        self.hierarchy_dependencies = []
-        self.dependencies = []
-        self.prepared = True
-        self.executed = False
+        super().__init__(signature, base_tree)
+        inputs = [
+            "Input Relationship" ,
+            "Use Max X"          ,
+            "Max X"              ,
+            "Use Max Y"          ,
+            "Max Y"              ,
+            "Use Max Z"          ,
+            "Max Z"              ,
+            "Use Min X"          ,
+            "Min X"              ,
+            "Use Min Y"          ,
+            "Min Y"              ,
+            "Use Min Z"          ,
+            "Min Z"              ,
+            "Affect Transform"   ,
+            "Owner Space"        ,
+            "Influence"          ,
+            "Enable"             ,
+        ]
+        additional_parameters = { "Name":None }
+        self.inputs.init_sockets(inputs)
+        self.outputs.init_sockets(["Output Relationship"])
+        self.init_parameters(additional_parameters=additional_parameters)
+        self.set_traverse([("Input Relationship", "Output Relationship")])
+        
         
 
     
@@ -999,45 +786,26 @@ class LinkLimitScale(MantisLinkNode):
         
 class LinkLimitDistance(MantisLinkNode):
     def __init__(self, signature, base_tree):
-        self.base_tree=base_tree
-        self.signature = signature
-        self.inputs = {
-            "Input Relationship" : NodeSocket(is_input = True, name = "Input Relationship", node = self,),
-            "Head/Tail"          : NodeSocket(is_input = True, name = "Head/Tail", node = self,),
-            "UseBBone"           : NodeSocket(is_input = True, name = "UseBBone", node = self,),
-            "Distance"           : NodeSocket(is_input = True, name = "Distance", node = self,),
-            "Clamp Region"       : NodeSocket(is_input = True, name = "Clamp Region", node = self,),
-            "Affect Transform"   : NodeSocket(is_input = True, name = "Affect Transform", node = self,),
-            "Owner Space"        : NodeSocket(is_input = True, name = "Owner Space", node = self,),
-            "Target Space"       : NodeSocket(is_input = True, name = "Target Space", node = self,),
-            "Influence"          : NodeSocket(is_input = True, name = "Influence", node = self,),
-            "Target"             : NodeSocket(is_input = True, name = "Target", node = self,),
-            "Enable"             : NodeSocket(is_input = True, name = "Enable", node = self,),  }
-        self.outputs = {
-            "Output Relationship" : NodeSocket(name = "Output Relationship", node=self) }
-        self.parameters = {
-            "Name":None,
-            "Input Relationship":None,
-            "Head/Tail":None,
-            "UseBBone":None,
-            "Distance":None,
-            "Clamp Region":None,
-            "Affect Transform":None,
-            "Owner Space":None,
-            "Target Space":None,
-            "Influence":None,
-            "Target":None,
-            "Enable":None,}
-        # now set up the traverse target...
-        self.inputs["Input Relationship"].set_traverse_target(self.outputs["Output Relationship"])
-        self.outputs["Output Relationship"].set_traverse_target(self.inputs["Input Relationship"])
-        self.node_type = 'LINK'
-        self.hierarchy_connections = []
-        self.connections = []
-        self.hierarchy_dependencies = []
-        self.dependencies = []
-        self.prepared = True
-        self.executed = False
+        super().__init__(signature, base_tree)
+        inputs = [
+            "Input Relationship" ,
+            "Head/Tail"          ,
+            "UseBBone"           ,
+            "Distance"           ,
+            "Clamp Region"       ,
+            "Affect Transform"   ,
+            "Owner Space"        ,
+            "Target Space"       ,
+            "Influence"          ,
+            "Target"             ,
+            "Enable"             ,
+        ]
+        additional_parameters = { "Name":None }
+        self.inputs.init_sockets(inputs)
+        self.outputs.init_sockets(["Output Relationship"])
+        self.init_parameters(additional_parameters=additional_parameters)
+        self.set_traverse([("Input Relationship", "Output Relationship")])
+        
         
 
 
@@ -1101,53 +869,30 @@ class LinkLimitDistance(MantisLinkNode):
 
 class LinkStretchTo(MantisLinkNode):
     def __init__(self, signature, base_tree):
-        self.base_tree=base_tree
-        self.signature = signature
-        self.inputs = {
-            "Input Relationship" : NodeSocket(is_input = True, name = "Input Relationship", node = self,),
-            "Head/Tail"          : NodeSocket(is_input = True, name = "Head/Tail", node = self,),
-            "UseBBone"           : NodeSocket(is_input = True, name = "UseBBone", node = self,),
-            "Original Length"    : NodeSocket(is_input = True, name = "Original Length", node = self,),
-            "Volume Variation"   : NodeSocket(is_input = True, name = "Volume Variation", node = self,),
-            "Use Volume Min"     : NodeSocket(is_input = True, name = "Use Volume Min", node = self,),
-            "Volume Min"         : NodeSocket(is_input = True, name = "Volume Min", node = self,),
-            "Use Volume Max"     : NodeSocket(is_input = True, name = "Use Volume Max", node = self,),
-            "Volume Max"         : NodeSocket(is_input = True, name = "Volume Max", node = self,),
-            "Smooth"             : NodeSocket(is_input = True, name = "Smooth", node = self,),
-            "Maintain Volume"    : NodeSocket(is_input = True, name = "Maintain Volume", node = self,),
-            "Rotation"           : NodeSocket(is_input = True, name = "Rotation", node = self,),
-            "Influence"          : NodeSocket(is_input = True, name = "Influence", node = self,),
-            "Target"             : NodeSocket(is_input = True, name = "Target", node = self,),
-            "Enable"             : NodeSocket(is_input = True, name = "Enable", node = self,),  }
-        self.outputs = {
-            "Output Relationship" : NodeSocket(name = "Output Relationship", node=self) }
-        self.parameters = {
-            "Name":None,
-            "Input Relationship":None,
-            "Head/Tail":None,
-            "UseBBone":None,
-            "Original Length":None,
-            "Volume Variation":None,
-            "Use Volume Min":None,
-            "Volume Min":None,
-            "Use Volume Max":None,
-            "Volume Max":None,
-            "Smooth":None,
-            "Maintain Volume":None,
-            "Rotation":None,
-            "Influence":None,
-            "Target":None,
-            "Enable":None,}
-        # now set up the traverse target...
-        self.inputs["Input Relationship"].set_traverse_target(self.outputs["Output Relationship"])
-        self.outputs["Output Relationship"].set_traverse_target(self.inputs["Input Relationship"])
-        self.node_type = 'LINK'
-        self.hierarchy_connections = []
-        self.connections = []
-        self.hierarchy_dependencies = []
-        self.dependencies = []
-        self.prepared = True
-        self.executed = False
+        super().__init__(signature, base_tree)
+        inputs = [
+            "Input Relationship" ,
+            "Head/Tail"          ,
+            "UseBBone"           ,
+            "Original Length"   ,
+            "Volume Variation"   ,
+            "Use Volume Min"     ,
+            "Volume Min"         ,
+            "Use Volume Max"     ,
+            "Volume Max"         ,
+            "Smooth"             ,
+            "Maintain Volume"    ,
+            "Rotation"           ,
+            "Influence"          ,
+            "Target"             ,
+            "Enable"             ,
+        ]
+        additional_parameters = { "Name":None }
+        self.inputs.init_sockets(inputs)
+        self.outputs.init_sockets(["Output Relationship"])
+        self.init_parameters(additional_parameters=additional_parameters)
+        self.set_traverse([("Input Relationship", "Output Relationship")])
+        
         
 
 
@@ -1193,37 +938,22 @@ class LinkStretchTo(MantisLinkNode):
 
 class LinkDampedTrack(MantisLinkNode):
     def __init__(self, signature, base_tree):
-        self.base_tree=base_tree
-        self.signature = signature
-        self.inputs = {
-            "Input Relationship" : NodeSocket(is_input = True, name = "Input Relationship", node = self,),
-            "Head/Tail"          : NodeSocket(is_input = True, name = "Head/Tail", node = self,),
-            "UseBBone"           : NodeSocket(is_input = True, name = "UseBBone", node = self,),
-            "Track Axis"         : NodeSocket(is_input = True, name = "Track Axis", node = self,),
-            "Influence"          : NodeSocket(is_input = True, name = "Influence", node = self,),
-            "Target"             : NodeSocket(is_input = True, name = "Target", node = self,),
-            "Enable"             : NodeSocket(is_input = True, name = "Enable", node = self,),  }
-        self.outputs = {
-            "Output Relationship" : NodeSocket(name = "Output Relationship", node=self) }
-        self.parameters = {
-            "Name":None,
-            "Input Relationship":None,
-            "Head/Tail":None,
-            "UseBBone":None,
-            "Track Axis":None,
-            "Influence":None,
-            "Target":None,
-            "Enable":None,}
-        # now set up the traverse target...
-        self.inputs["Input Relationship"].set_traverse_target(self.outputs["Output Relationship"])
-        self.outputs["Output Relationship"].set_traverse_target(self.inputs["Input Relationship"])
-        self.node_type = 'LINK'
-        self.hierarchy_connections = []
-        self.connections = []
-        self.hierarchy_dependencies = []
-        self.dependencies = []
-        self.prepared = True
-        self.executed = False
+        super().__init__(signature, base_tree)
+        inputs = [
+            "Input Relationship" ,
+            "Head/Tail"          ,
+            "UseBBone"           ,
+            "Track Axis"         ,
+            "Influence"          ,
+            "Target"             ,
+            "Enable"             ,
+        ]
+        additional_parameters = { "Name":None }
+        self.inputs.init_sockets(inputs)
+        self.outputs.init_sockets(["Output Relationship"])
+        self.init_parameters(additional_parameters=additional_parameters)
+        self.set_traverse([("Input Relationship", "Output Relationship")])
+        
         
 
 
@@ -1257,39 +987,23 @@ class LinkDampedTrack(MantisLinkNode):
 
 class LinkLockedTrack(MantisLinkNode):
     def __init__(self, signature, base_tree):
-        self.base_tree=base_tree
-        self.signature = signature
-        self.inputs = {
-            "Input Relationship" : NodeSocket(is_input = True, name = "Input Relationship", node = self,),
-            "Head/Tail"          : NodeSocket(is_input = True, name = "Head/Tail", node = self,),
-            "UseBBone"           : NodeSocket(is_input = True, name = "UseBBone", node = self,),
-            "Track Axis"         : NodeSocket(is_input = True, name = "Track Axis", node = self,),
-            "Lock Axis"          : NodeSocket(is_input = True, name = "Lock Axis", node = self,),
-            "Influence"          : NodeSocket(is_input = True, name = "Influence", node = self,),
-            "Target"             : NodeSocket(is_input = True, name = "Target", node = self,),
-            "Enable"             : NodeSocket(is_input = True, name = "Enable", node = self,),  }
-        self.outputs = {
-            "Output Relationship" : NodeSocket(name = "Output Relationship", node=self) }
-        self.parameters = {
-            "Name":None,
-            "Input Relationship":None,
-            "Head/Tail":None,
-            "UseBBone":None,
-            "Track Axis":None,
-            "Lock Axis":None,
-            "Influence":None,
-            "Target":None,
-            "Enable":None,}
-        # now set up the traverse target...
-        self.inputs["Input Relationship"].set_traverse_target(self.outputs["Output Relationship"])
-        self.outputs["Output Relationship"].set_traverse_target(self.inputs["Input Relationship"])
-        self.node_type = 'LINK'
-        self.hierarchy_connections = []
-        self.connections = []
-        self.hierarchy_dependencies = []
-        self.dependencies = []
-        self.prepared = True
-        self.executed = False
+        super().__init__(signature, base_tree)
+        inputs = [
+            "Input Relationship" ,
+            "Head/Tail"          ,
+            "UseBBone"           ,
+            "Track Axis"         ,
+            "Lock Axis"          ,
+            "Influence"          ,
+            "Target"             ,
+            "Enable"             ,
+        ]
+        additional_parameters = { "Name":None }
+        self.inputs.init_sockets(inputs)
+        self.outputs.init_sockets(["Output Relationship"])
+        self.init_parameters(additional_parameters=additional_parameters)
+        self.set_traverse([("Input Relationship", "Output Relationship")])
+        
         
 
 
@@ -1324,41 +1038,24 @@ class LinkLockedTrack(MantisLinkNode):
 
 class LinkTrackTo(MantisLinkNode):
     def __init__(self, signature, base_tree):
-        self.base_tree=base_tree
-        self.signature = signature
-        self.inputs = {
-            "Input Relationship" : NodeSocket(is_input = True, name = "Input Relationship", node = self,),
-            "Head/Tail"          : NodeSocket(is_input = True, name = "Head/Tail", node = self,),
-            "UseBBone"           : NodeSocket(is_input = True, name = "UseBBone", node = self,),
-            "Track Axis"         : NodeSocket(is_input = True, name = "Track Axis", node = self,),
-            "Up Axis"            : NodeSocket(is_input = True, name = "Up Axis", node = self,),
-            "Use Target Z"       : NodeSocket(is_input = True, name = "Use Target Z", node = self,),
-            "Influence"          : NodeSocket(is_input = True, name = "Influence", node = self,),
-            "Target"             : NodeSocket(is_input = True, name = "Target", node = self,),
-            "Enable"             : NodeSocket(is_input = True, name = "Enable", node = self,),  }
-        self.outputs = {
-            "Output Relationship" : NodeSocket(name = "Output Relationship", node=self) }
-        self.parameters = {
-            "Name":None,
-            "Input Relationship":None,
-            "Head/Tail":None,
-            "UseBBone":None,
-            "Track Axis":None,
-            "Up Axis":None,
-            "Use Target Z":None, 
-            "Influence":None,
-            "Target":None,
-            "Enable":None,}
-        # now set up the traverse target...
-        self.inputs["Input Relationship"].set_traverse_target(self.outputs["Output Relationship"])
-        self.outputs["Output Relationship"].set_traverse_target(self.inputs["Input Relationship"])
-        self.node_type = 'LINK'
-        self.hierarchy_connections = []
-        self.connections = []
-        self.hierarchy_dependencies = []
-        self.dependencies = []
-        self.prepared = True
-        self.executed = False
+        super().__init__(signature, base_tree)
+        inputs = [
+            "Input Relationship" ,
+            "Head/Tail"          ,
+            "UseBBone"           ,
+            "Track Axis"         ,
+            "Up Axis"            ,
+            "Use Target Z"       ,
+            "Influence"          ,
+            "Target"             ,
+            "Enable"             ,
+        ]
+        additional_parameters = { "Name":None }
+        self.inputs.init_sockets(inputs)
+        self.outputs.init_sockets(["Output Relationship"])
+        self.init_parameters(additional_parameters=additional_parameters)
+        self.set_traverse([("Input Relationship", "Output Relationship")])
+        
         
 
 
@@ -1396,38 +1093,22 @@ class LinkTrackTo(MantisLinkNode):
 
 class LinkInheritConstraint(MantisLinkNode):
     def __init__(self, signature, base_tree):
-        self.base_tree=base_tree
-        self.signature = signature
-        self.inputs = {
-            "Input Relationship" : NodeSocket(is_input = True, name = "Input Relationship", node = self,),
-            "Location"           : NodeSocket(is_input = True, name = "Location", node = self,),
-            "Rotation"           : NodeSocket(is_input = True, name = "Rotation", node = self,),
-            "Scale"              : NodeSocket(is_input = True, name = "Scale", node = self,),
-            "Influence"          : NodeSocket(is_input = True, name = "Influence", node = self,),
-            "Target"             : NodeSocket(is_input = True, name = "Target", node = self,),
-            "Enable"             : NodeSocket(is_input = True, name = "Enable", node = self,),  }
-        self.outputs = {
-            "Output Relationship" : NodeSocket(name = "Output Relationship", node=self) }
-        self.parameters = {
-            "Name":None,
-            "Input Relationship":None,
-            "Location":None,
-            "Rotation":None,
-            "Scale":None,
-            "Influence":None,
-            "Target":None,
-            "Enable":None,}
-        self.drivers = {}
-        # now set up the traverse target...
-        self.inputs["Input Relationship"].set_traverse_target(self.outputs["Output Relationship"])
-        self.outputs["Output Relationship"].set_traverse_target(self.inputs["Input Relationship"])
-        self.node_type = 'LINK'
-        self.hierarchy_connections = []
-        self.connections = []
-        self.hierarchy_dependencies = []
-        self.dependencies = []
-        self.prepared = True
-        self.executed = False
+        super().__init__(signature, base_tree)
+        inputs = [
+            "Input Relationship" ,
+            "Location"           ,
+            "Rotation"           ,
+            "Scale"              ,
+            "Influence"          ,
+            "Target"             ,
+            "Enable"             ,
+        ]
+        additional_parameters = { "Name":None }
+        self.inputs.init_sockets(inputs)
+        self.outputs.init_sockets(["Output Relationship"])
+        self.init_parameters(additional_parameters=additional_parameters)
+        self.set_traverse([("Input Relationship", "Output Relationship")])
+        
         
 
 
@@ -1471,45 +1152,25 @@ class LinkInheritConstraint(MantisLinkNode):
 
 class LinkInverseKinematics(MantisLinkNode):
     def __init__(self, signature, base_tree):
-        self.base_tree=base_tree
-        self.signature = signature
-        self.inputs = {
-            "Input Relationship"  : NodeSocket(is_input = True, name = "Input Relationship", node = self,),
-            "Chain Length"        : NodeSocket(is_input = True, name = "Chain Length", node = self,),
-            "Use Tail"            : NodeSocket(is_input = True, name = "Use Tail", node = self,),
-            "Stretch"             : NodeSocket(is_input = True, name = "Stretch", node = self,),
-            "Position"            : NodeSocket(is_input = True, name = "Position", node = self,),
-            "Rotation"            : NodeSocket(is_input = True, name = "Rotation", node = self,),
-            "Influence"           : NodeSocket(is_input = True, name = "Influence", node = self,),
-            "Target"              : NodeSocket(is_input = True, name = "Target", node = self,),
-            "Pole Target"         : NodeSocket(is_input = True, name = "Pole Target", node = self,),
-            "Enable"              : NodeSocket(is_input = True, name = "Enable", node = self,),  }
-        self.outputs = {
-            "Output Relationship" : NodeSocket(name = "Output Relationship", node=self) }
-        self.parameters = {
-            "Name":None,
-            "Connected":None,
-            "Chain Length":None,
-            "Use Tail":None,
-            "Stretch":None,
-            "Position":None,
-            "Rotation":None,
-            "Influence":None,
-            "Target":None, 
-            "Pole Target":None,
-            "Enable":None,}
-        # now set up the traverse target...
-        self.inputs["Input Relationship"].set_traverse_target(self.outputs["Output Relationship"])
-        self.outputs["Output Relationship"].set_traverse_target(self.inputs["Input Relationship"])
-        self.node_type = 'LINK'
-        self.bObject = None
-        self.drivers = {}
-        self.hierarchy_connections = []
-        self.connections = []
-        self.hierarchy_dependencies = []
-        self.dependencies = []
-        self.prepared = True
-        self.executed = False
+        super().__init__(signature, base_tree)
+        inputs = [
+            "Input Relationship"  ,
+            "Chain Length"        ,
+            "Use Tail"            ,
+            "Stretch"             ,
+            "Position"            ,
+            "Rotation"            ,
+            "Influence"           ,
+            "Target"              ,
+            "Pole Target"         ,
+            "Enable"              ,
+        ]
+        additional_parameters = { "Name":None }
+        self.inputs.init_sockets(inputs)
+        self.outputs.init_sockets(["Output Relationship"])
+        self.init_parameters(additional_parameters=additional_parameters)
+        self.set_traverse([("Input Relationship", "Output Relationship")])
+        
         
 
 
@@ -1626,34 +1287,21 @@ class LinkDrivenParameter(MantisLinkNode):
     '''A node representing an armature object'''
     def __init__(self, signature, base_tree):
         self.base_tree=base_tree
-        self.executed = False
+        inputs = [
+            "Input Relationship" ,
+            "Value"      ,
+            "Parameter"   ,
+            "Index"       ,
+        ]
         self.signature = signature
-        self.inputs = {
-            "Input Relationship" : NodeSocket(is_input = True, name = "Input Relationship", node = self,),
-            "Value"      : NodeSocket(is_input = True, name = "Value", node = self),
-            "Parameter"   : NodeSocket(is_input = True, name = "Parameter", node = self),
-            "Index"       : NodeSocket(is_input = True, name = "Index", node = self),
-        }
-        self.outputs = {
-            "Output Relationship" : NodeSocket(name = "Output Relationship", node=self), }
-        self.parameters = {
-            "Input Relationship":None, 
-            "Value":None, 
-            "Parameter":None,
-            "Index":None,
-        }
-        # now set up the traverse target...
-        self.inputs["Input Relationship"].set_traverse_target(self.outputs["Output Relationship"])
-        self.outputs["Output Relationship"].set_traverse_target(self.inputs["Input Relationship"])
-        self.node_type = "LINK"
-        self.hierarchy_connections,self.connections = [], []
-        self.hierarchy_dependencies, self.dependencies = [], []
-        self.prepared, self.executed = True, False
+        additional_parameters = { "Name":None }
+        self.inputs.init_sockets(inputs)
+        self.outputs.init_sockets(["Output Relationship"])
+        self.init_parameters(additional_parameters=additional_parameters)
+        self.set_traverse([("Input Relationship", "Output Relationship")])
 
     def GetxForm(self):
         return GetxForm(self)
-
-
 
     def bExecute(self, bContext = None,):
         prepare_parameters(self)
@@ -1707,41 +1355,24 @@ class LinkArmature(MantisLinkNode):
     '''A node representing an armature object'''
 
     def __init__(self, signature, base_tree,):
-        self.base_tree=base_tree
-        self.signature = signature
-        self.inputs = {
-        "Input Relationship"   : NodeSocket(is_input = True, name = "Input Relationship", node = self,),
-        "Preserve Volume"      : NodeSocket(is_input = True, name = "Preserve Volume", node = self),
-        "Use Envelopes"        : NodeSocket(is_input = True, name = "Use Envelopes", node = self),
-        "Use Current Location" : NodeSocket(is_input = True, name = "Use Current Location", node = self),
-        "Influence"            : NodeSocket(is_input = True, name = "Influence", node = self),
-        "Enable"               : NodeSocket(is_input = True, name = "Enable", node = self),
-        }
-        self.outputs = {
-          "Output Relationship" : NodeSocket(name = "Output Relationship", node=self), }
-        self.parameters = {
-            "Name":None,
-            "Input Relationship":None, 
-            "Preserve Volume":None, 
-            "Use Envelopes":None, 
-            "Use Current Location":None, 
-            "Influence":None, 
-            "Enable":None,
-        }
-        # now set up the traverse target...
-        self.inputs["Input Relationship"].set_traverse_target(self.outputs["Output Relationship"])
-        self.outputs["Output Relationship"].set_traverse_target(self.inputs["Input Relationship"])
-        self.node_type = "LINK"
+        super().__init__(signature, base_tree)
+        inputs = [
+            "Input Relationship"   ,
+            "Preserve Volume"      ,
+            "Use Envelopes"        ,
+            "Use Current Location" ,
+            "Influence"            ,
+            "Enable"               ,
+        ]
+        additional_parameters = { "Name":None }
+        self.inputs.init_sockets(inputs)
+        self.outputs.init_sockets(["Output Relationship"])
+        self.init_parameters(additional_parameters=additional_parameters)
+        self.set_traverse([("Input Relationship", "Output Relationship")])
         setup_custom_props(self)
-        self.hierarchy_connections,self.connections = [], []
-        self.hierarchy_dependencies, self.dependencies = [], []
-        self.prepared, self.executed = True, False
-
 
     def GetxForm(self):
         return GetxForm(self)
-
-
 
     def bExecute(self, bContext = None,):
         prGreen("Creating Armature Constraint for bone: \""+ self.GetxForm().bGetObject().name + "\"")
@@ -1790,44 +1421,24 @@ class LinkSplineIK(MantisLinkNode):
     '''A node representing an armature object'''
 
     def __init__(self, signature, base_tree):
-        self.base_tree=base_tree
-        self.signature = signature
-        self.inputs = {
-          "Input Relationship" : NodeSocket(is_input = True, name = "Input Relationship", node = self,),
-          "Target"             : NodeSocket(is_input = True, name = "Target", node = self),
-          "Chain Length"       : NodeSocket(is_input = True, name = "Chain Length", node = self),
-          "Even Divisions"     : NodeSocket(is_input = True, name = "Even Divisions", node = self),
-          "Chain Offset"       : NodeSocket(is_input = True, name = "Chain Offset", node = self),
-          "Use Curve Radius"   : NodeSocket(is_input = True, name = "Use Curve Radius", node = self),
-          "Y Scale Mode"       : NodeSocket(is_input = True, name = "Y Scale Mode", node = self),
-          "XZ Scale Mode"      : NodeSocket(is_input = True, name = "XZ Scale Mode", node = self),
-          "Use Original Scale" : NodeSocket(is_input = True, name = "Use Original Scale", node = self),
-          "Influence"          : NodeSocket(is_input = True, name = "Influence", node = self),
-        }
-        self.outputs = {
-          "Output Relationship" : NodeSocket(is_input = False, name = "Output Relationship", node=self), }
-        self.parameters = {
-          "Name":None,
-          "Input Relationship":None, 
-          "Target":None, 
-          "Chain Length":None, 
-          "Even Divisions":None, 
-          "Chain Offset":None, 
-          "Use Curve Radius":None, 
-          "Y Scale Mode":None, 
-          "XZ Scale Mode":None, 
-          "Use Original Scale":None, 
-          "Influence":None, 
-        }
-        # now set up the traverse target...
-        self.inputs["Input Relationship"].set_traverse_target(self.outputs["Output Relationship"])
-        self.outputs["Output Relationship"].set_traverse_target(self.inputs["Input Relationship"])
-        self.node_type = "LINK"
-        self.hierarchy_connections,self.connections = [], []
-        self.hierarchy_dependencies, self.dependencies = [], []
-        self.prepared, self.executed = True, False
-
-
+        super().__init__(signature, base_tree)
+        inputs = [
+            "Input Relationship" ,
+            "Target"             ,
+            "Chain Length"       ,
+            "Even Divisions"     ,
+            "Chain Offset"       ,
+            "Use Curve Radius"   ,
+            "Y Scale Mode"       ,
+            "XZ Scale Mode"      ,
+            "Use Original Scale" ,
+            "Influence"          ,
+        ]
+        additional_parameters = { "Name":None }
+        self.inputs.init_sockets(inputs)
+        self.outputs.init_sockets(["Output Relationship"])
+        self.init_parameters(additional_parameters=additional_parameters)
+        self.set_traverse([("Input Relationship", "Output Relationship")])
 
     def GetxForm(self):
         return GetxForm(self)

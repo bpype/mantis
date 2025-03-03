@@ -1,5 +1,5 @@
 from .node_container_common import *
-from .base_definitions import MantisNode
+from .base_definitions import MantisNode, NodeSocket
 
 def TellClasses():
              
@@ -27,34 +27,22 @@ class xFormArmature(MantisNode):
     bObject = None
     
     def __init__(self, signature, base_tree):
-        self.base_tree=base_tree
-        self.signature = signature
-        self.inputs = {
-         "Name"           : NodeSocket(is_input = True, name = "Name", node = self),
-         "Rotation Order" : NodeSocket(is_input = True, name = "Rotation Order", node = self),
-         "Matrix"         : NodeSocket(is_input = True, name = "Matrix", node = self),
-         "Relationship"   : NodeSocket(is_input = True, name = "Relationship", node = self),
-        }
-        self.outputs = {
-         "xForm Out" : NodeSocket(name="xForm Out", node = self),
-        }
-        self.parameters = {
-         "Name":None,
-         "Rotation Order":None,
-         "Matrix":None,
-         "Relationship":None,
-        }
-        self.links = {} # leave this empty for now!
-        # now set up the traverse target...
-        self.inputs["Relationship"].set_traverse_target(self.outputs["xForm Out"])
-        self.outputs["xForm Out"].set_traverse_target(self.inputs["Relationship"])
+        super().__init__(signature, base_tree)
+        inputs = [
+            "Name"           ,
+            "Rotation Order" ,
+            "Matrix"         ,
+            "Relationship"   ,
+        ]
+        outputs = [
+         "xForm Out",
+        ]
+        self.inputs.init_sockets(inputs)
+        self.outputs.init_sockets(outputs)
+        self.init_parameters()
+        self.set_traverse([("Relationship", "xForm Out")])
         self.node_type = 'XFORM'
-        self.hierarchy_connections = []
-        self.connections = []
-        self.hierarchy_dependencies = []
-        self.dependencies = []
         self.prepared = True
-        self.executed = False
 
     
     def bExecute(self, bContext = None,):
@@ -220,149 +208,16 @@ class xFormBone(MantisNode):
     '''A node representing a bone in an armature'''
     # DO: make a way to identify which armature this belongs to
     def __init__(self, signature, base_tree):
-        self.base_tree=base_tree
-        self.signature = signature
-        self.inputs = {
-         "Name"           : NodeSocket(is_input = True, name = "Name", node = self,),
-         "Rotation Order" : NodeSocket(is_input = True, name = "Rotation Order", node = self,),
-         "Matrix"         : NodeSocket(is_input = True, name = "Matrix", node = self,),
-         "Relationship"   : NodeSocket(is_input = True, name = "Relationship", node = self,),
-         # IK settings
-         "IK Stretch"     : NodeSocket(is_input = True, name = "IK Stretch", node = self,),
-         "Lock IK"        : NodeSocket(is_input = True, name = "Lock IK", node = self,),
-         "IK Stiffness"   : NodeSocket(is_input = True, name = "IK Stiffness", node = self,),
-         "Limit IK"       : NodeSocket(is_input = True, name = "Limit IK", node = self,),
-         "X Min"          : NodeSocket(is_input = True, name = "X Min", node = self,),
-         "X Max"          : NodeSocket(is_input = True, name = "X Max", node = self,),
-         "Y Min"          : NodeSocket(is_input = True, name = "Y Min", node = self,),
-         "Y Max"          : NodeSocket(is_input = True, name = "Y Max", node = self,),
-         "Z Min"          : NodeSocket(is_input = True, name = "Z Min", node = self,),
-         "Z Max"          : NodeSocket(is_input = True, name = "Z Max", node = self,),
-         # Visual stuff
-         "Bone Collection"                         : NodeSocket(is_input = True, name = "Bone Collection", node = self,),
-         "Hide"                               : NodeSocket(is_input = True, name = "Hide", node = self,),
-         "Custom Object"                      : NodeSocket(is_input = True, name = "Custom Object", node = self,),
-         "Custom Object xForm Override"       : NodeSocket(is_input = True, name = "Custom Object xForm Override", node = self,),
-         "Custom Object Scale to Bone Length" : NodeSocket(is_input = True, name = "Custom Object Scale to Bone Length", node = self,),
-         "Custom Object Wireframe"            : NodeSocket(is_input = True, name = "Custom Object Wireframe", node = self,),
-         "Custom Object Scale"                : NodeSocket(is_input = True, name = "Custom Object Scale", node = self,),
-         "Custom Object Translation"          : NodeSocket(is_input = True, name = "Custom Object Translation", node = self,),
-         "Custom Object Rotation"             : NodeSocket(is_input = True, name = "Custom Object Rotation", node = self,),
-         # Deform Stuff
-         "Deform"               : NodeSocket(is_input = True, name = "Deform", node = self,),
-         "Envelope Distance"    : NodeSocket(is_input = True, name = "Envelope Distance", node = self,),
-         "Envelope Weight"      : NodeSocket(is_input = True, name = "Envelope Weight", node = self,),
-         "Envelope Multiply"    : NodeSocket(is_input = True, name = "Envelope Multiply", node = self,),
-         "Envelope Head Radius" : NodeSocket(is_input = True, name = "Envelope Head Radius", node = self,),
-         "Envelope Tail Radius" : NodeSocket(is_input = True, name = "Envelope Tail Radius", node = self,),
-         # BBone stuff:
-         "BBone Segments" : NodeSocket(is_input = True, name = "BBone Segments", node=self,),
-         "BBone X Size" : NodeSocket(is_input = True, name = "BBone X Size", node=self,),
-         "BBone Z Size" : NodeSocket(is_input = True, name = "BBone Z Size", node=self,),
-         "BBone HQ Deformation" : NodeSocket(is_input = True, name = "BBone HQ Deformation", node=self,),
-         "BBone X Curve-In" : NodeSocket(is_input = True, name = "BBone X Curve-In", node=self,),
-         "BBone Z Curve-In" : NodeSocket(is_input = True, name = "BBone Z Curve-In", node=self,),
-         "BBone X Curve-Out" : NodeSocket(is_input = True, name = "BBone X Curve-Out", node=self,),
-         "BBone Z Curve-Out" : NodeSocket(is_input = True, name = "BBone Z Curve-Out", node=self,),
-         "BBone Roll-In" : NodeSocket(is_input = True, name = "BBone Roll-In", node=self,),
-         "BBone Roll-Out" : NodeSocket(is_input = True, name = "BBone Roll-Out", node=self,),
-         "BBone Inherit End Roll" : NodeSocket(is_input = True, name = "BBone Inherit End Roll", node=self,),
-         "BBone Scale-In" : NodeSocket(is_input = True, name = "BBone Scale-In", node=self,),
-         "BBone Scale-Out" : NodeSocket(is_input = True, name = "BBone Scale-Out", node=self,),
-         "BBone Ease-In" : NodeSocket(is_input = True, name = "BBone Ease-In", node=self,),
-         "BBone Ease-Out" : NodeSocket(is_input = True, name = "BBone Ease-Out", node=self,),
-         "BBone Easing" : NodeSocket(is_input = True, name = "BBone Easing", node=self,),
-         "BBone Start Handle Type" : NodeSocket(is_input = True, name = "BBone Start Handle Type", node=self,),
-         "BBone Custom Start Handle" : NodeSocket(is_input = True, name = "BBone Custom Start Handle", node=self,),
-         "BBone Start Handle Scale" : NodeSocket(is_input = True, name = "BBone Start Handle Scale", node=self,),
-         "BBone Start Handle Ease" : NodeSocket(is_input = True, name = "BBone Start Handle Ease", node=self,),
-         "BBone End Handle Type" : NodeSocket(is_input = True, name = "BBone End Handle Type", node=self,),
-         "BBone Custom End Handle" : NodeSocket(is_input = True, name = "BBone Custom End Handle", node=self,),
-         "BBone End Handle Scale" : NodeSocket(is_input = True, name = "BBone End Handle Scale", node=self,),
-         "BBone End Handle Ease" : NodeSocket(is_input = True, name = "BBone End Handle Ease", node=self,),
-
-         # locks
-         "Lock Location"    : NodeSocket(is_input = True, name = "Lock Location", node = self,),
-         "Lock Rotation" : NodeSocket(is_input = True, name = "Lock Rotation", node = self,),
-         "Lock Scale" : NodeSocket(is_input = True, name = "Lock Scale", node = self,),
-        }
-        self.outputs = {
-         "xForm Out"       : NodeSocket(name = "xForm Out", node = self),
-        }
-        self.parameters = {
-         "Name":None,
-         "Rotation Order":None,
-         "Matrix":None,
-         "Relationship":None,
-         # IK settings
-         "IK Stretch":None,
-         "Lock IK":None,
-         "IK Stiffness":None,
-         "Limit IK":None,
-         "X Min":None,
-         "X Max":None,
-         "Y Min":None,
-         "Y Max":None,
-         "Z Min":None,
-         "Z Max":None,
-         "Hide":None,
-         "Bone Collection":None,
-         "Hide":None,
-         "Custom Object":None,
-         "Custom Object xForm Override":None,
-         "Custom Object Scale to Bone Length":None,
-         "Custom Object Wireframe":None,
-         "Custom Object Scale":None,
-         "Custom Object Translation":None,
-         "Custom Object Rotation":None,
-         "Deform"               : None,
-         "Envelope Distance"    : None,
-         "Envelope Weight"      : None,
-         "Envelope Multiply"    : None,
-         "Envelope Head Radius" : None,
-         "Envelope Tail Radius" : None,
-         #
-         "BBone Segments"  : None,
-         "BBone X Size"  : None,
-         "BBone Z Size"  : None,
-         "BBone HQ Deformation"  : None,
-         "BBone X Curve-In"  : None,
-         "BBone Z Curve-In"  : None,
-         "BBone X Curve-Out"  : None,
-         "BBone Z Curve-Out"  : None,
-         "BBone Roll-In"  : None,
-         "BBone Roll-Out"  : None,
-         "BBone Inherit End Roll"  : None,
-         "BBone Scale-In"  : None,
-         "BBone Scale-Out"  : None,
-         "BBone Ease-In"  : None,
-         "BBone Ease-Out"  : None,
-         "BBone Easing"  : None,
-         "BBone Start Handle Type"  : None,
-         "BBone Custom Start Handle"  : None,
-         "BBone Start Handle Scale"  : None,
-         "BBone Start Handle Ease"  : None,
-         "BBone End Handle Type"  : None,
-         "BBone Custom End Handle"  : None,
-         "BBone End Handle Scale"  : None,
-         "BBone End Handle Ease"  : None,
-        #
-         "Lock Location"    : None,
-         "Lock Rotation" : None,
-         "Lock Scale" : None,
-        }
-        self.links = {} # leave this empty for now!
-        # now set up the traverse target...
-        self.inputs["Relationship"].set_traverse_target(self.outputs["xForm Out"])
-        self.outputs["xForm Out"].set_traverse_target(self.inputs["Relationship"])
+        super().__init__(signature, base_tree)
+        outputs = [
+         "xForm Out",
+        ]
+        self.inputs.init_sockets(bone_inputs)
+        self.outputs.init_sockets(outputs)
+        self.init_parameters()
+        self.set_traverse([("Relationship", "xForm Out")])
         self.node_type = 'XFORM'
-        self.hierarchy_connections = []
-        self.connections = []
-        self.hierarchy_dependencies = []
-        self.dependencies = []
         self.prepared = True
-        self.executed = False
-        self.input_length = len(self.inputs) # HACK HACK HACK 
         self.bObject=None
     
     def bGetParentArmature(self):
@@ -541,8 +396,7 @@ class xFormBone(MantisNode):
         driver = None
         do_prints=False
 
-        # print (self.input_length)
-        # even worse hack coming
+        # detect custom inputs
         for i, inp in enumerate(self.inputs.values()):
             if inp.name in bone_inputs:
                 continue
@@ -731,48 +585,36 @@ class xFormBone(MantisNode):
             prRed ("Cannot get bone for %s" % self)
             raise e
 
-    def fill_parameters(self):
+    def fill_parameters(self, prototype=None):
         # this is the fill_parameters that is run if it isn't a schema
         setup_custom_props(self)
-        super().fill_parameters()
+        super().fill_parameters(prototype)
         # otherwise we will do this from the schema 
         # LEGIBILITY TODO - why? explain this?
 
 class xFormGeometryObject(MantisNode):
     '''A node representing an armature object'''
     def __init__(self, signature, base_tree):
-        self.base_tree=base_tree
-        self.signature = signature
-        self.inputs = {
-          "Name"           : NodeSocket(is_input = True, name = "Name", node = self),
-          "Geometry" : NodeSocket(is_input = True, name = "Geometry", node = self),
-          "Matrix"         : NodeSocket(is_input = True, name = "Matrix", node = self),
-          "Relationship"   : NodeSocket(is_input = True, name = "Relationship", node = self),
-          "Deformer"   : NodeSocket(is_input = True, name = "Relationship", node = self),
-          "Hide in Viewport"   : NodeSocket(is_input = True, name = "Hide in Viewport", node = self),
-          "Hide in Render"   : NodeSocket(is_input = True, name = "Hide in Render", node = self),
-        }
-        self.outputs = {
-          "xForm Out" : NodeSocket(is_input = False, name="xForm Out", node = self), }
-        self.parameters = {
-          "Name":None, 
-          "Geometry":None, 
-          "Matrix":None, 
-          "Relationship":None, 
-          "Deformer":None,
-          "Hide in Viewport":None,
-          "Hide in Render":None,
-        }
-        self.links = {} # leave this empty for now!
-        # now set up the traverse target...
-        self.inputs["Relationship"].set_traverse_target(self.outputs["xForm Out"])
-        self.outputs["xForm Out"].set_traverse_target(self.inputs["Relationship"])
+        super().__init__(signature, base_tree)
+        inputs = [
+            "Name"             ,
+            "Geometry"         ,
+            "Matrix"           ,
+            "Relationship"     ,
+            "Deformer"         ,
+            "Hide in Viewport" ,
+            "Hide in Render"   ,
+        ]
+        outputs = [
+          "xForm Out",
+        ]
+        self.inputs.init_sockets(inputs)
+        self.outputs.init_sockets(outputs)
+        self.init_parameters()
+        self.set_traverse([("Relationship", "xForm Out")])
         self.node_type = "XFORM"
         self.bObject = None
-        self.prepared = False
-        self.executed = False
         self.has_shape_keys = False
-        self.drivers = {}
 
     def bSetParent(self):
         from bpy.types import Object
@@ -866,39 +708,29 @@ class xFormGeometryObject(MantisNode):
 class xFormObjectInstance(MantisNode):
     """Represents an instance of an existing geometry object."""
     def __init__(self, signature, base_tree):
-        self.base_tree=base_tree
-        self.signature = signature
-        self.inputs = {
-          "Name"             : NodeSocket(is_input = True, name = "Name", node = self),
-          "Source Object"    : NodeSocket(is_input = True, name = "Source Object", node = self),
-          "As Instance"      : NodeSocket(is_input = True, name = "As Instance", node = self),
-          "Matrix"           : NodeSocket(is_input = True, name = "Matrix", node = self),
-          "Relationship"     : NodeSocket(is_input = True, name = "Relationship", node = self),
-          "Deformer"         : NodeSocket(is_input = True, name = "Relationship", node = self),
-          "Hide in Viewport" : NodeSocket(is_input = True, name = "Hide in Viewport", node = self),
-          "Hide in Render"   : NodeSocket(is_input = True, name = "Hide in Render", node = self),
-        }
-        self.outputs = {
-          "xForm Out" : NodeSocket(is_input = False, name="xForm Out", node = self), }
-        self.parameters = {
-          "Name":None, 
-          "Source Object":None, 
-          "As Instance": None,
-          "Matrix":None, 
-          "Relationship":None, 
-          "Deformer":None,
-          "Hide in Viewport":None,
-          "Hide in Render":None,
-        }
+        super().__init__(signature, base_tree)
+        inputs = [
+            "Name"             ,
+            "Source Object"    ,
+            "As Instance"      ,
+            "Matrix"           ,
+            "Relationship"     ,
+            "Deformer"         ,
+            "Hide in Viewport" ,
+            "Hide in Render"   ,
+        ]
+        outputs = [
+          "xForm Out",
+        ]
+        self.inputs.init_sockets(inputs)
+        self.outputs.init_sockets(outputs)
+        self.init_parameters()
         self.links = {} # leave this empty for now!
         # now set up the traverse target...
-        self.inputs["Relationship"].set_traverse_target(self.outputs["xForm Out"])
-        self.outputs["xForm Out"].set_traverse_target(self.inputs["Relationship"])
+        self.set_traverse([("Relationship", "xForm Out")])
         self.node_type = "XFORM"
         self.bObject = None
-        self.prepared, self.executed = False, False
         self.has_shape_keys = False # Shape Keys will make a dupe so this is OK
-        self.drivers = {}
 
     def bSetParent(self):
         from bpy.types import Object

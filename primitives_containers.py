@@ -1,5 +1,5 @@
 from .node_container_common import *
-from .base_definitions import MantisNode
+from .base_definitions import MantisNode, NodeSocket
 
 def TellClasses():
     return [
@@ -17,29 +17,21 @@ class CirclePrimitive(MantisNode):
     '''A node representing a Circle Primitive mesh'''
 
     def __init__(self, signature, base_tree):
-        self.base_tree=base_tree
-        self.signature = signature
-        self.inputs = {
-          "Name"               : NodeSocket(is_input = True, name = "Name", node = self),
-          "Radius"             : NodeSocket(is_input = True, name = "Radius", node = self),
-          "Number of Points"   : NodeSocket(is_input = True, name = "Number of Points", node = self),
-        }
-        self.outputs = {
-          "Circle" : NodeSocket(is_input = False, name = "Circle", node=self),
-        }
-        self.parameters = {
-          "Name":None,
-          "Radius":None,
-          "Number of Points":None, 
-          "Circle":None, 
-        }
+        super().__init__(signature, base_tree)
+        inputs = [
+          "Name",
+          "Radius",
+          "Number of Points",
+        ]
+        outputs = [
+          "Circle",
+        ]
+        additional_parameters = {}
+        self.inputs.init_sockets(inputs)
+        self.outputs.init_sockets(outputs)
+        self.init_parameters(additional_parameters=additional_parameters)
         self.node_type = "UTILITY"
-        self.hierarchy_connections = []
-        self.connections = []
-        self.hierarchy_dependencies = []
-        self.dependencies = []
         self.prepared = True
-        self.executed = False
 
 
 

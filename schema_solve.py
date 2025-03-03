@@ -285,7 +285,6 @@ class SchemaSolver:
         
         from .utilities import clear_reroutes
         from .utilities import get_link_in_out, link_node_containers
-        from .node_container_common import DummyLink
 
         # if index_nc:
         #     index_nc.parameters['Index']=index
@@ -388,9 +387,9 @@ class SchemaSolver:
                             nc_from = nc_cls(sig, self.node.base_tree)
                             # ugly! maybe even a HACK!
                             nc_from.inputs = {}
-                            from .node_container_common import NodeSocket
+                            from .base_definitions import NodeSocket
                             nc_from.outputs = {link.from_socket.name:NodeSocket(name = link.from_socket.name, node=nc_from)}
-                            from .node_container_common import get_socket_value
+                            from .base_definitions import get_socket_value
                             nc_from.parameters = {link.from_socket.name:index}
                             frame_nc[sig]=nc_from
                             from_node = nc_from

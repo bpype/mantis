@@ -57,8 +57,7 @@ def reroute_links_grpin(nc, all_nc):
 # FIXME I don't think these signatures are unique.
 def insert_lazy_parents(nc):
     from .link_containers import LinkInherit
-    from .xForm_containers import xFormArmature
-    from .node_container_common import NodeLink
+    from .base_definitions import NodeLink
     inherit_nc = None
     if nc.inputs["Relationship"].is_connected:
         link = nc.inputs["Relationship"].links[0]
@@ -109,12 +108,11 @@ to_name_filter = [
 #                                  DATA FROM NODES                                  #
 # *** # *** # *** # *** # *** # *** # *** # *** # *** # *** # *** # *** # *** # *** #
 
-from .base_definitions import replace_types
+from .base_definitions import replace_types, NodeSocket
 
 # TODO: investigate whether I can set the properties in the downstream nodes directly.
 #       I am doing this in Schema Solver and it seems to work quite efficiently.
 def make_connections_to_ng_dummy(base_tree, tree_path_names, local_nc, all_nc, np):
-    from .node_container_common import NodeSocket
     nc_to = local_nc[(None, *tree_path_names, np.name)]
     for inp in np.inputs:
         nc_from = None

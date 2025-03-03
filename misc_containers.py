@@ -1,5 +1,5 @@
 from .node_container_common import *
-from .base_definitions import MantisNode
+from .base_definitions import MantisNode, NodeSocket
 
 from .xForm_containers import xFormArmature, xFormBone
 
@@ -71,138 +71,84 @@ class InputFloat(MantisNode):
     '''A node representing float input'''
     
     def __init__(self, signature, base_tree):
-        self.base_tree=base_tree
-        self.signature = signature
-        self.inputs = {}
-        self.outputs = {"Float Input" : NodeSocket(name = "Float Input", node=self) }
-        self.parameters = {"Float Input":None, "Mute":None}
+        super().__init__(signature, base_tree)
+        outputs = ["Float Input"]
+        self.outputs.init_sockets(outputs)
+        self.init_parameters()
         self.node_type = 'UTILITY'
-        self.hierarchy_connections = []
-        self.connections = []
-        self.hierarchy_dependencies = []
-        self.dependencies = []
         self.prepared = True
         self.executed = True
-        
-    def evaluate_input(self, input_name):
-        return self.parameters["Float Input"]
 
 class InputIntNode(MantisNode):
     '''A node representing integer input'''
     
     def __init__(self, signature, base_tree):
-        self.base_tree=base_tree
-        self.signature = signature
-        self.inputs = {}
-        self.outputs = {"Integer" : NodeSocket(name = "Integer", node=self) }
-        self.parameters = {"Integer":None, "Mute":None}
+        super().__init__(signature, base_tree)
+        outputs = ["Integer"]
+        self.outputs.init_sockets(outputs)
+        self.init_parameters()
         self.node_type = 'UTILITY'
-        self.hierarchy_connections = []
-        self.connections = []
-        self.hierarchy_dependencies = []
-        self.dependencies = []
         self.prepared = True
         self.executed = True
-        
-    def evaluate_input(self, input_name):
-        return self.parameters["Integer"]
     
 class InputVector(MantisNode):
     '''A node representing vector input'''
     
     def __init__(self, signature, base_tree):
-        self.base_tree=base_tree
-        self.signature = signature
-        self.inputs = {}
-        self.outputs = {"" : NodeSocket(name = '', node=self) }
-        self.parameters = {'':None, "Mute":None}
+        super().__init__(signature, base_tree)
+        outputs = [""]
+        self.outputs.init_sockets(outputs)
+        self.init_parameters()
         self.node_type = 'UTILITY'
-        self.hierarchy_connections = []
-        self.connections = []
-        self.hierarchy_dependencies = []
-        self.dependencies = []
         self.prepared = True
         self.executed = True
-        
-    def evaluate_input(self, input_name):
-        return self.parameters[""]
-    
 
 class InputBoolean(MantisNode):
     '''A node representing boolean input'''
     
     def __init__(self, signature, base_tree):
-        self.base_tree=base_tree
-        self.signature = signature
-        self.inputs = {}
-        self.outputs = {"" : NodeSocket(name = '', node=self) }
-        self.parameters = {'':None, "Mute":None}
+        super().__init__(signature, base_tree)
+        outputs = [""]
+        self.outputs.init_sockets(outputs)
+        self.init_parameters()
         self.node_type = 'UTILITY'
-        self.hierarchy_connections = []
-        self.connections = []
-        self.hierarchy_dependencies = []
-        self.dependencies = []
         self.prepared = True
         self.executed = True
-        
-    def evaluate_input(self, input_name):
-        return self.parameters[""]
 
 class InputBooleanThreeTuple(MantisNode):
     '''A node representing a tuple of three booleans'''
         
     def __init__(self, signature, base_tree):
-        self.base_tree=base_tree
-        self.signature = signature
-        self.inputs = {}
-        self.outputs = {"" : NodeSocket(name = '', node=self) }
-        self.parameters = {'':None, "Mute":None}
+        super().__init__(signature, base_tree)
+        outputs = [""]
+        self.outputs.init_sockets(outputs)
+        self.init_parameters()
         self.node_type = 'UTILITY'
-        self.hierarchy_connections = []
-        self.connections = []
-        self.hierarchy_dependencies = []
-        self.dependencies = []
         self.prepared = True
         self.executed = True
-        
-    def evaluate_input(self, input_name):
-        return self.parameters[""]
     
 class InputRotationOrder(MantisNode):
     '''A node representing string input for rotation order'''
         
     def __init__(self, signature, base_tree):
-        self.base_tree=base_tree
-        self.signature = signature
-        self.inputs = {}
-        self.outputs = {"" : NodeSocket(name = '', node=self) }
-        self.parameters = {'':None, "Mute":None}
+        super().__init__(signature, base_tree)
+        outputs = [""]
+        self.outputs.init_sockets(outputs)
+        self.init_parameters()
         self.node_type = 'UTILITY'
-        self.hierarchy_connections = []
-        self.connections = []
-        self.hierarchy_dependencies = []
-        self.dependencies = []
         self.prepared = True
         self.executed = True
-        
-    def evaluate_input(self, input_name):
-        return self.parameters[""]
     
 
 class InputTransformSpace(MantisNode):
     '''A node representing string input for transform space'''
         
     def __init__(self, signature, base_tree):
-        self.base_tree=base_tree
-        self.signature = signature
-        self.inputs = {}
-        self.outputs = {"" : NodeSocket(name = '', node=self) }
-        self.parameters = {'':None, "Mute":None}
+        super().__init__(signature, base_tree)
+        outputs = [""]
+        self.outputs.init_sockets(outputs)
+        self.init_parameters()
         self.node_type = 'UTILITY'
-        self.hierarchy_connections = []
-        self.connections = []
-        self.hierarchy_dependencies = []
-        self.dependencies = []
         self.prepared = True
         self.executed = True
         
@@ -213,41 +159,30 @@ class InputString(MantisNode):
     '''A node representing string input'''
         
     def __init__(self, signature, base_tree):
-        self.base_tree=base_tree
-        self.signature = signature
-        self.inputs = {}
-        self.outputs = {"" : NodeSocket(name = '', node=self) }
-        self.parameters = {'':None, "Mute":None}
+        super().__init__(signature, base_tree)
+        outputs = [""]
+        self.outputs.init_sockets(outputs)
+        self.init_parameters()
         self.node_type = 'UTILITY'
-        self.hierarchy_connections = []
-        self.connections = []
-        self.hierarchy_dependencies = []
-        self.dependencies = []
         self.prepared = True
         self.executed = True
-        
-    def evaluate_input(self, input_name):
-        return self.parameters[""]
+
     
 class InputMatrix(MantisNode):
     '''A node representing axis-angle quaternion input'''
         
     def __init__(self, signature, base_tree):
-        self.base_tree=base_tree
-        self.signature = signature
-        self.inputs = {}
-        self.outputs  = {"Matrix" : NodeSocket(name = 'Matrix', node=self) }
-        self.parameters = {'Matrix':None, "Mute":None}
+        super().__init__(signature, base_tree)
+        outputs  = ["Matrix",]
+        self.outputs.init_sockets(outputs)
+        self.init_parameters()
         self.node_type = 'UTILITY'
-        self.hierarchy_connections = []
-        self.connections = []
-        self.hierarchy_dependencies = []
-        self.dependencies = []
         self.prepared = True
         self.executed = True
         #
         from mathutils import Matrix
         from .utilities import get_node_prototype
+        # TODO: this should probably be in fill_parameters
         node_prototype = get_node_prototype(self.signature, self.base_tree)
         
         matrix = ( node_prototype.first_row[ 0], node_prototype.first_row[ 1], node_prototype.first_row[ 2], node_prototype.first_row[ 3],
@@ -255,38 +190,27 @@ class InputMatrix(MantisNode):
                    node_prototype.third_row[ 0], node_prototype.third_row[ 1], node_prototype.third_row[ 2], node_prototype.third_row[ 3],
                    node_prototype.fourth_row[0], node_prototype.fourth_row[1], node_prototype.fourth_row[2], node_prototype.fourth_row[3], )
         self.parameters["Matrix"] = Matrix([matrix[0:4], matrix[4:8], matrix[8:12], matrix[12:16]])
-        
-    def evaluate_input(self, input_name):
-        return self.parameters["Matrix"]
-    
-    def fill_parameters(self):
+
+    def fill_parameters(self, prototype=None):
         return
 
 class UtilityMatrixFromCurve(MantisNode):
     '''Get a matrix from a curve'''
 
     def __init__(self, signature, base_tree):
-        self.base_tree=base_tree
-        self.executed = False
-        self.signature = signature
-        self.inputs = {
-          "Curve"            : NodeSocket(is_input = True, name = "Curve", node=self),
-          "Total Divisions"  : NodeSocket(is_input = True, name = "Total Divisions", node=self),
-          "Matrix Index"     : NodeSocket(is_input = True, name = "Matrix Index", node=self),
-        }
-        self.outputs = {
-          "Matrix" : NodeSocket(name = "Matrix", node=self),
-        }
-        self.parameters = {
-          "Curve"            : None,
-          "Total Divisions"  : None,
-          "Matrix Index"     : None,
-          "Matrix"           : None,
-        }
+        super().__init__(signature, base_tree)
+        inputs = [
+          "Curve"            ,
+          "Total Divisions"  ,
+          "Matrix Index"     ,
+        ]
+        outputs = [
+          "Matrix" ,
+        ]
+        self.inputs.init_sockets(inputs)
+        self.outputs.init_sockets(outputs)
+        self.init_parameters()
         self.node_type = "UTILITY"
-        self.hierarchy_connections, self.connections = [], []
-        self.hierarchy_dependencies, self.dependencies = [], []
-        self.prepared, self.executed = False, False
 
     def bPrepare(self, bContext = None,):
         from mathutils import Matrix
@@ -337,25 +261,18 @@ class UtilityPointFromCurve(MantisNode):
     '''Get a point from a curve'''
 
     def __init__(self, signature, base_tree):
-        self.base_tree=base_tree
-        self.executed = False
-        self.signature = signature
-        self.inputs = {
-          "Curve"             : NodeSocket(is_input = True, name = "Curve", node=self),
-          "Factor"            : NodeSocket(is_input = True, name = "Factor", node=self),
-        }
-        self.outputs = {
-          "Point" : NodeSocket(name = "Point", node=self),
-        }
-        self.parameters = {
-          "Curve"       : None,
-          "Factor"      : None,
-          "Point"       : None,
-        }
+        super().__init__(signature, base_tree)
+        inputs = [
+          "Curve"       ,
+          "Factor"      ,
+        ]
+        outputs = [
+          "Point" ,
+        ]
+        self.inputs.init_sockets(inputs)
+        self.outputs.init_sockets(outputs)
+        self.init_parameters()
         self.node_type = "UTILITY"
-        self.hierarchy_connections, self.connections = [], []
-        self.hierarchy_dependencies, self.dependencies = [], []
-        self.prepared, self.executed = False, False
 
     def bPrepare(self, bContext = None,):
         from mathutils import Matrix
@@ -394,30 +311,18 @@ class UtilityMatricesFromCurve(MantisNode):
     '''Get matrices from a curve'''
 
     def __init__(self, signature, base_tree):
-        self.base_tree=base_tree
-        self.executed = False
-        self.signature = signature
-        self.inputs = {
-          "Curve"            : NodeSocket(is_input = True, name = "Curve", node=self),
-          "Total Divisions"  : NodeSocket(is_input = True, name = "Total Divisions", node=self),
-        #   "Matrix Index"     : NodeSocket(is_input = True, name = "Matrix Index", node=self),
-        }
-        self.outputs = {
-          "Matrices" : NodeSocket(name = "Matrices", node=self),
-        }
-        self.parameters = {
-          "Curve"            : None,
-          "Total Divisions"  : None,
-        #   "Matrix Index"     : None,
-          "Matrices"           : None,
-        }
+        super().__init__(signature, base_tree)
+        inputs = [
+          "Curve"            ,
+          "Total Divisions"  ,
+        ]
+        self.outputs = [
+          "Matrices" ,
+        ]
+        self.inputs.init_sockets(inputs)
+        self.outputs.init_sockets(outputs)
+        self.init_parameters()
         self.node_type = "UTILITY"
-        self.hierarchy_connections = []
-        self.connections = []
-        self.hierarchy_dependencies = []
-        self.dependencies = []
-        self.prepared = False
-        self.executed = False
 
     def bPrepare(self, bContext = None,):
         import time
@@ -475,27 +380,18 @@ class UtilityMetaRig(MantisNode):
     '''A node representing an armature object'''
 
     def __init__(self, signature, base_tree):
-        self.base_tree=base_tree
-        self.executed = False
-        self.signature = signature
-        self.inputs = {
-          "Meta-Armature" : NodeSocket(is_input = True, name = "Meta-Armature", node=self),
-          "Meta-Bone"     : NodeSocket(is_input = True, name = "Meta-Bone", node=self),
-        }
-        self.outputs = {
-          "Matrix" : NodeSocket(name = "Matrix", node=self),
-        }
-        self.parameters = {
-          "Meta-Armature" : None,
-          "Meta-Bone" : None,
-        }
+        super().__init__(signature, base_tree)
+        inputs = [
+          "Meta-Armature" ,
+          "Meta-Bone"     ,
+        ]
+        outputs = [
+          "Matrix" ,
+        ]
+        self.inputs.init_sockets(inputs)
+        self.outputs.init_sockets(outputs)
+        self.init_parameters()
         self.node_type = "UTILITY"
-        self.hierarchy_connections = []
-        self.connections = []
-        self.hierarchy_dependencies = []
-        self.dependencies = []
-        self.prepared = False
-        self.executed = False
 
     def bPrepare(self, bContext = None,):
         #kinda clumsy, whatever
@@ -532,43 +428,25 @@ class UtilityBoneProperties(MantisNode):
     '''A node representing a bone's gettable properties'''
 
     def __init__(self, signature, base_tree):
-        self.base_tree=base_tree
-        self.executed = False
-        self.signature = signature
-        self.inputs = {}
-        self.outputs = {
-          "matrix" : NodeSocket(name = "matrix", node=self),
-          "matrix_local" : NodeSocket(name = "matrix_local", node=self),
-          "matrix_basis" : NodeSocket(name = "matrix_basis", node=self),
-          "head" : NodeSocket(name = "head", node=self),
-          "tail" : NodeSocket(name = "tail", node=self),
-          "length" : NodeSocket(name = "length", node=self),
-          "rotation" : NodeSocket(name = "rotation", node=self),
-          "location" : NodeSocket(name = "location", node=self),
-          "scale" : NodeSocket(name = "scale", node=self),
-        }
-        self.parameters = {
-
-          "matrix":None, 
-          "matrix_local":None, 
-          "matrix_basis":None, 
-          "head":None, 
-          "tail":None, 
-          "length":None, 
-          "rotation":None, 
-          "location":None, 
-          "scale":None, 
-        }
+        super().__init__(signature, base_tree)
+        outputs = [
+            "matrix"        ,
+            "matrix_local"  ,
+            "matrix_basis"  ,
+            "head"          ,
+            "tail"          ,
+            "length"        ,
+            "rotation"      ,
+            "location"      ,
+            "scale"         ,
+        ]
+        self.outputs.init_sockets(outputs)
+        self.init_parameters()
         self.node_type = "UTILITY"
-        #
-        self.hierarchy_connections = []
-        self.connections = []
-        self.hierarchy_dependencies = []
-        self.dependencies = []
         self.prepared = True
         self.executed = True
 
-    def fill_parameters(self):
+    def fill_parameters(self, prototype=None):
         return
         
 # TODO this should probably be moved to Links
@@ -576,38 +454,24 @@ class UtilityDriverVariable(MantisNode):
     '''A node representing an armature object'''
 
     def __init__(self, signature, base_tree):
-        self.base_tree=base_tree
-        self.executed = False
-        self.signature = signature
-        self.inputs = {
-          "Variable Type"   : NodeSocket(is_input = True, name = "Variable Type", node = self),
-          "Property"   : NodeSocket(is_input = True, name = "Property", node = self),
-          "Property Index"   : NodeSocket(is_input = True, name = "Property Index", node = self),
-          "Evaluation Space"   : NodeSocket(is_input = True, name = "Evaluation Space", node = self),
-          "Rotation Mode"   : NodeSocket(is_input = True, name = "Rotation Mode", node = self),
-          "xForm 1"   : NodeSocket(is_input = True, name = "xForm 1", node = self),
-          "xForm 2"   : NodeSocket(is_input = True, name = "xForm 2", node = self),
-        }
-        self.outputs = {
-          "Driver Variable" : NodeSocket(name = "Driver Variable", node=self),
-        }
-        self.parameters = {
-          "Variable Type":None, 
-          "Property":None, 
-          "Property Index":None, 
-          "Evaluation Space":None, 
-          "Rotation Mode":None, 
-          "xForm 1":None, 
-          "xForm 2":None,
-        }
+        super().__init__(signature, base_tree)
+        inputs = [
+            "Variable Type"   ,
+            "Property"       ,
+            "Property Index" ,
+            "Evaluation Space",
+            "Rotation Mode"   ,
+            "xForm 1"         ,
+            "xForm 2"         ,
+        ]
+        outputs = [
+          "Driver Variable",
+        ]
+        self.inputs.init_sockets(inputs)
+        self.outputs.init_sockets(outputs)
+        self.init_parameters()
         self.node_type = "DRIVER" # MUST be run in Pose mode
-        #
-        self.hierarchy_connections = []
-        self.connections = []
-        self.hierarchy_dependencies = []
-        self.dependencies = []
         self.prepared = True
-        self.executed = False
         
     def evaluate_input(self, input_name):
         if input_name == 'Property':
@@ -683,30 +547,20 @@ class UtilityKeyframe(MantisNode):
     '''A node representing a keyframe for a F-Curve'''
 
     def __init__(self, signature, base_tree):
-        self.base_tree=base_tree
-        self.executed = False
-        self.signature = signature
-        self.inputs = {
-          "Frame"   : NodeSocket(is_input = True, name = "Frame", node = self),
-          "Value"   : NodeSocket(is_input = True, name = "Value", node = self),
-        }
-        self.outputs = {
-          "Keyframe" : NodeSocket(name = "Keyframe", node=self),
-        }
-
-        self.parameters = {
-          "Frame":None, 
-          "Value":None, 
-          "Keyframe":{}, # for some reason I have to initialize this and then use the dict... why? TODO find out
-        }
+        super().__init__(signature, base_tree)
+        inputs = [
+          "Frame"   ,
+          "Value"   ,
+        ]
+        outputs = [
+          "Keyframe" ,
+        ]
+        additional_parameters = {"Keyframe":{}}
+        self.inputs.init_sockets(inputs)
+        self.outputs.init_sockets(outputs)
+        self.init_parameters( additional_parameters=additional_parameters)
         self.node_type = "DRIVER" # MUST be run in Pose mode
         setup_custom_props(self)
-        self.hierarchy_connections = []
-        self.connections = []
-        self.hierarchy_dependencies = []
-        self.dependencies = []
-        self.prepared = False
-        self.executed = False
 
     def bPrepare(self, bContext = None,):
         key = self.parameters["Keyframe"]
@@ -724,27 +578,19 @@ class UtilityFCurve(MantisNode):
     '''A node representing an armature object'''
 
     def __init__(self, signature, base_tree):
-        self.base_tree=base_tree
-        self.executed = False
-        self.signature = signature
-        self.inputs = {
-            "Extrapolation Mode" : NodeSocket(is_input = True, name = "Extrapolation Mode", node = self),
-        }
-        self.outputs = {
-          "fCurve" : NodeSocket(name = "fCurve", node=self),
-        }
-        self.parameters = {
-          "Extrapolation Mode":None,
-          "fCurve":None, 
-        }
+        super().__init__(signature, base_tree)
+        inputs = [
+            "Extrapolation Mode",
+        ]
+        outputs = [
+          "fCurve",
+        ]
+        self.inputs.init_sockets(inputs)
+        self.outputs.init_sockets(outputs)
+        self.init_parameters()
         self.node_type = "UTILITY"
         setup_custom_props(self)
-        self.hierarchy_connections = []
-        self.connections = []
-        self.hierarchy_dependencies = []
-        self.dependencies = []
-        self.prepared = False
-        self.executed = False
+        self.prepared = True
 
     def evaluate_input(self, input_name):
         return super().evaluate_input(input_name)
@@ -769,7 +615,6 @@ class UtilityFCurve(MantisNode):
         keys.append(extrap_mode)
         print (keys)
         self.parameters["fCurve"] = keys
-        self.prepared = True
         self.executed = True
 #TODO make the fCurve data a data class instead of a dict 
 
@@ -777,32 +622,25 @@ class UtilityDriver(MantisNode):
     '''A node representing an armature object'''
 
     def __init__(self, signature, base_tree):
-        self.base_tree=base_tree
-        self.executed = False
-        self.signature = signature
-        self.inputs = {
-          "Driver Type"   : NodeSocket(is_input = True, name = "Driver Type", node = self),
-          "Expression"   : NodeSocket(is_input = True, name = "Expression", node = self),
-          "fCurve"   : NodeSocket(is_input = True, name = "fCurve", node = self),
-        }
-        self.outputs = {
-          "Driver" : NodeSocket(name = "Driver", node=self),
-        }
+        super().__init__(signature, base_tree)
+        inputs = [
+          "Driver Type"   ,
+          "Expression"    ,
+          "fCurve"        ,
+        ]
+        outputs = [
+          "Driver",
+        ]
         from .drivers import MantisDriver
-        self.parameters = {
-          "Driver Type":None, 
-          "Expression":None, 
-          "fCurve":None,
+        additional_parameters = {
           "Driver":MantisDriver(), 
         }
+        self.inputs.init_sockets(inputs)
+        self.outputs.init_sockets(outputs)
+        self.init_parameters(additional_parameters=additional_parameters)
         self.node_type = "DRIVER" # MUST be run in Pose mode
         setup_custom_props(self)
-        self.hierarchy_connections = []
-        self.connections = []
-        self.hierarchy_dependencies = []
-        self.dependencies = []
         self.prepared = True
-        self.executed = True
 
     def bExecute(self, bContext = None,):
         prepare_parameters(self)
@@ -843,33 +681,24 @@ class UtilitySwitch(MantisNode):
     '''A node representing an armature object'''
 
     def __init__(self, signature, base_tree):
-        self.base_tree=base_tree
-        self.executed = False
-        self.signature = signature
-        self.inputs = {
-        #   "xForm"   : NodeSocket(is_input = True, name = "xForm", node = self),
-          "Parameter"   : NodeSocket(is_input = True, name = "Parameter", node = self),
-          "Parameter Index"   : NodeSocket(is_input = True, name = "Parameter Index", node = self),
-          "Invert Switch" : NodeSocket(is_input = True, name = "Invert Switch", node = self),
+        super().__init__(signature, base_tree)
+        inputs = {
+          "Parameter"            ,
+          "Parameter Index"      ,
+          "Invert Switch"        ,
         }
-        self.outputs = {
-          "Driver" : NodeSocket(name = "Driver", node=self),
-        }
+        outputs = [
+          "Driver",
+        ]
         from .drivers import MantisDriver
-        self.parameters = {
-        #   "xForm":None, 
-          "Parameter":None,
-          "Parameter Index":None, 
-          "Invert Switch":None,
-          "Driver":MantisDriver(), # empty for now
+        additional_parameters = {
+          "Driver":MantisDriver(), 
         }
+        self.inputs.init_sockets(inputs)
+        self.outputs.init_sockets(outputs)
+        self.init_parameters(additional_parameters=additional_parameters)
         self.node_type = "DRIVER" # MUST be run in Pose mode
-        self.hierarchy_connections = []
-        self.connections = []
-        self.hierarchy_dependencies = []
-        self.dependencies = []
         self.prepared = True
-        self.executed = False
 
     def evaluate_input(self, input_name):
         if input_name == 'Parameter':
@@ -921,11 +750,9 @@ class UtilitySwitch(MantisNode):
         #  driver is sent to the next node.
         # In the case of some drivers, the parameter may be sent out
         #  before it's filled in (because there is a circular dependency)
-        # I want to support this behaviour because Blender supports it,
-        #  but I also do not want to support it because it makes things
-        #  more complex and IMO it's bad practice.
+        # I want to support this behaviour because Blender supports it.
         # We do not make a copy. We update the driver, so that
-        #  the same instance is filled out. 
+        #  the same instance is filled out.
         self.parameters["Driver"].update(my_driver)
         print("Initializing driver %s " % (wrapPurple(self.__repr__())) )
         self.executed = True
@@ -936,74 +763,48 @@ class UtilityCombineThreeBool(MantisNode):
     '''A node for combining three booleans into a boolean three-tuple'''
 
     def __init__(self, signature, base_tree):
-        self.base_tree=base_tree
-        self.executed = False
-        self.signature = signature
-        self.inputs = {
-          "X"   : NodeSocket(is_input = True, name = "X", node = self),
-          "Y"   : NodeSocket(is_input = True, name = "Y", node = self),
-          "Z"   : NodeSocket(is_input = True, name = "Z", node = self),
-        }
-        self.outputs = {
-          "Three-Bool" : NodeSocket(name = "Three-Bool", node=self),
-        }
-        self.parameters = {
-          "X":None,
-          "Y":None,
-          "Z":None, }
+        super().__init__(signature, base_tree)
+        inputs = [
+          "X"   ,
+          "Y"   ,
+          "Z"   ,
+        ]
+        outputs = [
+          "Three-Bool",
+        ]
+        self.inputs.init_sockets(inputs)
+        self.outputs.init_sockets(outputs)
+        self.init_parameters()
         self.node_type = "UTILITY"
-        self.hierarchy_connections = []
-        self.connections = []
-        self.hierarchy_dependencies = []
-        self.dependencies = []
-        self.prepared = False
-        self.executed = False
 
     def bPrepare(self, bContext = None,):
-        #prPurple("Executing CombineThreeBool Node")
-        #prepare_parameters(self)
         self.parameters["Three-Bool"] = (
           self.evaluate_input("X"),
           self.evaluate_input("Y"),
           self.evaluate_input("Z"), )
-        # DO:
-        # figure out how to get the driver at execute-time
-        #  because Blender allows circular dependencies in drivers
-        #  (sort of), I need to adopt a more convoluted way of doing
-        #  things here or elsewhere.
         self.prepared = True
         self.executed = True
 
 
-# Note this is a copy of the above. This needs to be de-duplicated into
-  # a simpler CombineVector node_container.
-  # TODO
+# Note this is a copy of the above. This needs to be de-duplicated.
 class UtilityCombineVector(MantisNode):
     '''A node for combining three floats into a vector'''
 
     def __init__(self, signature, base_tree):
-        self.base_tree=base_tree
-        self.executed = False
-        self.signature = signature
-        self.inputs = {
-          "X"   : NodeSocket(is_input = True, name = "X", node = self),
-          "Y"   : NodeSocket(is_input = True, name = "Y", node = self),
-          "Z"   : NodeSocket(is_input = True, name = "Z", node = self),
-        }
-        self.outputs = {
-          "Vector" : NodeSocket(name = "Vector", node=self),
-        }
-        self.parameters = {
-          "X":None,
-          "Y":None,
-          "Z":None, }
+        super().__init__(signature, base_tree)
+        super().__init__(signature, base_tree)
+        inputs = [
+          "X"   ,
+          "Y"   ,
+          "Z"   ,
+        ]
+        outputs = [
+          "Vector",
+        ]
+        self.inputs.init_sockets(inputs)
+        self.outputs.init_sockets(outputs)
+        self.init_parameters()
         self.node_type = "UTILITY"
-        self.hierarchy_connections = []
-        self.connections = []
-        self.hierarchy_dependencies = []
-        self.dependencies = []
-        self.prepared = False
-        self.executed = False
 
     def bPrepare(self, bContext = None,):
         #prPurple("Executing CombineVector Node")
@@ -1016,33 +817,25 @@ class UtilityCombineVector(MantisNode):
         self.executed = True
   
 
-  # TODO
 class UtilitySeparateVector(MantisNode):
     '''A node for separating a vector into three floats'''
 
     def __init__(self, signature, base_tree):
-        self.base_tree=base_tree
-        self.executed = False
-        self.signature = signature
-        self.inputs = {
-          "Vector" : NodeSocket(is_input = True, name = "Vector", node=self),
-        }
-        self.outputs = {
-          "X"   : NodeSocket(name = "X", node = self),
-          "Y"   : NodeSocket(name = "Y", node = self),
-          "Z"   : NodeSocket(name = "Z", node = self),
-        }
-        self.parameters = {
-          "X"   : None,
-          "Y"   : None,
-          "Z"   : None, }
+        super().__init__(signature, base_tree)
+        inputs = [
+          "Vector"
+        ]
+        outputs = [
+          "X"   ,
+          "Y"   ,
+          "Z"   ,
+        ]
+        self.inputs.init_sockets(inputs)
+        self.outputs.init_sockets(outputs)
+        self.init_parameters()
         self.node_type = "UTILITY"
-        self.hierarchy_connections, self.connections = [], []
-        self.hierarchy_dependencies, self.dependencies = [], []
-        self.prepared, self.executed = False, False
 
     def bPrepare(self, bContext = None,):
-        # prepare_parameters(self)
         self.parameters["X"] = self.evaluate_input("Vector")[0]
         self.parameters["Y"] = self.evaluate_input("Vector")[1]
         self.parameters["Z"] = self.evaluate_input("Vector")[2]
@@ -1053,82 +846,39 @@ class UtilityCatStrings(MantisNode):
     '''A node representing an armature object'''
 
     def __init__(self, signature, base_tree):
-        self.base_tree=base_tree
-        self.executed = False
-        self.signature = signature
-        self.inputs = {
-          "String_1"   : NodeSocket(is_input = True, name = "String_1", node = self),
-          "String_2"   : NodeSocket(is_input = True, name = "String_2", node = self),
-        }
-        self.outputs = {
-          "OutputString" : NodeSocket(name = "OutputString", node=self),
-        }
-        self.parameters = {
-          "String_1":None, 
-          "String_2":None,
-        }
+        super().__init__(signature, base_tree)
+        inputs = [
+          "String_1"   ,
+          "String_2"   ,
+        ]
+        outputs = [
+          "OutputString" ,
+        ]
+        self.inputs.init_sockets(inputs)
+        self.outputs.init_sockets(outputs)
+        self.init_parameters()
         self.node_type = "UTILITY"
-        self.hierarchy_connections = []
-        self.connections = []
-        self.hierarchy_dependencies = []
-        self.dependencies = []
-        self.prepared = False
-        self.executed = False
     
     def bPrepare(self, bContext = None,):
         self.parameters["OutputString"] = self.evaluate_input("String_1")+self.evaluate_input("String_2")
         self.prepared = True
         self.executed = True
 
-class InputLayerMask(MantisNode):
-    '''A node representing an armature object'''
-
-    def __init__(self, signature, base_tree):
-        self.base_tree=base_tree
-        self.executed = False
-        self.signature = signature
-        self.inputs = {
-        }
-        self.outputs = {
-          "Layer Mask" : NodeSocket(is_input = True, name = "Layer Mask", node = self),
-        }
-        self.parameters = {
-
-          "Layer Mask":None, 
-        }
-        self.node_type = "UTILITY"
-        self.hierarchy_connections = []
-        self.connections = []
-        self.hierarchy_dependencies = []
-        self.dependencies = []
-        self.prepared = True
-        self.executed = True
-
-
 class InputExistingGeometryObject(MantisNode):
     '''A node representing an existing object'''
 
     def __init__(self, signature, base_tree):
-        self.base_tree=base_tree
-        self.executed = False
-        self.signature = signature
-        self.inputs = {
-          "Name"   : NodeSocket(is_input = True, name = "Name", node = self),
-        }
-        self.outputs = {
-          "Object" : NodeSocket(is_input = False, name = "Object", node=self),
-        }
-        self.parameters = {
-          "Name":None, 
-          "Object":None, 
-        }
+        super().__init__(signature, base_tree)
+        inputs = [
+          "Name"  ,
+        ]
+        outputs = [
+          "Object" ,
+        ]
+        self.inputs.init_sockets(inputs)
+        self.outputs.init_sockets(outputs)
+        self.init_parameters()
         self.node_type = "XFORM"
-        self.hierarchy_connections = []
-        self.connections = []
-        self.hierarchy_dependencies = []
-        self.dependencies = []
-        self.prepared = False
-        self.executed = False
     
     def bPrepare(self, bContext=None):
         from bpy import data
@@ -1147,28 +897,20 @@ class InputExistingGeometryData(MantisNode):
     '''A node representing existing object data'''
 
     def __init__(self, signature, base_tree):
-        self.base_tree=base_tree
-        self.executed = False
-        self.signature = signature
-        self.inputs = {
-          "Name"   : NodeSocket(is_input = True, name = "Name", node = self),
-        }
-        self.outputs = {
-          "Geometry" : NodeSocket(is_input = False, name = "Geometry", node=self),
-        }
-        self.parameters = {
-
-          "Name":None, 
-          "Geometry":None, 
-        }
+        super().__init__(signature, base_tree)
+        inputs = [
+          "Name"  ,
+        ]
+        outputs = [
+          "Geometry" ,
+        ]
+        self.inputs.init_sockets(inputs)
+        self.outputs.init_sockets(outputs)
+        self.init_parameters()
         self.node_type = "UTILITY"
-        self.hierarchy_connections = []
-        self.connections = []
-        self.hierarchy_dependencies = []
-        self.dependencies = []
         self.prepared = True
         self.executed = True
-    # mode for interface consistency
+    # the mode argument is only for interface consistency
     def bGetObject(self, mode=''):
         from bpy import data
         # first try Curve, then try Mesh
@@ -1182,24 +924,19 @@ class InputExistingGeometryData(MantisNode):
 class UtilityGeometryOfXForm(MantisNode):
     '''A node representing existing object data'''
     def __init__(self, signature, base_tree):
-        self.base_tree=base_tree
-        self.executed = False
-        self.signature = signature
-        self.inputs = {
-          "xForm"   : NodeSocket(is_input = True, name = "xForm", node = self),
-        }
-        self.outputs = {
-          "Geometry" : NodeSocket(is_input = False, name = "Geometry", node=self),
-        }
-        self.parameters = {
-
-          "xForm":None, 
-          "Geometry":None, 
-        }
+        super().__init__(signature, base_tree)
+        inputs = [
+          "xForm"  ,
+        ]
+        outputs = [
+          "Geometry" ,
+        ]
+        self.inputs.init_sockets(inputs)
+        self.outputs.init_sockets(outputs)
+        self.init_parameters()
         self.node_type = "UTILITY"
-        self.hierarchy_connections, self.connections = [], []
-        self.hierarchy_dependencies,self.dependencies = [], []
-        self.prepared, self.executed = True, True
+        self.prepared = True
+        self.executed = True
 
     # mode for interface consistency
     def bGetObject(self, mode=''):
@@ -1218,24 +955,17 @@ class UtilityGeometryOfXForm(MantisNode):
 class UtilityNameOfXForm(MantisNode):
     '''A node representing existing object data'''
     def __init__(self, signature, base_tree):
-        self.base_tree=base_tree
-        self.executed = False
-        self.signature = signature
-        self.inputs = {
-          "xForm"   : NodeSocket(is_input = True, name = "xForm", node = self),
-        }
-        self.outputs = {
-          "Name" : NodeSocket(is_input = False, name = "Name", node=self),
-        }
-        self.parameters = {
-
-          "xForm":None, 
-          "Name":'', 
-        }
+        super().__init__(signature, base_tree)
+        inputs = [
+          "xForm"  ,
+        ]
+        outputs = [
+          "Name" ,
+        ]
+        self.inputs.init_sockets(inputs)
+        self.outputs.init_sockets(outputs)
+        self.init_parameters()
         self.node_type = "UTILITY"
-        self.hierarchy_connections, self.connections = [], []
-        self.hierarchy_dependencies,self.dependencies = [], []
-        self.prepared, self.executed = False, False
 
     # mode for interface consistency
     def bPrepare(self, bContext = None,):
@@ -1250,29 +980,19 @@ class UtilityGetBoneLength(MantisNode):
     '''A node to get the length of a bone matrix'''
 
     def __init__(self, signature, base_tree):
-        self.base_tree=base_tree
-        self.executed = False
-        self.signature = signature
-        self.inputs = {
-          "Bone Matrix"   : NodeSocket(is_input = True, name = "Bone Matrix", node = self),
-        }
-        self.outputs = {
-          "Bone Length"   : NodeSocket(name = "Bone Length", node = self),
-        }
-        self.parameters = {
-
-          "Bone Length":None, 
-        }
+        super().__init__(signature, base_tree)
+        inputs = [
+          "Bone Matrix" ,
+        ]
+        outputs = [
+          "Bone Length" ,
+        ]
+        self.inputs.init_sockets(inputs)
+        self.outputs.init_sockets(outputs)
+        self.init_parameters()
         self.node_type = "UTILITY"
-        self.hierarchy_connections = []
-        self.connections = []
-        self.hierarchy_dependencies = []
-        self.dependencies = []
-        self.prepared = False
-        self.executed = False
 
     def bPrepare(self, bContext = None,):
-        # print (self.inputs['Bone Matrix'].links)
         if l := self.evaluate_input("Bone Matrix"):
             self.parameters["Bone Length"] = l[3][3]
         self.prepared = True
@@ -1282,29 +1002,18 @@ class UtilityPointFromBoneMatrix(MantisNode):
     '''A node representing an armature object'''
 
     def __init__(self, signature, base_tree):
-        self.base_tree=base_tree
-        self.executed = False
-        self.signature = signature
-        self.inputs = {
-          "Bone Matrix"   : NodeSocket(is_input = True, name = "Bone Matrix", node = self),
-          "Head/Tail"     : NodeSocket(is_input = True, name = "Head/Tail", node = self),
-        }
-        self.outputs = {
-          "Point"     : NodeSocket(name = "Point", node = self),
-        }
-        self.parameters = {
-
-          "Bone Matrix":None, 
-          "Head/Tail":None,
-          "Point":None,
-        }
+        super().__init__(signature, base_tree)
+        inputs = [
+          "Bone Matrix"   ,
+          "Head/Tail"     ,
+        ]
+        outputs = [
+          "Point"     ,
+        ]
+        self.inputs.init_sockets(inputs)
+        self.outputs.init_sockets(outputs)
+        self.init_parameters()
         self.node_type = "UTILITY"
-        self.hierarchy_connections = []
-        self.connections = []
-        self.hierarchy_dependencies = []
-        self.dependencies = []
-        self.prepared = False
-        self.executed = False
 
     # TODO: find out why this is sometimes not ready at bPrepare phase
     def bPrepare(self, bContext = None,):
@@ -1321,28 +1030,18 @@ class UtilitySetBoneLength(MantisNode):
     '''Sets the length of a Bone's matrix'''
 
     def __init__(self, signature, base_tree):
-        self.base_tree=base_tree
-        self.executed = False
-        self.signature = signature
-        self.inputs = {
-          "Bone Matrix"   : NodeSocket(is_input = True, name = "Bone Matrix", node = self),
-          "Length"        : NodeSocket(is_input = True, name = "Length", node = self),
-        }
-        self.outputs = {
-          "Bone Matrix"   : NodeSocket(name = "Bone Matrix", node = self),
-        }
-        self.parameters = {
-
-          "Bone Matrix":None, 
-          "Length":None,
-        }
+        super().__init__(signature, base_tree)
+        inputs = [
+          "Bone Matrix"   ,
+          "Length"        ,
+        ]
+        outputs = [
+          "Bone Matrix"   ,
+        ]
+        self.inputs.init_sockets(inputs)
+        self.outputs.init_sockets(outputs)
+        self.init_parameters()
         self.node_type = "UTILITY"
-        self.hierarchy_connections = []
-        self.connections = []
-        self.hierarchy_dependencies = []
-        self.dependencies = []
-        self.prepared = False
-        self.executed = False
     
     def bPrepare(self, bContext = None,):
         from mathutils import Vector
@@ -1360,25 +1059,18 @@ class UtilityMatrixSetLocation(MantisNode):
     '''Sets the location of a matrix'''
 
     def __init__(self, signature, base_tree):
-        self.base_tree=base_tree
-        self.executed = False
-        self.signature = signature
-        self.inputs = {
-          "Matrix"        : NodeSocket(is_input = True, name = "Matrix", node = self),
-          "Location"      : NodeSocket(is_input = True, name = "Location", node = self),
-        }
-        self.outputs = {
-          "Matrix"        : NodeSocket(name = "Matrix", node = self),
-        }
-        self.parameters = {
-
-          "Matrix"   : None, 
-          "Location" : None,
-        }
+        super().__init__(signature, base_tree)
+        inputs = [
+          "Matrix"        ,
+          "Location"      ,
+        ]
+        outputs = [
+          "Matrix"        ,
+        ]
+        self.inputs.init_sockets(inputs)
+        self.outputs.init_sockets(outputs)
+        self.init_parameters()
         self.node_type = "UTILITY"
-        self.connections, self.hierarchy_connections = [], []
-        self.dependencies, self.hierarchy_dependencies = [], []
-        self.prepared, self.executed = False,False
     
     def bPrepare(self, bContext = None,):
         from mathutils import Vector
@@ -1394,23 +1086,17 @@ class UtilityMatrixSetLocation(MantisNode):
 class UtilityMatrixGetLocation(MantisNode):
     '''Gets the location of a matrix'''
     def __init__(self, signature, base_tree):
-        self.base_tree=base_tree
-        self.signature = signature
-        self.inputs = {
-          "Matrix"        : NodeSocket(is_input = True, name = "Matrix", node = self),
-        }
-        self.outputs = {
-          "Location"      : NodeSocket(name = "Location", node = self),
-        }
-        self.parameters = {
-
-          "Matrix"   : None, 
-          "Location" : None,
-        }
+        super().__init__(signature, base_tree)
+        inputs = [
+          "Matrix"        ,
+        ]
+        outputs = [
+          "Location"    ,
+        ]
+        self.inputs.init_sockets(inputs)
+        self.outputs.init_sockets(outputs)
+        self.init_parameters()
         self.node_type = "UTILITY"
-        self.connections, self.hierarchy_connections = [], []
-        self.dependencies, self.hierarchy_dependencies = [], []
-        self.prepared, self.executed = False,False
     
     def bPrepare(self, bContext = None,):
         from mathutils import Vector
@@ -1422,21 +1108,17 @@ class UtilityMatrixGetLocation(MantisNode):
 class UtilityMatrixFromXForm(MantisNode):
     """Returns the matrix of the given xForm node."""
     def __init__(self, signature, base_tree):
-        self.base_tree=base_tree
-        self.signature = signature
-        self.inputs = {
-          "xForm"        : NodeSocket(is_input = True, name = "xForm", node = self),
-        }
-        self.outputs = {
-          "Matrix"      : NodeSocket(name = "Matrix", node = self),
-        }
-        self.parameters = {
-          "Matrix"   : None,
-        }
+        super().__init__(signature, base_tree)
+        inputs = [
+          "xForm"        ,
+        ]
+        outputs = [
+          "Matrix"       ,
+        ]
         self.node_type = "UTILITY"
-        self.connections, self.hierarchy_connections = [], []
-        self.dependencies, self.hierarchy_dependencies = [], []
-        self.prepared, self.executed = False,False
+        self.inputs.init_sockets(inputs)
+        self.outputs.init_sockets(outputs)
+        self.init_parameters()
     
     def GetxForm(self):
         trace = trace_single_line(self, "xForm")
@@ -1462,26 +1144,19 @@ class UtilityMatrixFromXForm(MantisNode):
 class UtilityAxesFromMatrix(MantisNode):
     """Returns the axes of the given matrix."""
     def __init__(self, signature, base_tree):
-        self.base_tree=base_tree
-        self.signature = signature
-        self.inputs = {
-          "Matrix"        : NodeSocket(is_input = True, name = "Matrix", node = self),
-        }
-        self.outputs = {
-          "X Axis"      : NodeSocket(name = "X Axis", node = self),
-          "Y Axis"      : NodeSocket(name = "Y Axis", node = self),
-          "Z Axis"      : NodeSocket(name = "Z Axis", node = self),
-        }
-        self.parameters = {
-          "Matrix"   : None,
-          "X Axis"   : None,
-          "Y Axis"   : None,
-          "Z Axis"   : None,
-        }
+        super().__init__(signature, base_tree)
+        inputs = [
+          "Matrix"       ,
+        ]
+        outputs = [
+          "X Axis"      ,
+          "Y Axis"      ,
+          "Z Axis"      ,
+        ]
+        self.inputs.init_sockets(inputs)
+        self.outputs.init_sockets(outputs)
+        self.init_parameters()
         self.node_type = "UTILITY"
-        self.connections, self.hierarchy_connections = [], []
-        self.dependencies, self.hierarchy_dependencies = [], []
-        self.prepared, self.executed = False,False
         
     def bPrepare(self, bContext = None,):
         from mathutils import Vector
@@ -1495,25 +1170,17 @@ class UtilityAxesFromMatrix(MantisNode):
 
 class UtilityBoneMatrixHeadTailFlip(MantisNode):
     def __init__(self, signature, base_tree):
-        self.base_tree=base_tree
-        self.executed = False
-        self.signature = signature
-        self.inputs = {
-          "Bone Matrix"   : NodeSocket(is_input = True, name = "Bone Matrix", node = self),
-        }
-        self.outputs = {
-          "Bone Matrix"   : NodeSocket(name = "Bone Matrix", node = self),
-        }
-        self.parameters = {
-          "Bone Matrix":None, 
-        }
+        super().__init__(signature, base_tree)
+        inputs = [
+          "Bone Matrix"     ,
+        ]
+        outputs = [
+          "Bone Matrix"     ,
+        ]
+        self.inputs.init_sockets(inputs)
+        self.outputs.init_sockets(outputs)
+        self.init_parameters()
         self.node_type = "UTILITY"
-        self.hierarchy_connections = []
-        self.connections = []
-        self.hierarchy_dependencies = []
-        self.dependencies = []
-        self.prepared = False
-        self.executed = False
 
     def bPrepare(self, bContext = None,):
         from mathutils import Vector, Matrix, Quaternion
@@ -1533,28 +1200,18 @@ class UtilityBoneMatrixHeadTailFlip(MantisNode):
 
 class UtilityMatrixTransform(MantisNode):
     def __init__(self, signature, base_tree):
-        self.base_tree=base_tree
-        self.executed = False
-        self.signature = signature
-        self.inputs = {
-          "Matrix 1"   : NodeSocket(is_input = True, name = "Matrix 1", node = self),
-          "Matrix 2"   : NodeSocket(is_input = True, name = "Matrix 2", node = self),
-        }
-        self.outputs = {
-          "Out Matrix"     : NodeSocket(name = "Out Matrix", node = self),
-        }
-        self.parameters = {
-          "Matrix 1"   : None,
-          "Matrix 2"   : None,
-          "Out Matrix" : None,
-        }
+        super().__init__(signature, base_tree)
+        inputs = [
+          "Matrix 1"   ,
+          "Matrix 2"   ,
+        ]
+        outputs = [
+          "Out Matrix"    ,
+        ]
+        self.inputs.init_sockets(inputs)
+        self.outputs.init_sockets(outputs)
+        self.init_parameters()
         self.node_type = "UTILITY"
-        self.hierarchy_connections = []
-        self.connections = []
-        self.hierarchy_dependencies = []
-        self.dependencies = []
-        self.prepared = False
-        self.executed = False
 
     def bPrepare(self, bContext = None,):
         from mathutils import Vector
@@ -1572,31 +1229,19 @@ class UtilityMatrixTransform(MantisNode):
 
 class UtilityTransformationMatrix(MantisNode):
     def __init__(self, signature, base_tree):
-        self.base_tree=base_tree
-        self.executed = False
-        self.signature = signature
-        self.inputs = {
-          "Operation"   : NodeSocket(is_input = True, name = "Operation", node = self),
-          "Vector"        : NodeSocket(is_input = True, name = "Vector", node = self),
-          "W"   : NodeSocket(is_input = True, name = "W", node = self),
-        }
-        self.outputs = {
-          "Matrix"     : NodeSocket(name = "Matrix", node = self),
-        }
-        self.parameters = {
-          "Operation"   : None,
-          "Origin"      : None,
-          "Vector"        : None,
-          "W"   : None,
-          "Matrix"      : None,
-        }
+        super().__init__(signature, base_tree)
+        inputs = [
+          "Operation"   ,
+          "Vector"      ,
+          "W"           ,
+        ]
+        outputs = [
+          "Matrix"    ,
+        ]
+        self.inputs.init_sockets(inputs)
+        self.outputs.init_sockets(outputs)
+        self.init_parameters()
         self.node_type = "UTILITY"
-        self.hierarchy_connections = []
-        self.connections = []
-        self.hierarchy_dependencies = []
-        self.dependencies = []
-        self.prepared = False
-        self.executed = False
 
     def bPrepare(self, bContext = None,):
         from mathutils import Matrix, Vector
@@ -1619,28 +1264,18 @@ class UtilityTransformationMatrix(MantisNode):
 
 class UtilityIntToString(MantisNode):
     def __init__(self, signature, base_tree):
-        self.base_tree=base_tree
-        self.executed = False
-        self.signature = signature
-        self.inputs = {
-          "Number"        : NodeSocket(is_input = True, name = "Number", node = self),
-          "Zero Padding"  : NodeSocket(is_input = True, name = "Zero Padding", node = self),
-        }
-        self.outputs = {
-          "String"        : NodeSocket(name = "String", node = self),
-        }
-        self.parameters = {
-          "Number"        : None,
-          "Zero Padding"  : None,
-          "String"        : None,
-        }
+        super().__init__(signature, base_tree)
+        inputs = [
+          "Number"         ,
+          "Zero Padding"   ,
+        ]
+        outputs = [
+          "String"         ,
+        ]
+        self.inputs.init_sockets(inputs)
+        self.outputs.init_sockets(outputs)
+        self.init_parameters()
         self.node_type = "UTILITY"
-        self.hierarchy_connections = []
-        self.connections = []
-        self.hierarchy_dependencies = []
-        self.dependencies = []
-        self.prepared = False
-        self.executed = False
 
     def bPrepare(self, bContext = None,):
         number = self.evaluate_input("Number")
@@ -1653,30 +1288,19 @@ class UtilityIntToString(MantisNode):
 
 class UtilityArrayGet(MantisNode):
     def __init__(self, signature, base_tree):
-        self.base_tree=base_tree
-        self.executed = False
-        self.signature = signature
-        self.inputs = {
-          "Index"          : NodeSocket(is_input = True, name = "Index", node = self),
-          "OoB Behaviour"  : NodeSocket(is_input = True, name = "OoB Behaviour", node = self),
-          "Array"          : NodeSocket(is_input = True, name = "Array", node = self),
-        }
-        self.outputs = {
-          "Output"        : NodeSocket(name = "Output", node = self),
-        }
-        self.parameters = {
-          "Index"          : None,
-          "OoB Behaviour"  : None,
-          "Array"          : None,
-          "Output"         : None,
-        }
+        super().__init__(signature, base_tree)
+        inputs = [
+          "Index"           ,
+          "OoB Behaviour"   ,
+          "Array"           ,
+        ]
+        outputs = [
+          "Output"          ,
+        ]
+        self.inputs.init_sockets(inputs)
+        self.outputs.init_sockets(outputs)
+        self.init_parameters()
         self.node_type = "UTILITY"
-        self.hierarchy_connections = []
-        self.connections = []
-        self.hierarchy_dependencies = []
-        self.dependencies = []
-        self.prepared = False
-        self.executed = False
 
     def bPrepare(self, bContext = None,):
       if self.prepared == False:
@@ -1721,25 +1345,18 @@ class UtilityArrayGet(MantisNode):
 
 class UtilitySetBoneMatrixTail(MantisNode):
     def __init__(self, signature, base_tree):
-        self.base_tree=base_tree
-        self.executed = False
-        self.signature = signature
-        self.inputs = {
-          "Matrix"          : NodeSocket(is_input = True, name = "Matrix", node = self),
-          "Tail Location"  : NodeSocket(is_input = True, name = "Tail Location", node = self),
+        super().__init__(signature, base_tree)
+        inputs = {
+          "Matrix"        ,
+          "Tail Location" ,
         }
-        self.outputs = {
-          "Result"        : NodeSocket(name = "Result", node = self),
-        }
-        self.parameters = {
-          "Matrix"     : None,
-          "Tail Location"   : None,
-          "Result"     : None,
-        }
+        outputs = [
+          "Result"       ,
+        ]
+        self.inputs.init_sockets(inputs)
+        self.outputs.init_sockets(outputs)
+        self.init_parameters()
         self.node_type = "UTILITY"
-        self.hierarchy_connections, self.connections = [], []
-        self.hierarchy_dependencies, self.dependencies = [], []
-        self.prepared, self.executed = False, False
 
     def bPrepare(self, bContext = None,):
       from mathutils import Matrix
@@ -1752,23 +1369,14 @@ class UtilitySetBoneMatrixTail(MantisNode):
 
 class UtilityPrint(MantisNode):
     def __init__(self, signature, base_tree):
-        self.base_tree=base_tree
-        self.executed = False
-        self.signature = signature
-        self.inputs = {
-          "Input"          : NodeSocket(is_input = True, name = "Input", node = self),
-        }
-        self.outputs = {}
-        self.parameters = {
-          "Input"          : None,
-        }
+        super().__init__(signature, base_tree)
+        inputs = [
+          "Input"         ,
+        ]
+        self.inputs.init_sockets(inputs)
+        self.outputs.init_sockets(outputs)
+        self.init_parameters()
         self.node_type = "UTILITY"
-        self.hierarchy_connections = []
-        self.connections = []
-        self.hierarchy_dependencies = []
-        self.dependencies = []
-        self.prepared = False
-        self.executed = False
 
     def bPrepare(self, bContext = None,):
         if my_input := self.evaluate_input("Input"):
@@ -1787,25 +1395,18 @@ class UtilityPrint(MantisNode):
 
 class UtilityCompare(MantisNode):
     def __init__(self, signature, base_tree):
-        self.base_tree=base_tree
-        self.executed = False
-        self.signature = signature
-        self.inputs = {
-          "A"           : NodeSocket(is_input = True, name = "A", node = self),
-          "B"           : NodeSocket(is_input = True, name = "B", node = self),
-        }
-        self.outputs = {
-          "Result"      : NodeSocket(name = "Result", node = self),
-        }
-        self.parameters = {
-          "A"           : None,
-          "B"           : None,
-          "Result"      : None,
-        }
+        super().__init__(signature, base_tree)
+        inputs = [
+          "A"           ,
+          "B"           ,
+        ]
+        outputs = [
+          "Result"      ,
+        ]
+        self.inputs.init_sockets(inputs)
+        self.outputs.init_sockets(outputs)
+        self.init_parameters()
         self.node_type = "UTILITY"
-        self.hierarchy_connections, self.connections = [], []
-        self.hierarchy_dependencies, self.dependencies = [], []
-        self.prepared, self.executed = False, False
 
     def bPrepare(self, bContext = None,):
         self.parameters["Result"] = self.evaluate_input("A") == self.evaluate_input("B")
@@ -1814,27 +1415,19 @@ class UtilityCompare(MantisNode):
 
 class UtilityChoose(MantisNode):
     def __init__(self, signature, base_tree):
-        self.base_tree=base_tree
-        self.executed = False
-        self.signature = signature
-        self.inputs = {
-          "Condition"   : NodeSocket(is_input = True, name = "Condition", node = self),
-          "A"           : NodeSocket(is_input = True, name = "A", node = self),
-          "B"           : NodeSocket(is_input = True, name = "B", node = self),
-        }
-        self.outputs = {
-          "Result"      : NodeSocket(name = "Result", node = self),
-        }
-        self.parameters = {
-          "Condition"   : None,
-          "A"           : None,
-          "B"           : None,
-          "Result"      : None,
-        }
+        super().__init__(signature, base_tree)
+        inputs = [
+          "Condition"   ,
+          "A"           ,
+          "B"           ,
+        ]
+        outputs = [
+          "Result"      ,
+        ]
+        self.inputs.init_sockets(inputs)
+        self.outputs.init_sockets(outputs)
+        self.init_parameters()
         self.node_type = "UTILITY"
-        self.hierarchy_connections, self.connections = [], []
-        self.hierarchy_dependencies, self.dependencies = [], []
-        self.prepared, self.executed = False, False
 
     def bPrepare(self, bContext = None,):
         condition = self.evaluate_input("Condition")
