@@ -613,7 +613,6 @@ class UtilityFCurve(MantisNode):
         if len(keys) <1:
             prOrange(f"WARN: no keys in fCurve {self}.")
         keys.append(extrap_mode)
-        print (keys)
         self.parameters["fCurve"] = keys
         self.executed = True
 #TODO make the fCurve data a data class instead of a dict 
