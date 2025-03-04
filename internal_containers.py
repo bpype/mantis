@@ -24,6 +24,7 @@ class DummyNode(MantisNode):
                 self.outputs[sock.identifier] = NodeSocket(is_input = False, name = sock.identifier, node = self)
                 self.parameters[sock.identifier]=None
         # keep track of the "natural signature" of Schema nodes - so that they are unambiguous
+        self.natural_signature=self.signature
         if natural_signature:
             self.natural_signature=natural_signature
         # This is necessary for Schema to work if there are multiple Schema nodes using the same Schema tree.
