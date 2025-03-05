@@ -427,7 +427,11 @@ class SchemaSolver:
                 nc.bPrepare()
                 if nc.node_type == 'DUMMY_SCHEMA':
                     self.solve_nested_schema(nc)
-            else:
+            else: #TODO find out what I am missing elsewhere that makes this necessary
+                for dep in nc.hierarchy_dependencies:
+                    if not dep.prepared and dep not in unprepared:
+                        unprepared.appendleft(dep)
+                #TODO
                 unprepared.appendleft(nc) # just rotate them until they are ready.
         
         while(awaiting_prep_stage):

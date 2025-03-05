@@ -378,6 +378,10 @@ def parse_tree(base_tree):
         if n.signature in all_schema.keys():
             for dep in n.hierarchy_dependencies:
                 if dep not in schema_solve_done and (dep in solve_only_these):
+                    if dep.prepared: # HACK HACK HACK
+                        continue 
+                        # For some reason, the Schema Solver is able to detect and resolve dependencies outside
+                        #  of solve_only_these. So I have to figure out why.
                     solve_layer.appendleft(n)
                     break
             else:
