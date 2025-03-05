@@ -11,13 +11,12 @@ from . import ( ops_nodegroup,
                 schema_definitions,
               )
 from .ops_generate_tree import GenerateMantisTree
-from bpy.types import NodeSocket
 
 from .utilities import prRed
 
 MANTIS_VERSION_MAJOR=0
 MANTIS_VERSION_MINOR=9
-MANTIS_VERSION_SUB=14
+MANTIS_VERSION_SUB=15
 
 classLists = [module.TellClasses() for module in [
  link_definitions,
@@ -39,7 +38,6 @@ while (classLists):
     classes.extend(classLists.pop())
 
 interface_classes = []
-from bpy import app
 
 import nodeitems_utils
 from nodeitems_utils import NodeCategory, NodeItem

@@ -12,7 +12,7 @@ from .node_container_common import setup_custom_props_from_np
 
 
 class SchemaSolver:
-    def __init__(self, schema_dummy, nodes, prototype, signature=None):
+    def __init__(self, schema_dummy, nodes, prototype, signature=None,):
         self.all_nodes = nodes # this is the parsed tree from Mantis
         self.node = schema_dummy
         self.tree = prototype.node_tree
@@ -37,7 +37,6 @@ class SchemaSolver:
         self.index_link = self.node.inputs['Schema Length'].links[0]
         self.solve_length = self.node.evaluate_input("Schema Length")
         # I'm making this a property of the solver because the solver's data is modified as it solves each iteration
-        # So
         self.index = 0
 
         self.init_schema_links()
@@ -320,7 +319,22 @@ class SchemaSolver:
         connection = incoming.from_node.outputs[incoming.from_socket].connect(node=to_node, socket=ui_link.to_socket.name)
         init_connections(incoming.from_node)
                     
-
+    def prepare_nodes(self, unprepared):
+        # At this point, we've already run a pretty exhaustive preperation phase to prep the schema's dependencies
+        # So we should not need to add any new dependencies unless there is a bug elsewhere.
+        # and in fact, I could skip this in some cases, and should investigate if profiling reveals a slowdown here.
+        while unprepared:
+            nc = unprepared.pop()
+            if sum([dep.prepared for dep in nc.hierarchy_dependencies]) == len(nc.hierarchy_dependencies):
+                nc.bPrepare()
+                if nc.node_type == 'DUMMY_SCHEMA':
+                    self.solve_nested_schema(nc)
+            else: # Keeping this for-loop as a fallback, it should never add dependencies though
+                for dep in nc.hierarchy_dependencies:
+                    if not dep.prepared and dep not in unprepared:
+                        prOrange(f"Adding dependency... {dep}")
+                        unprepared.appendleft(dep)
+                unprepared.appendleft(nc) # just rotate them until they are ready.
 
     def solve_iteration(self):
         """ Solve an iteration of the schema.
@@ -418,21 +432,7 @@ class SchemaSolver:
             self.solved_nodes[k]=v
             init_dependencies(v) # it is hard to overstate how important this single line of code is
         
-        # This while-loop is a little scary, but in my testing it has never been a problem.
-        # At this point, we've already run a pretty exhaustive preperation phase to prep the schema's dependencies
-        # So at this point, if this while loop hangs it is because of an error elsewhere.
-        while unprepared:
-            nc = unprepared.pop()
-            if sum([dep.prepared for dep in nc.hierarchy_dependencies]) == len(nc.hierarchy_dependencies):
-                nc.bPrepare()
-                if nc.node_type == 'DUMMY_SCHEMA':
-                    self.solve_nested_schema(nc)
-            else: #TODO find out what I am missing elsewhere that makes this necessary
-                for dep in nc.hierarchy_dependencies:
-                    if not dep.prepared and dep not in unprepared:
-                        unprepared.appendleft(dep)
-                #TODO
-                unprepared.appendleft(nc) # just rotate them until they are ready.
+        self.prepare_nodes(unprepared)
         
         while(awaiting_prep_stage):
             ui_link = awaiting_prep_stage.pop()
