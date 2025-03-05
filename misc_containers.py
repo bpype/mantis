@@ -1363,6 +1363,8 @@ class UtilitySetBoneMatrixTail(MantisNode):
       if matrix is None: matrix = Matrix.Identity(4)
       #just do this for now lol
       self.parameters["Result"] = matrix_from_head_tail(matrix.translation, self.evaluate_input("Tail Location"))
+      self.prepared = True
+      self.executed = True
 
 
 
