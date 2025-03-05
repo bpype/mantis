@@ -437,8 +437,6 @@ class MantisNode:
     def evaluate_input(self, input_name, index=0):
         from .node_container_common import trace_single_line
         if not (self.inputs.get(input_name)): # get the named parameter if there is no input
-            if input_name == 'Meta-Armature':
-                prOrange("beans are not frogs")
             return self.parameters.get(input_name) # this will return None if the parameter does not exist.
         # this trace() should give a key error if there is a problem
         #  it is NOT handled here because it should NOT happen - so I want the error message.
@@ -484,6 +482,39 @@ class MantisNode:
                         raise RuntimeError(wrapRed("No value found for " + self.__repr__() + " when filling out node parameters for " + ui_node.name + "::"+node_socket.name))
                 else:
                     pass
+    def call_on_all_ancestors(self, *args, **kwargs):
+        """Resolve the dependencies of this node with the named method and its arguments.
+           First, dependencies are discovered by walking backwards through the tree. Once the root
+           nodes are discovered, the method is called by each node in dependency order.
+           The first argument MUST be the name of the method as a string.
+        """
+        prGreen(self)
+        if args[0] == 'call_on_all_ancestors': raise RuntimeError("Very funny!")
+        from .utilities import get_all_dependencies
+        from collections import deque
+        # get all dependencies by walking backward through the tree.
+        all_dependencies = get_all_dependencies(self)
+        # get just the roots
+        can_solve = deque(filter(lambda a : len(a.hierarchy_connections) == 0, all_dependencies))
+        solved = set()
+        while can_solve:
+            node = can_solve.pop()
+            print(node)
+            method = getattr(node, args[0])
+            method(*args[0:], **kwargs)
+            solved.add(node)
+            can_solve.extendleft(filter(lambda a : a in all_dependencies, node.hierarchy_connections))
+            # prPurple(can_solve)
+            if self in solved:
+                break
+        # else:
+        #     for dep in all_dependencies:
+        #         if dep not in solved:
+        #             prOrange(dep)
+        return
+
+        
+        
     
     def bPrepare(self, bContext=None):
         return
