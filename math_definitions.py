@@ -24,6 +24,7 @@ class MathStaticInt(Node, MantisUINode):
     bl_label = "Static Int Math"
     bl_icon = "NODE"
     initialized : bpy.props.BoolProperty(default = False)
+    mantis_node_class_name=bl_idname
 
 
     def init(self, context):
@@ -51,6 +52,7 @@ class MathStaticFloatNode(Node, MantisUINode):
     bl_label = "Static Float Math"
     bl_icon = "NODE"
     initialized : bpy.props.BoolProperty(default = False)
+    mantis_node_class_name=bl_idname
 
 
     def init(self, context):
@@ -77,6 +79,7 @@ class MathStaticVectorNode(Node, MantisUINode):
     bl_label = "Static Vector Math"
     bl_icon = "NODE"
     initialized : bpy.props.BoolProperty(default = False)
+    mantis_node_class_name=bl_idname
     
     def init(self, context):
         self.inputs.new("MathVectorOperation", "Operation")
@@ -113,3 +116,8 @@ class MathStaticVectorNode(Node, MantisUINode):
             else:
                 self.inputs["Vector B"].hide = False
                 self.inputs["Scalar A"].hide = True
+
+# Set up the class property that ties the UI classes to the Mantis classes.
+for cls in TellClasses():
+    cls.mantis_node_library='.math_containers'
+    cls.set_mantis_class()

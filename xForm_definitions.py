@@ -162,6 +162,7 @@ class xFormBoneNode(Node, xFormNode):
     display_bb_settings : bpy.props.BoolProperty(default=False)
     socket_count : bpy.props.IntProperty()
     initialized : bpy.props.BoolProperty(default = False)
+    mantis_node_class_name=bl_idname[:-4]
     
     def init(self, context):
 
@@ -270,6 +271,7 @@ class xFormArmatureNode(Node, xFormNode):
     bl_label = "Armature"
     bl_icon = 'OUTLINER_OB_ARMATURE'
     initialized : bpy.props.BoolProperty(default = False)
+    mantis_node_class_name=bl_idname[:-4]
 
     def init(self, context):
         self.inputs.new('StringSocket', "Name")
@@ -301,6 +303,7 @@ class xFormGeometryObjectNode(Node, xFormNode):
     bl_label = "Geometry Object"
     bl_icon = "EMPTY_AXIS"
     initialized : bpy.props.BoolProperty(default = False)
+    mantis_node_class_name=bl_idname
     
     def init(self, context):
         self.inputs.new('StringSocket', "Name")
@@ -334,6 +337,7 @@ class xFormObjectInstance(Node, xFormNode):
     bl_label = "Object Instance"
     bl_icon = "EMPTY_AXIS"
     initialized : bpy.props.BoolProperty(default = False)
+    mantis_node_class_name=bl_idname
     
     def init(self, context):
         self.inputs.new('StringSocket', "Name")
@@ -361,3 +365,6 @@ class xFormObjectInstance(Node, xFormNode):
             self.inputs['Name'].display_text = ""
             if nc:
                 self.inputs['Name'].display_text = nc.evaluate_input("Name")
+
+for cls in TellClasses():
+    cls.set_mantis_class()

@@ -23,6 +23,8 @@ def TellClasses():
 def error_popup_draw(self, context):
     self.layout.label(text="Error executing tree. See Console.")
 
+mantis_root = ".".join(__name__.split('.')[:-1]) # absolute HACK
+
 class MantisTree(NodeTree):
     '''A custom node tree type that will show up in the editor type list'''
     bl_idname = 'MantisTree'
@@ -139,10 +141,24 @@ class MantisUINode:
         MantisUINode objects will spawn one or more MantisNode objects when the graph is evaluated.
         The MantisNode objects will pull the data from the UI node and use it to generate the graph.
     """
+    mantis_node_library=''
+    mantis_node_class_name=''
+    mantis_class=None
     @classmethod
     def poll(cls, ntree):
         return (ntree.bl_idname in ['MantisTree', 'SchemaTree'])
                 
+    @classmethod
+    def set_mantis_class(self):
+        from importlib import import_module
+        # do not catch errors, they should cause a failure.
+        try:
+            module = import_module(self.mantis_node_library, package=mantis_root)
+            self.mantis_class=getattr(module, self.mantis_node_class_name)
+        except Exception as e:
+            print(self)
+            raise e
+
     def insert_link(self, link):
         context = bpy.context
         if context.space_data:
@@ -156,22 +172,26 @@ class MantisUINode:
                     node_tree.num_links+=1
         
             
-class SchemaUINode:
+class SchemaUINode(MantisUINode):
+    mantis_node_library='.schema_containers'
     @classmethod
     def poll(cls, ntree):
         return (ntree.bl_idname in ['SchemaTree'])
 
 class LinkNode(MantisUINode):
+    mantis_node_library='.link_containers'
     @classmethod
     def poll(cls, ntree):
         return (ntree.bl_idname in ['MantisTree', 'SchemaTree'])
-
+    
 class xFormNode(MantisUINode):
+    mantis_node_library='.xForm_containers'
     @classmethod
     def poll(cls, ntree):
         return (ntree.bl_idname in ['MantisTree', 'SchemaTree'])
 
 class DeformerNode(MantisUINode):
+    mantis_node_library='.deformer_containers'
     @classmethod
     def poll(cls, ntree):
         return (ntree.bl_idname in ['MantisTree', 'SchemaTree'])
@@ -406,13 +426,13 @@ class MantisNode:
         self.signature = signature
         self.inputs = MantisNodeSocketCollection(node=self, is_input=True)
         self.outputs = MantisNodeSocketCollection(node=self, is_input=False)
-        self.parameters = dict()
+        self.parameters = {}
+        self.drivers = {}
         self.node_type='UNINITIALIZED'
         self.hierarchy_connections, self.connections = [], []
         self.hierarchy_dependencies, self.dependencies = [], []
         self.prepared = False
         self.executed = False
-        self.drivers = {}
 
     def init_parameters(self, additional_parameters = {}):
         for socket in self.inputs:
@@ -658,11 +678,7 @@ class MantisNodeSocketCollection(dict):
         for socket in sockets:
             if not isinstance(socket, str): raise RuntimeError("NodeSocketCollection keys must be str.")
             self[socket] = NodeSocket(is_input=self.is_input, name=socket, node=self.node)
-
-    def __setitem__(self, key, value=None):
-        """Allows setting items using square brackets: obj[key] = value"""
-        super().__setitem__(key, value)
-    
+            
     def __delitem__(self, key):
         """Deletes a node socket by name, and all its links."""
         socket = self[key]

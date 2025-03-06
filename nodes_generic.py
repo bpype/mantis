@@ -17,10 +17,7 @@ def TellClasses():
              InputRotationOrderNode,
              InputTransformSpaceNode,
              InputStringNode,
-             InputQuaternionNode,
-             InputQuaternionNodeAA,
              InputMatrixNode,
-             InputLayerMaskNode,
              # InputGeometryNode,
              InputExistingGeometryObjectNode,
              InputExistingGeometryDataNode,
@@ -75,6 +72,7 @@ class InputFloatNode(Node, MantisUINode):
     bl_label = "Float"
     bl_icon = 'NODE'
     initialized : bpy.props.BoolProperty(default = False)
+    mantis_node_class_name=bl_idname[:-4]
 
     def init(self, context):
         self.outputs.new('FloatSocket', "Float Input").input = True
@@ -86,6 +84,7 @@ class InputIntNode(Node, MantisUINode):
     bl_label = "Integer"
     bl_icon = 'NODE'
     initialized : bpy.props.BoolProperty(default = False)
+    mantis_node_class_name=bl_idname
 
     def init(self, context):
         self.outputs.new('IntSocket', "Integer").input = True
@@ -97,6 +96,7 @@ class InputVectorNode(Node, MantisUINode):
     bl_label = "Vector"
     bl_icon = 'NODE'
     initialized : bpy.props.BoolProperty(default = False)
+    mantis_node_class_name=bl_idname[:-4]
 
     def init(self, context):
         self.outputs.new('VectorSocket', "").input = True
@@ -108,6 +108,7 @@ class InputBooleanNode(Node, MantisUINode):
     bl_label = "Boolean"
     bl_icon = 'NODE'
     initialized : bpy.props.BoolProperty(default = False)
+    mantis_node_class_name=bl_idname[:-4]
 
     def init(self, context):
         self.outputs.new('BooleanSocket', "").input = True
@@ -119,6 +120,7 @@ class InputBooleanThreeTupleNode(Node, MantisUINode):
     bl_label = "Boolean Vector"
     bl_icon = 'NODE'
     initialized : bpy.props.BoolProperty(default = False)
+    mantis_node_class_name=bl_idname[:-4]
 
     def init(self, context):
         self.outputs.new('BooleanThreeTupleSocket', "")
@@ -130,6 +132,7 @@ class InputRotationOrderNode(Node, MantisUINode):
     bl_label = "Rotation Order"
     bl_icon = 'NODE'
     initialized : bpy.props.BoolProperty(default = False)
+    mantis_node_class_name=bl_idname[:-4]
 
     def init(self, context):
         self.outputs.new('RotationOrderSocket', "").input = True
@@ -141,6 +144,7 @@ class InputTransformSpaceNode(Node, MantisUINode):
     bl_label = "Transform Space"
     bl_icon = 'NODE'
     initialized : bpy.props.BoolProperty(default = False)
+    mantis_node_class_name=bl_idname[:-4]
 
     def init(self, context):
         self.outputs.new('TransformSpaceSocket', "").input = True
@@ -152,34 +156,11 @@ class InputStringNode(Node, MantisUINode):
     bl_label = "String"
     bl_icon = 'NODE'
     initialized : bpy.props.BoolProperty(default = False)
+    mantis_node_class_name=bl_idname[:-4]
 
     def init(self, context):
         self.outputs.new('StringSocket', "").input = True
         self.initialized = True
-
-class InputQuaternionNode(Node, MantisUINode):
-    '''A node representing inheritance'''
-    bl_idname = 'InputQuaternionNode'
-    bl_label = "Quaternion"
-    bl_icon = 'NODE'
-    initialized : bpy.props.BoolProperty(default = False)
-
-    def init(self, context):
-        self.outputs.new('QuaternionSocket', "").input = True
-        self.initialized = True
-
-class InputQuaternionNodeAA(Node, MantisUINode):
-    '''A node representing inheritance'''
-    bl_idname = 'InputQuaternionNodeAA'
-    bl_label = "Axis Angle"
-    bl_icon = 'NODE'
-    initialized : bpy.props.BoolProperty(default = False)
-
-    def init(self, context):
-        self.outputs.new('QuaternionSocketAA', "").input = True
-        self.initialized = True
-
-
 class InputMatrixNode(Node, MantisUINode):
     '''A node representing inheritance'''
     bl_idname = 'InputMatrixNode'
@@ -190,6 +171,7 @@ class InputMatrixNode(Node, MantisUINode):
     third_row  : bpy.props.FloatVectorProperty(name="", size=4, default = (0.0, 0.0, 1.0, 0.0,))
     fourth_row : bpy.props.FloatVectorProperty(name="", size=4, default = (0.0, 0.0, 0.0, 1.0,))
     initialized : bpy.props.BoolProperty(default = False)
+    mantis_node_class_name=bl_idname[:-4]
 
     def set_matrix(self):
         return (self.first_row[ 0], self.first_row[ 1], self.first_row[ 2], self.first_row[ 3],
@@ -239,6 +221,7 @@ class MetaRigMatrixNode(Node, MantisUINode):
     third_row  : bpy.props.FloatVectorProperty(name="", size=4, default = (0.0, 0.0, 1.0, 0.0,))
     fourth_row : bpy.props.FloatVectorProperty(name="", size=4, default = (0.0, 0.0, 0.0, 1.0,))
     initialized : bpy.props.BoolProperty(default = False)
+    mantis_node_class_name="UtilityMetaRig"
 
     def set_matrix(self):
         return (self.first_row[ 0], self.first_row[ 1], self.first_row[ 2], self.first_row[ 3],
@@ -271,6 +254,7 @@ class UtilityMatrixFromCurve(Node, MantisUINode):
     bl_icon = "NODE"
     
     initialized : bpy.props.BoolProperty(default = False)
+    mantis_node_class_name=bl_idname
     
     def init(self, context):
         curv = self.inputs.new("EnumCurveSocket", "Curve")
@@ -288,6 +272,7 @@ class UtilityPointFromCurve(Node, MantisUINode):
     bl_icon = "NODE"
     
     initialized : bpy.props.BoolProperty(default = False)
+    mantis_node_class_name=bl_idname
     
     def init(self, context):
         curv = self.inputs.new("EnumCurveSocket", "Curve")
@@ -303,6 +288,7 @@ class UtilityMatricesFromCurve(Node, MantisUINode):
     bl_icon = "NODE"
     
     initialized : bpy.props.BoolProperty(default = False)
+    mantis_node_class_name=bl_idname
     
     def init(self, context):
         curv = self.inputs.new("EnumCurveSocket", "Curve")
@@ -321,6 +307,7 @@ class UtilityMetaRigNode(Node, MantisUINode):
     armature:bpy.props.StringProperty()
     pose_bone:bpy.props.StringProperty()
     initialized : bpy.props.BoolProperty(default = False)
+    mantis_node_class_name=bl_idname
     
     def init(self, context):
         armt = self.inputs.new("EnumMetaRigSocket", "Meta-Armature")
@@ -353,6 +340,7 @@ class UtilityBonePropertiesNode(Node, MantisUINode):
     bl_icon = "NODE"
     #bl_width_default = 250
     initialized : bpy.props.BoolProperty(default = False)
+    mantis_node_class_name=bl_idname
     
     def init(self, context):
         self.outputs.new("ParameterStringSocket", "matrix")
@@ -375,6 +363,7 @@ class UtilityDriverVariableNode(Node, MantisUINode):
     bl_label = "Driver Variable"
     bl_icon = "NODE"
     initialized : bpy.props.BoolProperty(default = False)
+    mantis_node_class_name=bl_idname
     
     
     def init(self, context):
@@ -440,6 +429,7 @@ class UtilityFCurveNode(Node, MantisUINode):
     
     use_kf_nodes   : bpy.props.BoolProperty(default=True)
     initialized : bpy.props.BoolProperty(default = False)
+    mantis_node_class_name=bl_idname
     
     def init(self, context):
         self.inputs.new("eFCrvExtrapolationMode", "Extrapolation Mode")
@@ -458,6 +448,7 @@ class UtilityDriverNode(Node, MantisUINode):
     bl_label = "Driver"
     bl_icon = "NODE"
     initialized : bpy.props.BoolProperty(default = False)
+    mantis_node_class_name=bl_idname
     
     def init(self, context):
         self.inputs.new("EnumDriverType", "Driver Type")
@@ -490,6 +481,7 @@ class UtilitySwitchNode(Node, MantisUINode):
     bl_label = "Switch"
     bl_icon = "NODE"
     initialized : bpy.props.BoolProperty(default = False)
+    mantis_node_class_name=bl_idname
     
     def init(self, context):
         # self.inputs.new("xFormSocket", "xForm")
@@ -505,6 +497,7 @@ class UtilityCombineThreeBoolNode(Node, MantisUINode):
     bl_label = "CombineThreeBool"
     bl_icon = "NODE"
     initialized : bpy.props.BoolProperty(default = False)
+    mantis_node_class_name=bl_idname
     
     def init(self, context):
         self.inputs.new("BooleanSocket", "X")
@@ -519,6 +512,7 @@ class UtilityCombineVectorNode(Node, MantisUINode):
     bl_label = "CombineVector"
     bl_icon = "NODE"
     initialized : bpy.props.BoolProperty(default = False)
+    mantis_node_class_name=bl_idname
     
     def init(self, context):
         self.inputs.new("FloatSocket", "X")
@@ -533,6 +527,7 @@ class UtilitySeparateVector(Node, MantisUINode):
     bl_label = "Separate Vector"
     bl_icon = "NODE"
     initialized : bpy.props.BoolProperty(default = False)
+    mantis_node_class_name=bl_idname
     
     def init(self, context):
         self.inputs.new("VectorSocket", "Vector")
@@ -547,6 +542,7 @@ class UtilityCatStringsNode(Node, MantisUINode):
     bl_label = "Concatenate Strings"
     bl_icon = "NODE"
     initialized : bpy.props.BoolProperty(default = False)
+    mantis_node_class_name=bl_idname
     
     def init(self, context):
         self.inputs.new("StringSocket", "String_1")
@@ -584,6 +580,7 @@ class InputLayerMaskNode(Node, MantisUINode):
     bl_label = "Layer Mask"
     bl_icon = "NODE"
     initialized : bpy.props.BoolProperty(default = False)
+    mantis_node_class_name=bl_idname
     
     def init(self, context):
         self.outputs.new("LayerMaskInputSocket", "Layer Mask")
@@ -595,6 +592,7 @@ class InputExistingGeometryObjectNode(Node, MantisUINode):
     bl_label = "Existing Object"
     bl_icon = "NODE"
     initialized : bpy.props.BoolProperty(default = False)
+    mantis_node_class_name=bl_idname
     # We want Mantis to import widgets and stuff, so we hold a reference to the object
     object_reference : bpy.props.PointerProperty(type=bpy.types.Object,) 
     
@@ -617,6 +615,7 @@ class InputExistingGeometryDataNode(Node, MantisUINode):
     bl_label = "Existing Geometry"
     bl_icon = "NODE"
     initialized : bpy.props.BoolProperty(default = False)
+    mantis_node_class_name=bl_idname
     
     def init(self, context):
         self.inputs.new("StringSocket", "Name")
@@ -629,6 +628,7 @@ class UtilityGeometryOfXForm(Node, MantisUINode):
     bl_label = "Geometry of xForm"
     bl_icon = "NODE"
     initialized : bpy.props.BoolProperty(default = False)
+    mantis_node_class_name=bl_idname
     
     def init(self, context):
         self.inputs.new("xFormSocket", "xForm")
@@ -642,6 +642,7 @@ class UtilityNameOfXForm(Node, MantisUINode):
     bl_label = "Name of xForm"
     bl_icon = "NODE"
     initialized : bpy.props.BoolProperty(default = False)
+    mantis_node_class_name=bl_idname
     
     def init(self, context):
         self.inputs.new("xFormSocket", "xForm")
@@ -654,6 +655,7 @@ class UtilityGetBoneLength(Node, MantisUINode):
     bl_label = "Get Bone Length"
     bl_icon = "NODE"
     initialized : bpy.props.BoolProperty(default = False)
+    mantis_node_class_name=bl_idname
     
     def init(self, context):
         self.inputs.new("MatrixSocket", "Bone Matrix")
@@ -667,6 +669,7 @@ class UtilityPointFromBoneMatrix(Node, MantisUINode):
     bl_label = "Point from Bone Matrix"
     bl_icon = "NODE"
     initialized : bpy.props.BoolProperty(default = False)
+    mantis_node_class_name=bl_idname
     
     def init(self, context):
         self.inputs.new("MatrixSocket", "Bone Matrix")
@@ -679,6 +682,7 @@ class UtilitySetBoneLength(Node, MantisUINode):
     bl_label = "Set Bone Matrix Length"
     bl_icon = "NODE"
     initialized : bpy.props.BoolProperty(default = False)
+    mantis_node_class_name=bl_idname
     
     def init(self, context):
         self.inputs.new("MatrixSocket", "Bone Matrix")
@@ -694,6 +698,7 @@ class UtilityKeyframe(Node, MantisUINode):
     bl_label = "KeyFrame"
     bl_icon = "NODE"
     initialized : bpy.props.BoolProperty(default = False)
+    mantis_node_class_name=bl_idname
     
     def init(self, context):
         # x and y
@@ -734,6 +739,7 @@ class UtilityBoneMatrixHeadTailFlip(Node, MantisUINode):
     bl_label = "Flip Head/Tail"
     bl_icon = "NODE"
     initialized : bpy.props.BoolProperty(default = False)
+    mantis_node_class_name=bl_idname
     
     def init(self, context):
         self.inputs.new("MatrixSocket", "Bone Matrix")
@@ -746,6 +752,7 @@ class UtilityMatrixTransform(Node, MantisUINode):
     bl_label = "Matrix Transform"
     bl_icon = "NODE"
     initialized : bpy.props.BoolProperty(default = False)
+    mantis_node_class_name=bl_idname
     
     def init(self, context):
         self.inputs.new("MatrixSocket", "Matrix 1")
@@ -759,6 +766,7 @@ class UtilityMatrixSetLocation(Node, MantisUINode):
     bl_label = "Set Matrix Location"
     bl_icon = "NODE"
     initialized : bpy.props.BoolProperty(default = False)
+    mantis_node_class_name=bl_idname
     
     def init(self, context):
         self.inputs.new("MatrixSocket", "Matrix")
@@ -772,6 +780,7 @@ class UtilityMatrixGetLocation(Node, MantisUINode):
     bl_label = "Get Matrix Location"
     bl_icon = "NODE"
     initialized : bpy.props.BoolProperty(default = False)
+    mantis_node_class_name=bl_idname
     
     def init(self, context):
         self.inputs.new("MatrixSocket", "Matrix")
@@ -784,6 +793,7 @@ class UtilityTransformationMatrix(Node, MantisUINode):
     bl_label = "Transformation Matrix"
     bl_icon = "NODE"
     initialized : bpy.props.BoolProperty(default = False)
+    mantis_node_class_name=bl_idname
     
     def init(self, context):
         # first input is a transformation type - translation, rotation, or scale
@@ -828,6 +838,7 @@ class UtilitySetBoneMatrixTail(Node, MantisUINode):
     bl_label = "Set Bone Matrix Tail"
     bl_icon = "NODE"
     initialized : bpy.props.BoolProperty(default = False)
+    mantis_node_class_name=bl_idname
     
     def init(self, context):
         self.inputs.new("MatrixSocket", "Matrix")
@@ -842,6 +853,7 @@ class UtilityMatrixFromXForm(Node, MantisUINode):
     bl_label = "Matrix of xForm"
     bl_icon = "NODE"
     initialized : bpy.props.BoolProperty(default = False)
+    mantis_node_class_name=bl_idname
     
     def init(self, context):
         self.inputs.new("xFormSocket", "xForm")
@@ -854,6 +866,7 @@ class UtilityAxesFromMatrix(Node, MantisUINode):
     bl_label = "Axes of Matrix"
     bl_icon = "NODE"
     initialized : bpy.props.BoolProperty(default = False)
+    mantis_node_class_name=bl_idname
     
     def init(self, context):
         self.inputs.new("MatrixSocket", "Matrix")
@@ -868,6 +881,7 @@ class UtilityIntToString(Node, MantisUINode):
     bl_label = "Number String"
     bl_icon = "NODE"
     initialized : bpy.props.BoolProperty(default = False)
+    mantis_node_class_name=bl_idname
     
     def init(self, context):
         
@@ -883,6 +897,7 @@ class UtilityArrayGet(Node, MantisUINode):
     bl_label  = "Array Get"
     bl_icon   = "NODE"
     initialized : bpy.props.BoolProperty(default = False)
+    mantis_node_class_name=bl_idname
     
     def init(self, context):
         self.inputs.new('EnumArrayGetOptions', 'OoB Behaviour')
@@ -915,6 +930,7 @@ class UtilityCompare(Node, MantisUINode):
     bl_label = "Compare"
     bl_icon = "NODE"
     initialized : bpy.props.BoolProperty(default = False)
+    mantis_node_class_name=bl_idname
     
     def init(self, context):
         self.inputs.new("WildcardSocket", "A")
@@ -946,6 +962,7 @@ class UtilityChoose(Node, MantisUINode):
     bl_label = "Choose"
     bl_icon = "NODE"
     initialized : bpy.props.BoolProperty(default = False)
+    mantis_node_class_name=bl_idname
     
     def init(self, context):
         
@@ -987,15 +1004,20 @@ class UtilityChoose(Node, MantisUINode):
                 self.inputs['B'].color = link.from_socket.color
 
 
-
 class UtilityPrint(Node, MantisUINode):
     """A utility used to print arbitrary values."""
     bl_idname = "UtilityPrint"
     bl_label  = "Print"
     bl_icon   = "NODE"
     initialized : bpy.props.BoolProperty(default = False)
+    mantis_node_class_name=bl_idname
     
     def init(self, context):
         self.inputs.new("WildcardSocket", "Input")
         self.initialized = True
     
+
+# Set up the class property that ties the UI classes to the Mantis classes.
+for cls in TellClasses():
+    cls.mantis_node_library='.misc_containers'
+    cls.set_mantis_class()

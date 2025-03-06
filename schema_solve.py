@@ -3,7 +3,6 @@ from .utilities import (prRed, prGreen, prPurple, prWhite,
                               wrapRed, wrapGreen, wrapPurple, wrapWhite,
                               wrapOrange,)
 from .utilities import init_connections, init_dependencies
-from .utilities import class_for_mantis_prototype_node
 from .base_definitions import SchemaUINode, GraphError, replace_types, custom_props_types
 from .node_container_common import setup_custom_props_from_np
 # a class that solves Schema nodes

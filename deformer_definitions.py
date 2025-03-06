@@ -29,6 +29,7 @@ class DeformerArmatureNode(Node, DeformerNode):
     bl_label = "Armature Deform"
     bl_icon = 'MOD_ARMATURE'
     initialized : bpy.props.BoolProperty(default = False)
+    mantis_node_class_name=bl_idname
 
     def init(self, context):
         # self.inputs.new ("RelationshipSocket", "Input Relationship")
@@ -66,6 +67,7 @@ class DeformerHook(Node, DeformerNode):
     bl_label = "Hook Deform"
     bl_icon = 'HOOK'
     initialized : bpy.props.BoolProperty(default = False)
+    mantis_node_class_name=bl_idname
 
     def init(self, context):
         self.inputs.new("DeformerSocket", "Deformer")
@@ -116,6 +118,7 @@ class DeformerMorphTargetDeform(Node, DeformerNode):
     bl_icon = 'MOD_ARMATURE'
     initialized : bpy.props.BoolProperty(default = False)
     num_targets : bpy.props.IntProperty(default = 0)
+    mantis_node_class_name=bl_idname
 
 
     def init(self, context):
@@ -183,6 +186,7 @@ class DeformerMorphTarget(Node, DeformerNode):
     bl_icon = 'SHAPEKEY_DATA'
     initialized : bpy.props.BoolProperty(default = False)
     num_targets : bpy.props.IntProperty(default = 0)
+    mantis_node_class_name=bl_idname
 
     def init(self, context):
         self.inputs.new('xFormSocket', "Relative to")
@@ -191,4 +195,7 @@ class DeformerMorphTarget(Node, DeformerNode):
         self.outputs.new('MorphTargetSocket', "Morph Target")
 
         self.initialized = True
-    
+
+# Set up the class property that ties the UI classes to the Mantis classes.
+for cls in TellClasses():
+    cls.set_mantis_class()

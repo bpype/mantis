@@ -33,6 +33,7 @@ def schema_init_sockets(nc, is_input = True, in_out='INPUT', category=''):
                         node=nc)
     nc.init_parameters()
 
+
 class SchemaNode(MantisNode):
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree)
@@ -51,8 +52,6 @@ class SchemaIndex(SchemaNode):
         self.outputs.init_sockets(outputs)
         self.init_parameters()
 
-
-
 class SchemaArrayInput(SchemaNode):
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree)
@@ -69,22 +68,15 @@ class SchemaArrayInputGet(SchemaNode):
         self.inputs.init_sockets(inputs)
         schema_init_sockets(self, is_input=False, in_out='INPUT', category='Array')
 
-
 class SchemaArrayOutput(SchemaNode):
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree)
         schema_init_sockets(self, is_input=True, in_out='OUTPUT', category='Array')
 
-
-        
-
 class SchemaConstInput(SchemaNode):
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree)
         schema_init_sockets(self, is_input=False, in_out='INPUT', category='Constant')
-
-
-
 
 
 class SchemaConstOutput(SchemaNode):

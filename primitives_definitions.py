@@ -17,6 +17,7 @@ class GeometryCirclePrimitive(Node, MantisUINode):
     bl_label = "Circle Primitive"
     bl_icon = 'NODE'
     initialized : bpy.props.BoolProperty(default = False)
+    mantis_node_class_name="CirclePrimitive"
 
     def init(self, context):
         self.inputs.new('StringSocket', "Name")
@@ -24,3 +25,7 @@ class GeometryCirclePrimitive(Node, MantisUINode):
         self.inputs.new('IntSocket', "Number of Points")
         self.outputs.new('GeometrySocket', "Circle")
         self.initialized = True
+
+for cls in TellClasses():
+    cls.mantis_node_library='.primitives_containers'
+    cls.set_mantis_class()

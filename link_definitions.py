@@ -1,6 +1,6 @@
 import bpy
 from bpy.types import NodeTree, Node, NodeSocket
-from .base_definitions import MantisUINode, LinkNode, GraphError
+from .base_definitions import LinkNode, GraphError
 from .utilities import (prRed, prGreen, prPurple, prWhite,
                               prOrange,
                               wrapRed, wrapGreen, wrapPurple, wrapWhite,
@@ -37,7 +37,6 @@ def default_traverse(self, socket):
             return self.outputs["Output Relationship"]
         return None
 
-
 from mathutils import Color # these colors were sampled from Blender's UI
 # TODO: maybe read the relevant colors from the Theme
 linkColor = Color((0.028034, 0.093164, 0.070379)).from_scene_linear_to_srgb()
@@ -55,6 +54,7 @@ class LinkInheritNode(Node, LinkNode):
     bl_label = "Inherit"
     bl_icon = 'CONSTRAINT_BONE'
     initialized : bpy.props.BoolProperty(default = False)
+    mantis_node_class_name="LinkInherit"
     
     
     # bone_prev : bpy.props.BoolProperty(default=False)
@@ -117,7 +117,7 @@ class LinkInverseKinematics(Node, LinkNode):
     bl_label = "Inverse Kinematics"
     bl_icon = 'CON_KINEMATIC'
     initialized : bpy.props.BoolProperty(default = False)
-    
+    mantis_node_class_name=bl_idname
 
     def init(self, context):
         self.inputs.new('RelationshipSocket', "Input Relationship")
@@ -148,8 +148,8 @@ class LinkCopyLocationNode(Node, LinkNode):
     bl_idname = 'LinkCopyLocation'
     bl_label = "Copy Location"
     bl_icon = 'CON_LOCLIKE'
-    
     initialized : bpy.props.BoolProperty(default = False)
+    mantis_node_class_name=bl_idname
 
     def init(self, context):
         self.inputs.new ('RelationshipSocket', "Input Relationship")
@@ -176,8 +176,8 @@ class LinkCopyRotationNode(Node, LinkNode):
     bl_idname = 'LinkCopyRotation'
     bl_label = "Copy Rotation"
     bl_icon = 'CON_ROTLIKE'
-    
     initialized : bpy.props.BoolProperty(default = False)
+    mantis_node_class_name=bl_idname
 
     def init(self, context):
         self.inputs.new ('RelationshipSocket', "Input Relationship")
@@ -204,8 +204,8 @@ class LinkCopyScaleNode(Node, LinkNode):
     bl_idname = 'LinkCopyScale'
     bl_label = "Copy Scale"
     bl_icon = 'CON_SIZELIKE'
-    
     initialized : bpy.props.BoolProperty(default = False)
+    mantis_node_class_name=bl_idname
 
     def init(self, context):
         self.inputs.new ('RelationshipSocket', "Input Relationship")
@@ -235,8 +235,8 @@ class LinkInheritConstraintNode(Node, LinkNode):
     bl_idname = 'LinkInheritConstraint'
     bl_label = "Inherit (constraint)"
     bl_icon = 'CON_CHILDOF'
-    
     initialized : bpy.props.BoolProperty(default = False)
+    mantis_node_class_name=bl_idname
 
     # === Optional Functions ===
     def init(self, context):
@@ -263,9 +263,8 @@ class LinkCopyTransformNode(Node, LinkNode):
     bl_idname = 'LinkCopyTransforms'
     bl_label = "Copy Transform"
     bl_icon = 'CON_TRANSLIKE'
-    
     initialized : bpy.props.BoolProperty(default = False)
-
+    mantis_node_class_name=bl_idname
 
     # === Optional Functions ===
     def init(self, context):
@@ -292,8 +291,9 @@ class LinkStretchToNode(Node, LinkNode):
     bl_idname = 'LinkStretchTo'
     bl_label = "Stretch To"
     bl_icon = 'CON_STRETCHTO'
-    
     initialized : bpy.props.BoolProperty(default = False)
+    mantis_node_class_name=bl_idname
+
     def init(self, context):
         self.inputs.new ('RelationshipSocket', "Input Relationship")
         self.inputs.new ('FloatFactorSocket', "Head/Tail")
@@ -325,8 +325,9 @@ class LinkDampedTrackNode(Node, LinkNode):
     bl_idname = 'LinkDampedTrack'
     bl_label = "Damped Track"
     bl_icon = 'CON_TRACKTO'
-    
     initialized : bpy.props.BoolProperty(default = False)
+    mantis_node_class_name=bl_idname
+
     def init(self, context):
         self.inputs.new ('RelationshipSocket', "Input Relationship")
         self.inputs.new ('FloatFactorSocket', "Head/Tail")
@@ -350,8 +351,8 @@ class LinkLockedTrackNode(Node, LinkNode):
     bl_idname = 'LinkLockedTrack'
     bl_label = "Locked Track"
     bl_icon = 'CON_LOCKTRACK'
-    
     initialized : bpy.props.BoolProperty(default = False)
+    mantis_node_class_name=bl_idname
 
     def init(self, context):
         self.inputs.new ('RelationshipSocket', "Input Relationship")
@@ -377,8 +378,8 @@ class LinkTrackToNode(Node, LinkNode):
     bl_idname = 'LinkTrackTo'
     bl_label = "Track To"
     bl_icon = 'CON_TRACKTO'
-    
     initialized : bpy.props.BoolProperty(default = False)
+    mantis_node_class_name=bl_idname
 
     def init(self, context):
         self.inputs.new ('RelationshipSocket', "Input Relationship")
@@ -407,7 +408,7 @@ class LinkLimitLocationNode(Node, LinkNode):
     bl_idname = 'LinkLimitLocation'
     bl_label = "Limit Location"
     bl_icon = 'CON_LOCLIMIT'
-    
+    mantis_node_class_name=bl_idname
     initialized : bpy.props.BoolProperty(default = False)
 
     def init(self, context):
@@ -442,8 +443,8 @@ class LinkLimitScaleNode(Node, LinkNode):
     bl_idname = 'LinkLimitScale'
     bl_label = "Limit Scale"
     bl_icon = 'CON_SIZELIMIT'
-    
     initialized : bpy.props.BoolProperty(default = False)
+    mantis_node_class_name=bl_idname
 
     def init(self, context):
         self.inputs.new ('RelationshipSocket', "Input Relationship")
@@ -479,8 +480,8 @@ class LinkLimitRotationNode(Node, LinkNode):
     bl_idname = 'LinkLimitRotation'
     bl_label = "Limit Rotation"
     bl_icon = 'CON_ROTLIMIT'
-    
     initialized : bpy.props.BoolProperty(default = False)
+    mantis_node_class_name=bl_idname
 
     # === Optional Functions ===
     def init(self, context):
@@ -512,8 +513,8 @@ class LinkLimitDistanceNode(Node, LinkNode):
     bl_idname = 'LinkLimitDistance'
     bl_label = "Limit Distance"
     bl_icon = 'CON_DISTLIMIT'
-    
     initialized : bpy.props.BoolProperty(default = False)
+    mantis_node_class_name=bl_idname
 
     def init(self, context):
         self.inputs.new ('RelationshipSocket', "Input Relationship")
@@ -541,8 +542,8 @@ class LinkTransformationNode(Node, LinkNode):
     bl_idname = 'LinkTransformation'
     bl_label = "Transformation"
     bl_icon = 'CON_TRANSFORM'
-    
     initialized : bpy.props.BoolProperty(default = False)
+    mantis_node_class_name=bl_idname
 
     def init(self, context):
         hide_me = []
@@ -619,6 +620,7 @@ class LinkArmatureNode(Node, LinkNode):
     bl_label = "Armature (Constraint)"
     bl_icon = "CON_ARMATURE"
     initialized : bpy.props.BoolProperty(default = False)
+    mantis_node_class_name=bl_idname
     
     def init(self, context):
         self.inputs.new ("RelationshipSocket", "Input Relationship")
@@ -651,6 +653,7 @@ class LinkSplineIKNode(Node, LinkNode):
     bl_label = "Spline IK"
     bl_icon = "CON_SPLINEIK"
     initialized : bpy.props.BoolProperty(default = False)
+    mantis_node_class_name=bl_idname
     
     def init(self, context):
         self.inputs.new ("RelationshipSocket", "Input Relationship")
@@ -681,6 +684,7 @@ class LinkDrivenParameterNode(Node, LinkNode):
     bl_label = "Driven Parameter"
     bl_icon = "CONSTRAINT_BONE"
     initialized : bpy.props.BoolProperty(default = False)
+    mantis_node_class_name=bl_idname
     
     def init(self, context):
         self.inputs.new ( "RelationshipSocket", "Input Relationship" )
@@ -698,3 +702,6 @@ class LinkDrivenParameterNode(Node, LinkNode):
         self.use_custom_color = True
         self.color = driverColor
 
+# Set up the class property that ties the UI classes to the Mantis classes.
+for cls in TellClasses():
+    cls.set_mantis_class()
