@@ -595,9 +595,9 @@ class NodeLink:
             init_dependencies(to_node)
 
 class NodeSocket:
-    @property # this is a read-only property.
-    def is_linked(self):
-        return bool(self.links)
+    # @property # this is a read-only property.
+    # def is_linked(self):
+    #     return bool(self.links)
         
     def __init__(self, is_input = False,
                  node = None, name = None,
@@ -608,6 +608,7 @@ class NodeSocket:
         self.name = name
         self.is_input = is_input
         self.links = []
+        self.is_linked = False
         if (traverse_target):
             self.can_traverse = True
         
@@ -618,6 +619,8 @@ class NodeSocket:
         else:
             from_node   = self.node; to_node   = node
             from_socket = self.name; to_socket = socket
+        from_node.outputs[from_socket].is_linked = True
+        to_node.inputs[to_socket].is_linked = True
         for l in from_node.outputs[from_socket].links:
             if l.to_node==to_node and l.to_socket==to_socket:
                 return None
@@ -636,6 +639,7 @@ class NodeSocket:
     def flush_links(self):
         """ Removes dead links from this socket."""
         self.links = [l for l in self.links if l.is_alive]
+        self.is_linked = bool(self.links)
         
     @property
     def is_connected(self):
@@ -657,7 +661,6 @@ class MantisNodeSocketCollection(dict):
 
     def __setitem__(self, key, value=None):
         """Allows setting items using square brackets: obj[key] = value"""
-        assert isinstance(key, str) and isinstance(value, NodeSocket), "Key must be a string and value must be NodeSocket"
         super().__setitem__(key, value)
     
     def __delitem__(self, key):
