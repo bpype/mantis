@@ -5,14 +5,12 @@ from .utilities import get_node_prototype, class_for_mantis_prototype_node, \
 
     
 
-# BAD NAMES ahead, as these have nothing to do with NodeReroute nodes.
-def reroute_common(nc, nc_to, all_nc):
+
+def grp_node_reroute_common(nc, nc_to, all_nc):
     # we need to do this: go  to the to-node
     # then reroute the link in the to_node all the way to the beginning
     # so that the number of links in "real" nodes is unchanged
     # then the links in the dummy nodes need to be deleted
-    # watch=False
-    # if nc.signature[-1] == 'NodeGroupOutput': watch=True
     for inp_name, inp in nc.inputs.items():
         # assume each input socket only has one input for now
         if inp.is_connected:
@@ -22,7 +20,7 @@ def reroute_common(nc, nc_to, all_nc):
                 from_socket = in_link.from_socket
                 links = []
                 from_links = from_nc.outputs[from_socket].links.copy()
-                while(from_links): # This is a weird way to do this HACK
+                while(from_links):
                     from_link = from_links.pop()
                     if from_link == in_link:
                         from_link.die()
@@ -41,18 +39,15 @@ def reroute_common(nc, nc_to, all_nc):
 def reroute_links_grp(nc, all_nc):
     if nc.inputs:
         if (nc_to := all_nc.get( ( *nc.signature, "NodeGroupInput") )):
-            reroute_common(nc, nc_to, all_nc)
+            grp_node_reroute_common(nc, nc_to, all_nc)
         else:
             raise RuntimeError("internal error: failed to enter a node group ")
 
 def reroute_links_grpout(nc, all_nc):
     if (nc_to := all_nc.get( ( *nc.signature[:-1],) )):
-        reroute_common(nc, nc_to, all_nc)
+        grp_node_reroute_common(nc, nc_to, all_nc)
     else:
         raise RuntimeError("error leaving a node group (maybe you are running the tree from inside a node group?)")
-
-def reroute_links_grpin(nc, all_nc):
-    pass
 
 # FIXME I don't think these signatures are unique.
 def insert_lazy_parents(nc):
@@ -142,23 +137,16 @@ def gen_node_containers(base_tree, current_tree, tree_path_names, all_nc, local_
     from .internal_containers import DummyNode
     from .base_definitions import SchemaUINode
     for np in current_tree.nodes:
-        # TODO: find out why I had to add this in. these should be taken care of already? BUG
         if np.bl_idname in ["NodeFrame", "NodeReroute"]:
             continue # not a Mantis Node
         if (nc_cls := class_for_mantis_prototype_node(np)):
             sig = (None, *tree_path_names, np.name)
-            # but I will probably choose to handle this elsewhere
-            # if isinstance(np, SchemaUINode):
-            #     continue # we won't do this one here.
             if np.bl_idname in replace_types:
-                # prPurple(np.bl_idname)
                 sig = (None, *tree_path_names, np.bl_idname)
                 if local_nc.get(sig):
                     continue # already made
             nc = nc_cls( sig , base_tree)
             local_nc[sig] = nc; all_nc[sig] = nc
-            # if np.bl_idname in ['UtilityMatricesFromCurve', 'UtilityBreakArray']:
-            #     schema_nodes[sig]=nc
         elif np.bl_idname in ["NodeGroupInput", "NodeGroupOutput"]: # make a Dummy Node
             # we only want ONE dummy in/out per tree_path, so use the bl_idname
             sig = (None, *tree_path_names, np.bl_idname)
@@ -167,10 +155,6 @@ def gen_node_containers(base_tree, current_tree, tree_path_names, all_nc, local_
                 local_nc[sig] = nc; all_nc[sig] = nc; dummy_nodes[sig] = nc
                 if np.bl_idname in ["NodeGroupOutput"]:
                     nc.reroute_links = reroute_links_grpout
-                if np.bl_idname in ["NodeGroupInput"]:
-                    nc.reroute_links = reroute_links_grpin
-            # else:
-            #     nc = local_nc.get(sig)
         elif np.bl_idname in  ["MantisNodeGroup", "MantisSchemaGroup"]:
             nc = DummyNode( signature= (sig := (None, *tree_path_names, np.name) ), base_tree=base_tree, prototype=np )
             local_nc[sig] = nc; all_nc[sig] = nc; dummy_nodes[sig] = nc
@@ -189,7 +173,7 @@ def gen_node_containers(base_tree, current_tree, tree_path_names, all_nc, local_
             nc.fill_parameters()
 
 def data_from_tree(base_tree, tree_path, dummy_nodes, all_nc, all_schema):
-    # TODO: it should be realtively easy to make this use a while loop instead of recursion.
+    # TODO: it should be relatively easy to make this use a while loop instead of recursion.
     local_nc, group_nodes = {}, []
     tree_path_names = [tree.name for tree in tree_path if hasattr(tree, "name")]
     if tree_path[-1]:
@@ -207,64 +191,41 @@ def data_from_tree(base_tree, tree_path, dummy_nodes, all_nc, all_schema):
             link_node_containers((None, *tree_path_names), link, local_nc)
         # Now, descend into the Node Groups and recurse
         for nc in group_nodes:
-            # ng = get_node_prototype(nc.signature, base_tree)
             data_from_tree(base_tree, tree_path+[nc.prototype], dummy_nodes, all_nc, all_schema)
     return dummy_nodes, all_nc, all_schema
 
 from .utilities import check_and_add_root, init_connections, init_dependencies, init_schema_dependencies
 
-
-def is_signature_in_other_signature(sig_a, sig_b):
-    # this is the easiest but not the best way to do this:
-    # this function is hideous but it does not seem to have any significant effect on timing
-    #    tested it with profiling on a full character rig.
-    # OK. Had another test in a more extreme situation and this one came out on top for time spent and calls
-    # gotta optimize this one.
-    sig_a = list(sig_a)
-    sig_a = ['MANTIS_NONE' if val is None else val for val in sig_a]
-    sig_b = list(sig_b)
-    sig_b = ['MANTIS_NONE' if val is None else val for val in sig_b]
-    string_a = "".join(sig_a)
-    string_b = "".join(sig_b)
-    return string_a in string_b
+def is_signature_in_other_signature(parent_signature, child_signature):
+    # If the other signature is shorter, it isn't a child node
+    if len(parent_signature) > len(child_signature):
+        return False
+    return parent_signature[0:] == child_signature[:len(parent_signature)]
 
 def solve_schema_to_tree(nc, all_nc, roots=[]):
     from .utilities import get_node_prototype
     np = get_node_prototype(nc.signature, nc.base_tree)
-    # if not hasattr(np, 'node_tree'):
-    #     nc.bPrepare()
-    #     nc.prepared=True
-    #     return {}
     from .schema_solve import SchemaSolver
-    length = nc.evaluate_input("Schema Length")
-
     tree = np.node_tree
+    length = nc.evaluate_input("Schema Length")
     prOrange(f"Expanding schema {tree.name} in node {nc} with length {length}.")
-
-    for inp in nc.inputs.values():
-        inp.links.sort(key=lambda a : -a.multi_input_sort_id)
 
     solver = SchemaSolver(nc, all_nc, np)
     solved_nodes = solver.solve()
-    # prGreen(f"Finished solving schema {tree.name} in node {nc}.")
     prWhite(f"Schema declared {len(solved_nodes)} nodes.")
-    nc.prepared = True
 
-    # TODO this should be handled by the schema's finalize() function
+    # maybe this should be done in schema solver. TODO invesitigate a more efficient way
     del_me = []
     for k, v in all_nc.items():
         # delete all the schema's internal nodes. The links have already been deleted by the solver.
         if v.signature[0] not in ['MANTIS_AUTOGENERATED'] and is_signature_in_other_signature(nc.signature, k):
-            # print (wrapOrange("Culling: ")+wrapRed(v))
             del_me.append(k)
     for k in del_me:
         del all_nc[k]
-    
     for k,v in solved_nodes.items():
         all_nc[k]=v
         init_connections(v)
         check_and_add_root(v, roots, include_non_hierarchy=True)
-    # end TODO
 
     return solved_nodes
 
@@ -349,8 +310,7 @@ def parse_tree(base_tree):
     roots, array_nodes = [], []
     from .misc_containers import UtilityArrayGet
     for mantis_node in all_mantis_nodes.values():
-        # clean up the groups
-        if mantis_node.node_type in ["DUMMY"]:
+        if mantis_node.node_type in ["DUMMY"]: # clean up the groups
             if mantis_node.prototype.bl_idname in ("MantisNodeGroup", "NodeGroupOutput"):
                 continue
         # Initialize the dependencies and connections (from/to links) for each node.
@@ -425,26 +385,24 @@ def parse_tree(base_tree):
         raise RuntimeError("Failed to resolve all schema declarations")
     # I had a problem with this looping forever. I think it is resolved... but I don't know lol
 
-    all_mantis_nodes = list(all_mantis_nodes.values()).copy()
+    all_mantis_nodes = list(all_mantis_nodes.values())
     kept_nc = {}
     while (all_mantis_nodes):
         nc = all_mantis_nodes.pop()
         if nc in array_nodes:
             continue
-
         if nc.node_type in ["DUMMY"]:
                 continue
         # cleanup autogen nodes
         if nc.signature[0] == "MANTIS_AUTOGENERATED" and len(nc.inputs) == 0 and len(nc.outputs) == 1:
             output=list(nc.outputs.values())[0]
-            value=list(nc.parameters.values())[0]   # TODO modify the dependecy get function to exclude these nodes completely
+            value=list(nc.parameters.values())[0]   # IDEA modify the dependecy get function to exclude these nodes completely
             for l in output.links:
                 to_node = l.to_node; to_socket = l.to_socket
                 l.die()
                 to_node.parameters[to_socket] = value
                 del to_node.inputs[to_socket]
                 init_dependencies(to_node)
-                # init_connections(from_node) # this is unnecesary
             continue
 
         if (nc.node_type in ['XFORM']) and ("Relationship" in nc.inputs.keys()):
@@ -470,16 +428,12 @@ def switch_mode(mode='OBJECT', objects = []):
 def execution_error_cleanup(node, exception, switch_objects = [] ):
     from bpy import  context
     if node:
-        # this stuff that is commented out is good and useful but I fear to enable it by default.
-        # TODO: see about this zoom-to-node stuff.
+        # TODO: see about zooming-to-node.
         base_tree = node.base_tree
         tree = base_tree
         try:
             pass
             space = context.space_data
-            # path = space.path
-            # path.clear()
-            # path.start(base_tree)
             for name in node.signature[1:]:
                 for n in tree.nodes: n.select = False
                 n = tree.nodes[name]
@@ -487,7 +441,6 @@ def execution_error_cleanup(node, exception, switch_objects = [] ):
                 tree.nodes.active = n
                 if hasattr(n, "node_tree"):
                     tree = n.node_tree
-                    # path.append(tree, node=n)
         except AttributeError: # not being run in node graph
             pass
         finally:
@@ -502,16 +455,7 @@ def execution_error_cleanup(node, exception, switch_objects = [] ):
     return exception
 
 
-#execute tree is really slow overall, but still completes 1000s of nodes in only 
 def execute_tree(nodes, base_tree, context, error_popups = False):
-    # for node in nodes.values():
-    #     if node.signature == (None, 'IK/FK Switch Spine', 'Copy Location'):
-    #         print("beans")
-    #         prRed (len(node.outputs["Output Relationship"].links))
-    #         for l in node.outputs["Output Relationship"].links:
-    #             print (l)
-    #         raise NotImplementedError 
-    # return
     import bpy
     from time import time
     from .node_container_common import GraphError

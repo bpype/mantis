@@ -42,6 +42,11 @@ class SchemaSolver:
         self.init_schema_links()
         self.set_index_strings()
 
+        # Sort the multi-input nodes in reverse order of ID, this ensures that they are
+        #   read in the order they were created
+        for inp in self.node.inputs.values():
+            inp.links.sort(key=lambda a : -a.multi_input_sort_id)
+
         for ui_node in self.tree.nodes:
             if isinstance(ui_node, SchemaUINode):
                 # first we need to fill the parameters of the schema nodes.
@@ -522,5 +527,6 @@ class SchemaSolver:
                     self.nested_schemas[sig] = nc
         self.finalize(frame_mantis_nodes)
         self.node.solver = self
+        self.node.prepared = True
         return self.solved_nodes
         
