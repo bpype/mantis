@@ -103,9 +103,9 @@ class LinkInheritNode(Node, LinkNode):
                 self.inputs["Inherit Scale"].hide    = False
                 self.inputs["Connected"].hide       = False
             else:
-                self.inputs["Inherit Rotation"].hide = True
-                self.inputs["Inherit Scale"].hide    = True
-                self.inputs["Connected"].hide        = True
+                self.inputs["Inherit Rotation"].hide = True or self.inputs["Inherit Rotation"].is_connected
+                self.inputs["Inherit Scale"].hide    = True or self.inputs["Inherit Scale"].is_connected
+                self.inputs["Connected"].hide        = True or self.inputs["Connected"].is_connected
             # the node_groups on the way here ought to be active if there
             #  is no funny business going on.
     
