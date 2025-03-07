@@ -550,7 +550,8 @@ class xFormBone(MantisNode):
 
 
 
-    
+        pb.custom_shape_transform = None
+        pb.custom_shape = None
         
         if len(self.inputs["Custom Object xForm Override"].links) > 0:
             trace = trace_single_line(self, "Custom Object xForm Override")
