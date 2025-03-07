@@ -335,11 +335,28 @@ def on_animation_playback_post_handler(scene,depsgraph):
         if t.bl_idname in ['MantisTree', 'SchemaTree']:
             t.is_executing = False
 @persistent
-def on_undo_pre_handler(scene): # the undo will still trigger a depsgraph update
+def on_undo_pre_handler(scene): # the undo will trigger a depsgraph update
     for t in bpy.data.node_groups: # so we enable prevent_next_exec.
         if t.bl_idname in ['MantisTree', 'SchemaTree']:
             t.prevent_next_exec = True
 
+@persistent
+def on_undo_post_handler(scene): # the undo will trigger a depsgraph update
+    for t in bpy.data.node_groups: # so we enable prevent_next_exec.
+        if t.bl_idname in ['MantisTree', 'SchemaTree']:
+            t.prevent_next_exec = True
+
+@persistent
+def on_save_pre_handler(scene): # save-as will trigger a depsgraph update
+    for t in bpy.data.node_groups: # so we enable prevent_next_exec.
+        if t.bl_idname in ['MantisTree', 'SchemaTree']:
+            t.prevent_next_exec = True
+# annoyingly, regular save does not trigger a DG update so we also need this:
+@persistent
+def on_save_post_handler(scene): # The DG has already updated and we can disable this.
+    for t in bpy.data.node_groups:
+        if t.bl_idname in ['MantisTree', 'SchemaTree']:
+            t.prevent_next_exec = False
 
 def register():
     if bpy.app.version >= (4, 4):
@@ -365,6 +382,8 @@ def register():
     # add the handlers
     bpy.app.handlers.depsgraph_update_pre.append(update_handler)
     bpy.app.handlers.depsgraph_update_post.append(execute_handler)
+    bpy.app.handlers.save_pre.append(on_save_pre_handler)
+    bpy.app.handlers.save_post.append(on_save_post_handler)
     bpy.app.handlers.load_post.append(version_update_handler)
     bpy.app.handlers.animation_playback_pre.append(on_animation_playback_pre_handler)
     bpy.app.handlers.animation_playback_post.append(on_animation_playback_post_handler)
