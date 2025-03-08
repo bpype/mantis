@@ -179,20 +179,6 @@ class InputMatrix(MantisNode):
         self.node_type = 'UTILITY'
         self.prepared = True
         self.executed = True
-        #
-        from mathutils import Matrix
-        from .utilities import get_node_prototype
-        # TODO: this should probably be in fill_parameters
-        node_prototype = get_node_prototype(self.signature, self.base_tree)
-        
-        matrix = ( node_prototype.first_row[ 0], node_prototype.first_row[ 1], node_prototype.first_row[ 2], node_prototype.first_row[ 3],
-                   node_prototype.second_row[0], node_prototype.second_row[1], node_prototype.second_row[2], node_prototype.second_row[3],
-                   node_prototype.third_row[ 0], node_prototype.third_row[ 1], node_prototype.third_row[ 2], node_prototype.third_row[ 3],
-                   node_prototype.fourth_row[0], node_prototype.fourth_row[1], node_prototype.fourth_row[2], node_prototype.fourth_row[3], )
-        self.parameters["Matrix"] = Matrix([matrix[0:4], matrix[4:8], matrix[8:12], matrix[12:16]])
-
-    def fill_parameters(self, prototype=None):
-        return
 
 class UtilityMatrixFromCurve(MantisNode):
     '''Get a matrix from a curve'''
