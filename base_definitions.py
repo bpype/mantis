@@ -25,6 +25,13 @@ def error_popup_draw(self, context):
 
 mantis_root = ".".join(__name__.split('.')[:-1]) # absolute HACK
 
+
+# https://docs.blender.org/api/master/bpy.types.NodeTree.html#bpy.types.NodeTree.valid_socket_type
+# thank you, Sverchok
+def valid_interface_types(cls : NodeTree, socket_idname : str):
+    from .socket_definitions import tell_valid_bl_idnames
+    return socket_idname in tell_valid_bl_idnames()
+
 class MantisTree(NodeTree):
     '''A custom node tree type that will show up in the editor type list'''
     bl_idname = 'MantisTree'
@@ -47,11 +54,8 @@ class MantisTree(NodeTree):
 
     if (bpy.app.version < (4, 4, 0)):  # in 4.4 this leads to a crash
         @classmethod
-        def valid_socket_type(cls : NodeTree, socket_type: str):
-            # https://docs.blender.org/api/master/bpy.types.NodeTree.html#bpy.types.NodeTree.valid_socket_type
-            from .socket_definitions import Tell_bl_idnames
-            return socket_type in Tell_bl_idnames()
-            # thank you, Sverchok
+        def valid_socket_type(cls : NodeTree, socket_idname: str):
+            return valid_interface_types(cls, socket_idname)
             
     def update_tree(self, context = None):
         if self.is_exporting:
@@ -126,11 +130,8 @@ class SchemaTree(NodeTree):
 
     if (bpy.app.version < (4, 4, 0)):  # in 4.4 this leads to a crash
         @classmethod
-        def valid_socket_type(cls, socket_type: str):
-            # https://docs.blender.org/api/master/bpy.types.NodeTree.html#bpy.types.NodeTree.valid_socket_type
-            from .socket_definitions import Tell_bl_idnames
-            return socket_type in Tell_bl_idnames()
-            # thank you, Sverchok
+        def valid_socket_type(cls : NodeTree, socket_idname: str):
+            return valid_interface_types(cls, socket_idname)
             
 
 
