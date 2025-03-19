@@ -7,32 +7,7 @@ from .utilities import (prRed, prGreen, prPurple, prWhite,
                               wrapRed, wrapGreen, wrapPurple, wrapWhite,
                               wrapOrange,)
 
-def TellClasses():
-    return [
-        MantisGroupNodes,
-        MantisEditGroup,
-        ExecuteNodeTree,
-        # CreateMetaGroup,
-        QueryNodeSockets,
-        ForceDisplayUpdate,
-        CleanUpNodeGraph,
-        MantisMuteNode,
-        SelectNodesOfType,
-        ConnectNodeToInput,
-        # xForm
-        AddCustomProperty,
-        EditCustomProperty,
-        RemoveCustomProperty,
-        # EditFCurveNode,
-        FcurveAddKeyframeInput,
-        FcurveRemoveKeyframeInput,
-        # Driver
-        DriverAddDriverVariableInput,
-        DriverRemoveDriverVariableInput,
-        # Armature Link Node
-        LinkArmatureAddTargetInput,
-        LinkArmatureRemoveTargetInput,]
-        # ExportNodeTreeToJSON,]
+
 
 def mantis_tree_poll_op(context):
     space = context.space_data
@@ -735,3 +710,84 @@ class LinkArmatureRemoveTargetInput(bpy.types.Operator):
         n = context.node
         n.inputs.remove(n.inputs[-1]); n.inputs.remove(n.inputs[-1])
         return {'FINISHED'}
+
+
+def get_socket_enum(operator, context):
+    valid_types = []; i = -1
+    from .socket_definitions import TellClasses, MantisSocket
+    for cls in TellClasses():
+        if cls.is_valid_interface_type:
+            valid_types.append( (cls.bl_idname, cls.bl_label, "Socket Type", i := i + 1), )
+    return valid_types
+
+
+class B4_4_0_Workaround_NodeTree_Interface_Update(Operator):
+    """Selects all nodes of same type as active node."""
+    bl_idname = "mantis.node_tree_interface_update_4_4_0_workaround"
+    bl_label = "Add Socket to Node Tree"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    socket_name : bpy.props.StringProperty()
+    output : bpy.props.BoolProperty()
+    socket_type  : bpy.props.EnumProperty(
+        name="Socket Type",
+        description="Socket Type",
+        items=get_socket_enum,
+        default=0,)
+
+    tree_invoked : bpy.props.StringProperty(options ={'HIDDEN'})
+    @classmethod
+    def poll(cls, context):
+        return (any_tree_poll(context))
+
+    def invoke(self, context, event):
+        self.tree_invoked = context.active_node.id_data.name
+        # we use active_node here ^ because we are comparing the active node to the selection.
+        wm = context.window_manager
+        return wm.invoke_props_dialog(self)
+    
+    def execute(self, context):
+        tree = bpy.data.node_groups[self.tree_invoked]
+        in_out = 'OUTPUT' if self.output else 'INPUT'
+        tree.interface.new_socket(self.socket_name, in_out=in_out, socket_type=self.socket_type)
+        # try to prevent the next execution
+        # because updating the interface triggers a depsgraph update.
+        # this doesn't actually work though...TODO
+        if tree.bl_idname == "MantisTree":
+            tree.prevent_next_exec=True 
+        return {"FINISHED"}
+
+
+
+
+# this has to be down here for some reason. what a pain
+classes = [
+        MantisGroupNodes,
+        MantisEditGroup,
+        ExecuteNodeTree,
+        # CreateMetaGroup,
+        QueryNodeSockets,
+        ForceDisplayUpdate,
+        CleanUpNodeGraph,
+        MantisMuteNode,
+        SelectNodesOfType,
+        ConnectNodeToInput,
+        # xForm
+        AddCustomProperty,
+        EditCustomProperty,
+        RemoveCustomProperty,
+        # EditFCurveNode,
+        FcurveAddKeyframeInput,
+        FcurveRemoveKeyframeInput,
+        # Driver
+        DriverAddDriverVariableInput,
+        DriverRemoveDriverVariableInput,
+        # Armature Link Node
+        LinkArmatureAddTargetInput,
+        LinkArmatureRemoveTargetInput,
+        ]
+if (bpy.app.version >= (4, 4, 0)):
+    classes.append(B4_4_0_Workaround_NodeTree_Interface_Update)
+
+def TellClasses():
+    return classes
