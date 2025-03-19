@@ -74,7 +74,9 @@ def export_to_json(trees, path="", write_file=True, only_selected=False):
                     "__slots__", "dimensions", "type", "interface",
                     "library_weak_reference", "parsed_tree", "node_tree_updater",
                     "asset_data", "preview",  # blender asset stuff
-                    "object_reference" ] # this one is here to hold on to widgets when appending
+                    "object_reference", # this one is here to hold on to widgets when appending
+                    "color_tag" , # added in blender 4.4, not used by Mantis, readonly.
+                    ] 
     # don't ignore: "bl_idname", "bl_label",
     # ignore the name, it's the dict - key for the node props
      # no that's stupid don't ignore the name good grief

@@ -45,9 +45,9 @@ class MantisTree(NodeTree):
     
     parsed_tree={}
 
-    if bpy.app.version >= (3, 2):  # in 3.1 this can lead to a crash
+    if (bpy.app.version < (4, 4, 0)):  # in 4.4 this leads to a crash
         @classmethod
-        def valid_socket_type(cls, socket_type: str):
+        def valid_socket_type(cls : NodeTree, socket_type: str):
             # https://docs.blender.org/api/master/bpy.types.NodeTree.html#bpy.types.NodeTree.valid_socket_type
             from .socket_definitions import Tell_bl_idnames
             return socket_type in Tell_bl_idnames()
@@ -92,6 +92,7 @@ class MantisTree(NodeTree):
         #    - Non-hierarchy links should be ignored in the circle-check and so the links should be marked valid in such a circle
         #    - hierarchy-links should be marked invalid and prevent the tree from executing.
 
+
         
     
     def execute_tree(self,context, error_popups = False):
@@ -123,7 +124,7 @@ class SchemaTree(NodeTree):
 
     mantis_version:IntVectorProperty(default=[0,9,2])
 
-    if bpy.app.version >= (3, 2):  # in 3.1 this can lead to a crash
+    if (bpy.app.version < (4, 4, 0)):  # in 4.4 this leads to a crash
         @classmethod
         def valid_socket_type(cls, socket_type: str):
             # https://docs.blender.org/api/master/bpy.types.NodeTree.html#bpy.types.NodeTree.valid_socket_type
@@ -160,10 +161,11 @@ class MantisUINode:
             raise e
 
     def insert_link(self, link):
+        if (bpy.app.version < (4, 4, 0)):
+            return # this causes a crasah due to a bug.
         context = bpy.context
         if context.space_data:
             node_tree = context.space_data.path[0].node_tree
-            from . import readtree
             if node_tree.do_live_update:
                 node_tree.update_tree(context)
                 if (link.to_socket.is_linked == False):

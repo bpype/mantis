@@ -359,9 +359,6 @@ def on_save_post_handler(scene): # The DG has already updated and we can disable
             t.prevent_next_exec = False
 
 def register():
-    if bpy.app.version >= (4, 4):
-        raise NotImplementedError("Blender 4.4 is not supported at this time.")
-
     from bpy.utils import register_class
     
     for cls in classes:
