@@ -63,6 +63,7 @@ def insert_lazy_parents(nc):
                 if from_link.to_node == nc and from_link.to_socket == "Relationship":
                     break # this is it
             from_link.to_node = inherit_nc; from_link.to_socket="Parent"
+            from_link.to_node.inputs[from_link.to_socket].is_linked=True
             
             links=[]
             while (nc.inputs["Relationship"].links):
@@ -70,6 +71,7 @@ def insert_lazy_parents(nc):
                 if to_link.from_node == from_nc and to_link.from_socket == "xForm Out":
                     continue # don't keep this one
                 links.append(to_link)
+                to_link.from_node.outputs[from_link.from_socket].is_linked=True
             
             nc.inputs["Relationship"].links=links
             link=NodeLink(from_node=inherit_nc, from_socket="Inheritance", to_node=nc, to_socket="Relationship")
