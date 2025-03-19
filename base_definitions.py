@@ -29,8 +29,12 @@ mantis_root = ".".join(__name__.split('.')[:-1]) # absolute HACK
 # https://docs.blender.org/api/master/bpy.types.NodeTree.html#bpy.types.NodeTree.valid_socket_type
 # thank you, Sverchok
 def valid_interface_types(cls : NodeTree, socket_idname : str):
-    from .socket_definitions import tell_valid_bl_idnames
-    return socket_idname in tell_valid_bl_idnames()
+    from .socket_definitions import tell_valid_bl_idnames, TellClasses
+    #TODO: do the versioning code to handle this so it can be in all versions
+    if bpy.app.version <= (4,4,0): # should work in 4.4.1
+        return socket_idname in [cls.bl_idname for cls in TellClasses()]
+    else: # once versioning is finished this will be unnecesary.
+        return socket_idname in tell_valid_bl_idnames()
 
 class MantisTree(NodeTree):
     '''A custom node tree type that will show up in the editor type list'''
