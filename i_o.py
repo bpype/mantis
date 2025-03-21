@@ -142,6 +142,11 @@ def export_to_json(trees, path="", write_file=True, only_selected=False):
 
         nodes = {}
         for n in tree.nodes:
+            # if this is a node-group, force it to update its interface, because it may be messed up.
+            # can remove this HACK when I have stronger guarentees about node-group's keeping the interface
+            from .base_definitions import node_group_update
+            if hasattr(n, "node_tree"):
+                node_group_update(n, force=True)
             if only_selected and n.select == False:
                 continue
             node_props, sockets = {}, {}
@@ -452,6 +457,10 @@ def do_import(data, context):
         
         interface_parent_me = {}
 
+        # I need to guarantee that the interface items are in the right order.
+        interface_sockets = [] # I'll just sort them afterwards so I hold them here.
+        
+
         for s_name, s_props in tree_in_out.items():
             if s_props["item_type"] == 'SOCKET':
                 if s_props["socket_type"] == "LayerMaskSocket":
@@ -460,6 +469,7 @@ def do_import(data, context):
                     socket_type = "VectorSocket"
                 sock = tree.interface.new_socket(s_props["name"], in_out=s_props["in_out"], socket_type=socket_type)
                 tree_sock_id_map[s_name] = sock.identifier
+                interface_sockets.append( (sock, s_props['position']) )
                     # TODO: set whatever properties are needed (default, etc)
                 if panel := s_props.get("parent"): # this get is just to maintain compatibility with an older form of this script... and it is harmless
                     interface_parent_me[sock] = (panel, s_props["position"])
@@ -472,6 +482,13 @@ def do_import(data, context):
                                     tree.interface.items_tree.get(panel),
                                     index,
                                     )
+        
+        # Go BACK through and set the index/position now that all items exist.
+        interface_sockets.sort(key=lambda a : a[1])
+        for (socket, position) in interface_sockets:
+            print (socket.name, position)
+            tree.interface.move(socket, position)
+        
     # Now go and do nodes and links
     for tree_name, tree_data in data.items():
         print ("Importing sub-graph: %s with %s nodes" % (wrapGreen(tree_name), wrapPurple(len(tree_data[2]))) )
