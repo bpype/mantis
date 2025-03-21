@@ -220,6 +220,10 @@ def node_group_update(node, force = False):
 
     identifiers_in={socket.identifier:socket for socket in node.inputs}
     identifiers_out={socket.identifier:socket for socket in node.outputs}
+    indices_in,indices_out={},{} # check by INDEX to see if the socket's name/type match.
+    for collection, map in [(node.inputs, indices_in), (node.outputs, indices_out)]:
+        for i, socket in enumerate(collection):
+            map[socket.identifier]=i
 
     if node.node_tree is None:
         node.inputs.clear(); node.outputs.clear()
@@ -232,12 +236,14 @@ def node_group_update(node, force = False):
         if item.in_out == 'OUTPUT':
             if s:= identifiers_out.get(item.identifier): # if the requested output doesn't exist, update
                 found_out.append(item.identifier)
+                if (indices_out[s.identifier]!=item.index): update_output=True; continue
                 if update_output: continue
                 if s.bl_idname != item.socket_type: update_output = True; continue
             else: update_output = True; continue
         else:
             if s:= identifiers_in.get(item.identifier): # if the requested input doesn't exist, update
                 found_in.append(item.identifier)
+                if (indices_in[s.identifier]!=item.index): update_input=True; continue
                 if update_input: continue # done here
                 if s.bl_idname != item.socket_type: update_input = True; continue
             else: update_input = True; continue
