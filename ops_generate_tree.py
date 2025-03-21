@@ -882,7 +882,7 @@ def do_generate_armature(armOb, context, node_tree, parent_node=None):
             else: # This is a root
                 if (parent := bone_inherit_node.get(armOb.name)) is None:
                     parent = node_tree.nodes.new("linkInherit")
-                    bone_inherit_node[armOb.name] = parent
+                    bone_inherit_node[armOb.name] = [parent]
                     node_tree.links.new(armature.outputs["xForm Out"], parent.inputs['Parent'])
                     parent.inputs["Inherit Rotation"].default_value = True
                 node_tree.links.new(parent.outputs["Inheritance"], bone_node.inputs['Relationship'])
