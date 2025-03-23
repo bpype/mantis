@@ -27,10 +27,7 @@ def schema_init_sockets(nc, is_input = True, in_out='INPUT', category=''):
             if item.item_type == 'PANEL': continue
             if item.parent and item.parent.name == category:
                 if item.in_out == in_out:
-                    sockets[item.name] = NodeSocket(
-                        is_input=is_input,
-                        name=item.name,
-                        node=nc)
+                    sockets.init_sockets([item.name])
     nc.init_parameters()
 
 
@@ -74,19 +71,44 @@ class SchemaArrayOutput(SchemaNode):
         schema_init_sockets(self, is_input=True, in_out='OUTPUT', category='Array')
 
 class SchemaConstInput(SchemaNode):
-    def __init__(self, signature, base_tree):
+    def __init__(self, signature, base_tree, parent_schema_node=None):
         super().__init__(signature, base_tree)
-        schema_init_sockets(self, is_input=False, in_out='INPUT', category='Constant')
+        if parent_schema_node:
+            # this allows us to generate the Constant Input from a normal Node Group
+            # and treat the node group as a schema
+            parent_tree = parent_schema_node.prototype.node_tree
+            sockets=self.outputs
+            for item in parent_tree.interface.items_tree:
+                if item.item_type == 'PANEL': continue
+                if item.in_out == 'INPUT':
+                    sockets.init_sockets([item.name])
+            self.init_parameters()
+            
+        else:
+            schema_init_sockets(self, is_input=False, in_out='INPUT', category='Constant')
 
 
 class SchemaConstOutput(SchemaNode):
-    def __init__(self, signature, base_tree):
+    def __init__(self, signature, base_tree, parent_schema_node=None):
         super().__init__(signature, base_tree)
         inputs = [
             "Expose when N==",
         ]
         self.inputs.init_sockets(inputs)
-        schema_init_sockets(self, is_input=True, in_out='OUTPUT', category='Constant')
+        if parent_schema_node:
+            # this allows us to generate the Constant Input from a normal Node Group
+            # and treat the node group as a schema
+            parent_tree = parent_schema_node.prototype.node_tree
+            sockets=self.inputs
+            for item in parent_tree.interface.items_tree:
+                if item.item_type == 'PANEL': continue
+                if item.in_out == 'OUTPUT':
+                    sockets.init_sockets([item.name, "Expose when N==",])
+            self.init_parameters()
+            self.parameters['Expose when N=="']=1
+
+        else:
+            schema_init_sockets(self, is_input=True, in_out='OUTPUT', category='Constant')
 
 
         

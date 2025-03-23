@@ -9,11 +9,11 @@ class DummyNode(MantisNode):
         self.prototype = prototype
         self.node_type = 'DUMMY'
         self.prepared = True
-        if prototype.bl_idname in ["MantisSchemaGroup"]:
-            self.node_type = 'DUMMY_SCHEMA'
-            self.prepared = False
-            self.uuid = uuid4()
+        self.uuid = uuid4()
         if prototype:
+            if prototype.bl_idname in ["MantisSchemaGroup"]:
+                self.node_type = 'DUMMY_SCHEMA'
+                self.prepared = False
             for sock in prototype.inputs:
                 if sock.identifier == "__extend__" or sock.name == "__extend__":
                     continue
