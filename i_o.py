@@ -459,6 +459,7 @@ def do_import(data, context):
 
         # I need to guarantee that the interface items are in the right order.
         interface_sockets = [] # I'll just sort them afterwards so I hold them here.
+        default_position=0 # We'll use this if the position attribute is not set when e.g. making groups.
         
 
         for s_name, s_props in tree_in_out.items():
@@ -469,7 +470,9 @@ def do_import(data, context):
                     socket_type = "VectorSocket"
                 sock = tree.interface.new_socket(s_props["name"], in_out=s_props["in_out"], socket_type=socket_type)
                 tree_sock_id_map[s_name] = sock.identifier
-                interface_sockets.append( (sock, s_props['position']) )
+                if not (socket_position := s_props.get('position')):
+                    socket_position=default_position; default_position+=1
+                interface_sockets.append( (sock, socket_position) )
                     # TODO: set whatever properties are needed (default, etc)
                 if panel := s_props.get("parent"): # this get is just to maintain compatibility with an older form of this script... and it is harmless
                     interface_parent_me[sock] = (panel, s_props["position"])
