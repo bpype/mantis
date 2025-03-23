@@ -151,7 +151,7 @@ class SchemaSolver:
                 nc_from.inputs = {}
                 from .base_definitions import NodeSocket
                 nc_from.outputs = {ui_link.from_socket.name:NodeSocket(name = ui_link.from_socket.name, node=nc_from)}
-                from .base_definitions import get_socket_value
+                from .node_container_common import get_socket_value
                 nc_from.parameters = {ui_link.from_socket.name:index}
                 frame_mantis_nodes[sig]=nc_from
                 from_node = nc_from
@@ -190,8 +190,8 @@ class SchemaSolver:
         to_name = get_link_in_out(ui_link)[1]
         to_node = frame_mantis_nodes[(*self.autogen_path_names, to_name+self.index_str())]
         to_socket=ui_link.to_socket.name
-        from .base_definitions import SchemaGroup
-        if isinstance(to_ui_node, SchemaGroup):
+        from .base_definitions import MantisNodeGroup, SchemaGroup
+        if isinstance(to_ui_node, (SchemaGroup, MantisNodeGroup)):
             to_socket=ui_link.to_socket.identifier
         connection = from_node.outputs[incoming.from_socket].connect(node=to_node, socket=to_socket)
         init_connections(from_node)
