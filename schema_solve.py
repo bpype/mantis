@@ -578,6 +578,9 @@ class SchemaSolver:
                     
         
     def solve(self):
+        if self.solve_length < 1:
+            print (f"WARN: Schema {self.signature} has a length of 0 or less and will not expand.")
+            return {} # just don't do anything. This may cause errors if the Schema has dependencies - that's OK.
         for index in range(self.solve_length):
             self.index = index
             frame_mantis_nodes = self.solve_iteration()
