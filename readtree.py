@@ -552,6 +552,13 @@ def execute_tree(nodes, base_tree, context, error_popups = False):
                 else:
                     raise e
 
+
+        switch_mode(mode='OBJECT', objects=switch_me)
+        for ob in switch_me:
+            ob.data.pose_position = 'POSE'
+        # switch to pose mode here so that the nodes can use the final pose data
+        # this will require them to update the depsgraph.
+        
         for n in executed:
             try:
                 n.bFinalize(context)
@@ -560,10 +567,6 @@ def execute_tree(nodes, base_tree, context, error_popups = False):
                     raise execution_error_cleanup(n, e,)
                 else:
                     raise e
-
-        switch_mode(mode='OBJECT', objects=switch_me)
-        for ob in switch_me:
-            ob.data.pose_position = 'POSE'
         
         tot_time = (time() - start_execution_time)
         prGreen(f"Executed tree of {len(executed)} nodes in {tot_time} seconds")

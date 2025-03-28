@@ -12,6 +12,7 @@ from .utilities import (prRed, prGreen, prPurple, prWhite,
 
 from .utilities import get_socket_maps, relink_socket_map, do_relink
 
+FLOAT_EPSILON=0.0001 # used to check against floating point inaccuracy
 
 def TellClasses():
     #Why use a function to do this? Because I don't need every class to register.
@@ -702,3 +703,10 @@ class MantisNodeSocketCollection(dict):
     def __iter__(self):
         """Makes the class iterable"""
         return iter(self.values())
+
+# The Mantis Solver class is used to store the execution-specific variables that are used
+#   when executing the tree
+class MantisSolver():
+    pass
+
+# GOAL: make the switch to "group overlay" paradigm

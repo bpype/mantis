@@ -1,6 +1,6 @@
 from .node_container_common import *
 from bpy.types import Bone
-from .base_definitions import MantisNode, NodeSocket, GraphError
+from .base_definitions import MantisNode, NodeSocket, GraphError, FLOAT_EPSILON
 
 def TellClasses():
     return [
@@ -1176,6 +1176,131 @@ class LinkInverseKinematics(MantisLinkNode):
 
     def GetxForm(self):
         return GetxForm(self)
+    
+    def get_base_ik_bone(self, ik_bone):
+        chain_length : int = (self.evaluate_input("Chain Length"))
+        if not isinstance(chain_length, (int, float)):
+            raise GraphError(f"Chain Length must be an integer number in {self}::Chain Length")
+        if chain_length == 0:
+            chain_length = int("inf")
+        
+        base_ik_bone = ik_bone; i=1
+        while (i<chain_length) and (base_ik_bone.parent):
+            base_ik_bone=base_ik_bone.parent
+        return base_ik_bone
+
+    
+    def calc_pole_angle_pre(self, c, ik_bone):
+        """
+            This function gets us most of the way to a correct IK pole angle. Unfortunately,
+            due to the unpredictable nature of the iterative IK calculation, I can't figure
+            out an exact solution. So we do a bisect search in calc_pole_angle_post().
+        """
+        # TODO: instead of these checks, convert all to armature local space. But this is tedious.
+        if not c.target:
+            raise GraphError(f"IK Constraint {self} must have target.")
+        elif c.target.type != "ARMATURE":
+            raise NotImplementedError(f"Currently, IK Constraint Target for {self} must be a bone within the same armature.")
+        if c.pole_target.type != "ARMATURE":
+            raise NotImplementedError(f"Currently, IK Constraint Pole Target for {self} must be a bone within the same armature.")
+
+        ik_handle = c.target.pose.bones[c.subtarget]
+        if ik_handle.id_data != ik_bone.id_data:
+            raise NotImplementedError(f"Currently, IK Constraint Target for {self} must be a bone within the same armature.")
+        ik_pole = c.pole_target.pose.bones[c.pole_subtarget]
+        if ik_pole.id_data != ik_bone.id_data:
+            raise NotImplementedError(f"Currently,IK Constraint Pole Target for {self} must be a bone within the same armature.")
+        
+        base_ik_bone = self.get_base_ik_bone(ik_bone)
+        
+        start_effector = base_ik_bone.bone.head_local
+        end_effector = ik_handle.bone.head_local
+        pole_location = ik_pole.bone.head_local
+
+        # this is the X-Axis of the bone's rest-pose, added to its bone
+        knee_location = base_ik_bone.bone.matrix_local.col[0].xyz+start_effector
+        ik_axis = (end_effector-start_effector).normalized()
+        from .utilities import project_point_to_plane
+        pole_planar_projection = project_point_to_plane(pole_location, start_effector, ik_axis)
+        # this planar projection is necessary because the IK axis is different than the base_bone's y axis
+        planar_projection = project_point_to_plane(knee_location, start_effector, ik_axis)
+
+        knee_direction =(planar_projection       -  start_effector).normalized()
+        pole_direction =(pole_planar_projection  -  start_effector).normalized()
+
+        return knee_direction.angle(pole_direction)
+
+    
+    def calc_pole_angle_post(self, c, ik_bone, context):
+        """
+            This function should give us a completely accurate result for IK.
+        """
+        from time import time
+        start_time=time()
+        def signed_angle(vector_u, vector_v, normal):
+            # it seems that this fails if the vectors are exactly aligned under certain circumstances.
+            angle = vector_u.angle(vector_v, 0.0) # So we use a fallback of 0
+            # Normal specifies orientation
+            if angle != 0 and vector_u.cross(vector_v).angle(normal) < 1:
+                angle = -angle
+            return angle
+        
+        # we have already checked for valid data.
+        ik_handle = c.target.pose.bones[c.subtarget]
+        base_ik_bone = self.get_base_ik_bone(ik_bone)
+        start_effector = base_ik_bone.bone.head_local
+        angle = c.pole_angle
+
+        dg = context.view_layer.depsgraph
+        dg.update()
+
+        ik_axis = (ik_handle.bone.head_local-start_effector).normalized()
+        center_point = start_effector +(ik_axis*base_ik_bone.bone.length)
+        knee_direction = base_ik_bone.bone.tail_local - center_point
+        current_knee_direction = base_ik_bone.tail-center_point
+
+        error=signed_angle(current_knee_direction, knee_direction, ik_axis)
+        if error == 0:
+            prGreen("No Fine-tuning needed."); return
+        
+        # Flip it if needed
+        dot_before=current_knee_direction.dot(knee_direction)
+        if dot_before < 0 and angle!=0: # then it is not aligned and we should check the inverse
+            angle = -angle; c.pole_angle=angle
+            dg.update()
+            current_knee_direction = base_ik_bone.tail-center_point
+            dot_after=current_knee_direction.dot(knee_direction)
+            if dot_after < dot_before: # they are somehow less aligned
+                prPurple("Mantis has gone down an unexpected code path. Please report this as a bug.")
+                angle = -angle; c.pole_angle = angle
+                dg.update()
+
+        # now we can do a bisect search to find the best value.
+        error_threshhold = FLOAT_EPSILON
+        max_iterations=600
+        error=signed_angle(current_knee_direction, knee_direction, ik_axis)
+        if error == 0:
+            prGreen("No Fine-tuning needed."); return
+        angle+=error
+        alt_angle = angle+(error*-2) # should be very near the center when flipped here
+        # we still need to bisect search because the relationship of pole_angle <==> error is somewhat unpredictable
+        upper_bounds = alt_angle if alt_angle > angle else angle
+        lower_bounds = alt_angle if alt_angle < angle else angle
+        i=0
+        while ( True ):
+            if (i>=max_iterations):
+                prOrange(f"IK Pole Angle Set reached max iterations of {i} in {time()-start_time} seconds")
+                break
+            if (abs(error)<error_threshhold) or (upper_bounds<=lower_bounds):
+                prPurple(f"IK Pole Angle Set converged after {i} iterations with error={error} in {time()-start_time} seconds")
+                break
+            # get the center-point betweeen the bounds
+            try_angle = lower_bounds + (upper_bounds-lower_bounds)/2
+            c.pole_angle = try_angle; dg.update()
+            error=signed_angle((base_ik_bone.tail-center_point), knee_direction, ik_axis)
+            if error>0: upper_bounds=try_angle
+            if error<0: lower_bounds=try_angle
+            i+=1
 
     def bExecute(self, context):
         prepare_parameters(self)
@@ -1192,73 +1317,14 @@ class LinkInverseKinematics(MantisLinkNode):
         self.bObject = c
         c.chain_count = 1 # so that, if there are errors, this doesn't print a whole bunch of circular dependency crap from having infinite chain length
         if (c.pole_target): # Calculate the pole angle, the user shouldn't have to.
-            pole_object = c.pole_target
-            assert pole_object == c.target, f"Error with {self}: Pole Target must be bone within the same Armature as IK Bone  -- for now."
-            pole_location = None
-            if (c.pole_subtarget):
-                pole_object = c.pole_target.pose.bones[c.pole_subtarget]
-                pole_location = pole_object.bone.head_local
-            else: #TODO this is a dumb limitation but I don't want to convert to the armature's local space so that some idiot can rig in a stupid way
-                raise RuntimeError(f"Error with {self}: Pole Target must be bones within the same Armature as IK Bone -- for now.")
-            #HACK HACK
-            handle_location = ik_bone.bone.tail_local if (self.evaluate_input("Use Tail")) else ik_bone.bone.head_local
-            counter = 0
-            parent = ik_bone
-            base_bone = ik_bone
-            while (parent is not None):
-                counter+=1
-                if ((self.evaluate_input("Chain Length") != 0) and (counter > self.evaluate_input("Chain Length"))):
-                    break
-                base_bone = parent
-                parent = parent.parent
+            # my_xf = self.GetxForm()
+            # from .xForm_containers import xFormBone
+            # if not isinstance(my_xf, xFormBone):
+            #     raise GraphError(f"ERROR: Pole Target must be ")
+            # if c.target != 
+            c.pole_angle = self.calc_pole_angle_pre(c, ik_bone)
 
-            def get_main_axis(bone, knee_location):
-                # To decide whether the IK mainly bends around the x or z axis....
-                x_axis = bone.matrix_local.to_3x3() @ Vector((1,0,0))
-                y_axis = bone.matrix_local.to_3x3() @ Vector((0,1,0))
-                z_axis = bone.matrix_local.to_3x3() @ Vector((0,0,1))
-                # project the knee location onto the plane of the bone.
-                from .utilities import project_point_to_plane
-                planar_projection = project_point_to_plane(knee_location, bone.head_local, y_axis)
-                # and get the dot between the X and Z axes to find which one the knee is displaced on.
-                x_dot = x_axis.dot(planar_projection) # whichever axis' dot-product is closer to zero 
-                z_dot = z_axis.dot(planar_projection) #  with the base_bone's axis is in-line with it.
-                prWhite(bone.name, z_dot, x_dot)
-                # knee is in-line with this axis vector, the bend is happening on the perpendicular axis.
-                if abs(z_dot) < abs(x_dot): return x_axis # so we return X if Z is in-line with the knee
-                else: return z_axis                       # and visa versa
 
-            # modified from https://blender.stackexchange.com/questions/19754/how-to-set-calculate-pole-angle-of-ik-constraint-so-the-chain-does-not-move
-            from mathutils import Vector
-
-            def signed_angle(vector_u, vector_v, normal):
-                # Normal specifies orientation
-                angle = vector_u.angle(vector_v)
-                if vector_u.cross(vector_v).angle(normal) < 1:
-                    angle = -angle
-                return angle
-
-            def get_pole_angle(base_bone, ik_bone, pole_location, main_axis):
-                pole_normal = (ik_bone.bone.tail_local - base_bone.bone.head_local).cross(pole_location - base_bone.bone.head_local)
-                projected_pole_axis = pole_normal.cross(base_bone.bone.tail_local - base_bone.bone.head_local)
-                # note that this normal-axis is the y-axis but flipped
-                return signed_angle(main_axis, projected_pole_axis, base_bone.bone.tail_local - base_bone.bone.head_local)
-
-            if self.evaluate_input("Use Tail") == True:
-                main_axis = get_main_axis(ik_bone.bone, ik_bone.bone.tail_local)
-                # pole angle to the PV:
-                pole_angle_in_radians = get_pole_angle(base_bone, ik_bone, pole_location, main_axis)
-            elif ik_bone.bone.parent:
-                main_axis = get_main_axis(ik_bone.bone.parent, ik_bone.bone.tail_local)
-                pole_angle_in_radians = get_pole_angle(base_bone, ik_bone, pole_location, main_axis)
-            else: # the bone is not using "Use Tail" and it has no parent -- meaningless.
-                pole_angle_in_radians = 0
-            
-            c.pole_angle = pole_angle_in_radians
-
-            # TODO: the pole target should be a bone in a well-designed rig, but I don't want to force this, so....
-            #   in future, calculate all this in world-space so we can use other objects as the pole.
-        
         props_sockets = {
         'chain_count'   : ("Chain Length", 1),
         'use_tail'      : ("Use Tail", True),
@@ -1276,11 +1342,33 @@ class LinkInverseKinematics(MantisLinkNode):
         c.use_location   = self.evaluate_input("Position") > 0
         c.use_rotation   = self.evaluate_input("Rotation") > 0
         self.executed = True
-    
+
     def bFinalize(self, bContext = None):
+        # adding a test here
+        if bContext:
+            ik_bone = self.GetxForm().bGetObject(mode='POSE')
+            if self.bObject.pole_target:
+                prWhite(f"Fine-tuning IK Pole Angle for {self}")
+                self.calc_pole_angle_post(self.bObject, ik_bone, bContext)
         finish_drivers(self)
         
-        
+
+def ik_report_error(pb, context, do_print=False):
+    dg = context.view_layer.depsgraph
+    dg.update()
+    loc1, rot_quaternion1, scl1 = pb.matrix.decompose()
+    loc2, rot_quaternion2, scl2 = pb.bone.matrix_local.decompose()
+    location_error=(loc1-loc2).length
+    rotation_error = rot_quaternion1.rotation_difference(rot_quaternion2).angle
+    scale_error = (scl1-scl2).length
+    if location_error < FLOAT_EPSILON: location_error = 0
+    if abs(rotation_error) < FLOAT_EPSILON: rotation_error = 0
+    if scale_error < FLOAT_EPSILON: scale_error = 0
+    if do_print:
+        print (f"IK Location Error: {location_error}")
+        print (f"IK Rotation Error: {rotation_error}")
+        print (f"IK Scale Error   : {scale_error}")
+    return (location_error, rotation_error, scale_error) 
 
 # This is kinda a weird design decision?
 class LinkDrivenParameter(MantisLinkNode):
