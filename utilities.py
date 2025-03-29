@@ -85,6 +85,7 @@ def get_node_prototype(sig, base_tree):
 # groups and changing sockets -- this is used extensively by Schema.
 ##################################################################################################
 
+# this one returns None if there is an error.
 def get_socket_maps(node):
     maps = [{}, {}]
     node_collection = ["inputs", "outputs"]
@@ -93,11 +94,24 @@ def get_socket_maps(node):
         for sock in getattr(node, collection):
             if sock.is_linked:
                 map[sock.identifier]=[ getattr(l, link) for l in sock.links ]
+            elif hasattr(sock, "default_value"):
+                try:
+                    val = sock["default_value"]
+                    if val is None:
+                        raise RuntimeError(f"ERROR: Could not get socket data for socket of type: {sock.bl_idname}")
+                    map[sock.identifier]=sock["default_value"]
+                except KeyError: # The node socket is not initialized yet.
+                    return None
             else:
-                map[sock.identifier]=sock.get("default_value")
+                from .socket_definitions import no_default_value
+                if sock.bl_idname in no_default_value:
+                    map[sock.identifier]=None
+                else:
+                    raise RuntimeError(f"ERROR: Could not get socket data for socket of type: {sock.bl_idname}")
     return maps
 
 def do_relink(node, s, map, in_out='INPUT', parent_name = ''):
+    if not node.__class__.is_registered_node_type(): return
     tree = node.id_data; interface_in_out = 'OUTPUT' if in_out == 'INPUT' else 'INPUT'
     if hasattr(node, "node_tree"):
         tree = node.node_tree
@@ -105,32 +119,32 @@ def do_relink(node, s, map, in_out='INPUT', parent_name = ''):
     from bpy.types import NodeSocket
     get_string = '__extend__'
     if s: get_string = s.identifier
-    if val := map.get(get_string):
-        if isinstance(val, list):
-            for sub_val in val:
-                # this will only happen once because it assigns s, so it is safe to do in the for loop.
-                if s is None:
-                    # prGreen("zornpt")
-                    name = unique_socket_name(node, sub_val, tree)
-                    sock_type = sub_val.bl_idname
-                    if parent_name:
-                        interface_socket = update_interface(tree.interface, name, interface_in_out, sock_type, parent_name)
-                    if in_out =='INPUT':
-                        s = node.inputs.new(sock_type, name, identifier=interface_socket.identifier)
-                    else:
-                        s = node.outputs.new(sock_type, name, identifier=interface_socket.identifier)
-                    if parent_name == 'Array': s.display_shape='SQUARE_DOT'
-                    # then move it up and delete the other link.
-                    # this also needs to modify the interface of the node tree.
-                    
-                    
-                #
-                if isinstance(sub_val, NodeSocket):
-                    if in_out =='INPUT':
-                        node.id_data.links.new(input=sub_val, output=s)
-                    else:
-                        node.id_data.links.new(input=s, output=sub_val)
-        else:
+    if hasattr(node, "node_tree") and get_string not in map.keys():
+        # this happens when we are creating a new node group and need to update it from nothing.
+        return
+    val = map[get_string] # this will throw an error if the socket isn't there. Good!
+    if isinstance(val, list):
+        for sub_val in val:
+            # this will only happen once because it assigns s, so it is safe to do in the for loop.
+            if s is None:
+                name = unique_socket_name(node, sub_val, tree)
+                sock_type = sub_val.bl_idname
+                if parent_name:
+                    interface_socket = update_interface(tree.interface, name, interface_in_out, sock_type, parent_name)
+                if in_out =='INPUT':
+                    s = node.inputs.new(sock_type, name, identifier=interface_socket.identifier)
+                else:
+                    s = node.outputs.new(sock_type, name, identifier=interface_socket.identifier)
+                if parent_name == 'Array': s.display_shape='SQUARE_DOT'
+                # then move it up and delete the other link.
+                # this also needs to modify the interface of the node tree.
+            if isinstance(sub_val, NodeSocket):
+                if in_out =='INPUT':
+                    node.id_data.links.new(input=sub_val, output=s)
+                else:
+                    node.id_data.links.new(input=s, output=sub_val)
+    elif get_string != "__extend__":
+        if not s.is_output:
             try:
                 s.default_value = val
             except (AttributeError, ValueError): # must be readonly or maybe it doesn't have a d.v.
@@ -149,14 +163,10 @@ def update_interface(interface, name, in_out, sock_type, parent_name):
         raise RuntimeError(wrapRed("Cannot add interface item to tree without specifying type."))
 
 def relink_socket_map(node, socket_collection, map, item, in_out=None):
-    from bpy.types import NodeSocket
     if not in_out: in_out=item.in_out
     if node.bl_idname in ['MantisSchemaGroup'] and item.parent and item.parent.name == 'Array':
-        multi = False
-        if in_out == 'INPUT':
-            multi=True
+        multi = True if in_out == 'INPUT' else False
         s = socket_collection.new(type=item.socket_type, name=item.name, identifier=item.identifier,  use_multi_input=multi)
-        # s.link_limit = node.schema_length TODO
     else:
         s = socket_collection.new(type=item.socket_type, name=item.name, identifier=item.identifier)
     if item.parent.name == 'Array': s.display_shape = 'SQUARE_DOT'

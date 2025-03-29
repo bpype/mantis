@@ -1,6 +1,26 @@
 import bpy
 from bpy.types import NodeSocket, NodeSocketStandard
 
+# Classes which do not have default_value
+# needed to detect when there is an error updating dynamic nodes
+no_default_value= [
+            'MantisSocket',
+            'RelationshipSocket',
+            'DeformerSocket',
+            'xFormSocket',
+            'GeometrySocket',
+            'GenericRotationSocket',
+            'FCurveSocket',
+            'DriverSocket',
+            'DriverVariableSocket',
+            'xFormParameterSocket',
+            'MorphTargetSocket',
+            'KeyframeSocket',
+            'WildcardSocket',
+]
+# the sockets that do not have this field do not transfer data.
+# instead, it is the link itself which is meaningful.
+
 class MantisSocket(NodeSocket):
     is_valid_interface_type=False
     

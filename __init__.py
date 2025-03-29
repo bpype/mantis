@@ -21,7 +21,6 @@ MANTIS_VERSION_SUB=1
 classLists = [module.TellClasses() for module in [
  link_definitions,
  xForm_definitions,
- base_definitions,
  nodes_generic,
  socket_definitions,
  ops_nodegroup,
@@ -30,6 +29,7 @@ classLists = [module.TellClasses() for module in [
  math_definitions,
  i_o,
  schema_definitions,
+ base_definitions,
 ]]
 classLists.append( [GenerateMantisTree] )
 #
@@ -313,6 +313,10 @@ def do_version_update(node_tree):
 
 @persistent
 def version_update_handler(filename):
+    for node_tree in bpy.data.node_groups: # ensure it can update again after file load.
+        if node_tree.bl_idname in ["MantisTree", "SchemaTree"]:
+                node_tree.is_exporting=False; node_tree.is_executing=False
+
     for node_tree in bpy.data.node_groups:
         if node_tree.bl_idname in ["MantisTree", "SchemaTree"]:
             if (node_tree.mantis_version[0] < MANTIS_VERSION_MAJOR) or \
@@ -365,9 +369,8 @@ def register():
         try:
             register_class(cls)
         except RuntimeError as e:
-            prRed(cls.__name__)
+            prRed(f"Registration error for class: {cls.__name__}")
             raise e
-
     nodeitems_utils.register_node_categories('MantisNodeCategories', node_categories)
     nodeitems_utils.register_node_categories('SchemaNodeCategories', schema_categories)
 
@@ -377,19 +380,24 @@ def register():
         k.active = True
         addon_keymaps.append((km, k))
     # add the handlers
-    bpy.app.handlers.depsgraph_update_pre.append(update_handler)
-    bpy.app.handlers.depsgraph_update_post.append(execute_handler)
-    bpy.app.handlers.save_pre.append(on_save_pre_handler)
-    bpy.app.handlers.save_post.append(on_save_post_handler)
-    bpy.app.handlers.load_post.append(version_update_handler)
-    bpy.app.handlers.animation_playback_pre.append(on_animation_playback_pre_handler)
-    bpy.app.handlers.animation_playback_post.append(on_animation_playback_post_handler)
-    bpy.app.handlers.undo_pre.append(on_undo_pre_handler)
+    bpy.app.handlers.depsgraph_update_pre.insert(0, update_handler)
+    bpy.app.handlers.depsgraph_update_post.insert(0, execute_handler)
+    bpy.app.handlers.save_pre.insert(0, on_save_pre_handler)
+    bpy.app.handlers.save_post.insert(0, on_save_post_handler)
+    bpy.app.handlers.load_post.insert(0, version_update_handler)
+    bpy.app.handlers.animation_playback_pre.insert(0, on_animation_playback_pre_handler)
+    bpy.app.handlers.animation_playback_post.insert(0, on_animation_playback_post_handler)
+    bpy.app.handlers.undo_pre.insert(0, on_undo_pre_handler)
+    # I'm adding mine in first to ensure other addons don't mess up mine
+    # but I am a good citizen! so my addon won't mess up yours! probably...
 
 
     
 
 def unregister():
+    for tree in bpy.data.node_groups: # ensure it doesn't try to update while quitting.
+        if tree.bl_idname in ['MantisTree, SchemaTree']:
+            tree.is_exporting=True; tree.is_executing=True
     nodeitems_utils.unregister_node_categories('MantisNodeCategories')
     nodeitems_utils.unregister_node_categories('SchemaNodeCategories')
 

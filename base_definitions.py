@@ -61,7 +61,7 @@ class MantisTree(NodeTree):
         @classmethod
         def valid_socket_type(cls : NodeTree, socket_idname: str):
             return valid_interface_types(cls, socket_idname)
-            
+
     def update_tree(self, context = None):
         if self.is_exporting:
             return
@@ -101,9 +101,6 @@ class MantisTree(NodeTree):
         #    - Non-hierarchy links should be ignored in the circle-check and so the links should be marked valid in such a circle
         #    - hierarchy-links should be marked invalid and prevent the tree from executing.
 
-
-        
-    
     def execute_tree(self,context, error_popups = False):
         self.prevent_next_exec = False
         if self.is_exporting:
@@ -118,7 +115,6 @@ class MantisTree(NodeTree):
             prRed("Recursion error while parsing tree.")
         finally:
             self.is_executing = False
-
 
 class SchemaTree(NodeTree):
     '''A node tree representing a schema to generate a Mantis tree'''
@@ -216,6 +212,7 @@ def node_group_update(node, force = False):
         if (node.id_data.do_live_update == False) or (node.id_data.is_executing == True):
             return
     # note: if (node.id_data.is_exporting == True) I need to be able to update so I can make links.
+
     toggle_update = node.id_data.do_live_update
     node.id_data.do_live_update = False
 
@@ -273,7 +270,11 @@ def node_group_update(node, force = False):
         return
 
     if update_input or update_output:
-        socket_map_in, socket_map_out = get_socket_maps(node)
+        socket_maps = get_socket_maps(node)
+        if socket_maps is None:
+            node.id_data.do_live_update = toggle_update
+            return
+        socket_map_in, socket_map_out = socket_maps
 
         if update_input :
             if node.bl_idname == 'MantisSchemaGroup':

@@ -134,7 +134,10 @@ class DeformerMorphTargetDeform(Node, DeformerNode):
     def update_morph_deformer(self, force=False):
         self.initialized = False
         # use_offset = self.inputs["Use Offset"].default_value
-        input_map = get_socket_maps(self)[0]
+        socket_maps = get_socket_maps(self)
+        if socket_maps is None:
+            return
+        input_map = socket_maps[0]
         # checc to see if targets have been removed... then modify the input map if necessary
         targets_deleted = 0 # this should usually be either 0 or 1
         for i in range(self.num_targets):

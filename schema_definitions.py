@@ -54,8 +54,12 @@ class SchemaArrayInput(Node, SchemaUINode):
         self.update()
 
     def update(self):
+        if len(self.id_data.interface.items_tree) == 0: return
         # self.initialized = False
-        output_map = get_socket_maps(self)[1]
+        socket_maps = get_socket_maps(self)
+        if socket_maps is None:
+            return
+        output_map = socket_maps[1]
         self.outputs.clear()
         for item in self.id_data.interface.items_tree:
             if item.item_type == 'PANEL': continue
@@ -81,8 +85,12 @@ class SchemaArrayInputGet(Node, SchemaUINode):
         self.update()
 
     def update(self):
+        if len(self.id_data.interface.items_tree) == 0: return
         # self.initialized = False
-        output_map = get_socket_maps(self)[1]
+        socket_maps = get_socket_maps(self)
+        if socket_maps is None:
+            return
+        output_map = socket_maps[1]
         self.outputs.clear()
         for item in self.id_data.interface.items_tree:
             if item.item_type == 'PANEL': continue
@@ -106,8 +114,12 @@ class SchemaArrayOutput(Node, SchemaUINode):
         self.update()
 
     def update(self):
+        if len(self.id_data.interface.items_tree) == 0: return
         self.initialized = False
-        input_map = get_socket_maps(self)[0]
+        socket_maps = get_socket_maps(self)
+        if socket_maps is None:
+            return
+        input_map = socket_maps[0]
         self.inputs.clear()
         for item in self.id_data.interface.items_tree:
             if item.item_type == 'PANEL': continue
@@ -133,8 +145,12 @@ class SchemaConstInput(Node, SchemaUINode):
         self.update()
 
     def update(self):
+        if len(self.id_data.interface.items_tree) == 0: return
         self.initialized = False
-        output_map = get_socket_maps(self)[1]
+        socket_maps = get_socket_maps(self)
+        if socket_maps is None:
+            return
+        output_map = socket_maps[1]
         self.outputs.clear()
         for item in self.id_data.interface.items_tree:
             if item.item_type == 'PANEL': continue
@@ -160,8 +176,12 @@ class SchemaConstOutput(Node, SchemaUINode):
         self.update()
 
     def update(self):
+        if len(self.id_data.interface.items_tree) == 0: return
         self.initialized = False
-        input_map = get_socket_maps(self)[0]
+        socket_maps = get_socket_maps(self)
+        if socket_maps is None:
+            return
+        input_map = socket_maps[0]
         self.inputs.clear()
         s = self.inputs.new('IntSocket', "Expose when N==")
         for item in self.id_data.interface.items_tree:
@@ -192,8 +212,12 @@ class SchemaOutgoingConnection(Node, SchemaUINode):
         self.update()
 
     def update(self):
+        if len(self.id_data.interface.items_tree) == 0: return
         self.initialized = False
-        input_map = get_socket_maps(self)[0]
+        socket_maps = get_socket_maps(self)
+        if socket_maps is None:
+            return
+        input_map = socket_maps[0]
         self.inputs.clear()
         for item in self.id_data.interface.items_tree:
             if item.item_type == 'PANEL': continue
@@ -221,8 +245,12 @@ class SchemaIncomingConnection(Node, SchemaUINode):
         self.update()
 
     def update(self):
+        if len(self.id_data.interface.items_tree) == 0: return
         self.initialized = False
-        output_map = get_socket_maps(self)[1]
+        socket_maps = get_socket_maps(self)
+        if socket_maps is None:
+            return
+        output_map = socket_maps[1]
         self.outputs.clear()
         for item in self.id_data.interface.items_tree:
             if item.item_type == 'PANEL': continue
