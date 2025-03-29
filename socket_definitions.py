@@ -996,7 +996,12 @@ class EnumMetaRigSocket(MantisSocket):
             return self.search_prop.name
         return ""
     
-    default_value  : StringProperty(name = "", get=get_default_value)
+    def set_default_value(self, value):
+        if ob:= bpy.data.objects.get(value):
+            if ob.type == 'ARMATURE':
+                self.search_prop=ob
+    
+    default_value  : StringProperty(name = "", get=get_default_value, set=set_default_value)
     
     color_simple = cString
     color : bpy.props.FloatVectorProperty(default=cString, size=4)
@@ -1034,7 +1039,12 @@ class EnumCurveSocket(MantisSocket):
             return self.search_prop.name
         return ""
     
-    default_value  : StringProperty(name = "", get=get_default_value)
+    def set_default_value(self, value):
+        if ob:= bpy.data.objects.get(value):
+            if ob.type == 'CURVE':
+                self.search_prop=ob
+    
+    default_value  : StringProperty(name = "", get=get_default_value, set=set_default_value)
     
     color_simple = cString
     color : bpy.props.FloatVectorProperty(default=cString, size=4)
