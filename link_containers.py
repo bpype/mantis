@@ -1188,7 +1188,19 @@ class LinkInverseKinematics(MantisLinkNode):
         while (i<chain_length) and (base_ik_bone.parent):
             base_ik_bone=base_ik_bone.parent
         return base_ik_bone
-
+    
+    # We need to do the calculation in a "full circle", meaning the pole_angle
+    # can go over pi or less than -pi - but the actuall constraint value must
+    # be clamped in that range.
+    # so we simply wrap the value.
+    # not very efficient but it's OK
+    def set_pole_angle(self, angle: float) -> None:
+        from math import pi
+        def wrap(min : float, max : float, value: float) -> float:
+            range = max-min; remainder = value % range
+            if remainder > max: return min + remainder-max
+            else: return remainder
+        self.bObject.pole_angle = wrap(-pi, pi, angle)
     
     def calc_pole_angle_pre(self, c, ik_bone):
         """
@@ -1272,7 +1284,7 @@ class LinkInverseKinematics(MantisLinkNode):
             dot_after=current_knee_direction.dot(knee_direction)
             if dot_after < dot_before: # they are somehow less aligned
                 prPurple("Mantis has gone down an unexpected code path. Please report this as a bug.")
-                angle = -angle; c.pole_angle = angle
+                angle = -angle; self.set_pole_angle(angle)
                 dg.update()
 
         # now we can do a bisect search to find the best value.
@@ -1287,6 +1299,7 @@ class LinkInverseKinematics(MantisLinkNode):
         upper_bounds = alt_angle if alt_angle > angle else angle
         lower_bounds = alt_angle if alt_angle < angle else angle
         i=0
+
         while ( True ):
             if (i>=max_iterations):
                 prOrange(f"IK Pole Angle Set reached max iterations of {i} in {time()-start_time} seconds")
@@ -1296,7 +1309,7 @@ class LinkInverseKinematics(MantisLinkNode):
                 break
             # get the center-point betweeen the bounds
             try_angle = lower_bounds + (upper_bounds-lower_bounds)/2
-            c.pole_angle = try_angle; dg.update()
+            self.set_pole_angle(try_angle); dg.update()
             error=signed_angle((base_ik_bone.tail-center_point), knee_direction, ik_axis)
             if error>0: upper_bounds=try_angle
             if error<0: lower_bounds=try_angle
@@ -1322,7 +1335,7 @@ class LinkInverseKinematics(MantisLinkNode):
             # if not isinstance(my_xf, xFormBone):
             #     raise GraphError(f"ERROR: Pole Target must be ")
             # if c.target != 
-            c.pole_angle = self.calc_pole_angle_pre(c, ik_bone)
+            self.set_pole_angle(self.calc_pole_angle_pre(c, ik_bone))
 
 
         props_sockets = {
