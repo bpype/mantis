@@ -1,6 +1,6 @@
 from .node_container_common import *
 from bpy.types import Bone
-from .base_definitions import MantisNode, NodeSocket, GraphError, FLOAT_EPSILON
+from .base_definitions import MantisNode, GraphError, MantisSocketTemplate, FLOAT_EPSILON
 
 def TellClasses():
     return [
@@ -64,14 +64,21 @@ def GetxForm(nc):
             return node
     raise GraphError("%s is not connected to a downstream xForm" % nc)
 
+LinkInheritSockets = [   # Name                   is_input         bl_idname                  
+    MantisSocketTemplate(name="Parent",           is_input=True,   bl_idname='xFormSocket',),
+    MantisSocketTemplate(name="Inherit Rotation", is_input=True,   bl_idname='BooleanSocket',),
+    MantisSocketTemplate(name="Inherit Scale",    is_input=True,   bl_idname='EnumInheritScale',),
+    MantisSocketTemplate(name="Connected",        is_input=True,   bl_idname='BooleanSocket',),
+    MantisSocketTemplate(name="Inheritance",      is_input=False,  bl_idname='RelationshipSocket',),
+]
+
 class LinkInherit(MantisLinkNode):
     '''A node representing inheritance'''
     
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree)
-        inputs = ["Parent", "Inherit Rotation", "Inherit Scale", "Connected"]
-        self.inputs.init_sockets(inputs)
-        self.outputs.init_sockets(["Inheritance"])
+        self.inputs.init_sockets(LinkInheritSockets)
+        self.outputs.init_sockets(LinkInheritSockets)
         self.init_parameters()
         self.set_traverse([('Parent', 'Inheritance')])
         self.executed = True

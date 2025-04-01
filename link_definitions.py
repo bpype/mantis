@@ -61,14 +61,10 @@ class LinkInheritNode(Node, LinkNode):
     # bone_next : bpy.props.BoolProperty(default=False)
 
     def init(self, context):
-        r = self.inputs.new('BooleanSocket', "Inherit Rotation")
-        s = self.inputs.new('EnumInheritScale', "Inherit Scale")
-        c = self.inputs.new('BooleanSocket', "Connected")
-        i = self.outputs.new('RelationshipSocket', "Inheritance")
-        p = self.inputs.new('xFormSocket', "Parent")
+        from .link_containers import LinkInheritSockets
+        self.init_sockets(LinkInheritSockets)
         # set default values...
         self.initialized = True
-        # color
         self.use_custom_color = True
         self.color = inheritColor
 
