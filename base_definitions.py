@@ -136,6 +136,23 @@ class SchemaTree(NodeTree):
             
 
 
+from dataclasses import dataclass, field
+from typing import Any
+
+@dataclass
+class MantisSocketTemplate():
+    name            : str = field(default="")
+    bl_idname       : str = field(default="")
+    traverse_target : str = field(default="")
+    identifier      : str = field(default="")
+    display_shape   : str = field(default="") # for arrays
+    category        : str = field(default="") # for use in display update
+    is_input        : bool = field(default=False)
+    hide            : bool = field(default=False)
+    use_multi_input : bool = field(default=False)
+    default_value   : Any = field(default=None)
+
+
 #TODO: do a better job explaining how MantisNode and MantisUINode relate.
 
 class MantisUINode:
@@ -174,6 +191,29 @@ class MantisUINode:
                     node_tree.num_links+=1
                 elif (link.to_socket.is_multi_input):
                     node_tree.num_links+=1
+    
+    def init_sockets(self, socket_templates : tuple[MantisSocketTemplate]):
+        for template in socket_templates:
+            collection = self.outputs
+            if template.is_input:
+                collection = self.inputs
+            identifier = template.name
+            if template.identifier:
+                identifier = template.identifier
+            socket = collection.new(
+                template.bl_idname,
+                template.name,
+                identifier=identifier,
+                use_multi_input=template.use_multi_input
+            )
+            socket.hide= template.hide
+            if template.category:
+                # a custom property for the UI functions to use.
+                socket['category'] = template.category
+            if template.default_value is not None:
+                socket.default_value = template.default_value
+                # this can throw a TypeError - it is the caller's
+                #   responsibility to send the right type.
         
             
 class SchemaUINode(MantisUINode):
@@ -305,8 +345,6 @@ def node_group_update(node, force = False):
 
 
         node.id_data.do_live_update = toggle_update
-
-
 
 
 def node_tree_prop_update(self, context):
@@ -691,8 +729,13 @@ class MantisNodeSocketCollection(dict):
     
     def init_sockets(self, sockets):
         for socket in sockets:
-            if not isinstance(socket, str): raise RuntimeError("NodeSocketCollection keys must be str.")
-            self[socket] = NodeSocket(is_input=self.is_input, name=socket, node=self.node)
+            if isinstance(socket, str):
+                self[socket] = NodeSocket(is_input=self.is_input, name=socket, node=self.node)
+            elif isinstance(socket, MantisSocketTemplate):
+                if socket.is_input != self.is_input: continue
+                self[socket.name] = NodeSocket(is_input=self.is_input, name=socket.name, node=self.node)
+            else:
+                raise RuntimeError("NodeSocketCollection keys must be str.")
             
     def __delitem__(self, key):
         """Deletes a node socket by name, and all its links."""
