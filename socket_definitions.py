@@ -336,10 +336,8 @@ def ChooseDraw(self, context, layout, node, text, icon = "NONE", use_enum=True, 
     elif hasattr(self, "display_text") and self.display_text and self.is_linked:
             layout.label(text=self.display_text)
     else:
-        if ( (hasattr(self, "text_only")) and (getattr(self, "text_only") ) ):
-            layout.label(text=text)
         # ENUM VALUES (this is a HACK, fix it later)
-        elif ('Enum' in self.bl_idname) and (use_enum):
+        if ('Enum' in self.bl_idname) and (use_enum):
             if not (self.is_output or self.is_linked):
                 layout.prop_tabs_enum(self, "default_value",)
             else:
@@ -747,7 +745,6 @@ class StringSocket(bpy.types.NodeSocketString, MantisSocket):
     bl_idname = 'StringSocket'
     bl_label = "String"
     default_value : bpy.props.StringProperty(default = "", update = update_socket,)
-    # text_only : bpy.props.BoolProperty(default=False)
     color_simple = cString
     color : bpy.props.FloatVectorProperty(default=cString, size=4)
     icon : bpy.props.StringProperty(default = "NONE",)
@@ -957,7 +954,6 @@ class ParameterStringSocket(MantisSocket):
     
     color : bpy.props.FloatVectorProperty(default=cString, size=4)
     input : bpy.props.BoolProperty(default =False,)
-    text_only : bpy.props.BoolProperty(default=False)
     #custom properties:
     description:bpy.props.StringProperty(default = "")
     def init(self):

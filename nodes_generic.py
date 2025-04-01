@@ -258,7 +258,6 @@ class UtilityMatrixFromCurve(Node, MantisUINode):
     
     def init(self, context):
         curv = self.inputs.new("EnumCurveSocket", "Curve")
-        curv.icon = "OUTLINER_OB_CURVE"
         self.inputs.new('IntSocket', 'Total Divisions')
         self.inputs.new('IntSocket', 'Matrix Index')
         self.outputs.new("MatrixSocket", "Matrix")
@@ -276,7 +275,6 @@ class UtilityPointFromCurve(Node, MantisUINode):
     
     def init(self, context):
         curv = self.inputs.new("EnumCurveSocket", "Curve")
-        curv.icon = "OUTLINER_OB_CURVE"
         self.inputs.new('FloatFactorSocket', 'Factor')
         self.outputs.new("VectorSocket", "Point")
         self.initialized = True
@@ -312,8 +310,6 @@ class UtilityMetaRigNode(Node, MantisUINode):
     def init(self, context):
         armt = self.inputs.new("EnumMetaRigSocket", "Meta-Armature")
         bone = self.inputs.new("EnumMetaBoneSocket", "Meta-Bone")
-        armt.icon = "OUTLINER_OB_ARMATURE"
-        bone.icon = "BONE_DATA"
         bone.hide=True
         self.outputs.new("MatrixSocket", "Matrix")
         self.initialized = True
@@ -343,19 +339,17 @@ class UtilityBonePropertiesNode(Node, MantisUINode):
     mantis_node_class_name=bl_idname
     
     def init(self, context):
-        self.outputs.new("ParameterStringSocket", "matrix")
-        self.outputs.new("ParameterStringSocket", "matrix_local")
-        self.outputs.new("ParameterStringSocket", "matrix_basis")
-        self.outputs.new("ParameterStringSocket", "head")
-        self.outputs.new("ParameterStringSocket", "tail")
-        self.outputs.new("ParameterStringSocket", "length")
-        self.outputs.new("ParameterStringSocket", "rotation")
-        self.outputs.new("ParameterStringSocket", "location")
-        self.outputs.new("ParameterStringSocket", "scale")
+        self.outputs.new("StringSocket", "matrix")
+        self.outputs.new("StringSocket", "matrix_local")
+        self.outputs.new("StringSocket", "matrix_basis")
+        self.outputs.new("StringSocket", "head")
+        self.outputs.new("StringSocket", "tail")
+        self.outputs.new("StringSocket", "length")
+        self.outputs.new("StringSocket", "rotation")
+        self.outputs.new("StringSocket", "location")
+        self.outputs.new("StringSocket", "scale")
         self.initialized = True
         
-        for o in self.outputs:
-            o.text_only = True
 
 class UtilityDriverVariableNode(Node, MantisUINode):
     """Creates a variable for use in a driver."""
