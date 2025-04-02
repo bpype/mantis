@@ -620,6 +620,15 @@ class DummyLink:
         return(self.nc_from.__repr__()+":"+self.from_socket.name + " -> " + self.nc_to.__repr__()+":"+self.to_socket.name)
 
 
+def detect_hierarchy_link(from_node, from_socket, to_node, to_socket,):
+    if to_node.node_type in ['DUMMY_SCHEMA', 'SCHEMA']:
+        return False
+    if (from_socket in from_name_filter) or (to_socket in to_name_filter):
+        return False
+    # if from_node.__class__.__name__ in ["UtilityCombineVector", "UtilityCombineThreeBool"]:
+    #     return False
+    return True
+
 class NodeLink:
     from_node = None
     from_socket = None
@@ -637,7 +646,6 @@ class NodeLink:
         # it is the responsibility of the node that uses these links to sort them correctly based on the sort_id
         self.multi_input_sort_id = multi_input_sort_id
         self.to_node.inputs[self.to_socket].links.append(self)
-        from .node_container_common import detect_hierarchy_link
         self.is_hierarchy = detect_hierarchy_link(from_node, from_socket, to_node, to_socket,)
         self.is_alive = True
     

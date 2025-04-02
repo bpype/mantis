@@ -233,15 +233,6 @@ class MetaRigMatrixNode(Node, MantisUINode):
         self.outputs.new('MatrixSocket', "Matrix")
         self.initialized = True
     
-    def traverse(self, context):
-        # from mathutils import Matrix
-        v = self.outputs[0].default_value
-        # print( Matrix( ( ( v[ 0], v[ 1], v[ 2], v[ 3],),
-        #                  ( v[ 4], v[ 5], v[ 6], v[ 7],),
-        #                  ( v[ 8], v[ 9], v[10], v[11],),
-        #                  ( v[12], v[13], v[14], v[15],), ) ) )
-        return None
-
     def update(self):
         mat_sock = self.outputs[0]
         mat_sock.default_value = self.set_matrix()

@@ -17,34 +17,6 @@ def get_socket_value(node_socket):
         value =  node_socket.TellValue()
     return value
 
-def check_for_driver(node_container, input_name, index = None):
-    prop = node_container.evaluate_input(input_name)
-    if (index is not None):
-        prop = prop[index]
-    return (prop.__class__.__name__ == 'MantisDriver')
-
-def trace_node_lines(node_container):
-    """ Tells the depth of a node within the node tree. """
-    node_lines = []
-    if hasattr(node_container, "inputs"):
-        for key, socket in node_container.inputs.items():
-            # Recrusive search through the tree.
-            #  * checc each relevant input socket in the node
-            #  * for EACH input, find the node it's connected to
-            #    * repeat from here until you get all the lines
-            if ( ( key in ["Relationship", "Parent", "Input Relationship", "Target"])
-                          and (socket.is_connected) ):
-                # it is necesary to check the key because of Link nodes,
-                #   which don't really traverse like normal.
-                # TODO: see if I can refactor this to make it traverse
-                other = socket.from_node
-                if (other):
-                    other_lines = trace_node_lines(other)
-                    if not other_lines:
-                        node_lines.append([other])
-                    for line in other_lines:
-                        node_lines.append( [other] + line )
-    return node_lines
 
 
 # TODO: modify this to work with multi-input nodes
@@ -91,187 +63,7 @@ def trace_single_line_up(node_container, output_name,):
                     break
     return nodes, socket
 
-def trace_all_lines_up(nc, output_name):
-    copy_items = {}
-    for item in dir(nc):
-        if "__" not in item:
-            copy_items[item]=getattr(nc, item)
-    # we want to copy it, BUT:
-    copy_items["outputs"]:{output_name:nc.outputs[output_name]}
-    # override outputs with just the one we care about.
-    
-    check_me = type('', (object,), copy_items)
-    return get_depth_lines(check_me)[1]
 
-
-
-
-
-def num_hierarchy_connections(nc):
-    num=0
-    for out in nc.outputs:
-        for link in out.links:
-            if link.is_hierarchy: num+=1
-    return num
-
-def list_hierarchy_connections(nc):
-    return len(nc.hierarchy_connections)-1
-    hc=[]
-    for out in nc.outputs:
-        for link in out.links:
-            if link.is_hierarchy: hc.append(link.to_node)
-    return num
-
-# what this is doing is giving a list of Output-Index that is the path to the given node, from a given root.
-# HOW TO REWRITE...
-# we simply do the same thing, but we look at the outputs, not the old hierarchy-connections
-# we can do the same tree-search but we simply ignore an output if it is not hierarchy.
-# the existing code isn't complicated, it's just hard to read. So this new code should be easier to read, too.
-
-def get_depth_lines(root):
-    from .base_definitions import GraphError
-    path, nc_path = [0,], [root,]
-    lines, nc_paths = {}, {}
-    nc_len = len(root.hierarchy_connections)-1
-    curheight=0
-    while (path[0] <= nc_len):
-        # this doesn't seem to make this any slower. It is good to check it.
-        if nc_path[-1] in nc_path[:-1]:
-            raise GraphError(wrapRed(f"Infinite loop detected while depth sorting for root {root}."))
-        #
-        nc_path.append(nc_path[-1].hierarchy_connections[path[-1]])
-        if (not (node_lines  := lines.get(nc_path[-1].signature, None))):
-            node_lines = lines[nc_path[-1].signature] = set()
-        if (not (node_paths  := nc_paths.get(nc_path[-1].signature, None))):
-            node_paths = nc_paths[nc_path[-1].signature] = set()
-        node_lines.add(tuple(path)); node_paths.add(tuple(nc_path))
-        if nc_path[-1].hierarchy_connections: # if there is at least one element
-            path.append(0); curheight+=1
-        else: # at this point, nc_path is one longer than path because path is a segment between two nodes
-            # or more siimply, because nc_path has the root in it and path starts with the first node
-            path[curheight] = path[curheight] + 1
-            nc_path.pop() # so we go back and horizontal
-            if ( path[-1] <= len(nc_path[-1].hierarchy_connections)-1 ):
-                pass # and continue if we can
-            elif curheight > 0: # otherwise we keep going back
-                while(len(path) > 1):
-                    path.pop(); curheight -= 1; path[curheight]+=1; nc_path.pop()
-                    if ( (len(nc_path)>1) and path[-1] < len(nc_path[-1].hierarchy_connections) ):
-                        break 
-    return lines, nc_paths
-
-# same but because the checks end up costing a fair amount of time, I don't want to use this one unless I need to.
-def get_prepared_depth_lines(root,):
-    # import pstats, io, cProfile
-    # from pstats import SortKey
-    # with cProfile.Profile() as pr:
-        path, nc_path = [0,], [root,]
-        lines, nc_paths = {}, {}
-        nc_len = len(prepared_connections(root, ))-1
-        curheight=0
-        while (path[0] <= nc_len):
-            if nc_path[-1] in nc_path[:-1]:
-                raise GraphError(wrapRed(f"Infinite loop detected while depth sorting for root {root}."))
-            nc_path.append(prepared_connections(nc_path[-1], )[path[-1]])
-            if (not (node_lines  := lines.get(nc_path[-1].signature, None))):
-                node_lines = lines[nc_path[-1].signature] = set()
-            if (not (node_paths  := nc_paths.get(nc_path[-1].signature, None))):
-                node_paths = nc_paths[nc_path[-1].signature] = set()
-            node_lines.add(tuple(path)); node_paths.add(tuple(nc_path))
-            if prepared_connections(nc_path[-1], ): # if there is at least one element
-                path.append(0); curheight+=1
-            else: # at this point, nc_path is one longer than path because path is a segment between two nodes
-                # or more siimply, because nc_path has the root in it and path starts with the first node
-                path[curheight] = path[curheight] + 1
-                nc_path.pop() # so we go back and horizontal
-                if path[-1] <= len(prepared_connections(nc_path[-1], ))-1:
-                    pass # and continue if we can
-                elif curheight > 0: # otherwise we keep going back
-                    while(len(path) > 1):
-                        path.pop(); curheight -= 1; path[curheight]+=1; nc_path.pop()
-                        if (len(nc_path)>1) and path[-1] < len(prepared_connections(nc_path[-1], ) ):
-                            break 
-        # from the Python docs at https://docs.python.org/3/library/profile.html#module-cProfile
-    # s = io.StringIO()
-    # sortby = SortKey.TIME
-    # ps = pstats.Stats(pr, stream=s).sort_stats(sortby)
-    # ps.print_stats()
-    # print(s.getvalue())
-        return lines, nc_paths
-
-
-def prepared_connections(nc):
-    if nc.prepared:
-        return nc.hierarchy_connections
-    else:
-        ret = []
-        for hc in nc.hierarchy_connections:
-            if hc.prepared:
-                ret.append(hc)
-        return ret
-        # return [hc for hc in nc.hierarchy_connections if hc.prepared]
-
-
-def node_depth(lines):
-    maxlen = 0
-    for line in lines:
-        if ( (l := len(line) ) > maxlen):
-            maxlen = l
-    return maxlen
-    
-
-
-#TODO rewrite this so it'll work with new nc_path thing
-#  not a high priority bc this was debugging code for something that
-#  works and has since ben refactored to work better
-def printable_path(nc, path, no_wrap = False):
-    string = ""; cur_nc = nc
-    #DO: find out if the copy is necessary
-    path = path.copy(); path.reverse()
-    dummy = lambda a : a
-    while path:
-        wrap = dummy
-        if not no_wrap:
-            wrap=wrapWhite
-            if (cur_nc.node_type == 'DRIVER'):
-                wrap = wrapPurple
-            elif (cur_nc.node_type == 'XFORM'):
-                wrap = wrapOrange
-            elif (cur_nc.node_type == 'LINK'):
-                wrap = wrapGreen
-        string += wrap(cur_nc.__repr__()) + " -> "
-        try:
-            cur_nc = get_from_path(cur_nc, [path.pop()] )
-        except IndexError:
-            string = string[:-4]
-            return string
-    string = string[:-4]
-    return string
-    # why is this not printing groups in brackets?
-
-
-def get_parent(node_container, type = 'XFORM'):
-    # type variable for selecting whether to get either 
-    #   the parent xForm  or the inheritance node
-    node_line, socket = trace_single_line(node_container, "Relationship")
-    parent_nc = None
-    for i in range(len(node_line)):
-        # check each of the possible parent types.
-        if ( (node_line[ i ].__class__.__name__ == 'LinkInherit') ):
-            try: # it's the next one
-                if (type == 'XFORM'):
-                    return node_line[ i + 1 ]
-                else: # type = 'LINK'
-                    return node_line[ i ]
-            except IndexError: # if there is no next one...
-                return None # then there's no parent!
-    return None
-    # TODO!
-    #
-    # make this do shorthand parenting - if no parent, then use World
-    #  if the parent node is skipped, use the previous node (an xForm)
-    #  with default settings.
-    # it is OK to generate a new, "fake" node container for this!
 
 def get_target_and_subtarget(node_container, linkOb, input_name = "Target"):
     from bpy.types import PoseBone, Object, SplineIKConstraint, ArmatureModifier, HookModifier
@@ -347,7 +139,11 @@ def prepare_parameters(nc):
             nc.parameters[s_name] = sock.links[0].from_node.parameters[sock.name]
     # should work, this is ugly.
 
-
+def check_for_driver(node_container, input_name, index = None):
+    prop = node_container.evaluate_input(input_name)
+    if (index is not None):
+        prop = prop[index]
+    return (prop.__class__.__name__ == 'MantisDriver')
 
 
 # TODO: this should handle sub-properties better
@@ -515,17 +311,3 @@ def finish_drivers(nc):
             drivers.append(finish_driver(nc, driver_item, prop))
     from .drivers import CreateDrivers
     CreateDrivers(drivers)
-
-
-from .base_definitions import from_name_filter, to_name_filter
-def detect_hierarchy_link(from_node, from_socket, to_node, to_socket,):
-    if to_node.node_type in ['DUMMY_SCHEMA', 'SCHEMA']:
-        return False
-    if (from_socket in from_name_filter) or (to_socket in to_name_filter):
-        return False
-    # if from_node.__class__.__name__ in ["UtilityCombineVector", "UtilityCombineThreeBool"]:
-    #     return False
-    return True
-
-#Dummy classes for logic with node containers, they are not meant to do
-#  each and every little thing the "real" Blender classes do.

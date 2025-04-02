@@ -21,6 +21,23 @@ def reset_object_data(ob):
     ob.animation_data_clear() # this is a little dangerous. TODO find a better solution since this can wipe animation the user wants to keep
     ob.modifiers.clear() # I would also like a way to copy modifiers and their settings, or bake them down. oh well
 
+def get_parent(node_container, type = 'XFORM'):
+    # type variable for selecting whether to get either 
+    #   the parent xForm  or the inheritance node
+    node_line, socket = trace_single_line(node_container, "Relationship")
+    parent_nc = None
+    for i in range(len(node_line)):
+        # check each of the possible parent types.
+        if ( (node_line[ i ].__class__.__name__ == 'LinkInherit') ):
+            try: # it's the next one
+                if (type == 'XFORM'):
+                    return node_line[ i + 1 ]
+                else: # type = 'LINK'
+                    return node_line[ i ]
+            except IndexError: # if there is no next one...
+                return None # then there's no parent!
+    return None
+
 class xFormArmature(MantisNode):
     '''A node representing an armature object'''
     

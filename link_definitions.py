@@ -30,13 +30,6 @@ def TellClasses():
              LinkTransformationNode,
            ]
 
-def default_traverse(self, socket):
-        if (socket == self.outputs["Output Relationship"]):
-            return self.inputs["Input Relationship"]
-        if (socket == self.inputs["Input Relationship"]):
-            return self.outputs["Output Relationship"]
-        return None
-
 from mathutils import Color # these colors were sampled from Blender's UI
 # TODO: maybe read the relevant colors from the Theme
 linkColor = Color((0.028034, 0.093164, 0.070379)).from_scene_linear_to_srgb()
@@ -67,13 +60,6 @@ class LinkInheritNode(Node, LinkNode):
         self.initialized = True
         self.use_custom_color = True
         self.color = inheritColor
-
-    def traverse(self, socket):
-        if (socket == self.outputs["Inheritance"]):
-            return self.inputs["Parent"]
-        if (socket == self.inputs["Parent"]):
-            return self.outputs["Inheritance"]
-        return None
     
     def display_update(self, parsed_tree, context):
         node_tree = context.space_data.path[0].node_tree
@@ -630,10 +616,6 @@ class LinkArmatureNode(Node, LinkNode):
         self.use_custom_color = True
         self.color = inheritColor
         self.initialized = True
-
-
-    def traverse(self, socket):
-        return default_traverse(self,socket)
     
     def draw_buttons(self, context, layout):
         # return
@@ -667,10 +649,6 @@ class LinkSplineIKNode(Node, LinkNode):
         self.use_custom_color = True
         self.color = ikColor
         self.initialized = True
-
-    def traverse(self, socket):
-        return default_traverse(self,socket)
-        
         
 # DRIVERS!!
 
@@ -691,12 +669,6 @@ class LinkDrivenParameterNode(Node, LinkNode):
         #
         self.outputs.new( "RelationshipSocket", "Output Relationship" )
         self.initialized = True
-        
-    def traverse(self, socket):
-        return default_traverse(self,socket)
-        # color
-        self.use_custom_color = True
-        self.color = driverColor
 
 # Set up the class property that ties the UI classes to the Mantis classes.
 for cls in TellClasses():
