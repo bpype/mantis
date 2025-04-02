@@ -141,16 +141,18 @@ from typing import Any
 
 @dataclass
 class MantisSocketTemplate():
-    name            : str = field(default="")
-    bl_idname       : str = field(default="")
-    traverse_target : str = field(default="")
-    identifier      : str = field(default="")
-    display_shape   : str = field(default="") # for arrays
-    category        : str = field(default="") # for use in display update
-    is_input        : bool = field(default=False)
-    hide            : bool = field(default=False)
-    use_multi_input : bool = field(default=False)
-    default_value   : Any = field(default=None)
+    name             : str = field(default="")
+    bl_idname        : str = field(default="")
+    traverse_target  : str = field(default="")
+    identifier       : str = field(default="")
+    display_shape    : str = field(default="") # for arrays
+    category         : str = field(default="") # for use in display update
+    blender_property : str | tuple[str] = field(default="") # for props_sockets -> evaluate sockets
+    is_input         : bool = field(default=False)
+    hide             : bool = field(default=False)
+    use_multi_input  : bool = field(default=False)
+    default_value    : Any = field(default=None)
+    
 
 
 #TODO: do a better job explaining how MantisNode and MantisUINode relate.
@@ -445,8 +447,9 @@ SOCKETS_RENAMED=[ ("LinkDrivenParameter", "DriverSocket",   "Driver",     "Float
 
                 # NODE CLASS NAME             IN_OUT    SOCKET TYPE     SOCKET NAME     INDEX   MULTI     DEFAULT
 SOCKETS_ADDED=[("DeformerMorphTargetDeform", 'INPUT', 'BooleanSocket', "Use Shape Key", 1,      False,    False),
-               ("DeformerMorphTargetDeform", 'INPUT', 'BooleanSocket', "Use Offset", 2,         False,     True),
-               ("UtilityFCurve",             'INPUT',  "eFCrvExtrapolationMode", "Extrapolation Mode", 0, False, 'CONSTANT')]
+               ("DeformerMorphTargetDeform", 'INPUT', 'BooleanSocket', "Use Offset",    2,      False,    True),
+               ("UtilityFCurve",             'INPUT',  "eFCrvExtrapolationMode", "Extrapolation Mode", 0, False, 'CONSTANT'),
+               ("LinkCopyScale",             'INPUT',  "BooleanSocket", "Additive",     3,      False, False)]
 
 # replace names with bl_idnames for reading the tree and solving schemas.
 replace_types = ["NodeGroupInput", "NodeGroupOutput", "SchemaIncomingConnection",
@@ -474,7 +477,9 @@ class MantisNode:
         A MantisNode is used internally by Mantis to represent the final evaluated node graph.
         It gets generated with data from a MantisUINode when the graph is read.
     """
-    def __init__(self, signature, base_tree):
+    def __init__(self, signature : tuple,
+                 base_tree : bpy.types.NodeTree,
+                 socket_templates : list[MantisSocketTemplate]=[]):
         self.base_tree=base_tree
         self.signature = signature
         self.inputs = MantisNodeSocketCollection(node=self, is_input=True)
@@ -486,8 +491,15 @@ class MantisNode:
         self.hierarchy_dependencies, self.dependencies = [], []
         self.prepared = False
         self.executed = False
+        self.socket_templates = socket_templates
+        if self.socket_templates:
+            self.init_sockets()
 
-    def init_parameters(self, additional_parameters = {}):
+    def init_sockets(self) -> None:
+        self.inputs.init_sockets(self.socket_templates)
+        self.outputs.init_sockets(self.socket_templates)
+
+    def init_parameters(self, additional_parameters = {}) -> None:
         for socket in self.inputs:
             self.parameters[socket.name] = None
         for socket in self.outputs:
@@ -495,19 +507,31 @@ class MantisNode:
         for key, value in additional_parameters.items():
             self.parameters[key]=value
     
-    def set_traverse(self, traversal_pairs = [(str, str)]):
+    def gen_property_socket_map(self) -> dict:
+        props_sockets = {}
+        for s_template in self.socket_templates:
+            if not s_template.blender_property:
+                continue
+            if isinstance(s_template.blender_property, str):
+                props_sockets[s_template.blender_property]=(s_template.name, s_template.default_value)
+            elif isinstance(s_template.blender_property, tuple):
+                for index, sub_prop in enumerate(s_template.blender_property):
+                    props_sockets[sub_prop]=( (s_template.name, index),s_template.default_value[index] )
+        return props_sockets
+    
+    def set_traverse(self, traversal_pairs = [(str, str)]) -> None:
         for (a, b) in traversal_pairs:
             self.inputs[a].set_traverse_target(self.outputs[b])
             self.outputs[b].set_traverse_target(self.inputs[a])
             
 
-    def flush_links(self):
+    def flush_links(self) -> None:
         for inp in self.inputs.values():
             inp.flush_links()
         for out in self.outputs.values():
             out.flush_links()
     
-    def evaluate_input(self, input_name, index=0):
+    def evaluate_input(self, input_name, index=0)  -> Any:
         from .node_container_common import trace_single_line
         if not (self.inputs.get(input_name)): # get the named parameter if there is no input
             return self.parameters.get(input_name) # this will return None if the parameter does not exist.
@@ -517,7 +541,7 @@ class MantisNode:
         prop = trace[0][-1].parameters[trace[1].name] #trace[0] = the list of traced nodes; read its parameters
         return prop
     
-    def fill_parameters(self, ui_node=None):
+    def fill_parameters(self, ui_node=None)  -> None:
         from .utilities import get_node_prototype
         from .node_container_common import get_socket_value
         if not ui_node:
@@ -555,6 +579,7 @@ class MantisNode:
                         raise RuntimeError(wrapRed("No value found for " + self.__repr__() + " when filling out node parameters for " + ui_node.name + "::"+node_socket.name))
                 else:
                     pass
+    # I don't think this works! but I like the idea
     def call_on_all_ancestors(self, *args, **kwargs):
         """Resolve the dependencies of this node with the named method and its arguments.
            First, dependencies are discovered by walking backwards through the tree. Once the root
@@ -586,9 +611,6 @@ class MantisNode:
         #             prOrange(dep)
         return
 
-        
-        
-    
     def bPrepare(self, bContext=None):
         return
     def bExecute(self, bContext=None):
@@ -597,9 +619,6 @@ class MantisNode:
         return
     def __repr__(self): 
         return self.signature.__repr__()
-
-
-
 
 # do I need this and the link class above?
 class DummyLink:
@@ -743,7 +762,7 @@ class MantisNodeSocketCollection(dict):
                 if socket.is_input != self.is_input: continue
                 self[socket.name] = NodeSocket(is_input=self.is_input, name=socket.name, node=self.node)
             else:
-                raise RuntimeError("NodeSocketCollection keys must be str.")
+                raise RuntimeError(f"NodeSocketCollection keys must be str or MantisSocketTemplate, not {type(socket)}")
             
     def __delitem__(self, key):
         """Deletes a node socket by name, and all its links."""

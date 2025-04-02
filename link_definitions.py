@@ -134,20 +134,8 @@ class LinkCopyLocationNode(Node, LinkNode):
     mantis_node_class_name=bl_idname
 
     def init(self, context):
-        self.inputs.new ('RelationshipSocket', "Input Relationship")
-        self.inputs.new ('FloatFactorSocket', "Head/Tail")
-        self.inputs.new ('BooleanSocket', "UseBBone")
-        self.inputs.new ('BooleanThreeTupleSocket', "Axes")
-        self.inputs.new ('BooleanThreeTupleSocket', "Invert")
-        self.inputs.new ('TransformSpaceSocket', "Target Space")
-        self.inputs.new ('TransformSpaceSocket', "Owner Space")
-        self.inputs.new ('BooleanSocket', "Offset")
-        self.inputs.new ('FloatFactorSocket', "Influence")
-        self.inputs.new ('xFormSocket', "Target")
-        self.inputs.new ('EnableSocket', "Enable")
-        #
-        self.outputs.new('RelationshipSocket', "Output Relationship")
-        # color
+        from .link_containers import LinkCopyLocationSockets
+        self.init_sockets(LinkCopyLocationSockets)
         self.use_custom_color = True
         self.color = linkColor
         self.initialized = True
@@ -162,19 +150,8 @@ class LinkCopyRotationNode(Node, LinkNode):
     mantis_node_class_name=bl_idname
 
     def init(self, context):
-        self.inputs.new ('RelationshipSocket', "Input Relationship")
-        self.inputs.new ('RotationOrderSocket', "RotationOrder")
-        self.inputs.new ('EnumRotationMix', "Rotation Mix")
-        self.inputs.new ('BooleanThreeTupleSocket', "Axes")
-        self.inputs.new ('BooleanThreeTupleSocket', "Invert")
-        self.inputs.new ('TransformSpaceSocket', "Target Space")
-        self.inputs.new ('TransformSpaceSocket', "Owner Space")
-        self.inputs.new ('FloatFactorSocket', "Influence")
-        self.inputs.new ('xFormSocket', "Target")
-        self.inputs.new ('EnableSocket', "Enable")
-        #
-        self.outputs.new('RelationshipSocket', "Output Relationship")
-        # color
+        from .link_containers import LinkCopyRotationSockets
+        self.init_sockets(LinkCopyRotationSockets)
         self.use_custom_color = True
         self.color = linkColor
         self.initialized = True
@@ -190,20 +167,8 @@ class LinkCopyScaleNode(Node, LinkNode):
     mantis_node_class_name=bl_idname
 
     def init(self, context):
-        self.inputs.new ('RelationshipSocket', "Input Relationship")
-        self.inputs.new ('BooleanSocket', "Offset")
-        self.inputs.new ('BooleanSocket', "Average")
-        self.inputs.new ('BooleanThreeTupleSocket', "Axes")
-        #self.inputs.new ('BooleanThreeTupleSocket', "Invert")
-        # dingus, this one doesn't have inverts
-        self.inputs.new ('TransformSpaceSocket', "Target Space")
-        self.inputs.new ('TransformSpaceSocket', "Owner Space")
-        self.inputs.new ('FloatFactorSocket', "Influence")
-        self.inputs.new ('xFormSocket', "Target")
-        self.inputs.new ('EnableSocket', "Enable")
-        #
-        self.outputs.new('RelationshipSocket', "Output Relationship")
-        # color
+        from .link_containers import LinkCopyScaleSockets
+        self.init_sockets(LinkCopyScaleSockets)
         self.use_custom_color = True
         self.color = linkColor
         self.initialized = True

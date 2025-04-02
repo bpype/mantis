@@ -1,5 +1,5 @@
 from .node_container_common import *
-from bpy.types import Bone
+from bpy.types import Bone, NodeTree
 from .base_definitions import MantisNode, GraphError, MantisSocketTemplate, FLOAT_EPSILON
 
 def TellClasses():
@@ -32,9 +32,55 @@ def TellClasses():
              LinkDrivenParameter,
             ]
 
+# Socket Templates we will reuse:
+# inputs:
+InputRelationshipTemplate : MantisSocketTemplate = MantisSocketTemplate(
+    name="Input Relationship", is_input=True,  bl_idname='RelationshipSocket', )
+TargetTemplate : MantisSocketTemplate = MantisSocketTemplate(
+    name="Target", is_input=True,  bl_idname='xFormSocket', )
+Head_Tail_Template : MantisSocketTemplate = MantisSocketTemplate(
+    name="Head/Tail", is_input=True,  bl_idname='FloatFactorSocket',
+    default_value=1.0, blender_property='head_tail' )
+UseBBoneTemplate : MantisSocketTemplate = MantisSocketTemplate(
+    name="UseBBone", is_input=True,  bl_idname='BooleanSocket',
+    default_value=False, blender_property='use_bbone_shape' )
+AxesTemplate : MantisSocketTemplate = MantisSocketTemplate(
+    name="Axes", is_input=True,  bl_idname='BooleanThreeTupleSocket',
+    default_value=[True, True, True], blender_property=['use_x', 'use_y', 'use_z'])
+AxesInvertTemplate : MantisSocketTemplate = MantisSocketTemplate(
+    name="Invert", is_input=True,  bl_idname='BooleanThreeTupleSocket',
+    default_value=[False, False, False], blender_property=['invert_x', 'invert_y', 'invert_z'])
+TargetSpaceTemplate : MantisSocketTemplate = MantisSocketTemplate(
+    name="Target Space", is_input=True,  bl_idname='TransformSpaceSocket',
+    default_value="WORLD", blender_property='target_space' )
+OwnerSpaceTemplate : MantisSocketTemplate = MantisSocketTemplate(
+    name="Owner Space", is_input=True,  bl_idname='TransformSpaceSocket',
+    default_value="WORLD", blender_property='owner_space' )
+InfluenceTemplate : MantisSocketTemplate = MantisSocketTemplate(
+    name="Influence", is_input=True,  bl_idname='FloatFactorSocket',
+    default_value=1.0, blender_property='influence')
+EnableTemplate : MantisSocketTemplate = MantisSocketTemplate(
+    name="Enable", is_input=True,  bl_idname='EnableSocket',
+    default_value=True, blender_property='mute')
+OffsetTemplate : MantisSocketTemplate = MantisSocketTemplate(
+    name="Offset", bl_idname='BooleanSocket', is_input=True,
+    default_value=False, blender_property='use_offset')
+# outputs:
+OutputRelationshipTemplate : MantisSocketTemplate = MantisSocketTemplate(
+    name="Output Relationship", is_input=False,  bl_idname='RelationshipSocket', )
+
+
+# set the name if it is available, otherwise just use the constraint's nice name
+set_constraint_name = lambda nc : nc.evaluate_input("Name") if nc.evaluate_input("Name") else nc.__class__.__name__
+
+
+
+
 class MantisLinkNode(MantisNode):
-    def __init__(self, signature, base_tree):
-        super().__init__(signature, base_tree)
+    def __init__(self, signature : tuple,
+                 base_tree : NodeTree,
+                 socket_templates : list[MantisSocketTemplate]=[]):
+        super().__init__(signature, base_tree, socket_templates)
         self.node_type = 'LINK'
         self.prepared = True
 
@@ -48,10 +94,14 @@ class MantisLinkNode(MantisNode):
             
         else:
             return super().evaluate_input(input_name)
-
-# set the name if it is available, otherwise just use the constraint's nice name
-set_constraint_name = lambda nc : nc.evaluate_input("Name") if nc.evaluate_input("Name") else nc.__class__.__name__
-
+    
+    def gen_property_socket_map(self) -> dict:
+        props_sockets = super().gen_property_socket_map()
+        if self.inputs["Owner Space"].is_connected and self.inputs["Owner Space"].links[0].from_node.node_type == 'XFORM':
+            del props_sockets['owner_space']
+        if self.inputs["Target Space"].is_connected and self.inputs["Target Space"].links[0].from_node.node_type == 'XFORM':
+            del props_sockets['target_space']
+        return props_sockets
 
 #*#-------------------------------#++#-------------------------------#*#
 # L I N K   N O D E S
@@ -76,9 +126,7 @@ class LinkInherit(MantisLinkNode):
     '''A node representing inheritance'''
     
     def __init__(self, signature, base_tree):
-        super().__init__(signature, base_tree)
-        self.inputs.init_sockets(LinkInheritSockets)
-        self.outputs.init_sockets(LinkInheritSockets)
+        super().__init__(signature, base_tree, LinkInheritSockets)
         self.init_parameters()
         self.set_traverse([('Parent', 'Inheritance')])
         self.executed = True
@@ -90,36 +138,32 @@ class LinkInherit(MantisLinkNode):
             if (node.node_type == 'XFORM'):
                 return node
         raise GraphError("%s is not connected to a downstream xForm" % self)
-    
-    
-        
 
+LinkCopyLocationSockets = [
+    InputRelationshipTemplate,
+    Head_Tail_Template,
+    UseBBoneTemplate,
+    AxesTemplate,
+    AxesInvertTemplate,
+    TargetSpaceTemplate,
+    OwnerSpaceTemplate,
+    OffsetTemplate,
+    InfluenceTemplate,
+    TargetTemplate,
+    EnableTemplate,
+    OutputRelationshipTemplate,
+]
 
 class LinkCopyLocation(MantisLinkNode):
     '''A node representing Copy Location'''
     
-    def __init__(self, signature, base_tree):
-        super().__init__(signature, base_tree)
-        inputs = [
-            "Input Relationship",
-            "Head/Tail",
-            "UseBBone",
-            "Axes",
-            "Invert",
-            "Target Space",
-            "Owner Space",
-            "Offset",
-            "Influence",
-            "Target",
-            "Enable",
-        ]
+    def __init__(self, signature : tuple,
+                 base_tree : NodeTree,):
+        super().__init__(signature, base_tree, LinkCopyLocationSockets)
         additional_parameters = { "Name":None }
-        self.inputs.init_sockets(inputs)
-        self.outputs.init_sockets(["Output Relationship"])
         self.init_parameters(additional_parameters=additional_parameters)
         self.set_traverse([("Input Relationship", "Output Relationship")])
         
-    
     def GetxForm(self):
         return GetxForm(self)
 
@@ -133,9 +177,7 @@ class LinkCopyLocation(MantisLinkNode):
         if constraint_name := self.evaluate_input("Name"):
             c.name = constraint_name
         self.bObject = c
-        custom_space_owner, custom_space_target = False, False
         if self.inputs["Owner Space"].is_connected and self.inputs["Owner Space"].links[0].from_node.node_type == 'XFORM':
-            custom_space_owner=True
             c.owner_space='CUSTOM'
             xf = self.inputs["Owner Space"].links[0].from_node.bGetObject(mode="OBJECT")
             if isinstance(xf, Bone):
@@ -143,66 +185,45 @@ class LinkCopyLocation(MantisLinkNode):
             else:
                 c.space_object=xf
         if self.inputs["Target Space"].is_connected and self.inputs["Target Space"].links[0].from_node.node_type == 'XFORM':
-            custom_space_target=True
             c.target_space='CUSTOM'
             xf = self.inputs["Target Space"].links[0].from_node.bGetObject(mode="OBJECT")
             if isinstance(xf, Bone):
                 c.space_object=self.inputs["Target Space"].links[0].from_node.bGetParentArmature(); c.space_subtarget=xf.name
             else:
                 c.space_object=xf
-        props_sockets = {
-        'use_offset'       : ("Offset", False),
-        'head_tail'       : ("Head/Tail", 0),
-        'use_bbone_shape' : ("UseBBone", False),
-        'invert_x'        : ( ("Invert", 0), False),
-        'invert_y'        : ( ("Invert", 1), False),
-        'invert_z'        : ( ("Invert", 2), False),
-        'use_x'           : ( ("Axes", 0), False),
-        'use_y'           : ( ("Axes", 1), False),
-        'use_z'           : ( ("Axes", 2), False),
-        'owner_space'     : ("Owner Space",  'WORLD'),
-        'target_space'    : ("Target Space", 'WORLD'),
-        'influence'       : ("Influence", 1),
-        'mute'            : ("Enable", True),
-        }
-        if custom_space_owner: del props_sockets['owner_space']
-        if custom_space_target: del props_sockets['target_space']
-        #
+        props_sockets = self.gen_property_socket_map()
         evaluate_sockets(self, c, props_sockets)
         self.executed = True
         
     def bFinalize(self, bContext = None):
         finish_drivers(self)
     
-        
-        
+
+LinkCopyRotationSockets = [
+    InputRelationshipTemplate,
+    MantisSocketTemplate(name='RotationOrder', bl_idname='RotationOrderSocket', is_input=True,
+                         default_value='AUTO', blender_property='euler_order'),
+    MantisSocketTemplate(name='Rotation Mix',  bl_idname='EnumRotationMix', is_input=True,
+                         default_value='REPLACE', blender_property='mix_mode'),
+    AxesTemplate,
+    AxesInvertTemplate,
+    TargetSpaceTemplate,
+    OwnerSpaceTemplate,
+    InfluenceTemplate,
+    TargetTemplate,
+    EnableTemplate,
+    OutputRelationshipTemplate,
+]
 
 class LinkCopyRotation(MantisLinkNode):
     '''A node representing Copy Rotation'''
     
     def __init__(self, signature, base_tree):
-        super().__init__(signature, base_tree)
-        inputs = [
-            "Input Relationship",
-            "RotationOrder",
-            "Rotation Mix",
-            "Axes",
-            "Invert",
-            "Target Space",
-            "Owner Space",
-            "Influence",
-            "Target",
-            "Enable",
-        ]
+        super().__init__(signature, base_tree, LinkCopyRotationSockets)
         additional_parameters = { "Name":None }
-        self.inputs.init_sockets(inputs)
-        self.outputs.init_sockets(["Output Relationship"])
         self.init_parameters(additional_parameters=additional_parameters)
         self.set_traverse([("Input Relationship", "Output Relationship")])
         
-        
-
-    
     def GetxForm(self):
         return GetxForm(self)
 
@@ -225,9 +246,7 @@ class LinkCopyRotation(MantisLinkNode):
         if constraint_name := self.evaluate_input("Name"):
             c.name = constraint_name
         self.bObject = c
-        custom_space_owner, custom_space_target = False, False
         if self.inputs["Owner Space"].is_connected and self.inputs["Owner Space"].links[0].from_node.node_type == 'XFORM':
-            custom_space_owner=True
             c.owner_space='CUSTOM'
             xf = self.inputs["Owner Space"].links[0].from_node.bGetObject(mode="OBJECT")
             if isinstance(xf, Bone):
@@ -235,58 +254,41 @@ class LinkCopyRotation(MantisLinkNode):
             else:
                 c.space_object=xf
         if self.inputs["Target Space"].is_connected and self.inputs["Target Space"].links[0].from_node.node_type == 'XFORM':
-            custom_space_target=True
             c.target_space='CUSTOM'
             xf = self.inputs["Target Space"].links[0].from_node.bGetObject(mode="OBJECT")
             if isinstance(xf, Bone):
                 c.space_object=self.inputs["Target Space"].links[0].from_node.bGetParentArmature(); c.space_subtarget=xf.name
             else:
                 c.space_object=xf
-        props_sockets = {
-        'euler_order' : ("RotationOrder", 'AUTO'),
-        'mix_mode'       : ("Rotation Mix", 'REPLACE'),
-        'invert_x'       : ( ("Invert", 0), False),
-        'invert_y'       : ( ("Invert", 1), False),
-        'invert_z'       : ( ("Invert", 2), False),
-        'use_x'          : ( ("Axes", 0), False),
-        'use_y'          : ( ("Axes", 1), False),
-        'use_z'          : ( ("Axes", 2), False),
-        'owner_space'    : ("Owner Space",  'WORLD'),
-        'target_space'   : ("Target Space", 'WORLD'),
-        'influence'      : ("Influence", 1),
-        'mute'            : ("Enable", True),
-        }
-        if custom_space_owner: del props_sockets['owner_space']
-        if custom_space_target: del props_sockets['target_space']
-        #
+        props_sockets = self.gen_property_socket_map()
         evaluate_sockets(self, c, props_sockets)
         self.executed = True
             
     def bFinalize(self, bContext = None):
         finish_drivers(self)
     
-        
+LinkCopyScaleSockets = [
+    InputRelationshipTemplate,
+    OffsetTemplate,
+    MantisSocketTemplate(name='Average', bl_idname = 'BooleanSocket', is_input=True,
+                         default_value=False, blender_property='use_make_uniform'),
+    MantisSocketTemplate(name='Additive', bl_idname = 'BooleanSocket', is_input=True,
+                         default_value=False, blender_property='use_add'),
+    AxesTemplate,
+    TargetSpaceTemplate,
+    OwnerSpaceTemplate,
+    InfluenceTemplate,
+    TargetTemplate,
+    EnableTemplate,
+    OutputRelationshipTemplate,
+]
         
 class LinkCopyScale(MantisLinkNode):
     '''A node representing Copy Scale'''
     
     def __init__(self, signature, base_tree):
-        super().__init__(signature, base_tree)
-        inputs = [
-            "Input Relationship",
-            "Offset",
-            "Average",
-            "Additive",
-            "Axes",
-            "Target Space",
-            "Owner Space",
-            "Influence",
-            "Target",
-            "Enable",
-        ]
+        super().__init__(signature, base_tree, LinkCopyScaleSockets)
         additional_parameters = { "Name":None }
-        self.inputs.init_sockets(inputs)
-        self.outputs.init_sockets(["Output Relationship"])
         self.init_parameters(additional_parameters=additional_parameters)
         self.set_traverse([("Input Relationship", "Output Relationship")])
     
@@ -303,9 +305,7 @@ class LinkCopyScale(MantisLinkNode):
         if constraint_name := self.evaluate_input("Name"):
             c.name = constraint_name
         self.bObject = c
-        custom_space_owner, custom_space_target = False, False
         if self.inputs["Owner Space"].is_connected and self.inputs["Owner Space"].links[0].from_node.node_type == 'XFORM':
-            custom_space_owner=True
             c.owner_space='CUSTOM'
             xf = self.inputs["Owner Space"].links[0].from_node.bGetObject(mode="OBJECT")
             if isinstance(xf, Bone):
@@ -313,27 +313,13 @@ class LinkCopyScale(MantisLinkNode):
             else:
                 c.space_object=xf
         if self.inputs["Target Space"].is_connected and self.inputs["Target Space"].links[0].from_node.node_type == 'XFORM':
-            custom_space_target=True
             c.target_space='CUSTOM'
             xf = self.inputs["Target Space"].links[0].from_node.bGetObject(mode="OBJECT")
             if isinstance(xf, Bone):
                 c.space_object=self.inputs["Owner Space"].links[0].from_node.bGetParentArmature(); c.space_subtarget=xf.name
             else:
                 c.space_object=xf
-        props_sockets = {
-        'use_offset'       : ("Offset", False),
-        'use_make_uniform' : ("Average", False),
-        'owner_space'      : ("Owner Space",  'WORLD'),
-        'target_space'     : ("Target Space", 'WORLD'),
-        'use_x'            : ( ("Axes", 0), False),
-        'use_y'            : ( ("Axes", 1), False),
-        'use_z'            : ( ("Axes", 2), False),
-        'influence'        : ("Influence", 1),
-        'mute'             : ("Enable", True),
-        }
-        if custom_space_owner: del props_sockets['owner_space']
-        if custom_space_target: del props_sockets['target_space']
-        #
+        props_sockets = self.gen_property_socket_map()
         evaluate_sockets(self, c, props_sockets)   
         self.executed = True 
             
