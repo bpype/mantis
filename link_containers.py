@@ -153,11 +153,14 @@ def GetxForm(nc):
             return node
     raise GraphError("%s is not connected to a downstream xForm" % nc)
 
-LinkInheritSockets = [   # Name                   is_input         bl_idname                  
+LinkInheritSockets = [              
+    SockTemplate(name="Inherit Rotation", is_input=True,
+                 bl_idname='BooleanSocket',       default_value=True,),
+    SockTemplate(name="Inherit Scale",    is_input=True,
+                 bl_idname='EnumInheritScale',    default_value="FULL",),
+    SockTemplate(name="Connected",        is_input=True,
+                 bl_idname='BooleanSocket',       default_value=False,),
     SockTemplate(name="Parent",           is_input=True,   bl_idname='xFormSocket',),
-    SockTemplate(name="Inherit Rotation", is_input=True,   bl_idname='BooleanSocket',),
-    SockTemplate(name="Inherit Scale",    is_input=True,   bl_idname='EnumInheritScale',),
-    SockTemplate(name="Connected",        is_input=True,   bl_idname='BooleanSocket',),
     SockTemplate(name="Inheritance",      is_input=False,  bl_idname='RelationshipSocket',),
 ]
 
