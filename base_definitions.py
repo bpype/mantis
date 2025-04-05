@@ -610,6 +610,37 @@ class MantisNode:
         #         if dep not in solved:
         #             prOrange(dep)
         return
+    
+    # gets targets for constraints and deformers and should handle all cases
+    def get_target_and_subtarget(self, constraint_or_deformer, input_name = "Target"):
+        from bpy.types import PoseBone, Object, SplineIKConstraint
+        subtarget = ''; target = self.evaluate_input(input_name)
+        if target:
+            if not hasattr(target, "bGetObject"):
+                prRed(f"No {input_name} target found for {constraint_or_deformer.name} in {self} because there is no connected node, or node is wrong type")
+                return 
+            if (isinstance(target.bGetObject(), PoseBone)):
+                subtarget = target.bGetObject().name
+                target = target.bGetParentArmature()
+            elif (isinstance(target.bGetObject(), Object) ):
+                target = target.bGetObject()
+            else:
+                raise RuntimeError("Cannot interpret constraint or deformer target!")
+        
+        if   (isinstance(constraint_or_deformer, SplineIKConstraint)):
+                if target and target.type not in ["CURVE"]:
+                    raise GraphError(wrapRed("Error: %s requires a Curve input, not %s" %
+                                    (self, type(target))))
+                constraint_or_deformer.target = target# don't get a subtarget
+        if (input_name == 'Pole Target'):
+            constraint_or_deformer.pole_target, constraint_or_deformer.pole_subtarget = target, subtarget
+        else:
+            if hasattr(constraint_or_deformer, "target"):
+                constraint_or_deformer.target = target
+            if hasattr(constraint_or_deformer, "object"):
+                constraint_or_deformer.object = target
+            if hasattr(constraint_or_deformer, "subtarget"):
+                constraint_or_deformer.subtarget = subtarget
 
     def bPrepare(self, bContext=None):
         return

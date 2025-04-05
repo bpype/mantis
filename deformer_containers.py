@@ -250,7 +250,7 @@ class DeformerHook(MantisNode):
             d = ob.modifiers.new(mod_name, type='HOOK')
             if d is None:
                 raise RuntimeError(f"Modifier was not created in node {self} -- the object is invalid.")
-        get_target_and_subtarget(self, d, input_name="Hook Target")
+        self.get_target_and_subtarget(d, input_name="Hook Target")
         vertices_used=[]
         if reuse: # Get the verts in the list... filter out all the unneeded 0's
             vertices_used = list(d.vertex_indices)

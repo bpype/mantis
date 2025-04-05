@@ -201,8 +201,6 @@ class LinkInheritConstraintNode(Node, LinkNode):
         self.color = inheritColor
         self.initialized = True
 
-
-        
 class LinkCopyTransformNode(Node, LinkNode):
     # === Basics ===
     # Description string
@@ -215,18 +213,8 @@ class LinkCopyTransformNode(Node, LinkNode):
 
     # === Optional Functions ===
     def init(self, context):
-        self.inputs.new ('RelationshipSocket', "Input Relationship")
-        self.inputs.new ('FloatFactorSocket', "Head/Tail")
-        self.inputs.new ('BooleanSocket', "UseBBone")
-        self.inputs.new ('EnumRotationMixCopyTransforms', "Mix")
-        self.inputs.new ('TransformSpaceSocket', "Target Space")
-        self.inputs.new ('TransformSpaceSocket', "Owner Space")
-        self.inputs.new ('FloatFactorSocket', "Influence")
-        self.inputs.new ('xFormSocket', "Target")
-        self.inputs.new ('EnableSocket', "Enable")
-        #
-        self.outputs.new('RelationshipSocket', "Output Relationship")
-        # color
+        from .link_containers import LinkCopyTransformsSockets
+        self.init_sockets(LinkCopyTransformsSockets)
         self.use_custom_color = True
         self.color = linkColor
         self.initialized = True
