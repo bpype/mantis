@@ -1124,7 +1124,7 @@ class LinkInverseKinematics(MantisLinkNode):
         
         base_ik_bone = ik_bone; i=1
         while (i<chain_length) and (base_ik_bone.parent):
-            base_ik_bone=base_ik_bone.parent
+            base_ik_bone=base_ik_bone.parent; i+=1
         return base_ik_bone
     
     # We need to do the calculation in a "full circle", meaning the pole_angle
