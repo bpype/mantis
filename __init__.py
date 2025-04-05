@@ -209,8 +209,10 @@ def update_handler(scene):
         trees = [p.node_tree for p in context.space_data.path]
         if not trees: return
         if (node_tree := trees[0]).bl_idname in ['MantisTree']:
+            if node_tree.is_exporting:
+                return 
             if node_tree.prevent_next_exec : pass
-            elif node_tree.do_live_update and not (node_tree.is_executing or node_tree.is_exporting):
+            elif node_tree.do_live_update and not (node_tree.is_executing):
                 prev_links = node_tree.num_links
                 node_tree.num_links = len(node_tree.links)
                 if (prev_links == -1):
@@ -231,8 +233,10 @@ def execute_handler(scene):
         trees = [p.node_tree for p in context.space_data.path]
         if not trees: return
         if (node_tree := trees[0]).bl_idname in ['MantisTree']:
+            if node_tree.is_exporting:
+                return 
             if node_tree.prevent_next_exec : node_tree.prevent_next_exec = False
-            elif node_tree.tree_valid and node_tree.do_live_update and not (node_tree.is_executing or node_tree.is_exporting):
+            elif node_tree.tree_valid and node_tree.do_live_update and not (node_tree.is_executing):
                 scene.render.use_lock_interface = True
                 node_tree.execute_tree(context)
                 scene.render.use_lock_interface = False

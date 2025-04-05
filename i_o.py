@@ -402,8 +402,6 @@ def export_to_json(trees, path="", write_file=True, only_selected=False):
     # I'm gonna do this in a totally naive way, because this should already be sorted properly
     #   for the sake of dependency satisfaction. So the current "tree" should be the "main" tree
     tree.filepath = path
-
-    return {'FINISHED'}
     
 
 def do_import_from_file(filepath, context):
@@ -412,6 +410,7 @@ def do_import_from_file(filepath, context):
     all_trees = [n_tree for n_tree in bpy.data.node_groups if n_tree.bl_idname in ["MantisTree", "SchemaTree"]]
 
     for tree in all_trees:
+        tree.is_exporting = True
         tree.do_live_update = False
 
     with open(filepath, 'r', encoding='utf-8') as f:
@@ -430,7 +429,9 @@ def do_import_from_file(filepath, context):
     # otherwise:
     # repeat this because we left the with, this is bad and ugly but I don't care
     for tree in all_trees:
+        tree.is_exporting = False
         tree.do_live_update = True
+        tree.prevent_next_exec = True
     return {'CANCELLED'}
 
 def do_import(data, context):
@@ -808,7 +809,11 @@ class MantisExportNodeTreeSaveAs(Operator, ExportHelper):
         prGreen("Exporting node graph with dependencies...")
         for t in trees:
             prGreen ("Node graph: \"%s\"" % (t.name))
-        return export_to_json(trees, self.filepath)
+        base_tree.is_exporting = True
+        export_to_json(trees, self.filepath)
+        base_tree.is_exporting = False
+        base_tree.prevent_next_exec = True
+        return {'FINISHED'}
 
 # Save
 class MantisExportNodeTreeSave(Operator):
@@ -828,7 +833,11 @@ class MantisExportNodeTreeSave(Operator):
         prGreen("Exporting node graph with dependencies...")
         for t in trees:
             prGreen ("Node graph: \"%s\"" % (t.name))
-        return export_to_json(trees, base_tree.filepath)
+        base_tree.is_exporting = True
+        export_to_json(trees, self.filepath)
+        base_tree.is_exporting = False
+        base_tree.prevent_next_exec = True
+        return {'FINISHED'}
 
 # Save Choose:
 class MantisExportNodeTree(Operator):
