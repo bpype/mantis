@@ -534,19 +534,12 @@ def do_import(data, context):
             
             if sub_tree := propslist.get("node_tree"):
                 n.node_tree = bpy.data.node_groups.get(sub_tree)
-                if n.bl_idname == "MantisNodeGroup":
-                    from .base_definitions import node_group_update
-                    n.is_updating = True
-                    try:
-                        node_group_update(n, force = True)
-                    finally:
-                        n.is_updating=False
-                else:
-                    n.is_updating = True
-                    try:
-                        n.inputs.clear()
-                    finally:
-                        n.is_updating=False
+                from .base_definitions import node_group_update
+                n.is_updating = True
+                try:
+                    node_group_update(n, force = True)
+                finally:
+                    n.is_updating=False
             
             sockets_removed = []
             for i, (s_id, s_val) in enumerate(propslist["sockets"].items()):
@@ -558,7 +551,6 @@ def do_import(data, context):
                         continue
                 try:
                     if s_val["is_output"]: # for some reason it thinks the index is a string?
-                        # try:
                         if n.bl_idname == "MantisSchemaGroup":
                             n.is_updating = True
                             try:
@@ -584,10 +576,8 @@ def do_import(data, context):
                             elif n.bl_idname in ["NodeGroupOutput"]:
                                 pass # this is dealt with separately
                             else:
-                                prWhite(n.name, s_val["name"], s_id)
-                                for k,v in propslist["sockets"].items():
-                                    print(k,v)
-                                prRed(s_val["index"], len(n.inputs))
+                                prWhite("Not found: ", n.name, s_val["name"], s_id)
+                                prRed("Index: ", s_val["index"], "Number of inputs", len(n.inputs))
                                 raise NotImplementedError(wrapRed(f"{n.bl_idname} needs to be handled in JSON load."))
                         else: # most of the time
                             socket = n.inputs[int(s_val["index"])]

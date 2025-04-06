@@ -166,7 +166,8 @@ def update_interface(interface, name, in_out, sock_type, parent_name):
     else:
         raise RuntimeError(wrapRed("Cannot add interface item to tree without specifying type."))
 
-def relink_socket_map(node, socket_collection, map, item, in_out=None):
+#UGLY BAD REFACTOR
+def relink_socket_map_add_socket(node, socket_collection, item, in_out=None,):
     if not in_out: in_out=item.in_out
     if node.bl_idname in ['MantisSchemaGroup'] and item.parent and item.parent.name == 'Array':
         multi = True if in_out == 'INPUT' else False
@@ -174,6 +175,15 @@ def relink_socket_map(node, socket_collection, map, item, in_out=None):
     else:
         s = socket_collection.new(type=item.socket_type, name=item.name, identifier=item.identifier)
     if item.parent.name == 'Array': s.display_shape = 'SQUARE_DOT'
+    return s
+
+# TODO REFACTOR THIS
+# I did this awful thing because I needed the above code
+# but I have provided this interface to Mantis
+# I did not follow the Single Responsibility Principle
+# I am now suffering for it, as I rightly deserve.
+def relink_socket_map(node, socket_collection, map, item, in_out=None,):
+    s = relink_socket_map_add_socket(node, socket_collection, item, in_out=None,)
     do_relink(node, s, map)
 
 def unique_socket_name(node, other_socket, tree):
@@ -218,12 +228,60 @@ def init_dependencies(nc):
     nc.hierarchy_dependencies = hc
     nc.dependencies = c
 
+def schema_dependency_handle_item(schema, all_nc, item,):
+    hierarchy = True
+    from .base_definitions import from_name_filter, to_name_filter
+    if item.in_out == 'INPUT':
+        c = schema.dependencies
+        hc = schema.hierarchy_dependencies
+        if item.parent and item.parent.name == 'Array':
+            for t in ['SchemaArrayInput', 'SchemaArrayInputGet']:
+                if (nc := all_nc.get( (*schema.signature, t) )):
+                    for to_link in nc.outputs[item.name].links:
+                        if to_link.to_socket in to_name_filter:
+                            # hierarchy_reason='a'
+                            hierarchy = False
+                    for from_link in schema.inputs[item.identifier].links:
+                        if from_link.from_socket in from_name_filter:
+                            hierarchy = False
+                            # hierarchy_reason='b'
+                    if from_link.from_node not in c:
+                        if hierarchy:
+                            hc.append(from_link.from_node)
+                        c.append(from_link.from_node)
+        if item.parent and item.parent.name == 'Constant':
+            if nc := all_nc.get((*schema.signature, 'SchemaConstInput')):
+                for to_link in nc.outputs[item.name].links:
+                    if to_link.to_socket in to_name_filter:
+                        # hierarchy_reason='c'
+                        hierarchy = False
+                for from_link in schema.inputs[item.identifier].links:
+                    if from_link.from_socket in from_name_filter:
+                        # hierarchy_reason='d'
+                        hierarchy = False
+                if from_link.from_node not in c:
+                    if hierarchy:
+                        hc.append(from_link.from_node)
+                    c.append(from_link.from_node)
+        if item.parent and item.parent.name == 'Connection':
+            if nc := all_nc.get((*schema.signature, 'SchemaIncomingConnection')):
+                for to_link in nc.outputs[item.name].links:
+                    if to_link.to_socket in to_name_filter:
+                        # hierarchy_reason='e'
+                        hierarchy = False
+                for from_link in schema.inputs[item.identifier].links:
+                    if from_link.from_socket in from_name_filter:
+                        # hierarchy_reason='f'
+                        hierarchy = False
+                if from_link.from_node not in c:
+                    if hierarchy:
+                        hc.append(from_link.from_node)
+                    c.append(from_link.from_node)
 
-def init_schema_dependencies(schema, all_nc):
+def init_schema_dependencies(schema, all_nc, raise_errors=False):
     """ Initialize the dependencies for Schema, and mark them as hierarchy or non-hierarchy dependencies
         Non-hierarchy dependencies are e.g. drivers and custom transforms.
     """
-    from .base_definitions import from_name_filter, to_name_filter
     from .utilities import get_node_prototype
     np = get_node_prototype(schema.signature, schema.base_tree)
     tree = np.node_tree
@@ -232,54 +290,8 @@ def init_schema_dependencies(schema, all_nc):
     for item in tree.interface.items_tree:
         if item.item_type == 'PANEL':
             continue
-        hierarchy = True
-        # hierarchy_reason=""
-        if item.in_out == 'INPUT':
-            c = schema.dependencies
-            hc = schema.hierarchy_dependencies
-            if item.parent and item.parent.name == 'Array':
-                for t in ['SchemaArrayInput', 'SchemaArrayInputGet']:
-                    if (nc := all_nc.get( (*schema.signature, t) )):
-                        for to_link in nc.outputs[item.name].links:
-                            if to_link.to_socket in to_name_filter:
-                                # hierarchy_reason='a'
-                                hierarchy = False
-                        for from_link in schema.inputs[item.identifier].links:
-                            if from_link.from_socket in from_name_filter:
-                                hierarchy = False
-                                # hierarchy_reason='b'
-                        if from_link.from_node not in c:
-                            if hierarchy:
-                                hc.append(from_link.from_node)
-                            c.append(from_link.from_node)
-            if item.parent and item.parent.name == 'Constant':
-                if nc := all_nc.get((*schema.signature, 'SchemaConstInput')):
-                    for to_link in nc.outputs[item.name].links:
-                        if to_link.to_socket in to_name_filter:
-                            # hierarchy_reason='c'
-                            hierarchy = False
-                    for from_link in schema.inputs[item.identifier].links:
-                        if from_link.from_socket in from_name_filter:
-                            # hierarchy_reason='d'
-                            hierarchy = False
-                    if from_link.from_node not in c:
-                        if hierarchy:
-                            hc.append(from_link.from_node)
-                        c.append(from_link.from_node)
-            if item.parent and item.parent.name == 'Connection':
-                if nc := all_nc.get((*schema.signature, 'SchemaIncomingConnection')):
-                    for to_link in nc.outputs[item.name].links:
-                        if to_link.to_socket in to_name_filter:
-                            # hierarchy_reason='e'
-                            hierarchy = False
-                    for from_link in schema.inputs[item.identifier].links:
-                        if from_link.from_socket in from_name_filter:
-                            # hierarchy_reason='f'
-                            hierarchy = False
-                    if from_link.from_node not in c:
-                        if hierarchy:
-                            hc.append(from_link.from_node)
-                        c.append(from_link.from_node)
+        schema_dependency_handle_item(schema, all_nc, item,)
+        
 
 
 def check_and_add_root(n, roots, include_non_hierarchy=False):

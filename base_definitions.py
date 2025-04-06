@@ -250,6 +250,8 @@ def poll_node_tree(self, object):
 
 # TODO: try to check identifiers instead of name.
 def node_group_update(node, force = False):
+    if not node.is_updating:
+        raise RuntimeError("Cannot update node while it is not marked as updating.")
     if not force:
         if (node.id_data.do_live_update == False) or  \
            (node.id_data.is_executing == True) or \
@@ -314,11 +316,13 @@ def node_group_update(node, force = False):
         return
 
     if update_input or update_output:
+        socket_map_in, socket_map_out = None, None
         socket_maps = get_socket_maps(node)
-        if socket_maps is None:
+        if socket_maps is None and force == False:
             node.id_data.do_live_update = toggle_update
             return
-        socket_map_in, socket_map_out = socket_maps
+        if socket_maps:
+            socket_map_in, socket_map_out = socket_maps
 
         if update_input :
             if node.bl_idname == 'MantisSchemaGroup':
@@ -334,16 +338,23 @@ def node_group_update(node, force = False):
 
         if update_output: node.outputs.clear()
 
+        from .utilities import relink_socket_map_add_socket
 
         for item in node.node_tree.interface.items_tree:
             if item.item_type != "SOCKET": continue
             if (item.in_out == 'INPUT' and update_input):
-                relink_socket_map(node, node.inputs, socket_map_in, item)
+                socket = relink_socket_map_add_socket(node, node.inputs, item)
+                if socket_map_in:
+                    do_relink(node, socket, socket_map_in)
+
             if (item.in_out == 'OUTPUT' and update_output):
-                relink_socket_map(node, node.outputs, socket_map_out, item)
+                socket = relink_socket_map_add_socket(node, node.outputs, item)
+                if socket_map_out:
+                    do_relink(node, socket, socket_map_out)
+
         
         # at this point there is no wildcard socket
-        if '__extend__' in socket_map_in.keys():
+        if socket_map_in and '__extend__' in socket_map_in.keys():
             do_relink(node, None, socket_map_in, in_out='INPUT', parent_name='Constant' )
 
         node.id_data.do_live_update = toggle_update
