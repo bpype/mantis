@@ -110,6 +110,9 @@ def get_socket_maps(node):
                     raise RuntimeError(f"ERROR: Could not get socket data for socket of type: {sock.bl_idname}")
     return maps
 
+# this function is completely overloaded with different purposes and code paths
+# TODO refactor everything that funnels into this function
+# make this stuff simpler.
 def do_relink(node, s, map, in_out='INPUT', parent_name = ''):
     if not node.__class__.is_registered_node_type(): return
     tree = node.id_data; interface_in_out = 'OUTPUT' if in_out == 'INPUT' else 'INPUT'
@@ -119,7 +122,8 @@ def do_relink(node, s, map, in_out='INPUT', parent_name = ''):
     from bpy.types import NodeSocket
     get_string = '__extend__'
     if s: get_string = s.identifier
-    if hasattr(node, "node_tree") and get_string not in map.keys():
+    from .base_definitions import SchemaUINode
+    if (hasattr(node, "node_tree") or isinstance(node, SchemaUINode)) and get_string not in map.keys():
         # this happens when we are creating a new node group and need to update it from nothing.
         return
     val = map[get_string] # this will throw an error if the socket isn't there. Good!
