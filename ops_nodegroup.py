@@ -629,7 +629,7 @@ class FcurveAddKeyframeInput(bpy.types.Operator):
         return (hasattr(context, 'active_node') )
 
     def execute(self, context):
-        num_keys = len( context.node.inputs)
+        num_keys = len( context.node.inputs)-1
         context.node.inputs.new("KeyframeSocket", "Keyframe."+str(num_keys).zfill(3))
         return {'FINISHED'}
 
