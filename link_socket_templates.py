@@ -240,6 +240,8 @@ LinkLimitDistanceSockets = [
     SockTemplate(name="Clamp Region", bl_idname="EnumLimitMode", is_input=True,
                  default_value='LIMITDIST_INSIDE', blender_property='limit_mode'),
     AffectTransformTemplate,
+    OwnerSpaceTemplate,
+    TargetSpaceTemplate,
     InfluenceTemplate,
     TargetTemplate,
     EnableTemplate,
@@ -335,6 +337,8 @@ LinkInheritConstraintSockets = [
 
 LinkInverseKinematicsSockets = [
     InputRelationshipTemplate,
+    TargetTemplate,
+    SockTemplate(name="Pole Target", is_input=True,  bl_idname='xFormSocket', ),
     ChainLengthTemplate := SockTemplate(name="Chain Length",
                  bl_idname="IntSocket", is_input=True,
                  default_value=0, blender_property='chain_count'),
@@ -347,8 +351,6 @@ LinkInverseKinematicsSockets = [
     SockTemplate(name="Rotation", bl_idname="FloatFactorSocket", is_input=True,
                  default_value=0.0, blender_property='orient_weight'),
     InfluenceTemplate,
-    TargetTemplate,
-    SockTemplate(name="Pole Target", is_input=True,  bl_idname='xFormSocket', ),
     EnableTemplate,
     OutputRelationshipTemplate,
 ]
