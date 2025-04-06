@@ -9,6 +9,10 @@ from mathutils import  Vector
 
 from .base_definitions import NODES_REMOVED, SOCKETS_REMOVED
 
+add_inputs_bl_idnames = [
+    "UtilityDriver", "UtilityFCurve", "DeformerMorphTargetDeform",
+    "MantisSchemaGroup", "LinkArmature",
+    ]
 
 # this works but it is really ugly and probably quite inneficient
 # TODO: make hotkeys for export and import and reload from file
@@ -62,6 +66,52 @@ def fix_custom_parameter(n, property_definition, ):
     
     
 
+def get_socket_data(socket):
+    socket_data = {}
+    socket_data["name"] = socket.name
+    socket_data["bl_idname"] = socket.bl_idname
+    socket_data["is_output"] = socket.is_output
+    socket_data["is_multi_input"] = socket.is_multi_input
+
+    # if socket.bl_idname == 'TransformSpaceSocket':
+    #     prGreen(socket.default_value)
+    
+    # here is where we'll handle a socket_data'socket special data
+    if socket.bl_idname == "EnumMetaBoneSocket":
+        socket_data["bone"] = socket.bone
+    if socket.bl_idname in ["EnumMetaBoneSocket", "EnumMetaRigSocket", "EnumCurveSocket"]:
+        if sp := socket.get("search_prop"): # may be None
+            socket_data["search_prop"] = sp.name # this is an object.
+    #
+
+    # v = socket.get("default_value") # this doesn't seem to work, see below
+    if hasattr(socket, "default_value"):
+        v = socket.default_value
+    else:
+        v = None
+    v_type = type(v)
+    if v is None:
+        return socket_data # we don't need to store this.
+    if not is_jsonable(v):
+        v = tuple(v)
+    if not is_jsonable(v):
+        raise RuntimeError(f"Error serializing data in {socket.node.name}::{socket.name} for value of type {v_type}")
+    socket_data["default_value"] = v
+    # at this point we can get the custom parameter ui hints if we want
+    if not socket.is_output:
+        # try and get this data
+        if v := getattr(socket,'min', None):
+            socket_data["min"] = v
+        if v := getattr(socket,'max', None):
+            socket_data["max"] = v
+        if v := getattr(socket,'soft_min', None):
+            socket_data["soft_min"] = v
+        if v := getattr(socket,'soft_max', None):
+            socket_data["soft_max"] = v
+        if v := getattr(socket,'description', None):
+            socket_data["description"] = v
+    return socket_data
+    #
 
 def export_to_json(trees, path="", write_file=True, only_selected=False):
     # ignore these because they are either unrelated python stuff or useless or borked
@@ -182,68 +232,12 @@ def export_to_json(trees, path="", write_file=True, only_selected=False):
                     node_props[propname] = tuple(location_acc)
                     # this works!
 
-                    # n.parent = None
-                
-                # if propname == "location":
-                #     print (v, n.location)
-                # if parent:
-                #     n.parent = parent
-            # now we need to get the sockets...
-
-            # WHY IS THIS FUNCTION DEFINED IN THIS SCOPE?
-            def socket_data(s):
-                socket = {}
-                socket["name"] = s.name
-                socket["bl_idname"] = s.bl_idname
-                socket["is_output"] = s.is_output
-                socket["is_multi_input"] = s.is_multi_input
-
-                # if s.bl_idname == 'TransformSpaceSocket':
-                #     prGreen(s.default_value)
-                
-                # here is where we'll handle a socket's special data
-                if s.bl_idname == "EnumMetaBoneSocket":
-                    socket["bone"] = s.bone
-                if s.bl_idname in ["EnumMetaBoneSocket", "EnumMetaRigSocket", "EnumCurveSocket"]:
-                    if sp := s.get("search_prop"): # may be None
-                        socket["search_prop"] = sp.name # this is an object.
-                #
-
-                # v = s.get("default_value") # this doesn't seem to work, see below
-                if hasattr(s, "default_value"):
-                    v = s.default_value
-                else:
-                    v = None
-                v_type = type(v)
-                if v is None:
-                    return socket # we don't need to store this.
-                if not is_jsonable(v):
-                    v = tuple(v)
-                if not is_jsonable(v):
-                    raise RuntimeError(f"Error serializing data in {s.node.name}::{s.name} for value of type {v_type}")
-                socket["default_value"] = v
-                # at this point we can get the custom parameter ui hints if we want
-                if not s.is_output:
-                    # try and get this data
-                    if v := getattr(s,'min', None):
-                        socket["min"] = v
-                    if v := getattr(s,'max', None):
-                        socket["max"] = v
-                    if v := getattr(s,'soft_min', None):
-                        socket["soft_min"] = v
-                    if v := getattr(s,'soft_max', None):
-                        socket["soft_max"] = v
-                    if v := getattr(s,'description', None):
-                        socket["description"] = v
-                return socket
-                #
-
             for i, s in enumerate(n.inputs):
-                socket = socket_data(s)
+                socket = get_socket_data(s)
                 socket["index"]=i
                 sockets[s.identifier] = socket
             for i, s in enumerate(n.outputs):
-                socket = socket_data(s)
+                socket = get_socket_data(s)
                 socket["index"]=i
                 sockets[s.identifier] = socket
             
@@ -285,8 +279,6 @@ def export_to_json(trees, path="", write_file=True, only_selected=False):
                 raise RuntimeError(wrapRed(f"Error saving index of socket: {problem}"))
             g, h = l.from_socket.name, l.to_socket.name
 
-            # print (f"{a}:{b} --> {c}:{d})")
-            # this data is good enough
             if base_tree:
                 if (only_selected and l.from_node.select) and (not l.to_node.select):
                     # handle an output in the tree
@@ -391,6 +383,7 @@ def export_to_json(trees, path="", write_file=True, only_selected=False):
             nodes["MANTIS_AUTOGEN_GROUP_OUTPUT"]=out_node
 
         export_data[tree.name] = (tree_info, tree_in_out, nodes, links,) # f_curves)
+    
     import json
 
     if not write_file:
@@ -412,13 +405,18 @@ def do_import_from_file(filepath, context):
     for tree in all_trees:
         tree.is_exporting = True
         tree.do_live_update = False
+    
+    def do_cleanup(tree):
+        tree.is_exporting = False
+        tree.do_live_update = True
+        tree.prevent_next_exec = True
 
     with open(filepath, 'r', encoding='utf-8') as f:
         data = json.load(f)
         do_import(data,context)
 
         for tree in all_trees:
-            tree.do_live_update = True
+            do_cleanup(tree)
 
         tree = bpy.data.node_groups[list(data.keys())[-1]]
         try:
@@ -429,9 +427,7 @@ def do_import_from_file(filepath, context):
     # otherwise:
     # repeat this because we left the with, this is bad and ugly but I don't care
     for tree in all_trees:
-        tree.is_exporting = False
-        tree.do_live_update = True
-        tree.prevent_next_exec = True
+            do_cleanup(tree)
     return {'CANCELLED'}
 
 def do_import(data, context):
@@ -490,7 +486,6 @@ def do_import(data, context):
         # Go BACK through and set the index/position now that all items exist.
         interface_sockets.sort(key=lambda a : a[1])
         for (socket, position) in interface_sockets:
-            print (socket.name, position)
             tree.interface.move(socket, position)
         
     # Now go and do nodes and links
@@ -558,36 +553,16 @@ def do_import(data, context):
                             if s_val["index"] > removed_index:
                                 s_val["index"]-=1
                         if s_val["index"] >= len(n.inputs):
-                            if n.bl_idname == "UtilityDriver":
-                                with bpy.context.temp_override(**{'node':n}):
-                                    bpy.ops.mantis.driver_node_add_variable()
-                                socket = n.inputs[int(s_val["index"])]
-                            elif n.bl_idname == "UtilityFCurve":
-                                with bpy.context.temp_override(**{'node':n}):
-                                    bpy.ops.mantis.fcurve_node_add_kf()
-                                socket = n.inputs[int(s_val["index"])]
-                            elif n.bl_idname == "MantisSchemaGroup":
+                            if n.bl_idname in add_inputs_bl_idnames:
                                 socket = n.inputs.new(s_val["bl_idname"], s_val["name"], identifier=s_id, use_multi_input=s_val["is_multi_input"])
-                                # for k,v in s_val.items():
-                                #     print(f"{k}:{v}")
-                                # print (s_id)
-                                # raise NotImplementedError(s_val["is_multi_input"])
                             elif n.bl_idname in ["NodeGroupOutput"]:
-                                # print (len(n.inputs), len(n.outputs))
-                                pass
-                            elif n.bl_idname == "LinkArmature":
-                                with bpy.context.temp_override(**{'node':n}):
-                                    bpy.ops.mantis.link_armature_node_add_target()
-                                socket = n.inputs[int(s_val["index"])]
-                            elif n.bl_idname == "DeformerMorphTargetDeform": # this one doesn't use an operator since I figure out how to do dynamic node stuff
-                                socket = n.inputs.new(s_val["bl_idname"], s_val["name"], identifier=s_id)
+                                pass # this is dealt with separately
                             else:
                                 prWhite(n.name, s_val["name"], s_id)
                                 for k,v in propslist["sockets"].items():
                                     print(k,v)
                                 prRed(s_val["index"], len(n.inputs))
                                 raise NotImplementedError(wrapRed(f"{n.bl_idname} needs to be handled in JSON load."))
-                            # if n.bl_idname in ['']
                         else: # most of the time
                             socket = n.inputs[int(s_val["index"])]
                 except IndexError:
@@ -596,14 +571,7 @@ def do_import(data, context):
                         is_output = "output" if {s_val["is_output"]} else "input"
                         prRed(s_val, type(s_val))
                         raise RuntimeError(is_output, n.name, s_val["name"], s_id, len(n.inputs))
-
                 
-#                if propslist["bl_idname"] == "UtilityMetaRig":#and i == 0:
-#                    pass#prRed (i, s_id, s_val)
-#                if propslist["bl_idname"] == "UtilityMetaRig":# and i > 0:
-#                       prRed("Not Found: %s" % (s_id))
-#                       prOrange(propslist["sockets"][s_id])
-#                       socket = fix_custom_parameter(n, propslist["sockets"][s_id]
                 for s_p, s_v in s_val.items():
                     if s_p not in ["default_value"]:
                         if s_p == "search_prop" and n.bl_idname == 'UtilityMetaRig':
@@ -622,20 +590,15 @@ def do_import(data, context):
                     try:
                         setattr(socket, s_p , s_v)
                     except TypeError as e:
-                        prRed("Can't set socket due to type mismatch: ", socket, s_p, s_v)
+                        prRed("Can't set socket due to type mismatch: ", n.name, socket.name, s_p, s_v)
                         # raise e
                     except ValueError as e:
-                        prRed("Can't set socket due to type mismatch: ", socket, s_p, s_v)
+                        prRed("Can't set socket due to type mismatch: ", n.name,  socket.name, s_p, s_v)
                         # raise e
                     except AttributeError as e:
                         prWhite("Tried to write a read-only property, ignoring...")
                         prWhite(f"{socket.node.name}[{socket.name}].{s_p} is read only, cannot set value to {s_v}")
-                        # raise e
-                # not sure if this is true:
-                    # this can find properties that aren't node in/out
-                    # we should also be checking those above actually
-                # TODO:
-                # find out why "Bone hide" not being found
+
             for p, v in propslist.items():
                 if p == "sockets": # it's the sockets dict
                     continue
@@ -653,12 +616,6 @@ def do_import(data, context):
                 except Exception as e:
                     print (p)
                     raise e
-#        raise NotImplementedError
-
-        
-        
-#        for k,v in tree_sock_id_map.items():
-#            print (wrapGreen(k), "   ", wrapPurple(v))
         
         for l in links:
 
@@ -667,14 +624,6 @@ def do_import(data, context):
             #
             name1=l[6]
             name2=l[7]
-            
-            # prWhite(l[0], l[1], " --> ", l[2], l[3])
-            
-            # l has...
-            # node 1
-            # identifier 1
-            # node 2
-            # identifier 2
             
             # if the from/to socket or node has been removed, continue
             from_node = tree.nodes.get(l[0])
@@ -702,8 +651,6 @@ def do_import(data, context):
             else: # we can raise a runtime error here actually
                 from_sock = None
                 
-                
-            
             to_node = tree.nodes[l[2]]
             if hasattr(to_node, "node_tree"):
                 try:
@@ -713,15 +660,9 @@ def do_import(data, context):
                     id2 = None
             elif to_node.bl_idname in ["NodeGroupOutput"]:
                 id2 = tree_sock_id_map.get(l[3])
-#                prPurple(to_node.name)
-#                for inp in to_node.inputs:
-#                    prPurple(inp.name, inp.identifier)
-#                prOrange (l[3], id2)
             elif to_node.bl_idname in ["SchemaArrayOutput", "SchemaConstOutput", "SchemaOutgoingConnection"]:
                 # try the index instead
                 id2 = to_node.inputs[l[5]].identifier
-                # try to get by name
-                #id2 = to_node.inputs[name2]
 
             for to_sock in to_node.inputs:
                 if to_sock.identifier == id2: break
@@ -738,6 +679,7 @@ def do_import(data, context):
                     prRed (f"Failed: {l[0]}:{l[1]} --> {l[2]}:{l[3]}")
                     prRed (f" got node: {from_node.name}, {to_node.name}")
                     prRed (f" got socket: {from_sock}, {to_sock}")
+                    prOrange(to_node.inputs.keys())
 
                     if from_sock is None:
                         prOrange ("Candidates...")
@@ -759,17 +701,10 @@ def do_import(data, context):
             if (n := tree.nodes.get(name)) and (p := tree.nodes.get(p)):
                 n.parent = p
             # otherwise the frame node is missing because it was not included in the data e.g. when grouping nodes.
-
+        
         tree.is_executing = False
         tree.do_live_update = True
         
-        # try:
-        #     tree=context.space_data.path[0].node_tree
-        #     tree.update_tree(context)
-        # except: #update tree can cause all manner of errors
-        #     pass
-
-
 
 
 
@@ -884,7 +819,6 @@ class MantisImportNodeTree(Operator, ImportHelper):
         options={'HIDDEN'},
         maxlen=255,  # Max internal buffer length, longer would be clamped.
     )
-
 
     def execute(self, context):
         return do_import_from_file(self.filepath, context)
