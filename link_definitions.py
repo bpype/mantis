@@ -102,25 +102,9 @@ class LinkInverseKinematics(Node, LinkNode):
     mantis_node_class_name=bl_idname
 
     def init(self, context):
-        self.inputs.new('RelationshipSocket', "Input Relationship")
-        self.inputs.new ('xFormSocket', "Target")
-        self.inputs.new ('xFormSocket', "Pole Target")
-        self.inputs.new ('IKChainLengthSocket', "Chain Length")
-        self.inputs.new ('BooleanSocket', "Use Tail")
-        self.inputs.new ('BooleanSocket', "Stretch")
-        self.inputs.new ('FloatFactorSocket', "Position")
-        self.inputs.new ('FloatFactorSocket', "Rotation")
-        self.inputs.new ('FloatFactorSocket', "Influence")
-        self.inputs.new ('EnableSocket', "Enable")
-        
-        #Well, it turns out that this has to be a constraint like
-        # everything else, because of course, there can be more than one.
-        
-        #self.outputs.new('RelationshipSocket', "Inheritance")
-        self.outputs.new('RelationshipSocket', "Output Relationship")
-
+        from .link_containers import LinkInverseKinematicsSockets
+        self.init_sockets(LinkInverseKinematicsSockets)
         self.initialized = True
-        # color
         self.use_custom_color = True
         self.color = ikColor
 
@@ -187,16 +171,8 @@ class LinkInheritConstraintNode(Node, LinkNode):
 
     # === Optional Functions ===
     def init(self, context):
-        self.inputs.new ('RelationshipSocket', "Input Relationship")
-        self.inputs.new ('BooleanThreeTupleSocket', "Location")
-        self.inputs.new ('BooleanThreeTupleSocket', "Rotation")
-        self.inputs.new ('BooleanThreeTupleSocket', "Scale")
-        self.inputs.new ('FloatFactorSocket', "Influence")
-        self.inputs.new ('xFormSocket', "Target")
-        self.inputs.new ('EnableSocket', "Enable")
-        #
-        self.outputs.new('RelationshipSocket', "Output Relationship")
-        # color
+        from .link_containers import LinkInheritConstraintSockets
+        self.init_sockets(LinkInheritConstraintSockets)
         self.use_custom_color = True
         self.color = inheritColor
         self.initialized = True
@@ -230,31 +206,12 @@ class LinkStretchToNode(Node, LinkNode):
     mantis_node_class_name=bl_idname
 
     def init(self, context):
-        self.inputs.new ('RelationshipSocket', "Input Relationship")
-        self.inputs.new ('FloatFactorSocket', "Head/Tail")
-        self.inputs.new ('BooleanSocket', "UseBBone")
-        self.inputs.new ('FloatSocket', "Original Length")
-        self.inputs.new ('FloatSocket', "Volume Variation")
-        self.inputs.new ('BoolUpdateParentNode', "Use Volume Min")
-        self.inputs.new ('FloatSocket', "Volume Min")
-        self.inputs.new ('BoolUpdateParentNode', "Use Volume Max")
-        self.inputs.new ('FloatSocket', "Volume Max")
-        self.inputs.new ('FloatFactorSocket', "Smooth")
-        self.inputs.new ('EnumMaintainVolumeStretchToSocket', "Maintain Volume")
-        self.inputs.new ('EnumRotationStretchTo', "Rotation")
-        self.inputs.new ('FloatFactorSocket', "Influence")
-        self.inputs.new ('xFormSocket', "Target")
-        self.inputs.new ('EnableSocket', "Enable")
-        #
-        self.outputs.new('RelationshipSocket', "Output Relationship")
-
+        from .link_containers import LinkStretchToSockets
+        self.init_sockets(LinkStretchToSockets)
         self.initialized = True
-        # color
         self.use_custom_color = True
         self.color = trackingColor
 
-
-        
 class LinkDampedTrackNode(Node, LinkNode):
     '''A node representing Stretch-To'''
     bl_idname = 'LinkDampedTrack'
@@ -264,22 +221,11 @@ class LinkDampedTrackNode(Node, LinkNode):
     mantis_node_class_name=bl_idname
 
     def init(self, context):
-        self.inputs.new ('RelationshipSocket', "Input Relationship")
-        self.inputs.new ('FloatFactorSocket', "Head/Tail")
-        self.inputs.new ('BooleanSocket', "UseBBone")
-        self.inputs.new ('EnumTrackAxis', "Track Axis")
-        self.inputs.new ('FloatFactorSocket', "Influence")
-        self.inputs.new ('xFormSocket', "Target")
-        self.inputs.new ('EnableSocket', "Enable")
-        #
-        self.outputs.new('RelationshipSocket', "Output Relationship")
-
+        from .link_containers import LinkDampedTrackSockets
+        self.init_sockets(LinkDampedTrackSockets)
         self.initialized = True
-        # color
         self.use_custom_color = True
         self.color = trackingColor
-
-
         
 class LinkLockedTrackNode(Node, LinkNode):
     '''A node representing Stretch-To'''
@@ -290,23 +236,10 @@ class LinkLockedTrackNode(Node, LinkNode):
     mantis_node_class_name=bl_idname
 
     def init(self, context):
-        self.inputs.new ('RelationshipSocket', "Input Relationship")
-        self.inputs.new ('FloatFactorSocket', "Head/Tail")
-        self.inputs.new ('BooleanSocket', "UseBBone")
-        self.inputs.new ('EnumTrackAxis', "Track Axis")
-        self.inputs.new ('EnumLockAxis', "Lock Axis")
-        self.inputs.new ('FloatFactorSocket', "Influence")
-        self.inputs.new ('xFormSocket', "Target")
-        self.inputs.new ('EnableSocket', "Enable")
-        #
-        self.outputs.new('RelationshipSocket', "Output Relationship")
-
+        from .link_containers import LinkLockedTrackSockets
         self.initialized = True
-        # color
         self.use_custom_color = True
         self.color = trackingColor
-
-
         
 class LinkTrackToNode(Node, LinkNode):
     '''A node representing Stretch-To'''
@@ -317,27 +250,12 @@ class LinkTrackToNode(Node, LinkNode):
     mantis_node_class_name=bl_idname
 
     def init(self, context):
-        self.inputs.new ('RelationshipSocket', "Input Relationship")
-        self.inputs.new ('FloatFactorSocket', "Head/Tail")
-        self.inputs.new ('BooleanSocket', "UseBBone")
-        self.inputs.new ('EnumTrackAxis', "Track Axis")
-        self.inputs.new ('EnumUpAxis', "Up Axis")
-        self.inputs.new ('BooleanSocket', "Use Target Z")
-        self.inputs.new ('TransformSpaceSocket', "Target Space")
-        self.inputs.new ('TransformSpaceSocket', "Owner Space")
-        self.inputs.new ('FloatFactorSocket', "Influence")
-        self.inputs.new ('xFormSocket', "Target")
-        self.inputs.new ('EnableSocket', "Enable")
-        #
-        self.outputs.new('RelationshipSocket', "Output Relationship")
-
+        from .link_containers import LinkTrackToSockets
+        self.init_sockets(LinkTrackToSockets)
         self.initialized = True
-        # color
         self.use_custom_color = True
         self.color = trackingColor
 
-
-        
 class LinkLimitLocationNode(Node, LinkNode):
     '''A node representing Limit Location'''
     bl_idname = 'LinkLimitLocation'
@@ -347,32 +265,12 @@ class LinkLimitLocationNode(Node, LinkNode):
     initialized : bpy.props.BoolProperty(default = False)
 
     def init(self, context):
-        self.inputs.new ('RelationshipSocket', "Input Relationship")
-        self.inputs.new ('BoolUpdateParentNode', "Use Max X")
-        self.inputs.new ('FloatSocket', "Max X")
-        self.inputs.new ('BoolUpdateParentNode', "Use Min X")
-        self.inputs.new ('FloatSocket', "Min X")
-        self.inputs.new ('BoolUpdateParentNode', "Use Max Y")
-        self.inputs.new ('FloatSocket', "Max Y")
-        self.inputs.new ('BoolUpdateParentNode', "Use Min Y")
-        self.inputs.new ('FloatSocket', "Min Y")
-        self.inputs.new ('BoolUpdateParentNode', "Use Max Z")
-        self.inputs.new ('FloatSocket', "Max Z")
-        self.inputs.new ('BoolUpdateParentNode', "Use Min Z")
-        self.inputs.new ('FloatSocket', "Min Z")
-        self.inputs.new ('BooleanSocket', "Affect Transform")
-        self.inputs.new ('TransformSpaceSocket', "Owner Space")
-        self.inputs.new ('FloatFactorSocket', "Influence")
-        self.inputs.new ('EnableSocket', "Enable")
-        #
-        self.outputs.new('RelationshipSocket', "Output Relationship")
+        from .link_containers import LinkLimitLocationScaleSockets
+        self.init_sockets(LinkLimitLocationScaleSockets)
         self.initialized = True
-        # color
         self.use_custom_color = True
         self.color = linkColor
 
-
-            
 class LinkLimitScaleNode(Node, LinkNode):
     '''A node representing Limit Scale'''
     bl_idname = 'LinkLimitScale'
@@ -382,32 +280,12 @@ class LinkLimitScaleNode(Node, LinkNode):
     mantis_node_class_name=bl_idname
 
     def init(self, context):
-        self.inputs.new ('RelationshipSocket', "Input Relationship")
-        self.inputs.new ('BoolUpdateParentNode', "Use Max X")
-        self.inputs.new ('FloatSocket', "Max X")
-        self.inputs.new ('BoolUpdateParentNode', "Use Min X")
-        self.inputs.new ('FloatSocket', "Min X")
-        self.inputs.new ('BoolUpdateParentNode', "Use Max Y")
-        self.inputs.new ('FloatSocket', "Max Y")
-        self.inputs.new ('BoolUpdateParentNode', "Use Min Y")
-        self.inputs.new ('FloatSocket', "Min Y")
-        self.inputs.new ('BoolUpdateParentNode', "Use Max Z")
-        self.inputs.new ('FloatSocket', "Max Z")
-        self.inputs.new ('BoolUpdateParentNode', "Use Min Z")
-        self.inputs.new ('FloatSocket', "Min Z")
-        self.inputs.new ('BooleanSocket', "Affect Transform")
-        self.inputs.new ('TransformSpaceSocket', "Owner Space")
-        self.inputs.new ('FloatFactorSocket', "Influence")
-        self.inputs.new ('EnableSocket', "Enable")
-        #
-        self.outputs.new('RelationshipSocket', "Output Relationship")
+        from .link_containers import LinkLimitLocationScaleSockets
+        self.init_sockets(LinkLimitLocationScaleSockets)
         self.initialized = True
-        # color
         self.use_custom_color = True
         self.color = linkColor
-
-
-            
+ 
 class LinkLimitRotationNode(Node, LinkNode):
     # === Basics ===
     # Description string
@@ -420,29 +298,13 @@ class LinkLimitRotationNode(Node, LinkNode):
 
     # === Optional Functions ===
     def init(self, context):
-        self.inputs.new ('RelationshipSocket', "Input Relationship")
-        self.inputs.new ('BoolUpdateParentNode', "Use X")
-        self.inputs.new ('FloatAngleSocket', "Min X")
-        self.inputs.new ('FloatAngleSocket', "Max X")
-        self.inputs.new ('BoolUpdateParentNode', "Use Y")
-        self.inputs.new ('FloatAngleSocket', "Min Y")
-        self.inputs.new ('FloatAngleSocket', "Max Y")
-        self.inputs.new ('BoolUpdateParentNode', "Use Z")
-        self.inputs.new ('FloatAngleSocket', "Min Z")
-        self.inputs.new ('FloatAngleSocket', "Max Z")
-        self.inputs.new ('BooleanSocket', "Affect Transform")
-        self.inputs.new ('TransformSpaceSocket', "Owner Space")
-        self.inputs.new ('FloatFactorSocket', "Influence")
-        self.inputs.new ('EnableSocket', "Enable")
-        #
-        self.outputs.new('RelationshipSocket', "Output Relationship")
+        from .link_containers import LinkLimitRotationSockets
+        self.init_sockets(LinkLimitRotationSockets)
         self.initialized = True
         # color
         self.use_custom_color = True
         self.color = linkColor
 
-
-        
 class LinkLimitDistanceNode(Node, LinkNode):
     '''A node representing Limit Distance'''
     bl_idname = 'LinkLimitDistance'
@@ -452,26 +314,13 @@ class LinkLimitDistanceNode(Node, LinkNode):
     mantis_node_class_name=bl_idname
 
     def init(self, context):
-        self.inputs.new ('RelationshipSocket', "Input Relationship")
-        self.inputs.new ('FloatFactorSocket', "Head/Tail")
-        self.inputs.new ('BooleanSocket', "UseBBone")
-        self.inputs.new ('FloatSocket', "Distance")
-        self.inputs.new ('EnumLimitMode', "Clamp Region")
-        self.inputs.new ('BooleanSocket', "Affect Transform")
-        self.inputs.new ('TransformSpaceSocket', "Owner Space")
-        self.inputs.new ('TransformSpaceSocket', "Target Space")
-        self.inputs.new ('FloatFactorSocket', "Influence")
-        self.inputs.new ('xFormSocket', "Target")
-        self.inputs.new ('EnableSocket', "Enable")
-        #
-        self.outputs.new('RelationshipSocket', "Output Relationship")
-        # color
+        from .link_containers import LinkLimitDistanceSockets
+        self.init_sockets(LinkLimitDistanceSockets)
         self.use_custom_color = True
         self.color = linkColor
         self.initialized = True
 
-        
-        
+
 class LinkTransformationNode(Node, LinkNode):
     '''A node representing Transformation (Constraint)'''
     bl_idname = 'LinkTransformation'
@@ -481,48 +330,12 @@ class LinkTransformationNode(Node, LinkNode):
     mantis_node_class_name=bl_idname
 
     def init(self, context):
-        hide_me = []
-        self.inputs.new ('RelationshipSocket', "Input Relationship")
-        self.inputs.new ('xFormSocket', "Target")
-        self.inputs.new ('TransformSpaceSocket', "Owner Space")
-        self.inputs.new ('TransformSpaceSocket', "Target Space")
-        self.inputs.new ('BooleanSocket', "Extrapolate")
-        self.inputs.new ('EnumTransformationMap', "Map From")
-        hide_me.append( self.inputs.new ('EnumTransformationRotationMode', "Rotation Mode"))
-        self.inputs.new ('FloatSocket', "X Min From")
-        self.inputs.new ('FloatSocket', "X Max From")
-        self.inputs.new ('FloatSocket', "Y Min From")
-        self.inputs.new ('FloatSocket', "Y Max From")
-        self.inputs.new ('FloatSocket', "Z Min From")
-        self.inputs.new ('FloatSocket', "Z Max From")
-        self.inputs.new ('EnumTransformationMap', "Map To")
-        hide_me.append( self.inputs.new ('EnumTransformationRotationOrder', "Rotation Order"))
-        self.inputs.new ('EnumTransformationAxes', "X Source Axis")
-        self.inputs.new ('FloatSocket', "X Min To")
-        self.inputs.new ('FloatSocket', "X Max To")
-        self.inputs.new ('EnumTransformationAxes', "Y Source Axis")
-        self.inputs.new ('FloatSocket', "Y Min To")
-        self.inputs.new ('FloatSocket', "Y Max To")
-        self.inputs.new ('EnumTransformationAxes', "Z Source Axis")
-        self.inputs.new ('FloatSocket', "Z Min To")
-        self.inputs.new ('FloatSocket', "Z Max To")
-        self.inputs.new ('EnumTransformationTranslationMixMode', "Mix Mode (Translation)")
-        hide_me.append( self.inputs.new ('EnumTransformationRotationMixMode', "Mix Mode (Rotation)"))
-        hide_me.append( self.inputs.new ('EnumTransformationScaleMixMode', "Mix Mode (Scale)"))
-        self.inputs.new ('FloatFactorSocket', "Influence")
-        self.inputs.new ('EnableSocket', "Enable")
-        #
-        self.outputs.new('RelationshipSocket', "Output Relationship")
-        
-        for s in hide_me:
-            s.hide = True
-        # color
+        from .link_containers import LinkTransformationSockets
+        self.init_sockets(LinkTransformationSockets)
         self.use_custom_color = True
         self.color = linkColor
         self.initialized = True
 
-    
-    
     def display_update(self, parsed_tree, context):
         node_tree = context.space_data.path[0].node_tree
         nc = parsed_tree.get(get_signature_from_edited_tree(self, context))
@@ -547,8 +360,6 @@ class LinkTransformationNode(Node, LinkNode):
                     self.inputs["Mix Mode (Rotation)"].hide=True
                     self.inputs["Mix Mode (Scale)"].hide=False
 
-
-
 class LinkArmatureNode(Node, LinkNode):
     """A node representing Blender's Armature Constraint"""
     bl_idname = "LinkArmature"
@@ -558,14 +369,8 @@ class LinkArmatureNode(Node, LinkNode):
     mantis_node_class_name=bl_idname
     
     def init(self, context):
-        self.inputs.new ("RelationshipSocket", "Input Relationship")
-        self.inputs.new("BooleanSocket", "Preserve Volume")
-        self.inputs.new("BooleanSocket", "Use Envelopes")
-        self.inputs.new("BooleanSocket", "Use Current Location")
-        self.inputs.new("FloatFactorSocket", "Influence")
-        self.inputs.new ('EnableSocket', "Enable")
-        self.outputs.new("RelationshipSocket", "Output Relationship")
-        # color
+        from .link_containers import LinkArmatureSockets
+        self.init_sockets(LinkArmatureSockets)
         self.use_custom_color = True
         self.color = inheritColor
         self.initialized = True
@@ -587,18 +392,8 @@ class LinkSplineIKNode(Node, LinkNode):
     mantis_node_class_name=bl_idname
     
     def init(self, context):
-        self.inputs.new ("RelationshipSocket", "Input Relationship")
-        self.inputs.new("xFormSocket", "Target")
-        self.inputs.new("IntSocket", "Chain Length")
-        self.inputs.new("BooleanSocket", "Even Divisions")
-        self.inputs.new("BooleanSocket", "Chain Offset")
-        self.inputs.new("BooleanSocket", "Use Curve Radius")
-        self.inputs.new("EnumYScaleMode", "Y Scale Mode")
-        self.inputs.new("EnumXZScaleMode", "XZ Scale Mode")
-        self.inputs.new("BooleanSocket", "Use Original Scale")
-        self.inputs.new("FloatFactorSocket", "Influence")
-        self.outputs.new("RelationshipSocket", "Output Relationship")
-        # color
+        from .link_containers import LinkSplineIKSockets
+        self.init_sockets(LinkSplineIKSockets)
         self.use_custom_color = True
         self.color = ikColor
         self.initialized = True
@@ -614,13 +409,10 @@ class LinkDrivenParameterNode(Node, LinkNode):
     mantis_node_class_name=bl_idname
     
     def init(self, context):
-        self.inputs.new ( "RelationshipSocket", "Input Relationship" )
-        self.inputs.new ( "FloatSocket", "Value" )
-        self.inputs.new ( "ParameterStringSocket", "Parameter" )
-        self.inputs.new ( "IntSocket", "Index" )
-        self.inputs.new ('EnableSocket', "Enable")
-        #
-        self.outputs.new( "RelationshipSocket", "Output Relationship" )
+        from .link_containers import LinkDrivenParameterSockets
+        self.init_sockets(LinkDrivenParameterSockets)
+        self.use_custom_color = True
+        self.color = linkColor
         self.initialized = True
 
 # Set up the class property that ties the UI classes to the Mantis classes.

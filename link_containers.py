@@ -68,25 +68,44 @@ OffsetTemplate : SockTemplate = SockTemplate(
     default_value=False, blender_property='use_offset')
 # Limit Constraints follow a pattern and can use this generator
 LimitTemplateGenerator = lambda name_stub, axis : SockTemplate(
-    name=name_stub+axis.upper(), is_input=True,  bl_idname='BoolUpdateParentNode',
+    name=name_stub+axis.upper(), is_input=True,  bl_idname='BooleanSocket' if "Use" in name_stub else "FloatSocket",
     default_value=False, blender_property=name_stub.lower().replace(' ', '_')+axis.lower())
 LimitAxesSocketTemplates = [] # could generate these with loops, but this is easier to understand
-LimitAxesSocketTemplates.append(UseMaxXTemplates := LimitTemplateGenerator("Use Max ", "X"))
-LimitAxesSocketTemplates.append(MaxXTemplates    := LimitTemplateGenerator("Max ", "X"))
-LimitAxesSocketTemplates.append(UseMaxYTemplates := LimitTemplateGenerator("Use Max ", "Y"))
-LimitAxesSocketTemplates.append(MaxYTemplates    := LimitTemplateGenerator("Max ", "Y"))
-LimitAxesSocketTemplates.append(UseMaxZTemplates := LimitTemplateGenerator("Use Max ", "Z"))
-LimitAxesSocketTemplates.append(MinZTemplates    := LimitTemplateGenerator("Min ", "Z"))
-LimitAxesSocketTemplates.append(UseMinXTemplates := LimitTemplateGenerator("Use Min ", "X"))
-LimitAxesSocketTemplates.append(MinXTemplates    := LimitTemplateGenerator("Min ", "X"))
-LimitAxesSocketTemplates.append(UseMinYTemplates := LimitTemplateGenerator("Use Min ", "Y"))
-LimitAxesSocketTemplates.append(MinYTemplates    := LimitTemplateGenerator("Min ", "Y"))
-LimitAxesSocketTemplates.append(UseMinZTemplates := LimitTemplateGenerator("Use Min ", "Z"))
-LimitAxesSocketTemplates.append(MinZTemplates    := LimitTemplateGenerator("Min ", "Z"))
-#
+LimitAxesSocketTemplates.append(UseMaxXTemplate := LimitTemplateGenerator("Use Max ", "X"))
+LimitAxesSocketTemplates.append(MaxXTemplate    := LimitTemplateGenerator("Max ", "X"))
+LimitAxesSocketTemplates.append(UseMaxYTemplate := LimitTemplateGenerator("Use Max ", "Y"))
+LimitAxesSocketTemplates.append(MaxYTemplate    := LimitTemplateGenerator("Max ", "Y"))
+LimitAxesSocketTemplates.append(UseMaxZTemplate := LimitTemplateGenerator("Use Max ", "Z"))
+LimitAxesSocketTemplates.append(MaxZTemplate    := LimitTemplateGenerator("Min ", "Z"))
+LimitAxesSocketTemplates.append(UseMinXTemplate := LimitTemplateGenerator("Use Min ", "X"))
+LimitAxesSocketTemplates.append(MinXTemplate    := LimitTemplateGenerator("Min ", "X"))
+LimitAxesSocketTemplates.append(UseMinYTemplate := LimitTemplateGenerator("Use Min ", "Y"))
+LimitAxesSocketTemplates.append(MinYTemplate    := LimitTemplateGenerator("Min ", "Y"))
+LimitAxesSocketTemplates.append(UseMinZTemplate := LimitTemplateGenerator("Use Min ", "Z"))
+LimitAxesSocketTemplates.append(MinZTemplate    := LimitTemplateGenerator("Min ", "Z"))
+LimitRotationSocketTemplates = [
+    UseXTemplate := LimitTemplateGenerator("Use ", "X"),
+    MaxXTemplate,
+    MinXTemplate,
+    UseYTemplate := LimitTemplateGenerator("Use ", "Y"),
+    MaxYTemplate,
+    MinYTemplate,
+    UseZTemplate := LimitTemplateGenerator("Use ", "Z"),
+    MaxZTemplate,
+    MinZTemplate,
+]
+# annoyingly these are a little different than the pattern:
+UseXTemplate.blender_property='use_limit_x'
+UseYTemplate.blender_property='use_limit_y'
+UseZTemplate.blender_property='use_limit_z'
 AffectTransformTemplate : SockTemplate = SockTemplate(
     name="Affect Transform", bl_idname='BooleanSocket', is_input=True,
     default_value=False, blender_property='use_transform_limit')
+# Tracking
+
+TrackAxisTemplate= SockTemplate(name="Track Axis", bl_idname="EnumTrackAxis",
+            is_input=True, default_value='TRACK_Y', blender_property='track_axis')
+
 # outputs:
 OutputRelationshipTemplate : SockTemplate = SockTemplate(
     name="Output Relationship", is_input=False,  bl_idname='RelationshipSocket', )
@@ -119,7 +138,7 @@ class MantisLinkNode(MantisNode):
     
     def gen_property_socket_map(self) -> dict:
         props_sockets = super().gen_property_socket_map()
-        if (os := self.inputs["Owner Space"]).is_connected and os.links[0].from_node.node_type == 'XFORM':
+        if (os := self.inputs.get("Owner Space")) and os.is_connected and os.links[0].from_node.node_type == 'XFORM':
             del props_sockets['owner_space']
         if ts := self.inputs.get("Target_Space") and ts.is_connected and ts.links[0].from_node.node_type == 'XFORM':
             del props_sockets['target_space']
@@ -127,7 +146,7 @@ class MantisLinkNode(MantisNode):
     
     def set_custom_space(self):
         c = self.bObject
-        if (os := self.inputs["Owner Space"]).is_connected and os.links[0].from_node.node_type == 'XFORM':
+        if (os := self.inputs.get("Owner Space")) and os.is_connected and os.links[0].from_node.node_type == 'XFORM':
             c.owner_space='CUSTOM'
             xf = self.inputs["Owner Space"].links[0].from_node.bGetObject(mode="OBJECT")
             if isinstance(xf, Bone):
@@ -141,6 +160,9 @@ class MantisLinkNode(MantisNode):
                 c.space_object=self.inputs["Target_Space Space"].links[0].from_node.bGetParentArmature(); c.space_subtarget=xf.name
             else:
                 c.space_object=xf
+    
+    def bFinalize(self, bContext=None):
+        finish_drivers(self)
 
 #*#-------------------------------#++#-------------------------------#*#
 # L I N K   N O D E S
@@ -224,8 +246,7 @@ class LinkCopyLocation(MantisLinkNode):
         evaluate_sockets(self, c, props_sockets)
         self.executed = True
         
-    def bFinalize(self, bContext = None):
-        finish_drivers(self)
+
     
 
 LinkCopyRotationSockets = [
@@ -280,8 +301,7 @@ class LinkCopyRotation(MantisLinkNode):
         evaluate_sockets(self, c, props_sockets)
         self.executed = True
             
-    def bFinalize(self, bContext = None):
-        finish_drivers(self)
+
 
 LinkCopyScaleSockets = [
     InputRelationshipTemplate,
@@ -339,8 +359,7 @@ class LinkCopyScale(MantisLinkNode):
         evaluate_sockets(self, c, props_sockets)   
         self.executed = True 
             
-    def bFinalize(self, bContext = None):
-        finish_drivers(self)
+
 
 LinkCopyTransformsSockets = [
     InputRelationshipTemplate,
@@ -383,110 +402,66 @@ class LinkCopyTransforms(MantisLinkNode):
         evaluate_sockets(self, c, props_sockets)  
         self.executed = True
 
-    def bFinalize(self, bContext = None):
-        finish_drivers(self)
+
+
+TransformationMinMaxTemplateGenerator = lambda name, bprop  : SockTemplate(
+    name=name, is_input=True,
+    bl_idname='EnumTransformationAxes' if "Source" in name else "FloatSocket",
+    default_value=False, blender_property=bprop)
     
-        
+LinkTransformationSockets = [
+    InputRelationshipTemplate,
+    TargetTemplate,
+    OwnerSpaceTemplate,
+    TargetSpaceTemplate,
+    SockTemplate(name="Extrapolate", is_input=True, bl_idname='BooleanSocket',
+                default_value=False, blender_property='use_motion_extrapolate'),
+    SockTemplate(name="Map From", is_input=True, bl_idname='EnumTransformationMap',
+                default_value="LOCATION", blender_property='map_from'),
+    SockTemplate(name="Rotation Mode", is_input=True, bl_idname='EnumTransformationRotationMode',
+                default_value="AUTO", blender_property='from_rotation_mode', hide=True),
+    TransformationMinMaxTemplateGenerator("X Min From", "from_min_x"),
+    TransformationMinMaxTemplateGenerator("X Max From", "from_max_x"),
+    TransformationMinMaxTemplateGenerator("Y Min From", "from_min_y"),
+    TransformationMinMaxTemplateGenerator("Y Max From", "from_max_y"),
+    TransformationMinMaxTemplateGenerator("Z Min From", "from_min_z"),
+    TransformationMinMaxTemplateGenerator("Z Max From", "from_max_z"),
+    SockTemplate(name="Map To", is_input=True, bl_idname='EnumTransformationMap',
+                default_value="LOCATION", blender_property='map_to'),
+    SockTemplate(name="Rotation Order", is_input=True, bl_idname='EnumTransformationRotationOrder',
+                default_value="AUTO", blender_property='to_euler_order', hide=True),
+    TransformationMinMaxTemplateGenerator("X Source Axis", "map_to_x_from"),
+    TransformationMinMaxTemplateGenerator("X Min To", "to_min_x"),
+    TransformationMinMaxTemplateGenerator("X Max To", "to_max_x"),
+    TransformationMinMaxTemplateGenerator("Y Source Axis", "map_to_y_from"),
+    TransformationMinMaxTemplateGenerator("Y Min To", "to_min_y"),
+    TransformationMinMaxTemplateGenerator("Y Max To", "to_max_y"),
+    TransformationMinMaxTemplateGenerator("Z Source Axis", "map_to_z_from"),
+    TransformationMinMaxTemplateGenerator("Z Min To", "to_min_z"),
+    TransformationMinMaxTemplateGenerator("Z Max To", "to_max_z"),
+    SockTemplate(name="Mix Mode (Translation)", is_input=True,
+                 bl_idname='EnumTransformationTranslationMixMode',
+                default_value="ADD", blender_property='mix_mode',),
+    SockTemplate(name="Mix Mode (Translation)", is_input=True,
+                 bl_idname='EnumTransformationRotationMixMode',
+                default_value="ADD", blender_property='mix_mode_rot',  hide=True),
+    SockTemplate(name="Mix Mode (Translation)", is_input=True,
+                 bl_idname='EnumTransformationScaleMixMode',
+                default_value="REPLACE", blender_property='mix_mode_scale',  hide=True),
+    InfluenceTemplate,
+    EnableTemplate,
+    OutputRelationshipTemplate,
 
-
-transformation_props_sockets = {
-            'use_motion_extrapolate' : ("Extrapolate", False),
-            'map_from'               : ("Map From", 'LOCATION'),
-            'from_rotation_mode'     : ("Rotation Mode", 'AUTO'),
-            'from_min_x'             : ("X Min From", 0.0),
-            'from_max_x'             : ("X Max From", 0.0),
-            'from_min_y'             : ("Y Min From", 0.0),
-            'from_max_y'             : ("Y Max From", 0.0),
-            'from_min_z'             : ("Z Min From", 0.0),
-            'from_max_z'             : ("Z Max From", 0.0),
-            'from_min_x_rot'         : ("X Min From", 0.0),
-            'from_max_x_rot'         : ("X Max From", 0.0),
-            'from_min_y_rot'         : ("Y Min From", 0.0),
-            'from_max_y_rot'         : ("Y Max From", 0.0),
-            'from_min_z_rot'         : ("Z Min From", 0.0),
-            'from_max_z_rot'         : ("Z Max From", 0.0),
-            'from_min_x_scale'       : ("X Min From", 0.0),
-            'from_max_x_scale'       : ("X Max From", 0.0),
-            'from_min_y_scale'       : ("Y Min From", 0.0),
-            'from_max_y_scale'       : ("Y Max From", 0.0),
-            'from_min_z_scale'       : ("Z Min From", 0.0),
-            'from_max_z_scale'       : ("Z Max From", 0.0),
-            'map_to'                 : ("Map To", "LOCATION"),
-            'map_to_x_from'          : ("X Source Axis", "X"),
-            'map_to_y_from'          : ("Y Source Axis", "Y"),
-            'map_to_z_from'          : ("Z Source Axis", "Z"),
-            'to_min_x'               : ("X Min To", 0.0),
-            'to_max_x'               : ("X Max To", 0.0),
-            'to_min_y'               : ("Y Min To", 0.0),
-            'to_max_y'               : ("Y Max To", 0.0),
-            'to_min_z'               : ("Z Min To", 0.0),
-            'to_max_z'               : ("Z Max To", 0.0),
-            'to_min_x_rot'           : ("X Min To", 0.0),
-            'to_max_x_rot'           : ("X Max To", 0.0),
-            'to_min_y_rot'           : ("Y Min To", 0.0),
-            'to_max_y_rot'           : ("Y Max To", 0.0),
-            'to_min_z_rot'           : ("Z Min To", 0.0),
-            'to_max_z_rot'           : ("Z Max To", 0.0),
-            'to_min_x_scale'         : ("X Min To", 0.0),
-            'to_max_x_scale'         : ("X Max To", 0.0),
-            'to_min_y_scale'         : ("Y Min To", 0.0),
-            'to_max_y_scale'         : ("Y Max To", 0.0),
-            'to_min_z_scale'         : ("Z Min To", 0.0),
-            'to_max_z_scale'         : ("Z Max To", 0.0),
-            'to_euler_order'         : ("Rotation Mode", "AUTO"),
-            'mix_mode'               : ("Mix Mode (Translation)", "ADD"),
-            'mix_mode_rot'           : ("Mix Mode (Rotation)", "ADD"),
-            'mix_mode_scale'         : ("Mix Mode (Scale)", "MULTIPLY"),
-            'owner_space'            : ("Owner Space",  'WORLD'),
-            'target_space'           : ("Target Space", 'WORLD'),
-            'influence'              : ("Influence", 1),
-            'mute'                   : ("Enable", False),
-        }
+]
 
 class LinkTransformation(MantisLinkNode):
     '''A node representing Copy Transfoms'''
     
     def __init__(self, signature, base_tree):
-        super().__init__(signature, base_tree)
-        inputs = [
-            "Input Relationship" ,
-            "Target Space" ,
-            "Owner Space" ,
-            "Influence" ,
-            "Target" ,
-            "Enable" ,
-            "Extrapolate" ,
-            "Map From" ,
-            "Rotation Mode" ,
-            "X Min From" ,
-            "X Max From" ,
-            "Y Min From" ,
-            "Y Max From" ,
-            "Z Min From" ,
-            "Z Max From" ,
-            "Map To" ,
-            "X Source Axis" ,
-            "X Min To" ,
-            "X Max To" ,
-            "Y Source Axis" ,
-            "Y Min To" ,
-            "Y Max To" ,
-            "Z Source Axis" ,
-            "Z Min To" ,
-            "Z Max To" ,
-            "Mix Mode (Translation)" ,
-            "Mix Mode (Rotation)" ,
-            "Mix Mode (Scale)" ,
-        ]
-        additional_parameters = { "Name":None }
-        self.inputs.init_sockets(inputs)
-        self.outputs.init_sockets(["Output Relationship"])
-        self.init_parameters(additional_parameters=additional_parameters)
+        super().__init__(signature, base_tree, LinkTransformationSockets)
+        self.init_parameters(additional_parameters={"Name":None })
         self.set_traverse([("Input Relationship", "Output Relationship")])
         
-        
-
-    
     def GetxForm(self):
         return GetxForm(self)
 
@@ -500,35 +475,12 @@ class LinkTransformation(MantisLinkNode):
         if constraint_name := self.evaluate_input("Name"):
             c.name = constraint_name
         self.bObject = c
-        custom_space_owner, custom_space_target = False, False
-        if self.inputs["Owner Space"].is_connected and self.inputs["Owner Space"].links[0].from_node.node_type == 'XFORM':
-            custom_space_owner=True
-            c.owner_space='CUSTOM'
-            xf = self.inputs["Owner Space"].links[0].from_node.bGetObject(mode="OBJECT")
-            if isinstance(xf, Bone):
-                c.space_object=self.inputs["Owner Space"].links[0].from_node.bGetParentArmature(); c.space_subtarget=xf.name
-            else:
-                c.space_object=xf
-        if self.inputs["Target Space"].is_connected and self.inputs["Target Space"].links[0].from_node.node_type == 'XFORM':
-            custom_space_target=True
-            c.target_space='CUSTOM'
-            xf = self.inputs["Target Space"].links[0].from_node.bGetObject(mode="OBJECT")
-            if isinstance(xf, Bone):
-                c.space_object=self.inputs["Target Space"].links[0].from_node.bGetParentArmature(); c.space_subtarget=xf.name
-            else:
-                c.space_object=xf
-        props_sockets = transformation_props_sockets.copy()
-        if custom_space_owner: del props_sockets['owner_space']
-        if custom_space_target: del props_sockets['target_space']
-        #
-        evaluate_sockets(self, c, props_sockets)     
+        self.set_custom_space()
+        props_sockets = self.gen_property_socket_map()
+        evaluate_sockets(self, c, props_sockets)  
         self.executed = True
 
-    def bFinalize(self, bContext = None):
-        finish_drivers(self)
-
-
-LinkLimitLocationSockets = [
+LinkLimitLocationScaleSockets = [
     InputRelationshipTemplate,
     *LimitAxesSocketTemplates, # we generated these ahead of time in a list
     AffectTransformTemplate,
@@ -540,7 +492,7 @@ LinkLimitLocationSockets = [
 
 class LinkLimitLocation(MantisLinkNode):
     def __init__(self, signature, base_tree):
-        super().__init__(signature, base_tree, LinkLimitLocationSockets)
+        super().__init__(signature, base_tree, LinkLimitLocationScaleSockets)
         self.init_parameters(additional_parameters={ "Name":None })
         self.set_traverse([("Input Relationship", "Output Relationship")])
         
@@ -560,43 +512,25 @@ class LinkLimitLocation(MantisLinkNode):
         self.bObject = c
         self.set_custom_space()
         props_sockets = self.gen_property_socket_map()
-        #
         evaluate_sockets(self, c, props_sockets)
         self.executed = True
 
-    def bFinalize(self, bContext = None):
-        finish_drivers(self)
-    
-        
+LinkLimitRotationSockets = [
+    InputRelationshipTemplate,
+    *LimitRotationSocketTemplates, # we generated these ahead of time in a list
+    AffectTransformTemplate,
+    OwnerSpaceTemplate,
+    InfluenceTemplate,
+    EnableTemplate,
+    OutputRelationshipTemplate,
+]
         
 class LinkLimitRotation(MantisLinkNode):
     def __init__(self, signature, base_tree):
-        super().__init__(signature, base_tree)
-        inputs = [
-            "Input Relationship" ,
-            "Use X"              ,
-            "Use Y"              ,
-            "Use Z"              ,
-            "Max X"              ,
-            "Max Y"              ,
-            "Max Z"              ,
-            "Min X"              ,
-            "Min Y"              ,
-            "Min Z"              ,
-            "Affect Transform"   ,
-            "Owner Space"        ,
-            "Influence"          ,
-            "Enable"             ,
-        ]
-        additional_parameters = { "Name":None }
-        self.inputs.init_sockets(inputs)
-        self.outputs.init_sockets(["Output Relationship"])
-        self.init_parameters(additional_parameters=additional_parameters)
+        super().__init__(signature, base_tree, LinkLimitRotationSockets)
+        self.init_parameters(additional_parameters={ "Name":None })
         self.set_traverse([("Input Relationship", "Output Relationship")])
         
-        
-
-    
     def GetxForm(self):
         return GetxForm(self)
 
@@ -610,70 +544,26 @@ class LinkLimitRotation(MantisLinkNode):
         if constraint_name := self.evaluate_input("Name"):
             c.name = constraint_name
         self.bObject = c
-        custom_space_owner = False
-        if self.inputs["Owner Space"].is_connected and self.inputs["Owner Space"].links[0].from_node.node_type == 'XFORM':
-            custom_space_owner=True
-            c.owner_space='CUSTOM'
-            xf = self.inputs["Owner Space"].links[0].from_node.bGetObject(mode="OBJECT")
-            if isinstance(xf, Bone):
-                c.space_object=self.inputs["Owner Space"].links[0].from_node.bGetParentArmature(); c.space_subtarget=xf.name
-            else:
-                c.space_object=xf
-        props_sockets = {
-        'use_transform_limit' : ("Affect Transform", False),
-        'use_limit_x'         : ("Use X", False),
-        'use_limit_y'         : ("Use Y", False),
-        'use_limit_z'         : ("Use Z", False),
-        'max_x'               : ("Max X", 0),
-        'max_y'               : ("Max Y", 0),
-        'max_z'               : ("Max Z", 0),
-        'min_x'               : ("Min X", 0),
-        'min_y'               : ("Min Y", 0),
-        'min_z'               : ("Min Z", 0),
-        'owner_space'         : ("Owner Space", 'WORLD'),
-        'influence'           : ("Influence", 1),
-        'mute'               : ("Enable", True),
-        }
-        if custom_space_owner: del props_sockets['owner_space']
-        #
+        self.set_custom_space()
+        props_sockets = self.gen_property_socket_map()
         evaluate_sockets(self, c, props_sockets)
         self.executed = True
 
-    def bFinalize(self, bContext = None):
-        finish_drivers(self)
-    
-        
+LinkLimitLocationScaleSockets = [
+    InputRelationshipTemplate,
+    *LimitAxesSocketTemplates, # we generated these ahead of time in a list
+    AffectTransformTemplate,
+    OwnerSpaceTemplate,
+    InfluenceTemplate,
+    EnableTemplate,
+    OutputRelationshipTemplate,
+] 
         
 class LinkLimitScale(MantisLinkNode):
     def __init__(self, signature, base_tree):
-        super().__init__(signature, base_tree)
-        inputs = [
-            "Input Relationship" ,
-            "Use Max X"          ,
-            "Max X"              ,
-            "Use Max Y"          ,
-            "Max Y"              ,
-            "Use Max Z"          ,
-            "Max Z"              ,
-            "Use Min X"          ,
-            "Min X"              ,
-            "Use Min Y"          ,
-            "Min Y"              ,
-            "Use Min Z"          ,
-            "Min Z"              ,
-            "Affect Transform"   ,
-            "Owner Space"        ,
-            "Influence"          ,
-            "Enable"             ,
-        ]
-        additional_parameters = { "Name":None }
-        self.inputs.init_sockets(inputs)
-        self.outputs.init_sockets(["Output Relationship"])
-        self.init_parameters(additional_parameters=additional_parameters)
+        super().__init__(signature, base_tree, LinkLimitLocationScaleSockets)
+        self.init_parameters(additional_parameters={ "Name":None })
         self.set_traverse([("Input Relationship", "Output Relationship")])
-        
-        
-
     
     def GetxForm(self):
         return GetxForm(self)
@@ -688,68 +578,32 @@ class LinkLimitScale(MantisLinkNode):
         if constraint_name := self.evaluate_input("Name"):
             c.name = constraint_name
         self.bObject = c
-        custom_space_owner = False
-        if self.inputs["Owner Space"].is_connected and self.inputs["Owner Space"].links[0].from_node.node_type == 'XFORM':
-            custom_space_owner=True
-            c.owner_space='CUSTOM'
-            xf = self.inputs["Owner Space"].links[0].from_node.bGetObject(mode="OBJECT")
-            if isinstance(xf, Bone):
-                c.space_object=self.inputs["Owner Space"].links[0].from_node.bGetParentArmature(); c.space_subtarget=xf.name
-            else:
-                c.space_object=xf
-        props_sockets = {
-        'use_transform_limit' : ("Affect Transform", False),
-        'use_max_x'           : ("Use Max X", False),
-        'use_max_y'           : ("Use Max Y", False),
-        'use_max_z'           : ("Use Max Z", False),
-        'use_min_x'           : ("Use Min X", False),
-        'use_min_y'           : ("Use Min Y", False),
-        'use_min_z'           : ("Use Min Z", False),
-        'max_x'               : ("Max X", 0),
-        'max_y'               : ("Max Y", 0),
-        'max_z'               : ("Max Z", 0),
-        'min_x'               : ("Min X", 0),
-        'min_y'               : ("Min Y", 0),
-        'min_z'               : ("Min Z", 0),
-        'owner_space'         : ("Owner Space", 'WORLD'),
-        'influence'           : ("Influence", 1),
-        'mute'               :  ("Enable", True),
-        }
-        if custom_space_owner: del props_sockets['owner_space']
-        #
+        self.set_custom_space()
+        props_sockets = self.gen_property_socket_map()
         evaluate_sockets(self, c, props_sockets)
         self.executed = True
 
-    def bFinalize(self, bContext = None):
-        finish_drivers(self)
-    
-        
+LinkLimitDistanceSockets = [
+    InputRelationshipTemplate,
+    Head_Tail_Template,
+    UseBBoneTemplate,
+    SockTemplate(name="Distance", bl_idname='FloatSocket', is_input=True,
+                 default_value=0.0, blender_property='distance'),
+    SockTemplate(name="Clamp Region", bl_idname="EnumLimitMode", is_input=True,
+                 default_value='LIMITDIST_INSIDE', blender_property='limit_mode'),
+    AffectTransformTemplate,
+    InfluenceTemplate,
+    TargetTemplate,
+    EnableTemplate,
+    OutputRelationshipTemplate,
+]
         
 class LinkLimitDistance(MantisLinkNode):
     def __init__(self, signature, base_tree):
-        super().__init__(signature, base_tree)
-        inputs = [
-            "Input Relationship" ,
-            "Head/Tail"          ,
-            "UseBBone"           ,
-            "Distance"           ,
-            "Clamp Region"       ,
-            "Affect Transform"   ,
-            "Owner Space"        ,
-            "Target Space"       ,
-            "Influence"          ,
-            "Target"             ,
-            "Enable"             ,
-        ]
-        additional_parameters = { "Name":None }
-        self.inputs.init_sockets(inputs)
-        self.outputs.init_sockets(["Output Relationship"])
-        self.init_parameters(additional_parameters=additional_parameters)
+        super().__init__(signature, base_tree, LinkLimitDistanceSockets)
+        self.init_parameters(additional_parameters={ "Name":None })
         self.set_traverse([("Input Relationship", "Output Relationship")])
         
-        
-
-
     def GetxForm(self):
         return GetxForm(self)
 
@@ -763,80 +617,47 @@ class LinkLimitDistance(MantisLinkNode):
         if constraint_name := self.evaluate_input("Name"):
             c.name = constraint_name
         self.bObject = c
-        #
-        # TODO: set distance automagically
-        # IMPORTANT TODO BUG
-        
-        custom_space_owner, custom_space_target = False, False
-        if self.inputs["Owner Space"].is_connected and self.inputs["Owner Space"].links[0].from_node.node_type == 'XFORM':
-            custom_space_owner=True
-            c.owner_space='CUSTOM'
-            xf = self.inputs["Owner Space"].links[0].from_node.bGetObject(mode="OBJECT")
-            if isinstance(xf, Bone):
-                c.space_object=self.inputs["Owner Space"].links[0].from_node.bGetParentArmature(); c.space_subtarget=xf.name
-            else:
-                c.space_object=xf
-        if self.inputs["Target Space"].is_connected and self.inputs["Target Space"].links[0].from_node.node_type == 'XFORM':
-            custom_space_target=True
-            c.target_space='CUSTOM'
-            xf = self.inputs["Target Space"].links[0].from_node.bGetObject(mode="OBJECT")
-            if isinstance(xf, Bone):
-                c.space_object=self.inputs["Target Space"].links[0].from_node.bGetParentArmature(); c.space_subtarget=xf.name
-            else:
-                c.space_object=xf
-        props_sockets = {
-        'distance'            : ("Distance", 0),
-        'head_tail'           : ("Head/Tail", 0),
-        'limit_mode'          : ("Clamp Region", "LIMITDIST_INSIDE"),
-        'use_bbone_shape'     : ("UseBBone", False),
-        'use_transform_limit' : ("Affect Transform", 1),
-        'owner_space'         : ("Owner Space", 1),
-        'target_space'        : ("Target Space", 1),
-        'influence'           : ("Influence", 1),
-        'mute'               : ("Enable", True),
-        }
-        if custom_space_owner: del props_sockets['owner_space']
-        if custom_space_target: del props_sockets['target_space']
-        #
+        self.set_custom_space()
+        props_sockets = self.gen_property_socket_map()
         evaluate_sockets(self, c, props_sockets)
         self.executed = True
 
-    def bFinalize(self, bContext = None):
-        finish_drivers(self)
-    
-        
-
 # Tracking
+
+LinkStretchToSockets = [
+    InputRelationshipTemplate,
+    Head_Tail_Template,
+    UseBBoneTemplate,
+    SockTemplate(name="Original Length", bl_idname='FloatSocket', is_input=True,
+                 default_value=0.0, blender_property='rest_length'),
+    SockTemplate(name="Volume Variation", bl_idname='FloatSocket', is_input=True,
+                 default_value=1.0, blender_property='bulge'),
+    SockTemplate(name="Use Volume Min", bl_idname='BoolUpdateParentNode', is_input=True,
+                 default_value=False, blender_property='use_bulge_min'),
+    SockTemplate(name="Volume Min", bl_idname='FloatSocket', is_input=True,
+                 default_value=1.0, blender_property='bulge_min'),
+    SockTemplate(name="Use Volume Max", bl_idname='BoolUpdateParentNode', is_input=True,
+                 default_value=False, blender_property='use_bulge_max'),
+    SockTemplate(name="Volume Max", bl_idname='FloatSocket', is_input=True,
+                 default_value=1.0, blender_property='bulge_max'),
+    SockTemplate(name="Smooth", bl_idname='FloatFactorSocket', is_input=True,
+                 default_value=0.0, blender_property='bulge_smooth'),
+    SockTemplate(name="Maintain Volume", bl_idname='EnumMaintainVolumeStretchToSocket', is_input=True,
+                 default_value="VOLUME_XZX", blender_property='volume'),
+    SockTemplate(name="Rotation", bl_idname='EnumRotationStretchTo', is_input=True,
+                 default_value="SWING_Y", blender_property='keep_axis'),
+    InfluenceTemplate,
+    TargetTemplate,
+    EnableTemplate,
+    OutputRelationshipTemplate,
+]
 
 class LinkStretchTo(MantisLinkNode):
     def __init__(self, signature, base_tree):
-        super().__init__(signature, base_tree)
-        inputs = [
-            "Input Relationship" ,
-            "Head/Tail"          ,
-            "UseBBone"           ,
-            "Original Length"   ,
-            "Volume Variation"   ,
-            "Use Volume Min"     ,
-            "Volume Min"         ,
-            "Use Volume Max"     ,
-            "Volume Max"         ,
-            "Smooth"             ,
-            "Maintain Volume"    ,
-            "Rotation"           ,
-            "Influence"          ,
-            "Target"             ,
-            "Enable"             ,
-        ]
-        additional_parameters = { "Name":None }
-        self.inputs.init_sockets(inputs)
-        self.outputs.init_sockets(["Output Relationship"])
-        self.init_parameters(additional_parameters=additional_parameters)
+        super().__init__(signature, base_tree, LinkStretchToSockets)
+        self.init_parameters(additional_parameters={ "Name":None })
         self.set_traverse([("Input Relationship", "Output Relationship")])
         
-        
-
-
     def GetxForm(self):
         return GetxForm(self)
 
@@ -850,21 +671,7 @@ class LinkStretchTo(MantisLinkNode):
         if constraint_name := self.evaluate_input("Name"):
             c.name = constraint_name
         self.bObject = c
-        props_sockets = {
-        'head_tail'       : ("Head/Tail", 0),
-        'use_bbone_shape' : ("UseBBone", False),
-        'bulge'           : ("Volume Variation", 0),
-        'use_bulge_min'   : ("Use Volume Min", False),
-        'bulge_min'       : ("Volume Min", 0),
-        'use_bulge_max'   : ("Use Volume Max", False),
-        'bulge_max'       : ("Volume Max", 0),
-        'bulge_smooth'    : ("Smooth", 0),
-        'volume'          : ("Maintain Volume", 'VOLUME_XZX'),
-        'keep_axis'       : ("Rotation", 'PLANE_X'),
-        'rest_length'     : ("Original Length", self.GetxForm().bGetObject().bone.length),
-        'influence'       : ("Influence", 1),
-        'mute'           : ("Enable", True),
-        }
+        props_sockets = self.gen_property_socket_map()
         evaluate_sockets(self, c, props_sockets)
         
         if (self.evaluate_input("Original Length") == 0):
@@ -872,31 +679,22 @@ class LinkStretchTo(MantisLinkNode):
             c.rest_length = self.GetxForm().bGetObject().bone.length
         self.executed = True
         
-    def bFinalize(self, bContext = None):
-        finish_drivers(self)
-    
-        
+LinkDampedTrackSockets =[
+    InputRelationshipTemplate,
+    Head_Tail_Template,
+    UseBBoneTemplate,
+    TrackAxisTemplate,
+    InfluenceTemplate,
+    TargetTemplate,
+    EnableTemplate,
+    OutputRelationshipTemplate,
+]
 
 class LinkDampedTrack(MantisLinkNode):
     def __init__(self, signature, base_tree):
-        super().__init__(signature, base_tree)
-        inputs = [
-            "Input Relationship" ,
-            "Head/Tail"          ,
-            "UseBBone"           ,
-            "Track Axis"         ,
-            "Influence"          ,
-            "Target"             ,
-            "Enable"             ,
-        ]
-        additional_parameters = { "Name":None }
-        self.inputs.init_sockets(inputs)
-        self.outputs.init_sockets(["Output Relationship"])
-        self.init_parameters(additional_parameters=additional_parameters)
+        super().__init__(signature, base_tree, LinkDampedTrackSockets)
+        self.init_parameters(additional_parameters={ "Name":None })
         self.set_traverse([("Input Relationship", "Output Relationship")])
-        
-        
-
 
     def GetxForm(self):
         return GetxForm(self)
@@ -911,42 +709,28 @@ class LinkDampedTrack(MantisLinkNode):
         if constraint_name := self.evaluate_input("Name"):
             c.name = constraint_name
         self.bObject = c
-        props_sockets = {
-        'head_tail'       : ("Head/Tail", 0),
-        'use_bbone_shape' : ("UseBBone", False),
-        'track_axis'      : ("Track Axis", 'TRACK_Y'),
-        'influence'       : ("Influence", 1),
-        'mute'            : ("Enable", True),
-        }
+        props_sockets = self.gen_property_socket_map()
         evaluate_sockets(self, c, props_sockets)
         self.executed = True
     
-    def bFinalize(self, bContext = None):
-        finish_drivers(self)
-        
-        
+LinkLockedTrackSockets =[
+    InputRelationshipTemplate,
+    Head_Tail_Template,
+    UseBBoneTemplate,
+    TrackAxisTemplate,
+    SockTemplate(name="Lock Axis", bl_idname="EnumLockAxis", is_input=True,
+                 default_value="LOCK_Z", blender_property='lock_axis'),
+    InfluenceTemplate,
+    TargetTemplate,
+    EnableTemplate,
+    OutputRelationshipTemplate,
+]   
 
 class LinkLockedTrack(MantisLinkNode):
     def __init__(self, signature, base_tree):
-        super().__init__(signature, base_tree)
-        inputs = [
-            "Input Relationship" ,
-            "Head/Tail"          ,
-            "UseBBone"           ,
-            "Track Axis"         ,
-            "Lock Axis"          ,
-            "Influence"          ,
-            "Target"             ,
-            "Enable"             ,
-        ]
-        additional_parameters = { "Name":None }
-        self.inputs.init_sockets(inputs)
-        self.outputs.init_sockets(["Output Relationship"])
-        self.init_parameters(additional_parameters=additional_parameters)
+        super().__init__(signature, base_tree,LinkLockedTrackSockets)
+        self.init_parameters(additional_parameters={"Name":None })
         self.set_traverse([("Input Relationship", "Output Relationship")])
-        
-        
-
 
     def GetxForm(self):
         return GetxForm(self)
@@ -961,44 +745,34 @@ class LinkLockedTrack(MantisLinkNode):
         if constraint_name := self.evaluate_input("Name"):
             c.name = constraint_name
         self.bObject = c
-        props_sockets = {
-        'head_tail'       : ("Head/Tail", 0),
-        'use_bbone_shape' : ("UseBBone", False),
-        'track_axis'      : ("Track Axis", 'TRACK_Y'),
-        'lock_axis'       : ("Lock Axis", 'UP_X'),
-        'influence'       : ("Influence", 1),
-        'mute'           : ("Enable", True),
-        }
+        props_sockets = self.gen_property_socket_map()
         evaluate_sockets(self, c, props_sockets)
         self.executed = True
 
-    def bFinalize(self, bContext = None):
-        finish_drivers(self)
-    
-        
+
+
+# NOTE: I am setting different default values here than Blender in order to remain
+#       consistent with the track constraints tracking the bone to the target.
+LinkTrackToSockets = [
+    InputRelationshipTemplate,
+    Head_Tail_Template,
+    UseBBoneTemplate,
+    TrackAxisTemplate,
+    SockTemplate(name="Up Axis", bl_idname="EnumUpAxis", is_input=True,
+                 default_value="UP_Z", blender_property='up_axis'),
+    SockTemplate(name="Use Target Z", bl_idname="BooleanSocket", is_input=True,
+                 default_value=False, blender_property='use_target_z'),
+    InfluenceTemplate,
+    TargetTemplate,
+    EnableTemplate,
+    OutputRelationshipTemplate,
+]
 
 class LinkTrackTo(MantisLinkNode):
     def __init__(self, signature, base_tree):
-        super().__init__(signature, base_tree)
-        inputs = [
-            "Input Relationship" ,
-            "Head/Tail"          ,
-            "UseBBone"           ,
-            "Track Axis"         ,
-            "Up Axis"            ,
-            "Use Target Z"       ,
-            "Influence"          ,
-            "Target"             ,
-            "Enable"             ,
-        ]
-        additional_parameters = { "Name":None }
-        self.inputs.init_sockets(inputs)
-        self.outputs.init_sockets(["Output Relationship"])
-        self.init_parameters(additional_parameters=additional_parameters)
+        super().__init__(signature, base_tree, LinkTrackToSockets)
+        self.init_parameters(additional_parameters={"Name":None })
         self.set_traverse([("Input Relationship", "Output Relationship")])
-        
-        
-
 
     def GetxForm(self):
         return GetxForm(self)
@@ -1013,45 +787,36 @@ class LinkTrackTo(MantisLinkNode):
         if constraint_name := self.evaluate_input("Name"):
             c.name = constraint_name
         self.bObject = c
-        props_sockets = {
-        'head_tail'       : ("Head/Tail", 0),
-        'use_bbone_shape' : ("UseBBone", False),
-        'track_axis'      : ("Track Axis", "TRACK_Y"),
-        'up_axis'         : ("Up Axis", "UP_Z"),
-        'use_target_z'    : ("Use Target Z", False),
-        'influence'       : ("Influence", 1),
-        'mute'           : ("Enable", True),
-        }
+        props_sockets = self.gen_property_socket_map()
         evaluate_sockets(self, c, props_sockets)
         self.executed = True
-    
-        
 
-    def bFinalize(self, bContext = None):
-        finish_drivers(self)
+
 
 # relationships & misc.
 
+LinkInheritConstraintSockets = [
+    InputRelationshipTemplate,
+    SockTemplate(name="Location", bl_idname='BooleanThreeTupleSocket',
+                  is_input=True, default_value=[True, True, True],
+                 blender_property=['use_location_x', 'use_location_y', 'use_location_z']),
+    SockTemplate(name="Rotation", bl_idname='BooleanThreeTupleSocket',
+                  is_input=True, default_value=[True, True, True],
+                 blender_property=['use_rotation_x', 'use_rotation_y', 'use_rotation_z']),
+    SockTemplate(name="Scale", bl_idname='BooleanThreeTupleSocket',
+                  is_input=True, default_value=[True, True, True],
+                 blender_property=['use_scale_x', 'use_scale_y', 'use_scale_z']),
+    InfluenceTemplate,
+    TargetTemplate,
+    EnableTemplate,
+    OutputRelationshipTemplate,
+]
+
 class LinkInheritConstraint(MantisLinkNode):
     def __init__(self, signature, base_tree):
-        super().__init__(signature, base_tree)
-        inputs = [
-            "Input Relationship" ,
-            "Location"           ,
-            "Rotation"           ,
-            "Scale"              ,
-            "Influence"          ,
-            "Target"             ,
-            "Enable"             ,
-        ]
-        additional_parameters = { "Name":None }
-        self.inputs.init_sockets(inputs)
-        self.outputs.init_sockets(["Output Relationship"])
-        self.init_parameters(additional_parameters=additional_parameters)
+        super().__init__(signature, base_tree, LinkInheritConstraintSockets)
+        self.init_parameters(additional_parameters={"Name":None })
         self.set_traverse([("Input Relationship", "Output Relationship")])
-        
-        
-
 
     def GetxForm(self):
         return GetxForm(self)
@@ -1067,54 +832,37 @@ class LinkInheritConstraint(MantisLinkNode):
             c.name = constraint_name
         self.bObject = c
         
-        props_sockets = {
-        'use_location_x'   : (("Location", 0) , 1),
-        'use_location_y'   : (("Location", 1) , 1),
-        'use_location_z'   : (("Location", 2) , 1),
-        'use_rotation_x'   : (("Rotation", 0) , 1),
-        'use_rotation_y'   : (("Rotation", 1) , 1),
-        'use_rotation_z'   : (("Rotation", 2) , 1),
-        'use_scale_x'      : (("Scale"   , 0) , 1),
-        'use_scale_y'      : (("Scale"   , 1) , 1),
-        'use_scale_z'      : (("Scale"   , 2) , 1),
-        'influence'        : ( "Influence"    , 1),
-        'mute'             : ("Enable", True),
-        }
+        props_sockets = self.gen_property_socket_map()
         evaluate_sockets(self, c, props_sockets)
         c.set_inverse_pending
         self.executed = True
-        
-        
-    
-        
 
-    def bFinalize(self, bContext = None):
-        finish_drivers(self)
+LinkInverseKinematicsSockets = [
+    InputRelationshipTemplate,
+    ChainLengthTemplate := SockTemplate(name="Chain Length",
+                 bl_idname="IntSocket", is_input=True,
+                 default_value=0, blender_property='chain_count'),
+    SockTemplate(name="Use Tail", bl_idname="BooleanSocket", is_input=True,
+                 default_value=True, blender_property='use_tail'),
+    SockTemplate(name="Stretch", bl_idname="BooleanSocket", is_input=True,
+                 default_value=True, blender_property='use_stretch'),
+    SockTemplate(name="Position", bl_idname="FloatFactorSocket", is_input=True,
+                 default_value=1.0, blender_property='weight'),
+    SockTemplate(name="Rotation", bl_idname="FloatFactorSocket", is_input=True,
+                 default_value=0.0, blender_property='orient_weight'),
+    InfluenceTemplate,
+    TargetTemplate,
+    SockTemplate(name="Pole Target", is_input=True,  bl_idname='xFormSocket', ),
+    EnableTemplate,
+    OutputRelationshipTemplate,
+]
 
 class LinkInverseKinematics(MantisLinkNode):
     def __init__(self, signature, base_tree):
-        super().__init__(signature, base_tree)
-        inputs = [
-            "Input Relationship"  ,
-            "Chain Length"        ,
-            "Use Tail"            ,
-            "Stretch"             ,
-            "Position"            ,
-            "Rotation"            ,
-            "Influence"           ,
-            "Target"              ,
-            "Pole Target"         ,
-            "Enable"              ,
-        ]
-        additional_parameters = { "Name":None }
-        self.inputs.init_sockets(inputs)
-        self.outputs.init_sockets(["Output Relationship"])
-        self.init_parameters(additional_parameters=additional_parameters)
+        super().__init__(signature, base_tree, LinkInverseKinematicsSockets)
+        self.init_parameters(additional_parameters={"Name":None })
         self.set_traverse([("Input Relationship", "Output Relationship")])
         
-        
-
-
     def GetxForm(self):
         return GetxForm(self)
     
@@ -1269,30 +1017,14 @@ class LinkInverseKinematics(MantisLinkNode):
             c.name = constraint_name
         
         self.bObject = c
-        c.chain_count = 1 # so that, if there are errors, this doesn't print a whole bunch of circular dependency crap from having infinite chain length
-        if (c.pole_target): # Calculate the pole angle, the user shouldn't have to.
-            # my_xf = self.GetxForm()
-            # from .xForm_containers import xFormBone
-            # if not isinstance(my_xf, xFormBone):
-            #     raise GraphError(f"ERROR: Pole Target must be ")
-            # if c.target != 
+        c.chain_count = 1 # so that, if there are errors, this doesn't print
+        #  a whole bunch of circular dependency crap from having infinite chain length
+        if (c.pole_target):
             self.set_pole_angle(self.calc_pole_angle_pre(c, ik_bone))
 
-
-        props_sockets = {
-        'chain_count'   : ("Chain Length", 1),
-        'use_tail'      : ("Use Tail", True),
-        'use_stretch'   : ("Stretch", True),
-        "weight"        : ("Position", 1.0),
-        "orient_weight" : ("Rotation", 0.0),
-        "influence"     : ("Influence", 1.0),
-        'mute'          : ("Enable", True),
-        }
+        props_sockets = self.gen_property_socket_map()
         evaluate_sockets(self, c, props_sockets)
-                
-        # TODO: handle drivers
-        #        (it should be assumed we want it on if it's plugged
-        #         into a driver).
+        print (props_sockets)
         c.use_location   = self.evaluate_input("Position") > 0
         c.use_rotation   = self.evaluate_input("Rotation") > 0
         self.executed = True
@@ -1303,8 +1035,12 @@ class LinkInverseKinematics(MantisLinkNode):
             ik_bone = self.GetxForm().bGetObject(mode='POSE')
             if self.bObject.pole_target:
                 prWhite(f"Fine-tuning IK Pole Angle for {self}")
+                # make sure to enable it first
+                enabled_before = self.bObject.mute
+                self.bObject.mute = False
                 self.calc_pole_angle_post(self.bObject, ik_bone, bContext)
-        finish_drivers(self)
+                self.bObject.mute = enabled_before
+        super().bFinalize(bContext)
         
 
 def ik_report_error(pb, context, do_print=False):
@@ -1324,22 +1060,23 @@ def ik_report_error(pb, context, do_print=False):
         print (f"IK Scale Error   : {scale_error}")
     return (location_error, rotation_error, scale_error) 
 
+LinkDrivenParameterSockets = [
+    InputRelationshipTemplate,
+    SockTemplate(name="Value", bl_idname="FloatSocket", is_input=True,
+                 default_value=-0.0,),
+    SockTemplate(name="Parameter", bl_idname="ParameterStringSocket", is_input=True,
+                 default_value="",),
+    SockTemplate(name="Index", bl_idname="IntSocket", is_input=True,
+                 default_value=0,),
+    OutputRelationshipTemplate,
+]
+
 # This is kinda a weird design decision?
 class LinkDrivenParameter(MantisLinkNode):
     '''A node representing an armature object'''
     def __init__(self, signature, base_tree):
-        self.base_tree=base_tree
-        inputs = [
-            "Input Relationship" ,
-            "Value"      ,
-            "Parameter"   ,
-            "Index"       ,
-        ]
-        self.signature = signature
-        additional_parameters = { "Name":None }
-        self.inputs.init_sockets(inputs)
-        self.outputs.init_sockets(["Output Relationship"])
-        self.init_parameters(additional_parameters=additional_parameters)
+        super().__init__(signature, base_tree, LinkDrivenParameterSockets)
+        self.init_parameters(additional_parameters={ "Name":None })
         self.set_traverse([("Input Relationship", "Output Relationship")])
 
     def GetxForm(self):
@@ -1389,29 +1126,29 @@ class LinkDrivenParameter(MantisLinkNode):
             self.parameters["Value"] = driver
         except TypeError:
             self.parameters["Value"] = driver
-        finish_drivers(self)
+        super().bFinalize(bContext)
         
-
+LinkArmatureSockets=[
+    InputRelationshipTemplate,
+    SockTemplate(name="Preserve Volume", bl_idname='BooleanSocket', is_input=True,
+                 default_value=False, blender_property='use_deform_preserve_volume'),
+    SockTemplate(name="Use Envelopes", bl_idname='BooleanSocket', is_input=True,
+                 default_value=False, blender_property='use_bone_envelopes'),
+    SockTemplate(name="Use Current Location", bl_idname='BooleanSocket', is_input=True,
+                 default_value=False, blender_property='use_current_location'),
+    InfluenceTemplate,
+    EnableTemplate,
+    OutputRelationshipTemplate,
+]
         
 class LinkArmature(MantisLinkNode):
     '''A node representing an armature object'''
 
     def __init__(self, signature, base_tree,):
-        super().__init__(signature, base_tree)
-        inputs = [
-            "Input Relationship"   ,
-            "Preserve Volume"      ,
-            "Use Envelopes"        ,
-            "Use Current Location" ,
-            "Influence"            ,
-            "Enable"               ,
-        ]
-        additional_parameters = { "Name":None }
-        self.inputs.init_sockets(inputs)
-        self.outputs.init_sockets(["Output Relationship"])
-        self.init_parameters(additional_parameters=additional_parameters)
+        super().__init__(signature, base_tree, LinkArmatureSockets)
+        self.init_parameters(additional_parameters={"Name":None })
         self.set_traverse([("Input Relationship", "Output Relationship")])
-        setup_custom_props(self)
+        setup_custom_props(self) # <-- this takes care of the runtime-added sockets
 
     def GetxForm(self):
         return GetxForm(self)
@@ -1426,13 +1163,7 @@ class LinkArmature(MantisLinkNode):
         # get number of targets
         num_targets = len( list(self.inputs.values())[6:] )//2
         
-        props_sockets = {
-        'use_deform_preserve_volume' : ("Preserve Volume", 0),
-        'use_bone_envelopes'         : ("Use Envelopes", 0),
-        'use_current_location'       : ("Use Current Location", 0),
-        'influence'                  : ( "Influence"    , 1),
-        'mute'                       : ("Enable", True),
-        }
+        props_sockets = self.gen_property_socket_map()
         targets_weights = {}
         for i in range(num_targets):
             target = c.targets.new()
@@ -1443,43 +1174,41 @@ class LinkArmature(MantisLinkNode):
             if not isinstance(weight_value, float):
                 weight_value=0
             targets_weights[i]=weight_value
-
             props_sockets["targets[%d].weight" % i] = (weight_input_name, 0)
             # targets_weights.append({"weight":(weight_input_name, 0)})
         evaluate_sockets(self, c, props_sockets)
         for target, value in targets_weights.items():
             c.targets[target].weight=value
-        # for i, (target, weight) in enumerate(zip(c.targets, targets_weights)):
-            # evaluate_sockets(self, target, weight)
         self.executed = True
 
-    def bFinalize(self, bContext = None):
-        finish_drivers(self)
-
-
-
+LinkSplineIKSockets = [
+    InputRelationshipTemplate,
+    TargetTemplate,
+    ChainLengthTemplate,
+    SockTemplate(name="Even Divisions", bl_idname="BooleanSocket", is_input=True,
+                 default_value=False, blender_property='use_even_divisions'),
+    SockTemplate(name="Chain Offset", bl_idname="BooleanSocket", is_input=True,
+                 default_value=False, blender_property='use_chain_offset'),
+    SockTemplate(name="Use Curve Radius", bl_idname="BooleanSocket", is_input=True,
+                 default_value=True, blender_property='use_curve_radius'),
+    SockTemplate(name="Y Scale Mode", bl_idname="EnumYScaleMode", is_input=True,
+                 default_value="FIT_CURVE", blender_property='y_scale_mode'),
+    SockTemplate(name="XZ Scale Mode", bl_idname="EnumXZScaleMode", is_input=True,
+                 default_value="NONE", blender_property='xz_scale_mode'),
+    #IMPORTANT TODO: This socket is removed in 4.5
+    SockTemplate(name="Use Original Scale", bl_idname="BooleanSocket", is_input=True,
+                 default_value=False, blender_property='use_original_scale'),
+    InfluenceTemplate,
+    EnableTemplate,
+    OutputRelationshipTemplate,
+]
 
 class LinkSplineIK(MantisLinkNode):
     '''A node representing an armature object'''
 
     def __init__(self, signature, base_tree):
-        super().__init__(signature, base_tree)
-        inputs = [
-            "Input Relationship" ,
-            "Target"             ,
-            "Chain Length"       ,
-            "Even Divisions"     ,
-            "Chain Offset"       ,
-            "Use Curve Radius"   ,
-            "Y Scale Mode"       ,
-            "XZ Scale Mode"      ,
-            "Use Original Scale" ,
-            "Influence"          ,
-        ]
-        additional_parameters = { "Name":None }
-        self.inputs.init_sockets(inputs)
-        self.outputs.init_sockets(["Output Relationship"])
-        self.init_parameters(additional_parameters=additional_parameters)
+        super().__init__(signature, base_tree, LinkSplineIKSockets)
+        self.init_parameters(additional_parameters={"Name":None })
         self.set_traverse([("Input Relationship", "Output Relationship")])
 
     def GetxForm(self):
@@ -1493,16 +1222,6 @@ class LinkSplineIK(MantisLinkNode):
         if constraint_name := self.evaluate_input("Name"):
             c.name = constraint_name
         self.bObject = c
-        props_sockets = {
-        'chain_count' : ("Chain Length", 0),
-        'use_even_divisions'      : ("Even Divisions", False),
-        'use_chain_offset'         : ("Chain Offset", False),
-        'use_curve_radius'    : ("Use Curve Radius", False),
-        'y_scale_mode'       : ("Y Scale Mode", "FIT_CURVE"),
-        'xz_scale_mode'           : ("XZ Scale Mode", "NONE"),
-        'use_original_scale'           : ("Use Original Scale", False),
-        'influence'       : ("Influence", 1),
-        }
-
+        props_sockets = self.gen_property_socket_map()
         evaluate_sockets(self, c, props_sockets)
         self.executed = True
