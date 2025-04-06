@@ -251,7 +251,9 @@ def poll_node_tree(self, object):
 # TODO: try to check identifiers instead of name.
 def node_group_update(node, force = False):
     if not force:
-        if (node.id_data.do_live_update == False) or (node.id_data.is_executing == True):
+        if (node.id_data.do_live_update == False) or  \
+           (node.id_data.is_executing == True) or \
+           (node.id_data.is_exporting == True):
             return
     # note: if (node.id_data.is_exporting == True) I need to be able to update so I can make links.
 
@@ -344,8 +346,6 @@ def node_group_update(node, force = False):
         if '__extend__' in socket_map_in.keys():
             do_relink(node, None, socket_map_in, in_out='INPUT', parent_name='Constant' )
 
-
-
         node.id_data.do_live_update = toggle_update
 
 
@@ -353,8 +353,10 @@ def node_tree_prop_update(self, context):
     if self.is_updating: # update() can be called from update() and that leads to an infinite loop.
         return           # so we check if an update is currently running.
     self.is_updating = True
-    node_group_update(self)
-    self.is_updating = False
+    try:
+        node_group_update(self)
+    finally: # ensure this line is run even if there is an error
+        self.is_updating = False
     if self.bl_idname in ['MantisSchemaGroup'] and self.node_tree is not None:
         if len(self.inputs) == 0:
             self.inputs.new("IntSocket", "Schema Length", identifier='Schema Length')
@@ -377,7 +379,6 @@ class MantisNodeGroup(Node, MantisUINode):
         try:
             self.is_updating = True
             node_group_update(self)
-            self.is_updating = False
         finally: # we need to reset this regardless of whether or not the operation succeeds!
             self.is_updating = False
             self.id_data.do_live_update = live_update # ensure this remains the same
@@ -428,7 +429,7 @@ class SchemaGroup(Node, MantisUINode):
             if self.node_tree:
                 if len(self.inputs) == 0:
                     self.inputs.new("IntSocket", "Schema Length", identifier='Schema Length')
-                if self.inputs[-1].bl_idname != "WildcardSocket":
+                if self.inputs[-1].identifier != "__extend__":
                     self.inputs.new("WildcardSocket", "", identifier="__extend__")
         finally: # we need to reset this regardless of whether or not the operation succeeds!
             self.is_updating = False
