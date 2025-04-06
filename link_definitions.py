@@ -7,6 +7,7 @@ from .utilities import (prRed, prGreen, prPurple, prWhite,
                               wrapOrange,)
 
 from .base_definitions import get_signature_from_edited_tree
+from .link_socket_templates import *
 
 def TellClasses():
     return [ LinkInheritNode,
@@ -49,14 +50,8 @@ class LinkInheritNode(Node, LinkNode):
     initialized : bpy.props.BoolProperty(default = False)
     mantis_node_class_name="LinkInherit"
     
-    
-    # bone_prev : bpy.props.BoolProperty(default=False)
-    # bone_next : bpy.props.BoolProperty(default=False)
-
     def init(self, context):
-        from .link_containers import LinkInheritSockets
         self.init_sockets(LinkInheritSockets)
-        # set default values...
         self.initialized = True
         self.use_custom_color = True
         self.color = inheritColor
@@ -102,7 +97,6 @@ class LinkInverseKinematics(Node, LinkNode):
     mantis_node_class_name=bl_idname
 
     def init(self, context):
-        from .link_containers import LinkInverseKinematicsSockets
         self.init_sockets(LinkInverseKinematicsSockets)
         self.initialized = True
         self.use_custom_color = True
@@ -118,7 +112,6 @@ class LinkCopyLocationNode(Node, LinkNode):
     mantis_node_class_name=bl_idname
 
     def init(self, context):
-        from .link_containers import LinkCopyLocationSockets
         self.init_sockets(LinkCopyLocationSockets)
         self.use_custom_color = True
         self.color = linkColor
@@ -134,7 +127,6 @@ class LinkCopyRotationNode(Node, LinkNode):
     mantis_node_class_name=bl_idname
 
     def init(self, context):
-        from .link_containers import LinkCopyRotationSockets
         self.init_sockets(LinkCopyRotationSockets)
         self.use_custom_color = True
         self.color = linkColor
@@ -151,7 +143,6 @@ class LinkCopyScaleNode(Node, LinkNode):
     mantis_node_class_name=bl_idname
 
     def init(self, context):
-        from .link_containers import LinkCopyScaleSockets
         self.init_sockets(LinkCopyScaleSockets)
         self.use_custom_color = True
         self.color = linkColor
@@ -171,7 +162,6 @@ class LinkInheritConstraintNode(Node, LinkNode):
 
     # === Optional Functions ===
     def init(self, context):
-        from .link_containers import LinkInheritConstraintSockets
         self.init_sockets(LinkInheritConstraintSockets)
         self.use_custom_color = True
         self.color = inheritColor
@@ -189,7 +179,6 @@ class LinkCopyTransformNode(Node, LinkNode):
 
     # === Optional Functions ===
     def init(self, context):
-        from .link_containers import LinkCopyTransformsSockets
         self.init_sockets(LinkCopyTransformsSockets)
         self.use_custom_color = True
         self.color = linkColor
@@ -206,7 +195,6 @@ class LinkStretchToNode(Node, LinkNode):
     mantis_node_class_name=bl_idname
 
     def init(self, context):
-        from .link_containers import LinkStretchToSockets
         self.init_sockets(LinkStretchToSockets)
         self.initialized = True
         self.use_custom_color = True
@@ -221,7 +209,6 @@ class LinkDampedTrackNode(Node, LinkNode):
     mantis_node_class_name=bl_idname
 
     def init(self, context):
-        from .link_containers import LinkDampedTrackSockets
         self.init_sockets(LinkDampedTrackSockets)
         self.initialized = True
         self.use_custom_color = True
@@ -236,7 +223,7 @@ class LinkLockedTrackNode(Node, LinkNode):
     mantis_node_class_name=bl_idname
 
     def init(self, context):
-        from .link_containers import LinkLockedTrackSockets
+        self.init_sockets(LinkLockedTrackSockets)
         self.initialized = True
         self.use_custom_color = True
         self.color = trackingColor
@@ -250,7 +237,6 @@ class LinkTrackToNode(Node, LinkNode):
     mantis_node_class_name=bl_idname
 
     def init(self, context):
-        from .link_containers import LinkTrackToSockets
         self.init_sockets(LinkTrackToSockets)
         self.initialized = True
         self.use_custom_color = True
@@ -265,7 +251,6 @@ class LinkLimitLocationNode(Node, LinkNode):
     initialized : bpy.props.BoolProperty(default = False)
 
     def init(self, context):
-        from .link_containers import LinkLimitLocationScaleSockets
         self.init_sockets(LinkLimitLocationScaleSockets)
         self.initialized = True
         self.use_custom_color = True
@@ -280,15 +265,12 @@ class LinkLimitScaleNode(Node, LinkNode):
     mantis_node_class_name=bl_idname
 
     def init(self, context):
-        from .link_containers import LinkLimitLocationScaleSockets
         self.init_sockets(LinkLimitLocationScaleSockets)
         self.initialized = True
         self.use_custom_color = True
         self.color = linkColor
  
 class LinkLimitRotationNode(Node, LinkNode):
-    # === Basics ===
-    # Description string
     '''A node representing Limit Rotation'''
     bl_idname = 'LinkLimitRotation'
     bl_label = "Limit Rotation"
@@ -296,9 +278,7 @@ class LinkLimitRotationNode(Node, LinkNode):
     initialized : bpy.props.BoolProperty(default = False)
     mantis_node_class_name=bl_idname
 
-    # === Optional Functions ===
     def init(self, context):
-        from .link_containers import LinkLimitRotationSockets
         self.init_sockets(LinkLimitRotationSockets)
         self.initialized = True
         # color
@@ -314,7 +294,6 @@ class LinkLimitDistanceNode(Node, LinkNode):
     mantis_node_class_name=bl_idname
 
     def init(self, context):
-        from .link_containers import LinkLimitDistanceSockets
         self.init_sockets(LinkLimitDistanceSockets)
         self.use_custom_color = True
         self.color = linkColor
@@ -330,7 +309,6 @@ class LinkTransformationNode(Node, LinkNode):
     mantis_node_class_name=bl_idname
 
     def init(self, context):
-        from .link_containers import LinkTransformationSockets
         self.init_sockets(LinkTransformationSockets)
         self.use_custom_color = True
         self.color = linkColor
@@ -369,7 +347,6 @@ class LinkArmatureNode(Node, LinkNode):
     mantis_node_class_name=bl_idname
     
     def init(self, context):
-        from .link_containers import LinkArmatureSockets
         self.init_sockets(LinkArmatureSockets)
         self.use_custom_color = True
         self.color = inheritColor
@@ -392,7 +369,6 @@ class LinkSplineIKNode(Node, LinkNode):
     mantis_node_class_name=bl_idname
     
     def init(self, context):
-        from .link_containers import LinkSplineIKSockets
         self.init_sockets(LinkSplineIKSockets)
         self.use_custom_color = True
         self.color = ikColor
@@ -409,7 +385,6 @@ class LinkDrivenParameterNode(Node, LinkNode):
     mantis_node_class_name=bl_idname
     
     def init(self, context):
-        from .link_containers import LinkDrivenParameterSockets
         self.init_sockets(LinkDrivenParameterSockets)
         self.use_custom_color = True
         self.color = linkColor
