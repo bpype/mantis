@@ -11,7 +11,7 @@ from .base_definitions import NODES_REMOVED, SOCKETS_REMOVED
 
 add_inputs_bl_idnames = [
     "UtilityDriver", "UtilityFCurve", "DeformerMorphTargetDeform",
-    "MantisSchemaGroup", "LinkArmature",
+    "LinkArmature",
     ]
 
 # this works but it is really ugly and probably quite inneficient
@@ -196,7 +196,11 @@ def export_to_json(trees, path="", write_file=True, only_selected=False):
             # can remove this HACK when I have stronger guarentees about node-group's keeping the interface
             from .base_definitions import node_group_update
             if hasattr(n, "node_tree"):
-                node_group_update(n, force=True)
+                n.is_updating = True
+                try: # HERE BE DANGER
+                    node_group_update(n, force=True)
+                finally: # ensure this line is run even if there is an error
+                    n.is_updating = False
             if only_selected and n.select == False:
                 continue
             node_props, sockets = {}, {}
@@ -530,8 +534,19 @@ def do_import(data, context):
             
             if sub_tree := propslist.get("node_tree"):
                 n.node_tree = bpy.data.node_groups.get(sub_tree)
-                from .base_definitions import node_group_update
-                node_group_update(n, force = True)
+                if n.bl_idname == "MantisNodeGroup":
+                    from .base_definitions import node_group_update
+                    n.is_updating = True
+                    try:
+                        node_group_update(n, force = True)
+                    finally:
+                        n.is_updating=False
+                else:
+                    n.is_updating = True
+                    try:
+                        n.inputs.clear()
+                    finally:
+                        n.is_updating=False
             
             sockets_removed = []
             for i, (s_id, s_val) in enumerate(propslist["sockets"].items()):
@@ -545,7 +560,11 @@ def do_import(data, context):
                     if s_val["is_output"]: # for some reason it thinks the index is a string?
                         # try:
                         if n.bl_idname == "MantisSchemaGroup":
-                            socket = n.outputs.new(s_val["bl_idname"], s_val["name"], identifier=s_id)
+                            n.is_updating = True
+                            try:
+                                socket = n.outputs.new(s_val["bl_idname"], s_val["name"], identifier=s_id)
+                            finally:
+                                n.is_updating=False
                         else:
                             socket = n.outputs[int(s_val["index"])]
                     else:
@@ -555,6 +574,13 @@ def do_import(data, context):
                         if s_val["index"] >= len(n.inputs):
                             if n.bl_idname in add_inputs_bl_idnames:
                                 socket = n.inputs.new(s_val["bl_idname"], s_val["name"], identifier=s_id, use_multi_input=s_val["is_multi_input"])
+                            elif n.bl_idname in ["MantisSchemaGroup"]:
+                                n.is_updating = True
+                                try:
+                                    socket = n.inputs.new(s_val["bl_idname"], s_val["name"], identifier=s_id, use_multi_input=s_val["is_multi_input"])
+                                finally:
+                                    n.is_updating=False
+
                             elif n.bl_idname in ["NodeGroupOutput"]:
                                 pass # this is dealt with separately
                             else:
