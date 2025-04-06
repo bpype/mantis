@@ -54,7 +54,6 @@ class SchemaArrayInput(Node, SchemaUINode):
         self.update()
 
     def update(self):
-        if len(self.id_data.interface.items_tree) == 0: return
         # self.initialized = False
         socket_maps = get_socket_maps(self)
         if socket_maps is None:
@@ -85,7 +84,6 @@ class SchemaArrayInputGet(Node, SchemaUINode):
         self.update()
 
     def update(self):
-        if len(self.id_data.interface.items_tree) == 0: return
         # self.initialized = False
         socket_maps = get_socket_maps(self)
         if socket_maps is None:
@@ -114,7 +112,6 @@ class SchemaArrayOutput(Node, SchemaUINode):
         self.update()
 
     def update(self):
-        if len(self.id_data.interface.items_tree) == 0: return
         self.initialized = False
         socket_maps = get_socket_maps(self)
         if socket_maps is None:
@@ -145,7 +142,6 @@ class SchemaConstInput(Node, SchemaUINode):
         self.update()
 
     def update(self):
-        if len(self.id_data.interface.items_tree) == 0: return
         self.initialized = False
         socket_maps = get_socket_maps(self)
         if socket_maps is None:
@@ -176,7 +172,6 @@ class SchemaConstOutput(Node, SchemaUINode):
         self.update()
 
     def update(self):
-        if len(self.id_data.interface.items_tree) == 0: return
         self.initialized = False
         socket_maps = get_socket_maps(self)
         if socket_maps is None:
@@ -212,7 +207,6 @@ class SchemaOutgoingConnection(Node, SchemaUINode):
         self.update()
 
     def update(self):
-        if len(self.id_data.interface.items_tree) == 0: return
         self.initialized = False
         socket_maps = get_socket_maps(self)
         if socket_maps is None:
@@ -245,7 +239,6 @@ class SchemaIncomingConnection(Node, SchemaUINode):
         self.update()
 
     def update(self):
-        if len(self.id_data.interface.items_tree) == 0: return
         self.initialized = False
         socket_maps = get_socket_maps(self)
         if socket_maps is None:
