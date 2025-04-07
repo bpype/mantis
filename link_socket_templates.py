@@ -311,6 +311,8 @@ LinkTrackToSockets = [
                  default_value="UP_Z", blender_property='up_axis'),
     SockTemplate(name="Use Target Z", bl_idname="BooleanSocket", is_input=True,
                  default_value=False, blender_property='use_target_z'),
+    TargetSpaceTemplate,
+    OwnerSpaceTemplate,
     InfluenceTemplate,
     TargetTemplate,
     EnableTemplate,
