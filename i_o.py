@@ -8,6 +8,7 @@ from .utilities import (prRed, prGreen, prPurple, prWhite,
 from mathutils import  Vector
 
 from .base_definitions import NODES_REMOVED, SOCKETS_REMOVED
+from bpy.app import version
 
 add_inputs_bl_idnames = [
     "UtilityDriver", "UtilityFCurve", "DeformerMorphTargetDeform",
@@ -619,14 +620,14 @@ def do_import(data, context):
                         prWhite(f"{socket.node.name}[{socket.name}].{s_p} is read only, cannot set value to {s_v}")
 
             for p, v in propslist.items():
-                if p == "sockets": # it's the sockets dict
+                if p in ["node_tree", "sockets", "warning_propagation",  "socket_idname"]:
                     continue
-                if p == "node_tree":
-                    continue # we've already done this # v = bpy.data.node_groups.get(v)
                 # will throw AttributeError if read-only
                 # will throw TypeError if wrong type...
                 if n.bl_idname == "NodeFrame" and p in ["width, height, location"]:
                     continue 
+                if version  < (4,4,0) and p == 'location_absolute':
+                    continue
                 if p == "parent" and v is not None:
                     parent_me.append( (n.name, v) )
                     v = None # for now) #TODO
