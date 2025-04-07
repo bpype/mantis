@@ -335,10 +335,12 @@ def node_group_update(node, force = False):
                     schema_length = sl.default_value
                 # sometimes this isn't available yet # TODO not happy about this solution
 
-            node.inputs.clear()
             if node.bl_idname == 'MantisSchemaGroup':
-                node.inputs.new("IntSocket", "Schema Length", identifier='Schema Length')
-                node.inputs['Schema Length'].default_value = schema_length
+                while (len(node.inputs) > 1):
+                    node.inputs.remove(node.inputs[-1])
+                    # remove all but the Schema Length input (reuse it)
+            else: # for a regular node group it's OK to clear
+                node.inputs.clear()
 
         if update_output: node.outputs.clear()
 
