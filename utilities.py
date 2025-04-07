@@ -96,10 +96,13 @@ def get_socket_maps(node):
                 map[sock.identifier]=[ getattr(l, link) for l in sock.links ]
             elif hasattr(sock, "default_value"):
                 try:
-                    val = sock["default_value"]
+                    val = getattr(sock, 'default_value')
+                    from bpy import types
+                    if isinstance(val, types.bpy_struct):
+                        print (val)
                     if val is None:
                         raise RuntimeError(f"ERROR: Could not get socket data for socket of type: {sock.bl_idname}")
-                    map[sock.identifier]=sock["default_value"]
+                    map[sock.identifier]=val
                 except KeyError: # The node socket is not initialized yet.
                     return None
             else:
