@@ -86,7 +86,7 @@ def get_node_prototype(sig, base_tree):
 ##################################################################################################
 
 # this one returns None if there is an error.
-def get_socket_maps(node):
+def get_socket_maps(node, force=False):
     maps = [{}, {}]
     node_collection = ["inputs", "outputs"]
     links = ["from_socket", "to_socket"]
@@ -95,16 +95,13 @@ def get_socket_maps(node):
             if sock.is_linked:
                 map[sock.identifier]=[ getattr(l, link) for l in sock.links ]
             elif hasattr(sock, "default_value"):
-                try:
-                    val = getattr(sock, 'default_value')
-                    from bpy import types
-                    if isinstance(val, types.bpy_struct):
-                        print (val)
+                if sock.get("default_value") is not None:
+                    val = sock['default_value']
                     if val is None:
                         raise RuntimeError(f"ERROR: Could not get socket data for socket of type: {sock.bl_idname}")
-                    map[sock.identifier]=val
-                except KeyError: # The node socket is not initialized yet.
-                    return None
+                else:
+                    if not force: return
+                map[sock.identifier]=val
             else:
                 from .socket_definitions import no_default_value
                 if sock.bl_idname in no_default_value:

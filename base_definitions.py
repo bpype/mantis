@@ -316,13 +316,17 @@ def node_group_update(node, force = False):
         return
 
     if update_input or update_output:
-        socket_map_in, socket_map_out = None, None
-        socket_maps = get_socket_maps(node)
-        if socket_maps is None and force == False:
-            node.id_data.do_live_update = toggle_update
-            return
+        socket_maps = get_socket_maps(node,)
         if socket_maps:
             socket_map_in, socket_map_out = socket_maps
+        if node.bl_idname == "MantisSchemaGroup" and \
+            len(node.inputs)+len(node.outputs)==2 and\
+                len(node.node_tree.interface.items_tree) > 0:
+            socket_map_in, socket_map_out = None, None
+            # We have to initialize the node because it only has its base inputs.
+        elif socket_maps is None:
+            node.id_data.do_live_update = toggle_update
+            return
 
         if update_input :
             if node.bl_idname == 'MantisSchemaGroup':
