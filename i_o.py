@@ -487,10 +487,13 @@ def do_import(data, context):
                                     index,
                                     )
         
-        # Go BACK through and set the index/position now that all items exist.
-        interface_sockets.sort(key=lambda a : a[1])
-        for (socket, position) in interface_sockets:
-            tree.interface.move(socket, position)
+        # BUG this was screwing up the order of things
+        # so I wan tot fix it and re-enable it
+        if False:
+            # Go BACK through and set the index/position now that all items exist.
+            interface_sockets.sort(key=lambda a : a[1])
+            for (socket, position) in interface_sockets:
+                tree.interface.move(socket, position)
         
     # Now go and do nodes and links
     for tree_name, tree_data in data.items():
