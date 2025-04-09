@@ -182,7 +182,7 @@ class MantisUINode:
             raise e
 
     def insert_link(self, link):
-        if (bpy.app.version > (4, 4, 0)):
+        if (bpy.app.version >= (4, 4, 0)):
             return # this causes a crash due to a bug.
         context = bpy.context
         if context.space_data:
