@@ -61,6 +61,29 @@ class MantisTree(NodeTree):
         @classmethod
         def valid_socket_type(cls : NodeTree, socket_idname: str):
             return valid_interface_types(cls, socket_idname)
+    
+    def update(self): # set the reroute colors
+        context = bpy.context
+        if any((self.is_executing, self.is_exporting, self.do_live_update==False, context.space_data is None) ):
+            return
+        from collections import deque
+        from .utilities import socket_seek
+        from .socket_definitions import MantisSocket
+        reroutes_without_color = deque()
+        for n in self.nodes:
+            if n.bl_idname=='NodeReroute' and n.inputs[0].bl_idname == "NodeSocketColor":
+                reroutes_without_color.append(n)
+        try:
+            while reroutes_without_color:
+                rr = reroutes_without_color.pop()
+                if rr.inputs[0].is_linked:
+                    link = rr.inputs[0].links[0]
+                    from_node = link.from_node
+                    socket = socket_seek(link, self.links)
+                    if isinstance(socket, MantisSocket):
+                        rr.socket_idname = socket.bl_idname
+        except Exception as e:
+            print(wrapOrange("WARN: Updating reroute color failed with exception: ")+wrapWhite(f"{e.__class__.__name__}"))
 
     def update_tree(self, context = None):
         if self.is_exporting:
@@ -244,7 +267,13 @@ class DeformerNode(MantisUINode):
 
 
 def poll_node_tree(self, object):
-    if isinstance(object, MantisTree):
+    forbid = []
+    context = bpy.context
+    if context.space_data:
+        if context.space_data.path:
+            for path_item in context.space_data.path:
+                forbid.append(path_item.node_tree.name)
+    if isinstance(object, MantisTree) and object.name not in forbid:
         return True
     return False
 
@@ -320,7 +349,7 @@ def node_group_update(node, force = False):
         if socket_maps:
             socket_map_in, socket_map_out = socket_maps
         if node.bl_idname == "MantisSchemaGroup" and \
-            len(node.inputs)+len(node.outputs)==2 and\
+            len(node.inputs)+len(node.outputs)<=2 and\
                 len(node.node_tree.interface.items_tree) > 0:
             socket_map_in, socket_map_out = None, None
             # We have to initialize the node because it only has its base inputs.
@@ -370,17 +399,28 @@ def node_tree_prop_update(self, context):
     if self.is_updating: # update() can be called from update() and that leads to an infinite loop.
         return           # so we check if an update is currently running.
     self.is_updating = True
+    def init_schema(self, context):
+        if len(self.inputs) == 0:
+            self.inputs.new("UnsignedIntSocket", "Schema Length", identifier='Schema Length')
+        if self.inputs[-1].bl_idname != "WildcardSocket":
+            self.inputs.new("WildcardSocket", "", identifier="__extend__")
+    init_schema(self, context)
     try:
-        node_group_update(self)
+        node_group_update(self, force=True)
     finally: # ensure this line is run even if there is an error
         self.is_updating = False
     if self.bl_idname in ['MantisSchemaGroup'] and self.node_tree is not None:
-        if len(self.inputs) == 0:
-            self.inputs.new("IntSocket", "Schema Length", identifier='Schema Length')
-        if self.inputs[-1].bl_idname != "WildcardSocket":
-            self.inputs.new("WildcardSocket", "", identifier="__extend__")
+        init_schema(self, context)
 
 from bpy.types import NodeCustomGroup
+
+def group_draw_buttons(self, context, layout):
+    row = layout.row(align=True)
+    row.prop(self, "node_tree", text="")
+    if self.node_tree is None:
+        row.operator("mantis.new_node_tree", text="", icon='PLUS', emboss=True)
+    else:
+        row.operator("mantis.edit_group", text="", icon='NODETREE', emboss=True)
 
 class MantisNodeGroup(Node, MantisUINode):
     bl_idname = "MantisNodeGroup"
@@ -388,23 +428,29 @@ class MantisNodeGroup(Node, MantisUINode):
 
     node_tree:PointerProperty(type=NodeTree, poll=poll_node_tree, update=node_tree_prop_update,)
     is_updating:BoolProperty(default=False)
+
+    def draw_label(self):
+        if self.node_tree is None:
+            return "Node Group"
+        else:
+            return self.node_tree.name
     
+    def draw_buttons(self, context, layout):
+        group_draw_buttons(self, context, layout)
+        
     def update(self):
-        live_update = self.id_data.do_live_update
+        if self.node_tree is None:
+            return
         if self.is_updating: # update() can be called from update() and that leads to an infinite loop.
             return           # so we check if an update is currently running.
+        live_update = self.id_data.do_live_update
+        self.is_updating = True
         try:
-            self.is_updating = True
             node_group_update(self)
         finally: # we need to reset this regardless of whether or not the operation succeeds!
             self.is_updating = False
             self.id_data.do_live_update = live_update # ensure this remains the same
 
-    def draw_buttons(self, context, layout):
-        row = layout.row(align=True)
-        row.prop(self, "node_tree", text="")
-        row.operator("mantis.edit_group", text="", icon='NODETREE', emboss=True)
-        
 
 class GraphError(Exception):
     pass
@@ -431,21 +477,27 @@ class SchemaGroup(Node, MantisUINode):
     is_updating:BoolProperty(default=False)
 
     def draw_buttons(self, context, layout):
-        row = layout.row(align=True)
-        row.prop(self, "node_tree", text="")
-        row.operator("mantis.edit_group", text="", icon='NODETREE', emboss=True)
+        group_draw_buttons(self, context, layout)
 
+    def draw_label(self):
+        if self.node_tree is None:
+            return "Schema Group"
+        else:
+            return self.node_tree.name
+        
     def update(self):
-        live_update = self.id_data.do_live_update
         if self.is_updating: # update() can be called from update() and that leads to an infinite loop.
             return           # so we check if an update is currently running.
+        if self.node_tree is None:
+            return
+        live_update = self.id_data.do_live_update
         self.is_updating = True
         try:
             node_group_update(self)
             # reset things if necessary:
             if self.node_tree:
                 if len(self.inputs) == 0:
-                    self.inputs.new("IntSocket", "Schema Length", identifier='Schema Length')
+                    self.inputs.new("UnsignedIntSocket", "Schema Length", identifier='Schema Length')
                 if self.inputs[-1].identifier != "__extend__":
                     self.inputs.new("WildcardSocket", "", identifier="__extend__")
         finally: # we need to reset this regardless of whether or not the operation succeeds!
