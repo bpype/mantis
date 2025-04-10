@@ -37,6 +37,30 @@ def valid_interface_types(cls : NodeTree, socket_idname : str):
     else: # once versioning is finished this will be unnecesary.
         return socket_idname in tell_valid_bl_idnames()
 
+
+def fix_reroute_colors(tree):
+    context = bpy.context
+    if any((tree.is_executing, tree.is_exporting, tree.do_live_update==False, context.space_data is None) ):
+        return
+    from collections import deque
+    from .utilities import socket_seek
+    from .socket_definitions import MantisSocket
+    reroutes_without_color = deque()
+    for n in tree.nodes:
+        if n.bl_idname=='NodeReroute' and n.inputs[0].bl_idname == "NodeSocketColor":
+            reroutes_without_color.append(n)
+    try:
+        while reroutes_without_color:
+            rr = reroutes_without_color.pop()
+            if rr.inputs[0].is_linked:
+                link = rr.inputs[0].links[0]
+                from_node = link.from_node
+                socket = socket_seek(link, tree.links)
+                if isinstance(socket, MantisSocket):
+                    rr.socket_idname = socket.bl_idname
+    except Exception as e:
+        print(wrapOrange("WARN: Updating reroute color failed with exception: ")+wrapWhite(f"{e.__class__.__name__}"))
+
 class MantisTree(NodeTree):
     '''A custom node tree type that will show up in the editor type list'''
     bl_idname = 'MantisTree'
@@ -63,27 +87,8 @@ class MantisTree(NodeTree):
             return valid_interface_types(cls, socket_idname)
     
     def update(self): # set the reroute colors
-        context = bpy.context
-        if any((self.is_executing, self.is_exporting, self.do_live_update==False, context.space_data is None) ):
-            return
-        from collections import deque
-        from .utilities import socket_seek
-        from .socket_definitions import MantisSocket
-        reroutes_without_color = deque()
-        for n in self.nodes:
-            if n.bl_idname=='NodeReroute' and n.inputs[0].bl_idname == "NodeSocketColor":
-                reroutes_without_color.append(n)
-        try:
-            while reroutes_without_color:
-                rr = reroutes_without_color.pop()
-                if rr.inputs[0].is_linked:
-                    link = rr.inputs[0].links[0]
-                    from_node = link.from_node
-                    socket = socket_seek(link, self.links)
-                    if isinstance(socket, MantisSocket):
-                        rr.socket_idname = socket.bl_idname
-        except Exception as e:
-            print(wrapOrange("WARN: Updating reroute color failed with exception: ")+wrapWhite(f"{e.__class__.__name__}"))
+        if (bpy.app.version >= (4,4,0)):
+            fix_reroute_colors(self)
 
     def update_tree(self, context = None):
         if self.is_exporting:
@@ -156,7 +161,10 @@ class SchemaTree(NodeTree):
         @classmethod
         def valid_socket_type(cls : NodeTree, socket_idname: str):
             return valid_interface_types(cls, socket_idname)
-            
+
+    def update(self): # set the reroute colors
+        if (bpy.app.version >= (4,4,0)):
+            fix_reroute_colors(self)
 
 
 from dataclasses import dataclass, field
