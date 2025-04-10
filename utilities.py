@@ -284,13 +284,19 @@ def init_schema_dependencies(schema, all_nc, raise_errors=False):
     """
     from .utilities import get_node_prototype
     np = get_node_prototype(schema.signature, schema.base_tree)
+    if np is None:
+        return
     tree = np.node_tree
+    if tree is None:
+        return
     schema.dependencies = []
     schema.hierarchy_dependencies = []
-    for item in tree.interface.items_tree:
-        if item.item_type == 'PANEL':
-            continue
-        schema_dependency_handle_item(schema, all_nc, item,)
+    if tree.interface:
+        for item in tree.interface.items_tree:
+            if item.item_type == 'PANEL':
+                continue
+            schema_dependency_handle_item(schema, all_nc, item,)
+
         
 
 
@@ -545,6 +551,7 @@ def gen_nc_input_for_data(socket):
                         "RotationOrderSocket"                  : classes["InputRotationOrder"],
                         "QuaternionSocket"                     : None,
                         "QuaternionSocketAA"                   : None,
+                        "UnsignedIntSocket"                    : classes["InputFloat"],
                         "IntSocket"                            : classes["InputFloat"],
                         "StringSocket"                         : classes["InputString"],
                         #
