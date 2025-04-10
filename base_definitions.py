@@ -345,8 +345,6 @@ def node_group_update(node, force = False):
     #
     if len(node.inputs) > 0 and (inp := node.inputs[-1]).bl_idname == 'WildcardSocket' and inp.is_linked:
         update_input = True
-    if len(node.outputs) > 0 and  (out := node.outputs[-1]).bl_idname == 'WildcardSocket' and out.is_linked:
-        update_output = True
     #
     if not (update_input or update_output):
         node.id_data.do_live_update = toggle_update
@@ -371,15 +369,24 @@ def node_group_update(node, force = False):
                 if sl := node.inputs.get("Schema Length"):
                     schema_length = sl.default_value
                 # sometimes this isn't available yet # TODO not happy about this solution
+            remove_me=[]
+            # remove all found map items but the Schema Length input (reuse it)
+            for i, socket in enumerate(node.inputs):
+                if socket.identifier == "Schema Length" and i == 0:
+                    continue
+                elif socket.identifier in socket_map_in.keys():
+                    remove_me.append(socket)
+            while remove_me:
+                node.inputs.remove(remove_me.pop())
+            
+        if update_output:
+            remove_me=[]
+            for socket in node.outputs:
+                if socket.identifier in socket_map_out.keys():
+                    remove_me.append(socket)
+            while remove_me:
+                node.inputs.remove(remove_me.pop())
 
-            if node.bl_idname == 'MantisSchemaGroup':
-                while (len(node.inputs) > 1):
-                    node.inputs.remove(node.inputs[-1])
-                    # remove all but the Schema Length input (reuse it)
-            else: # for a regular node group it's OK to clear
-                node.inputs.clear()
-
-        if update_output: node.outputs.clear()
 
         from .utilities import relink_socket_map_add_socket
 
@@ -388,14 +395,15 @@ def node_group_update(node, force = False):
             if (item.in_out == 'INPUT' and update_input):
                 socket = relink_socket_map_add_socket(node, node.inputs, item)
                 if socket_map_in:
-                    do_relink(node, socket, socket_map_in)
+                    if item.identifier in socket_map_in.keys():
+                        do_relink(node, socket, socket_map_in)
 
             if (item.in_out == 'OUTPUT' and update_output):
                 socket = relink_socket_map_add_socket(node, node.outputs, item)
                 if socket_map_out:
-                    do_relink(node, socket, socket_map_out)
-
-        
+                    if item.identifier in socket_map_out.keys():
+                        do_relink(node, socket, socket_map_out)
+                    
         # at this point there is no wildcard socket
         if socket_map_in and '__extend__' in socket_map_in.keys():
             do_relink(node, None, socket_map_in, in_out='INPUT', parent_name='Constant' )
