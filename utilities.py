@@ -161,16 +161,22 @@ def do_relink(node, s, map, in_out='INPUT', parent_name = ''):
                 # then move it up and delete the other link.
                 # this also needs to modify the interface of the node tree.
             if isinstance(sub_val, NodeSocket):
+                l = None
                 if in_out =='INPUT':
-                    node.id_data.links.new(input=sub_val, output=s)
+                    l = node.id_data.links.new(input=sub_val, output=s)
                 else:
-                    node.id_data.links.new(input=s, output=sub_val)
+                    l = node.id_data.links.new(input=s, output=sub_val)
+                if l is None:
+                    raise RuntimeError("Could not create link")
             elif isinstance(sub_val, Node):
+                l = None
                 # this happens when it is a NodeReroute
-                if in_out =='INPUT':
-                    node.id_data.links.new(input=sub_val.outputs[0], output=s)
+                if not s.is_output:
+                    l = node.id_data.links.new(input=sub_val.outputs[0], output=s)
                 else:
-                    node.id_data.links.new(input=s, output=sub_val.inputs[0])
+                    l = node.id_data.links.new(input=s, output=sub_val.inputs[0])
+                if l is None:
+                    raise RuntimeError("Could not create link")
             else:
                 raise RuntimeError("Unhandled case in do_relink()")
     elif get_string != "__extend__":
