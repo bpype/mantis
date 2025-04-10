@@ -137,6 +137,7 @@ def TellClasses() -> List[MantisSocket]:
              RotationOrderSocket,
              QuaternionSocket,
              QuaternionSocketAA,
+             UnsignedIntSocket,
              IntSocket,
              StringSocket,
 
@@ -727,7 +728,24 @@ class IntSocket(MantisSocket):
     '''Custom node socket type'''
     bl_idname = 'IntSocket'
     bl_label = "Integer"
-    default_value: bpy.props.IntProperty(default=0, update = update_socket,)
+    default_value: bpy.props.IntProperty(default=0, update = update_socket, soft_min=-256, soft_max=256)
+    color_simple = cInt
+    color : bpy.props.FloatVectorProperty(default=cInt, size=4)
+    input : bpy.props.BoolProperty(default =False,)
+    is_valid_interface_type=True
+    def draw(self, context, layout, node, text):
+        ChooseDraw(self, context, layout, node, text)
+    def draw_color(self, context, node):
+        return self.color
+    @classmethod
+    def draw_color_simple(self):
+        return self.color_simple
+
+class UnsignedIntSocket(MantisSocket):
+    '''Unsigned Integer Socket'''
+    bl_idname = 'UnsignedIntSocket'
+    bl_label = "Unsigned Integer"
+    default_value: bpy.props.IntProperty(default=0, update = update_socket, min=0, soft_max=256, max=2**13)
     color_simple = cInt
     color : bpy.props.FloatVectorProperty(default=cInt, size=4)
     input : bpy.props.BoolProperty(default =False,)
