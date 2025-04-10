@@ -159,10 +159,12 @@ class MantisEditGroup(Operator):
                 for g in get_all_nodes_of_type(base_tree, "MantisNodeGroup"):
                     if g.node_tree == active.node_tree:
                         g.is_updating = True
+                        active.is_updating = True
                         try:
                             node_group_update(g, force = True)
                         finally:
                             g.is_updating = False
+                            active.is_updating = False
                 base_tree.display_update(context)
                 base_tree.is_executing = True
                 # base_tree.is_executing = True # because it seems display_update unsets this.
@@ -764,6 +766,7 @@ class B4_4_0_Workaround_NodeTree_Interface_Update(Operator):
 classes = [
         MantisGroupNodes,
         MantisEditGroup,
+        MantisNewNodeTree,
         ExecuteNodeTree,
         # CreateMetaGroup,
         QueryNodeSockets,
