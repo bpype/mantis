@@ -101,7 +101,7 @@ def get_socket_maps(node, force=False):
                     if val is None:
                         raise RuntimeError(f"ERROR: Could not get socket data for socket of type: {sock.bl_idname}")
                 else:
-                    if not force: return
+                    if not force: continue
                 map[sock.identifier]=val
             else:
                 from .socket_definitions import no_default_value

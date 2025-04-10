@@ -374,7 +374,7 @@ def node_group_update(node, force = False):
             for i, socket in enumerate(node.inputs):
                 if socket.identifier == "Schema Length" and i == 0:
                     continue
-                elif socket.identifier in socket_map_in.keys():
+                elif (socket_map_in is None) or socket.identifier in socket_map_in.keys():
                     remove_me.append(socket)
             while remove_me:
                 node.inputs.remove(remove_me.pop())
@@ -382,7 +382,7 @@ def node_group_update(node, force = False):
         if update_output:
             remove_me=[]
             for socket in node.outputs:
-                if socket.identifier in socket_map_out.keys():
+                if (socket_map_out is None) or socket.identifier in socket_map_out.keys():
                     remove_me.append(socket)
             while remove_me:
                 node.inputs.remove(remove_me.pop())
