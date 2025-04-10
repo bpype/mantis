@@ -165,7 +165,7 @@ def do_relink(node, s, map, in_out='INPUT', parent_name = ''):
                     node.id_data.links.new(input=sub_val, output=s)
                 else:
                     node.id_data.links.new(input=s, output=sub_val)
-            if isinstance(sub_val, Node):
+            elif isinstance(sub_val, Node):
                 # this happens when it is a NodeReroute
                 if in_out =='INPUT':
                     node.id_data.links.new(input=sub_val, output=node.inputs[0])
