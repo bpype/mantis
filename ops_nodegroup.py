@@ -179,6 +179,55 @@ class MantisEditGroup(Operator):
             # so I have to do this ridiculous hack with a Boolean flip bit.
             return {"FINISHED"}
 
+class MantisNewNodeTree(Operator):
+    """Add a new Mantis tree."""
+    bl_idname = "mantis.new_node_tree"
+    bl_label = "New Node Group"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    tree_invoked : bpy.props.StringProperty(options ={'HIDDEN'})
+    node_invoked : bpy.props.StringProperty(options ={'HIDDEN'})
+
+    @classmethod
+    def poll(cls, context):
+        return (
+            mantis_tree_poll_op(context) and \
+                context.node.bl_idname in ["MantisNodeGroup", "MantisSchemaGroup"]
+        )
+
+
+    @classmethod
+    def poll(cls, context):
+        return True #(hasattr(context, 'active_node') )
+
+    def invoke(self, context, event):
+        self.tree_invoked = context.node.id_data.name
+        self.node_invoked = context.node.name
+        return self.execute(context)
+        
+    def execute(self, context):
+        node = bpy.data.node_groups[self.tree_invoked].nodes[self.node_invoked]
+        if node.bl_idname == "MantisSchemaGroup":
+            if (node.node_tree):
+                print('a')
+                return {"CANCELLED"}
+            else:
+                from bpy import data
+                print('b')
+                node.node_tree = data.node_groups.new(name='Schema Group', type='SchemaTree')
+                return {'FINISHED'}
+        elif node.bl_idname == "MantisNodeGroup":
+            if (node.node_tree):
+                print('c')
+                return {"CANCELLED"}
+            else:
+                from bpy import data
+                print('d')
+                node.node_tree = data.node_groups.new(name='Mantis Group', type='MantisTree')
+                return {'FINISHED'}
+        else:
+            return {"CANCELLED"}
+
 class ExecuteNodeTree(Operator):
     """Execute this node tree"""
     bl_idname = "mantis.execute_node_tree"
