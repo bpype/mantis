@@ -25,6 +25,7 @@ def prOrange(*args): print (*[wrapOrange(arg) for arg in args])
 
 
 # A fuction for getting to the end of a Reroute.
+# TODO: this seems really inefficient!
 def socket_seek(start_link, links):
     link = start_link
     while(link.from_socket):

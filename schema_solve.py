@@ -57,9 +57,11 @@ class SchemaSolver:
             # we use the bl_idname because all schema nodes should be single-instance 
             signature = (*self.tree_path_names, ui_node.bl_idname)
             if isinstance(ui_node, SchemaUINode):
-                # We use the solver's signature here because it represents the "original" signature of the schema UI group node
-                # since this schema solver may be in a nested schema, and its node's signature may have uuid/index attached.
-                get_sig = (*self.signature, ui_node.bl_idname) 
+                # We use the schema node's "natural signature" here because it represents
+                # the "original" signature of the schema UI group node since this schema
+                # solver may be in a nested schema, and its node's signature may have
+                # uuid/index attached.
+                get_sig = (*self.node.natural_signature, ui_node.bl_idname) 
                 if not (mantis_node := self.all_nodes.get(get_sig)): raise RuntimeError(wrapRed(f"Not found: {get_sig}"))
                 self.schema_nodes[signature] = mantis_node
                 mantis_node.fill_parameters(ui_node)
@@ -147,10 +149,10 @@ class SchemaSolver:
                 # We stored the prototype ui_node when creating the Mantis node.
                 ui_node = prototype_mantis_node.prototype
                 # if prototype_mantis_node is a group or schema: TODO changes are needed elsewhere to make this easier to read. LEGIBILITY
-                if ui_node.bl_idname in ["MantisNodeGroup", "SchemaGroup"]:
+                if ui_node.bl_idname in ["MantisNodeGroup", "MantisSchemaGroup"]:
                     mantis_node = prototype_mantis_node.__class__(
                         signature, prototype_mantis_node.base_tree, prototype=ui_node,
-                        natural_signature = (*self.node.signature, ui_node.name) )
+                        natural_signature =  prototype_mantis_node.signature)
                     # now let's copy the links from the prototype node
                     if ui_node.bl_idname in ["MantisNodeGroup"]:
                         mantis_node.prepared = False
