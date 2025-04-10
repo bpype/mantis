@@ -393,16 +393,23 @@ def node_group_update(node, force = False):
         for item in node.node_tree.interface.items_tree:
             if item.item_type != "SOCKET": continue
             if (item.in_out == 'INPUT' and update_input):
-                socket = relink_socket_map_add_socket(node, node.inputs, item)
                 if socket_map_in:
                     if item.identifier in socket_map_in.keys():
+                        socket = relink_socket_map_add_socket(node, node.inputs, item)
                         do_relink(node, socket, socket_map_in)
+                    else:
+                        prRed(item.identifier)
+                else:
+                    prGreen(item.identifier)
+                    socket = relink_socket_map_add_socket(node, node.inputs, item)
 
             if (item.in_out == 'OUTPUT' and update_output):
-                socket = relink_socket_map_add_socket(node, node.outputs, item)
                 if socket_map_out:
                     if item.identifier in socket_map_out.keys():
+                        socket = relink_socket_map_add_socket(node, node.outputs, item)
                         do_relink(node, socket, socket_map_out)
+                else:
+                    socket = relink_socket_map_add_socket(node, node.outputs, item)
                     
         # at this point there is no wildcard socket
         if socket_map_in and '__extend__' in socket_map_in.keys():

@@ -91,17 +91,34 @@ def get_socket_maps(node, force=False):
     maps = [{}, {}]
     node_collection = ["inputs", "outputs"]
     links = ["from_socket", "to_socket"]
-    for collection, map, link in zip(node_collection, maps, links):
+    for collection, map, linked_socket in zip(node_collection, maps, links):
         for sock in getattr(node, collection):
             if sock.is_linked:
-                map[sock.identifier]=[ getattr(l, link) for l in sock.links ]
+                other_sockets = []
+                # HACK here because Blender will crash if the socket values in the NodeReroute
+                #  are mutated. Because this seems to happen in a deffered way, I can't account
+                #  for it except by checking the node later...
+                # TODO: The fact that I need this hack means I can probably solve this problem
+                #  for all node types in a safer way, since they may also be dynamic somehow
+                for l in sock.links:
+                    if "from" in linked_socket and l.from_node.bl_idname == "NodeReroute":
+                        other_sockets.append(l.from_node)
+                    elif "to" in linked_socket and l.to_node.bl_idname == "NodeReroute":
+                        other_sockets.append(l.to_node)
+                    else:
+                        other_sockets.append(getattr(l, linked_socket))
+                map[sock.identifier]= other_sockets
             elif hasattr(sock, "default_value"):
                 if sock.get("default_value") is not None:
                     val = sock['default_value']
-                    if val is None:
-                        raise RuntimeError(f"ERROR: Could not get socket data for socket of type: {sock.bl_idname}")
-                else:
-                    if not force: continue
+                elif sock.bl_idname == "EnumCurveSocket" and sock.get("default_value") is None:
+                    # HACK I need to add this special case because during file-load,
+                    #  this value is None and should not be altered until it is set once.
+                    continue
+                elif (val := sock.default_value) is not None:
+                    pass
+                elif not force:
+                    continue
                 map[sock.identifier]=val
             else:
                 from .socket_definitions import no_default_value
@@ -120,7 +137,7 @@ def do_relink(node, s, map, in_out='INPUT', parent_name = ''):
     if hasattr(node, "node_tree"):
         tree = node.node_tree
         interface_in_out=in_out
-    from bpy.types import NodeSocket
+    from bpy.types import NodeSocket, Node
     get_string = '__extend__'
     if s: get_string = s.identifier
     from .base_definitions import SchemaUINode
@@ -148,6 +165,14 @@ def do_relink(node, s, map, in_out='INPUT', parent_name = ''):
                     node.id_data.links.new(input=sub_val, output=s)
                 else:
                     node.id_data.links.new(input=s, output=sub_val)
+            if isinstance(sub_val, Node):
+                # this happens when it is a NodeReroute
+                if in_out =='INPUT':
+                    node.id_data.links.new(input=sub_val, output=node.inputs[0])
+                else:
+                    node.id_data.links.new(input=node.outputs[0], output=sub_val)
+            else:
+                raise RuntimeError("Unhandled case in do_relink()")
     elif get_string != "__extend__":
         if not s.is_output:
             try:
