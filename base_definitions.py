@@ -390,6 +390,8 @@ def node_group_update(node, force = False):
 
         from .utilities import relink_socket_map_add_socket
 
+        reorder_me_input = []; input_index = 0
+        reorder_me_output = []; output_index = 0
         for item in node.node_tree.interface.items_tree:
             if item.item_type != "SOCKET": continue
             if (item.in_out == 'INPUT' and update_input):
@@ -398,19 +400,43 @@ def node_group_update(node, force = False):
                         socket = relink_socket_map_add_socket(node, node.inputs, item)
                         do_relink(node, socket, socket_map_in)
                     else:
-                        prRed(item.identifier)
+                        for has_socket in node.inputs:
+                            if has_socket.bl_idname == item.socket_type and \
+                                has_socket.name == item.name:
+                                reorder_me_input.append((has_socket, input_index))
+                                break
+                        else:
+                            socket = relink_socket_map_add_socket(node, node.inputs, item)
                 else:
-                    prGreen(item.identifier)
                     socket = relink_socket_map_add_socket(node, node.inputs, item)
+                input_index += 1
 
             if (item.in_out == 'OUTPUT' and update_output):
                 if socket_map_out:
                     if item.identifier in socket_map_out.keys():
                         socket = relink_socket_map_add_socket(node, node.outputs, item)
                         do_relink(node, socket, socket_map_out)
+                    else:
+                        for has_socket in node.outputs:
+                            if has_socket.bl_idname == item.socket_type and \
+                                has_socket.name == item.name:
+                                reorder_me_output.append((has_socket, output_index))
+                                break
+                        else:
+                            socket = relink_socket_map_add_socket(node, node.outputs, item)
                 else:
                     socket = relink_socket_map_add_socket(node, node.outputs, item)
-                    
+                output_index += 1
+        
+        both_reorders = zip([reorder_me_input, reorder_me_output], [node.inputs, node.outputs])
+        for reorder_task, collection in both_reorders:
+            for socket, position in reorder_task:
+                for i, s  in enumerate(collection): # get the index
+                    if s.identifier == socket.identifier: break
+                else:
+                    prRed(f"WARN: could not reorder socket {socket.name}")
+                collection.move(i, position)
+
         # at this point there is no wildcard socket
         if socket_map_in and '__extend__' in socket_map_in.keys():
             do_relink(node, None, socket_map_in, in_out='INPUT', parent_name='Constant' )

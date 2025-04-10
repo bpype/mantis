@@ -168,9 +168,9 @@ def do_relink(node, s, map, in_out='INPUT', parent_name = ''):
             elif isinstance(sub_val, Node):
                 # this happens when it is a NodeReroute
                 if in_out =='INPUT':
-                    node.id_data.links.new(input=sub_val, output=node.inputs[0])
+                    node.id_data.links.new(input=sub_val.outputs[0], output=s)
                 else:
-                    node.id_data.links.new(input=node.outputs[0], output=sub_val)
+                    node.id_data.links.new(input=s, output=sub_val.inputs[0])
             else:
                 raise RuntimeError("Unhandled case in do_relink()")
     elif get_string != "__extend__":
