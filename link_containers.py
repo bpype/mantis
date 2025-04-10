@@ -620,19 +620,21 @@ class LinkInverseKinematics(MantisLinkNode):
         # we still need to bisect search because the relationship of pole_angle <==> error is somewhat unpredictable
         upper_bounds = alt_angle if alt_angle > angle else angle
         lower_bounds = alt_angle if alt_angle < angle else angle
-        i=0
+        i, error_identical = 0, 0
 
         while ( True ):
             if (i>=max_iterations):
-                prOrange(f"IK Pole Angle Set reached max iterations of {i} in {time()-start_time} seconds")
+                prOrange(f"IK Pole Angle Set reached max iterations of {i-error_identical} in {time()-start_time} seconds")
                 break
-            if (abs(error)<error_threshhold) or (upper_bounds<=lower_bounds):
-                prPurple(f"IK Pole Angle Set converged after {i} iterations with error={error} in {time()-start_time} seconds")
+            if (abs(error)<error_threshhold) or (upper_bounds<=lower_bounds) or (error_identical > 3):
+                prPurple(f"IK Pole Angle Set converged after {i-error_identical} iterations with error={error} in {time()-start_time} seconds")
                 break
             # get the center-point betweeen the bounds
             try_angle = lower_bounds + (upper_bounds-lower_bounds)/2
             self.set_pole_angle(try_angle); dg.update()
-            error=signed_angle((base_ik_bone.tail-center_point), knee_direction, ik_axis)
+            prev_error = error
+            error = signed_angle((base_ik_bone.tail-center_point), knee_direction, ik_axis)
+            error_identical+= int(error == prev_error)
             if error>0: upper_bounds=try_angle
             if error<0: lower_bounds=try_angle
             i+=1
