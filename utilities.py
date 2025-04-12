@@ -686,6 +686,7 @@ def RibbonMeshEdgeLengths(m, ribbon):
 
 def EnsureCurveIsRibbon(crv, defaultRadius = 0.1):
     crvRadius = 0
+    crv.data.offset = 0
     if (crv.data.bevel_depth == 0):
         crvRadius = crv.data.extrude
     else: #Set ribbon from bevel depth
@@ -708,7 +709,7 @@ def SetRibbonData(m, ribbon):
     # m.calc_normals() #calculate normals
     # it appears this has been removed.
     for i, (t, b) in enumerate(zip(tE, bE)):
-        ind = wrap( (i + 1), len(tE) - 1 )
+        ind = old_bad_wrap_that_should_be_refactored( (i + 1), len(tE) - 1 )
         tNext = tE[ind]; bNext = bE[ind]
         ribbonData.append(  ( (t,b), (tNext, bNext), lengths[i] ) )
         #if this is a circle, the last v in vertData has a length, otherwise 0
@@ -719,6 +720,9 @@ def mesh_from_curve(crv, context,):
     """Utility function for converting a mesh to a curve
        which will return the correct mesh even with modifiers"""
     import bpy
+    bevel = crv.data.bevel_depth
+    extrude = crv.data.extrude
+    offset = crv.data.offset
     if (len(crv.modifiers) > 0):
         do_unlink = False
         if (not context.scene.collection.all_objects.get(crv.name)):
@@ -734,14 +738,14 @@ def mesh_from_curve(crv, context,):
         m.name=crv.data.name+'_mesh'
         if (do_unlink):
             context.collection.objects.unlink(crv)
-        return m
-        # except: #dg is None?? # FIX THIS BUG BUG BUG
-        #     print ("Warning: could not apply modifiers on curve")
-        #     return bpy.data.meshes.new_from_object(crv)
     else: # (ಥ﹏ಥ) why can't I just use this !
         # for now I will just do it like this
         EnsureCurveIsRibbon(crv)
-        return bpy.data.meshes.new_from_object(crv)
+        m = bpy.data.meshes.new_from_object(crv)
+    crv.data.bevel_depth = bevel
+    crv.data.extrude = extrude
+    crv.data.offset = offset
+    return m
 
 def DetectRibbon(f, bm, skipMe):
     fFirst = f.index
