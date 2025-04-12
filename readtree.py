@@ -309,7 +309,7 @@ def parse_tree(base_tree):
     
     start_time = time.time()
     roots, array_nodes = [], []
-    from .misc_containers import UtilityArrayGet
+    from .misc_nodes import UtilityArrayGet
     for mantis_node in all_mantis_nodes.values():
         if mantis_node.node_type in ["DUMMY"]: # clean up the groups
             if mantis_node.prototype.bl_idname in ("MantisNodeGroup", "NodeGroupOutput"):

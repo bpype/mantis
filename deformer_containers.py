@@ -1,6 +1,6 @@
 from .node_container_common import *
 from .xForm_containers import xFormGeometryObject
-from .misc_containers import InputExistingGeometryObject
+from .misc_nodes import InputExistingGeometryObject
 from .base_definitions import MantisNode
 
 from .utilities import (prRed, prGreen, prPurple, prWhite, prOrange,
@@ -19,7 +19,7 @@ def TellClasses():
 
 def trace_xForm_back(nc, socket):
     from .xForm_containers import xFormGeometryObject
-    from .misc_containers import InputExistingGeometryObject
+    from .misc_nodes import InputExistingGeometryObject
     from bpy.types import Object
     if (trace := trace_single_line(nc, socket)[0] ) :
         for i in range(len(trace)): # have to look in reverse, actually
@@ -75,7 +75,7 @@ class DeformerArmature(MantisNode):
     # DEDUP HACK HACK HACK HACK HACK
     def bGetParentArmature(self):
         from .xForm_containers import xFormArmature
-        from .misc_containers import InputExistingGeometryObject
+        from .misc_nodes import InputExistingGeometryObject
         from bpy.types import Object
         if (trace := trace_single_line(self, "Armature Object")[0] ) :
             for i in range(len(trace)):

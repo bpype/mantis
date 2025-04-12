@@ -548,10 +548,10 @@ def project_point_to_plane(point, origin, normal):
 # This is really, really stupid way to do this
 def gen_nc_input_for_data(socket):
     # Class List #TODO deduplicate
-    from . import xForm_containers, link_containers, misc_containers, primitives_containers, deformer_containers, math_containers, schema_containers
+    from . import xForm_containers, link_containers, misc_nodes, primitives_containers, deformer_containers, math_containers, schema_containers
     from .internal_containers import NoOpNode
     classes = {}
-    for module in [xForm_containers, link_containers, misc_containers, primitives_containers, deformer_containers, math_containers, schema_containers]:
+    for module in [xForm_containers, link_containers, misc_nodes, primitives_containers, deformer_containers, math_containers, schema_containers]:
         for cls in module.TellClasses():
             classes[cls.__name__] = cls
     #

@@ -1004,5 +1004,5 @@ class UtilityPrint(Node, MantisUINode):
 
 # Set up the class property that ties the UI classes to the Mantis classes.
 for cls in TellClasses():
-    cls.mantis_node_library='.misc_containers'
+    cls.mantis_node_library='.misc_nodes'
     cls.set_mantis_class()
