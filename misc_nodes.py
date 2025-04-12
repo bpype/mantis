@@ -240,10 +240,18 @@ class UtilityMatrixFromCurve(MantisNode):
             m_index = self.evaluate_input("Matrix Index")
             factors = [1/num_divisions*m_index, 1/num_divisions*(m_index+1)]
             data = data_from_ribbon_mesh(m, [factors], curve.matrix_world)
-            # print(data)
+            head=data[0][0][0]
+            tail= data[0][0][1]
+            axis = (tail-head).normalized()
+            normal=data[0][2][0]
+            # make sure the normal is perpendicular to the tail
+            from .utilities import make_perpendicular
+            normal = make_perpendicular(axis, normal)
+            m = matrix_from_head_tail(head, tail, normal)
             # this is in world space... let's just convert it back
-            m = matrix_from_head_tail(data[0][0][0], data[0][0][1])
-            m.translation -= curve.location
+            m.translation = head - curve.location
+            m[3][3]=(tail-head).length
+
             # TODO HACK TODO
             # all the nodes should work in world-space, and it should be the responsibility
             # of the xForm node to convert!
@@ -342,7 +350,12 @@ class UtilityMatricesFromCurve(MantisNode):
             data = data_from_ribbon_mesh(mesh, [factors], curve.matrix_world)
             
             # 0 is the spline index. 0 selects points as opposed to normals or whatever.
-            matrices = [matrix_from_head_tail(data[0][0][i], data[0][0][i+1]) for i in range(num_divisions)]
+            from .utilities import make_perpendicular
+            matrices = [matrix_from_head_tail(
+                data[0][0][i], 
+                data[0][0][i+1],
+                make_perpendicular((data[0][0][i+1]-data[0][0][i]).normalized(), data[0][2][i]),) \
+                    for i in range(num_divisions)]
         
 
         for link in self.outputs["Matrices"].links:
@@ -456,7 +469,7 @@ class UtilityMatrixFromCurveSegment(MantisNode):
             from .utilities import make_perpendicular
             normal = make_perpendicular(axis, normal)
             m = matrix_from_head_tail(head, tail, normal)
-            m.translation = head + curve.location
+            m.translation = head - curve.location
             m[3][3]=(tail-head).length
             self.parameters["Matrix"] = m
         self.prepared, self.executed = True, True
