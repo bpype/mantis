@@ -519,10 +519,7 @@ class LinkInverseKinematics(MantisLinkNode):
     # not very efficient but it's OK
     def set_pole_angle(self, angle: float) -> None:
         from math import pi
-        def wrap(min : float, max : float, value: float) -> float:
-            range = max-min; remainder = value % range
-            if remainder > max: return min + remainder-max
-            else: return remainder
+        from .utilities import wrap
         self.bObject.pole_angle = wrap(-pi, pi, angle)
     
     def calc_pole_angle_pre(self, c, ik_bone):

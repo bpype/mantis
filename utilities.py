@@ -633,12 +633,6 @@ def gen_nc_input_for_data(socket):
 # CURVE STUFF
 ####################################
 
-def rotate(l, n):
-    if ( not ( isinstance(n, int) ) ): #print an error if n is not an int:
-        raise TypeError("List slice must be an int, not float.")
-    return l[n:] + l[:n]
-#from stack exchange, thanks YXD
-
 # this stuff could be branchless but I don't use it much TODO
 def cap(val, maxValue):
     if (val > maxValue):
@@ -650,13 +644,18 @@ def capMin(val, minValue):
         return minValue
     return val
 
-# def wrap(val, min=0, max=1):
-#     raise NotImplementedError
+def wrap(min : float, max : float, value: float) -> float:
+    range = max-min; remainder = value % range
+    if remainder > max: return min + remainder-max
+    else: return remainder
 
-#wtf this doesn't do anything even remotely similar to wrap, or useful in
+def lerpVal(a, b, fac = 0.5):
+    return a + ( (b-a) * fac)
+
+#wtf this doesn't do anything even remotely similar to wrap
 # HACK BAD FIXME UNBREAK ME BAD
 # I don't understand what this function does but I am using it in multiple places?
-def wrap(val, maxValue, minValue = None):
+def old_bad_wrap_that_should_be_refactored(val, maxValue, minValue = None):
     if (val > maxValue):
         return (-1 * ((maxValue - val) + 1))
     if ((minValue) and (val < minValue)):
@@ -664,30 +663,17 @@ def wrap(val, maxValue, minValue = None):
     return val
     #TODO clean this up
 
-
-def layerMaskCompare(mask_a, mask_b):
-    compare = 0
-    for a, b in zip(mask_a, mask_b):
-        if (a != b):
-            compare+=1
-    if (compare == 0):
-        return True
-    return False
-
-def lerpVal(a, b, fac = 0.5):
-    return a + ( (b-a) * fac)
-
 def RibbonMeshEdgeLengths(m, ribbon):
     tE = ribbon[0]; bE = ribbon[1]; c = ribbon[2]
     lengths = []
     for i in range( len( tE ) ): #tE and bE are same length
         if (c == True):
-            v1NextInd = tE[wrap((i+1), len(tE) - 1)]
+            v1NextInd = tE[old_bad_wrap_that_should_be_refactored((i+1), len(tE) - 1)]
         else:
             v1NextInd = tE[cap((i+1) , len(tE) - 1 )]
         v1 = m.vertices[tE[i]]; v1Next = m.vertices[v1NextInd]
         if (c == True):
-            v2NextInd = bE[wrap((i+1), len(bE) - 1)]
+            v2NextInd = bE[old_bad_wrap_that_should_be_refactored((i+1), len(bE) - 1)]
         else:
             v2NextInd = bE[cap((i+1) , len(bE) - 1 )]
         v2 = m.vertices[bE[i]]; v2Next = m.vertices[v2NextInd]
