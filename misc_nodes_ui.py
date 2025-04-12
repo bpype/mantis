@@ -25,9 +25,11 @@ def TellClasses():
              UtilityNameOfXForm,
             #  ComposeMatrixNode,
              MetaRigMatrixNode,
-             UtilityMatrixFromCurve,
              UtilityPointFromCurve,
+             UtilityMatrixFromCurve,
              UtilityMatricesFromCurve,
+             UtilityNumberOfCurveSegments,
+             UtilityMatrixFromCurveSegment,
             #  ScaleBoneLengthNode,
              UtilityMetaRigNode,
              UtilityBonePropertiesNode,
@@ -254,7 +256,6 @@ class UtilityMatrixFromCurve(Node, MantisUINode):
         self.outputs.new("MatrixSocket", "Matrix")
         self.initialized = True
 
-
 class UtilityPointFromCurve(Node, MantisUINode):
     """Gets a point from a curve."""
     bl_idname = "UtilityPointFromCurve"
@@ -270,6 +271,37 @@ class UtilityPointFromCurve(Node, MantisUINode):
         self.outputs.new("VectorSocket", "Point")
         self.initialized = True
 
+class UtilityNumberOfCurveSegments(Node, MantisUINode):
+    """Tells the number of segments in a curve."""
+    bl_idname = "UtilityNumberOfCurveSegments"
+    bl_label = "Number of Curve Segments"
+    bl_icon = "NODE"
+    
+    initialized : bpy.props.BoolProperty(default = False)
+    mantis_node_class_name=bl_idname
+    
+    def init(self, context):
+        self.inputs.new("EnumCurveSocket", "Curve")
+        self.inputs.new('UnsignedIntSocket', 'Spline Index')
+        self.outputs.new("UnsignedIntSocket", "Number of Segments")
+        self.initialized = True
+    
+class UtilityMatrixFromCurveSegment(Node, MantisUINode):
+    """Gets a matrix from a curve segment."""
+    bl_idname = "UtilityMatrixFromCurveSegment"
+    bl_label = "Matrix from Curve Segment"
+    bl_icon = "NODE"
+    
+    initialized : bpy.props.BoolProperty(default = False)
+    mantis_node_class_name=bl_idname
+    
+    def init(self, context):
+        self.inputs.new("EnumCurveSocket", "Curve")
+        self.inputs.new('UnsignedIntSocket', 'Spline Index')
+        self.inputs.new('UnsignedIntSocket', 'Segment Index')
+        self.outputs.new("MatrixSocket", "Matrix")
+        self.initialized = True
+    
 class UtilityMatricesFromCurve(Node, MantisUINode):
     """Gets a matrix from a curve."""
     bl_idname = "UtilityMatricesFromCurve"

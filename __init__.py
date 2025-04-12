@@ -131,6 +131,8 @@ matrix_category = [
         NodeItem("UtilityMetaRig"),
         NodeItem("UtilityMatrixFromCurve"),
         NodeItem("UtilityMatricesFromCurve"),
+        NodeItem("UtilityNumberOfCurveSegments"),
+        NodeItem("UtilityMatrixFromCurveSegment"),
         NodeItem("UtilityPointFromCurve"),
         NodeItem("UtilityPointFromBoneMatrix"),
         NodeItem("UtilitySetBoneLength"),

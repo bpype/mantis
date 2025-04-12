@@ -633,6 +633,11 @@ def gen_nc_input_for_data(socket):
 # CURVE STUFF
 ####################################
 
+def make_perpendicular(v1, v2):
+    projected = (v2.dot(v1) / v1.dot(v1)) * v1
+    perpendicular = v2 - projected
+    return perpendicular
+
 # this stuff could be branchless but I don't use it much TODO
 def cap(val, maxValue):
     if (val > maxValue):

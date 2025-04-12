@@ -24,6 +24,8 @@ def TellClasses():
              UtilityPointFromCurve,
              UtilityMatrixFromCurve,
              UtilityMatricesFromCurve,
+             UtilityNumberOfCurveSegments,
+             UtilityMatrixFromCurveSegment,
              UtilityMetaRig,
              UtilityBoneProperties,
              UtilityDriverVariable,
@@ -56,12 +58,28 @@ def TellClasses():
             ]
 
 
-def matrix_from_head_tail(head, tail):
+def matrix_from_head_tail(head, tail, normal=None):
     from mathutils import Vector, Quaternion, Matrix
-    rotation = Vector((0,1,0)).rotation_difference((tail-head).normalized()).to_matrix()
-    m= Matrix.LocRotScale(head, rotation, None)
-    m[3][3] = (tail-head).length
+    if normal is None:
+        rotation = Vector((0,1,0)).rotation_difference((tail-head).normalized()).to_matrix()
+        m= Matrix.LocRotScale(head, rotation, None)
+        m[3][3] = (tail-head).length
+    else: # construct a basis matrix
+        m = Matrix.Identity(3)
+        axis = (tail-head).normalized()
+        conormal = axis.cross(normal)
+        m[0]=conormal
+        m[1]=axis
+        m[2]=normal
+        m = m.transposed().to_4x4()
     return m
+
+def cleanup_curve(curve_name : str, execution_id : str) -> None:
+        import bpy
+        curve = bpy.data.objects.get(curve_name)
+        m_name = curve.name+'.'+ execution_id
+        if (mesh := bpy.data.meshes.get(m_name)):
+            bpy.data.meshes.remove(mesh)
 
 #*#-------------------------------#++#-------------------------------#*#
 # U T I L I T Y   N O D E S
@@ -235,12 +253,7 @@ class UtilityMatrixFromCurve(MantisNode):
         self.executed = True
     
     def bFinalize(self, bContext=None):
-        import bpy
-        curve_name = self.evaluate_input("Curve")
-        curve = bpy.data.objects.get(curve_name)
-        m_name = curve.name+'.'+self.base_tree.execution_id
-        if (mesh := bpy.data.meshes.get(m_name)):
-            bpy.data.meshes.remove(mesh)
+        cleanup_curve(self.evaluate_input("Curve"), self.base_tree.execution_id)
 
 
 class UtilityPointFromCurve(MantisNode):
@@ -261,7 +274,6 @@ class UtilityPointFromCurve(MantisNode):
         self.node_type = "UTILITY"
 
     def bPrepare(self, bContext = None,):
-        from mathutils import Matrix
         import bpy
         curve = bpy.data.objects.get(self.evaluate_input("Curve"))
         if not curve:
@@ -286,12 +298,7 @@ class UtilityPointFromCurve(MantisNode):
         self.prepared, self.executed = True, True
     
     def bFinalize(self, bContext=None):
-        import bpy
-        curve_name = self.evaluate_input("Curve")
-        curve = bpy.data.objects.get(curve_name)
-        m_name = curve.name+'.'+self.base_tree.execution_id
-        if (mesh := bpy.data.meshes.get(m_name)):
-            bpy.data.meshes.remove(mesh)
+        cleanup_curve(self.evaluate_input("Curve"), self.base_tree.execution_id)
 
 class UtilityMatricesFromCurve(MantisNode):
     '''Get matrices from a curve'''
@@ -302,7 +309,7 @@ class UtilityMatricesFromCurve(MantisNode):
           "Curve"            ,
           "Total Divisions"  ,
         ]
-        self.outputs = [
+        outputs = [
           "Matrices" ,
         ]
         self.inputs.init_sockets(inputs)
@@ -361,6 +368,101 @@ class UtilityMatricesFromCurve(MantisNode):
         if (mesh := bpy.data.meshes.get(m_name)):
             prGreen(f"Freeing mesh data {m_name}...")
             bpy.data.meshes.remove(mesh)
+
+class UtilityNumberOfCurveSegments(MantisNode):
+    def __init__(self, signature, base_tree):
+        super().__init__(signature, base_tree)
+        inputs = [
+          "Curve"            ,
+          "Spline Index"     ,
+        ]
+        outputs = [
+          "Number of Segments" ,
+        ]
+        self.inputs.init_sockets(inputs)
+        self.outputs.init_sockets(outputs)
+        self.init_parameters()
+        self.node_type = "UTILITY"
+    
+    def bPrepare(self, bContext = None,):
+        import bpy
+        curve_name = self.evaluate_input("Curve")
+        curve = bpy.data.objects.get(curve_name)
+        spline = curve.data.splines[self.evaluate_input("Spline Index")]
+        if spline.type == "BEZIER":
+            self.parameters["Number of Segments"] = len(spline.bezier_points)-1
+        else:
+            self.parameters["Number of Segments"] = len(spline.points)-1
+        self.prepared = True
+        self.executed = True
+
+class UtilityMatrixFromCurveSegment(MantisNode):
+    def __init__(self, signature, base_tree):
+        super().__init__(signature, base_tree)
+        inputs = [
+          "Curve"            ,
+          "Spline Index"     ,
+          "Segment Index"    ,
+        ]
+        outputs = [
+          "Matrix"           ,
+        ]
+        self.inputs.init_sockets(inputs)
+        self.outputs.init_sockets(outputs)
+        self.init_parameters()
+        self.node_type = "UTILITY"
+
+    def bPrepare(self, bContext = None,):
+        from mathutils import Matrix
+        import bpy
+        curve = bpy.data.objects.get(self.evaluate_input("Curve"))
+        if not curve:
+            raise RuntimeError(f"No curve found for {self}.")
+        else:
+            from .utilities import mesh_from_curve, data_from_ribbon_mesh
+            if not bContext: bContext = bpy.context
+            m_name = curve.name+'.'+self.base_tree.execution_id
+            if not (m := bpy.data.meshes.get(m_name)):
+                m = mesh_from_curve(curve, bContext)
+                m.name = m_name
+            # this section is dumb, but it is because the data_from_ribbon_mesh
+            #  function is designed to pull data from many splines at once (for optimization)
+            #  so we have to give it empty splines for each one we skip.
+            # TODO: Refactor this to make it so I can select spline index
+            spline_index = self.evaluate_input("Spline Index")
+            spline = curve.data.splines[spline_index]
+            splines_factors = [ [] for i in range (spline_index-1)]
+            factors = [0.0]
+            points = spline.bezier_points if spline.type == 'BEZIER' else spline.points
+            total_length=0.0
+            for i in range(len(points)-1):
+                total_length+= (seg_length := (points[i+1].co - points[i].co).length)
+                factors.append(seg_length)
+            prev_length = 0.0
+            for i in range(len(factors)):
+                factors[i] = prev_length+factors[i]/total_length
+                prev_length=factors[i]
+                # Why does this happen? Floating point error?
+                if factors[i]>1.0: factors[i] = 1.0
+            splines_factors.append(factors)
+            #
+            data = data_from_ribbon_mesh(m, splines_factors, curve.matrix_world)
+            segment_index = self.evaluate_input("Segment Index")
+            head=data[spline_index][0][segment_index]
+            tail= data[spline_index][0][segment_index+1]
+            axis = (tail-head).normalized()
+            normal=data[spline_index][2][segment_index]
+            # make sure the normal is perpendicular to the tail
+            from .utilities import make_perpendicular
+            normal = make_perpendicular(axis, normal)
+            m = matrix_from_head_tail(head, tail, normal)
+            m.translation = head + curve.location
+            m[3][3]=(tail-head).length
+            self.parameters["Matrix"] = m
+        self.prepared, self.executed = True, True
+    
+    def bFinalize(self, bContext=None):
+        cleanup_curve(self.evaluate_input("Curve"), self.base_tree.execution_id)
 
 class UtilityMetaRig(MantisNode):
     '''A node representing an armature object'''
