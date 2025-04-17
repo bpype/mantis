@@ -74,10 +74,21 @@ def matrix_from_head_tail(head, tail, normal=None):
         m = m.transposed().to_4x4()
     return m
 
+def get_ribbon_mesh_from_curve(curve_name : str, execution_id : str, bContext):
+        from bpy import data
+        curve = data.objects.get(curve_name)
+        assert curve.type == 'CURVE', f"ERROR: object is not a curve: {curve_name}"
+        from .utilities import mesh_from_curve
+        m_name = curve_name+'.'+str(hash(curve_name+'.'+execution_id))
+        if not (m := data.meshes.get(m_name)):
+            m = mesh_from_curve(curve, bContext)
+            m.name = m_name
+        return m
+
 def cleanup_curve(curve_name : str, execution_id : str) -> None:
         import bpy
         curve = bpy.data.objects.get(curve_name)
-        m_name = curve.name+'.'+ execution_id
+        m_name = curve_name+'.'+str(hash(curve.name+'.'+ execution_id))
         if (mesh := bpy.data.meshes.get(m_name)):
             bpy.data.meshes.remove(mesh)
 
@@ -219,22 +230,19 @@ class UtilityMatrixFromCurve(MantisNode):
     def bPrepare(self, bContext = None,):
         from mathutils import Matrix
         import bpy
-        m = Matrix.Identity(4)
-        curve = bpy.data.objects.get(self.evaluate_input("Curve"))
+        mat = Matrix.Identity(4)
+        curve_name = self.evaluate_input("Curve")
+        curve = bpy.data.objects.get(curve_name)
         if not curve:
-            prRed(f"No curve found for {self}. Using an Identity matrix instead.")
-            m[3][3] = 1.0
+            prRed(f"WARN: No curve found for {self}. Using an identity matrix instead.")
+            mat[3][3] = 1.0
+        elif curve.type != "CURVE":
+            prRed(f"WARN: Object {curve.name} is not a curve. Using an identity matrix instead.")
+            mat[3][3] = 1.0
         else:
-            from .utilities import mesh_from_curve, data_from_ribbon_mesh
-            if not bContext:
-                # TODO find out if this is bad or a HACK or if it is OK
-                bContext = bpy.context
-            # IMPORTANT TODO: I need to be able to reuse this m
-            # First, try to get the one we made before
-            m_name = curve.name+'.'+self.base_tree.execution_id
-            if not (m := bpy.data.meshes.get(m_name)):
-                m = mesh_from_curve(curve, bContext)
-                m.name = m_name
+            if bContext is None: bContext = bpy.context # is this wise?
+            m = get_ribbon_mesh_from_curve(curve.name, self.base_tree.execution_id, bContext)
+            from .utilities import data_from_ribbon_mesh
             #
             num_divisions = self.evaluate_input("Total Divisions")
             m_index = self.evaluate_input("Matrix Index")
@@ -247,16 +255,16 @@ class UtilityMatrixFromCurve(MantisNode):
             # make sure the normal is perpendicular to the tail
             from .utilities import make_perpendicular
             normal = make_perpendicular(axis, normal)
-            m = matrix_from_head_tail(head, tail, normal)
+            mat = matrix_from_head_tail(head, tail, normal)
             # this is in world space... let's just convert it back
-            m.translation = head - curve.location
-            m[3][3]=(tail-head).length
+            mat.translation = head - curve.location
+            mat[3][3]=(tail-head).length
 
             # TODO HACK TODO
             # all the nodes should work in world-space, and it should be the responsibility
             # of the xForm node to convert!
 
-        self.parameters["Matrix"] = m
+        self.parameters["Matrix"] = mat
         self.prepared = True
         self.executed = True
     
@@ -286,17 +294,12 @@ class UtilityPointFromCurve(MantisNode):
         curve = bpy.data.objects.get(self.evaluate_input("Curve"))
         if not curve:
             raise RuntimeError(f"No curve found for {self}.")
+        elif curve.type != "CURVE":
+            raise GraphError(f"ERROR: Object {curve.name} is not a curve.")
         else:
-            from .utilities import mesh_from_curve, data_from_ribbon_mesh
-            if not bContext:
-                # TODO find out if this is bad or a HACK or if it is OK
-                bContext = bpy.context
-            # IMPORTANT TODO: I need to be able to reuse this m
-            # First, try to get the one we made before
-            m_name = curve.name+'.'+self.base_tree.execution_id
-            if not (m := bpy.data.meshes.get(m_name)):
-                m = mesh_from_curve(curve, bContext)
-                m.name = m_name
+            if bContext is None: bContext = bpy.context # is this wise?
+            m = get_ribbon_mesh_from_curve(curve.name, self.base_tree.execution_id, bContext)
+            from .utilities import data_from_ribbon_mesh
             #
             num_divisions = 1
             factors = [self.evaluate_input("Factor")]
@@ -335,16 +338,15 @@ class UtilityMatricesFromCurve(MantisNode):
         curve_name = self.evaluate_input("Curve")
         curve = bpy.data.objects.get(curve_name)
         if not curve:
-            prRed(f"No curve found for {self}. Using an Identity matrix instead.")
+            prRed(f"WARN: No curve found for {self}. Using an identity matrix instead.")
+            m[3][3] = 1.0
+        elif curve.type != "CURVE":
+            prRed(f"WARN: Object {curve.name} is not a curve. Using an identity matrix instead.")
             m[3][3] = 1.0
         else:
-            from .utilities import mesh_from_curve, data_from_ribbon_mesh
-            if not bContext:
-                bContext = bpy.context
-            m_name = curve.name+'.'+self.base_tree.execution_id
-            if not (mesh := bpy.data.meshes.get(m_name)):
-                mesh = mesh_from_curve(curve, bContext)
-                mesh.name = m_name
+            if bContext is None: bContext = bpy.context # is this wise?
+            mesh = get_ribbon_mesh_from_curve(curve.name, self.base_tree.execution_id, bContext)
+            from .utilities import data_from_ribbon_mesh
             num_divisions = self.evaluate_input("Total Divisions")
             factors = [0.0] + [(1/num_divisions*(i+1)) for i in range(num_divisions)]
             data = data_from_ribbon_mesh(mesh, [factors], curve.matrix_world)
@@ -426,18 +428,16 @@ class UtilityMatrixFromCurveSegment(MantisNode):
         self.node_type = "UTILITY"
 
     def bPrepare(self, bContext = None,):
-        from mathutils import Matrix
         import bpy
         curve = bpy.data.objects.get(self.evaluate_input("Curve"))
         if not curve:
             raise RuntimeError(f"No curve found for {self}.")
+        elif curve.type != "CURVE":
+            raise GraphError(f"ERROR: Object {curve.name} is not a curve.")
         else:
-            from .utilities import mesh_from_curve, data_from_ribbon_mesh
-            if not bContext: bContext = bpy.context
-            m_name = curve.name+'.'+self.base_tree.execution_id
-            if not (m := bpy.data.meshes.get(m_name)):
-                m = mesh_from_curve(curve, bContext)
-                m.name = m_name
+            if bContext is None: bContext = bpy.context # is this wise?
+            m = get_ribbon_mesh_from_curve(curve.name, self.base_tree.execution_id, bContext)
+            from .utilities import data_from_ribbon_mesh
             # this section is dumb, but it is because the data_from_ribbon_mesh
             #  function is designed to pull data from many splines at once (for optimization)
             #  so we have to give it empty splines for each one we skip.
