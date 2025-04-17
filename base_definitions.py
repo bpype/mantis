@@ -583,8 +583,8 @@ SOCKETS_ADDED=[("DeformerMorphTargetDeform", 'INPUT', 'BooleanSocket', "Use Shap
 
 # replace names with bl_idnames for reading the tree and solving schemas.
 replace_types = ["NodeGroupInput", "NodeGroupOutput", "SchemaIncomingConnection",
-                 "SchemaArrayInput", "SchemaConstInput", "SchemaConstOutput", "SchemaIndex",
-                 "SchemaOutgoingConnection", "SchemaConstantOutput", "SchemaArrayOutput",
+                 "SchemaArrayInput", "SchemaArrayInputAll", "SchemaConstInput", "SchemaConstOutput",
+                 "SchemaIndex", "SchemaOutgoingConnection", "SchemaConstantOutput", "SchemaArrayOutput",
                  "SchemaArrayInputGet",]
 
 # anything that gets properties added in the graph... this is a clumsy approach but I need to watch for this

@@ -237,6 +237,7 @@ def solve_schema_to_tree(nc, all_nc, roots=[]):
 schema_bl_idnames = [   "SchemaIndex",
                         "SchemaArrayInput",
                         "SchemaArrayInputGet",
+                        "SchemaArrayInputAll",
                         "SchemaArrayOutput",
                         "SchemaConstInput",
                         "SchemaConstOutput",

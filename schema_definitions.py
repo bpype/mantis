@@ -16,6 +16,7 @@ def TellClasses():
         SchemaIndex,
         SchemaArrayInput,
         SchemaArrayInputGet,
+        SchemaArrayInputAll,
         SchemaArrayOutput,
         SchemaConstInput,
         SchemaConstOutput,
@@ -41,11 +42,10 @@ class SchemaIndex(Node, SchemaUINode):
         self.outputs.new("IntSocket", "Schema Length")
         self.initialized = True
 
-
 class SchemaArrayInput(Node, SchemaUINode):
     '''Array Inputs'''
     bl_idname = 'SchemaArrayInput'
-    bl_label = "Array Input"
+    bl_label = "Array Input at Current Index"
     bl_icon = 'GIZMO'
     initialized : bpy.props.BoolProperty(default = False)
     mantis_node_class_name=bl_idname
@@ -69,6 +69,33 @@ class SchemaArrayInput(Node, SchemaUINode):
         if len(self.inputs)<1 or self.inputs[-1].bl_idname not in ["WildcardSocket"]:
             self.outputs.new('WildcardSocket', '', identifier='__extend__')
         # self.initialized = True
+
+class SchemaArrayInputAll(Node, SchemaUINode):
+    '''Array Inputs'''
+    bl_idname = 'SchemaArrayInputAll'
+    bl_label = "Get entire Array Input"
+    bl_icon = 'GIZMO'
+    initialized : bpy.props.BoolProperty(default = False)
+    mantis_node_class_name=bl_idname
+
+    def init(self, context):
+        self.update()
+
+    def update(self):
+        # self.initialized = False
+        socket_maps = get_socket_maps(self)
+        if socket_maps is None:
+            return
+        output_map = socket_maps[1]
+        self.outputs.clear()
+        for item in self.id_data.interface.items_tree:
+            if item.item_type == 'PANEL': continue
+            if item.parent and item.in_out == 'INPUT' and item.parent.name == 'Array':
+                relink_socket_map(self, self.outputs, output_map, item, in_out='OUTPUT')
+        if '__extend__' in output_map.keys() and output_map['__extend__']:
+            do_relink(self, None, output_map, in_out='OUTPUT', parent_name='Array' )
+        if len(self.inputs)<1 or self.inputs[-1].bl_idname not in ["WildcardSocket"]:
+            self.outputs.new('WildcardSocket', '', identifier='__extend__')
 
 class SchemaArrayInputGet(Node, SchemaUINode):
     '''Array Inputs'''

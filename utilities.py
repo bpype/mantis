@@ -269,7 +269,7 @@ def schema_dependency_handle_item(schema, all_nc, item,):
         dependencies = schema.dependencies
         hierarchy_dependencies = schema.hierarchy_dependencies
         if item.parent and item.parent.name == 'Array':
-            for schema_idname in ['SchemaArrayInput', 'SchemaArrayInputGet',]:
+            for schema_idname in ['SchemaArrayInput', 'SchemaArrayInputGet', 'SchemaArrayInputAll']:
                 if (nc := all_nc.get( (*schema.signature, schema_idname) )):
                     for to_link in nc.outputs[item.name].links:
                         if to_link.to_socket in to_name_filter:

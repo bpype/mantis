@@ -7,6 +7,7 @@ def TellClasses():
         SchemaIndex,
         SchemaArrayInput,
         SchemaArrayInputGet,
+        SchemaArrayInputAll,
         SchemaArrayOutput,
         SchemaConstInput,
         SchemaConstOutput,
@@ -63,6 +64,11 @@ class SchemaArrayInputGet(SchemaNode):
             "Index"         ,
         ]
         self.inputs.init_sockets(inputs)
+        schema_init_sockets(self, is_input=False, in_out='INPUT', category='Array')
+
+class SchemaArrayInputAll(SchemaNode):
+    def __init__(self, signature, base_tree):
+        super().__init__(signature, base_tree)
         schema_init_sockets(self, is_input=False, in_out='INPUT', category='Array')
 
 class SchemaArrayOutput(SchemaNode):

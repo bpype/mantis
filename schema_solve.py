@@ -260,7 +260,7 @@ class SchemaSolver:
             existing_link.die()
         #
         connection = from_nc.outputs[ui_link.from_socket.name].connect(node=to_nc, socket=ui_link.to_socket.name)
-
+    
     def handle_link_from_array_input(self, frame_mantis_nodes, ui_link, index):
         from .utilities import get_link_in_out
         get_index = index
@@ -280,6 +280,18 @@ class SchemaSolver:
         to_node = frame_mantis_nodes[(*self.autogen_path_names, to_name+self.index_str())]
         connection = incoming.from_node.outputs[incoming.from_socket].connect(node=to_node, socket=ui_link.to_socket.name)
         init_connections(incoming.from_node)
+
+    def handle_link_from_array_input_all(self, frame_mantis_nodes, ui_link):
+        from .utilities import get_link_in_out
+        all_links = self.array_input_connections[ui_link.from_socket.identifier]
+        to_name = get_link_in_out(ui_link)[1]
+        to_node = frame_mantis_nodes[(*self.autogen_path_names, to_name+self.index_str())]
+        # connection = incoming.from_node.outputs[incoming.from_socket].connect(node=to_node, socket=ui_link.to_socket.name)
+        for l in all_links:
+            # we need to copy the link with the new from-node info
+            from .base_definitions import NodeLink
+            connection = NodeLink(l.from_node, l.from_socket, to_node, ui_link.to_socket.name, l.multi_input_sort_id)
+            to_node.flush_links()
 
     def handle_link_to_constant_output(self, frame_mantis_nodes, index, ui_link,  to_ui_node):
         from .utilities import get_link_in_out
@@ -409,6 +421,7 @@ class SchemaSolver:
         from .schema_definitions import (SchemaIndex,
                                         SchemaArrayInput,
                                         SchemaArrayInputGet,
+                                        SchemaArrayInputAll,
                                         SchemaArrayOutput,
                                         SchemaConstInput,
                                         SchemaConstOutput,
@@ -476,6 +489,9 @@ class SchemaSolver:
                 continue
             if isinstance(from_ui_node, SchemaArrayInput):
                 self.handle_link_from_array_input(frame_mantis_nodes, ui_link, self.index)
+                continue
+            if isinstance(from_ui_node, SchemaArrayInputAll):
+                self.handle_link_from_array_input_all(frame_mantis_nodes, ui_link)
                 continue
             # HOLD these links to the next iteration:
             if isinstance(to_ui_node, SchemaOutgoingConnection):
