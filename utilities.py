@@ -95,12 +95,14 @@ def get_socket_maps(node, force=False):
         for sock in getattr(node, collection):
             if sock.is_linked:
                 other_sockets = []
+                # Sort the links first (in case they are mult-input), because Blender doesn't
+                links = sorted(list(sock.links), key = lambda l : l.multi_input_sort_id)
                 # HACK here because Blender will crash if the socket values in the NodeReroute
                 #  are mutated. Because this seems to happen in a deffered way, I can't account
                 #  for it except by checking the node later...
                 # TODO: The fact that I need this hack means I can probably solve this problem
                 #  for all node types in a safer way, since they may also be dynamic somehow
-                for l in sock.links:
+                for l in links:
                     if "from" in linked_socket and l.from_node.bl_idname == "NodeReroute":
                         other_sockets.append(l.from_node)
                     elif "to" in linked_socket and l.to_node.bl_idname == "NodeReroute":
