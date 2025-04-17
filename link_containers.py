@@ -267,6 +267,34 @@ class LinkTransformation(MantisLinkNode):
         self.bObject = c
         self.set_custom_space()
         props_sockets = self.gen_property_socket_map()
+        # we have to fix the blender-property for scale/rotation
+        # because Blender stores these separately.
+        # I do not care that this code is ugly.
+        from_replace, to_replace = '', ''
+        if self.evaluate_input("Map From") == 'ROTATION':
+            from_replace='_rot'
+        elif self.evaluate_input("Map From") == 'SCALE':
+            from_replace='_scale'
+        if self.evaluate_input("Map To") == 'ROTATION':
+            to_replace='_rot'
+        elif self.evaluate_input("Map To") == 'SCALE':
+            to_replace='_scale'
+        if from_replace:
+            for axis in ['x', 'y', 'z']:
+                stub='from_min_'+axis
+                props_sockets[stub+from_replace]=props_sockets[stub]
+                del props_sockets[stub]
+                stub='from_max_'+axis
+                props_sockets[stub+from_replace]=props_sockets[stub]
+                del props_sockets[stub]
+        if to_replace:
+            for axis in ['x', 'y', 'z']:
+                stub='to_min_'+axis
+                props_sockets[stub+to_replace]=props_sockets[stub]
+                del props_sockets[stub]
+                stub='to_max_'+axis
+                props_sockets[stub+to_replace]=props_sockets[stub]
+                del props_sockets[stub]
         evaluate_sockets(self, c, props_sockets)  
         self.executed = True
 
