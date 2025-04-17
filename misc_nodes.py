@@ -444,7 +444,7 @@ class UtilityMatrixFromCurveSegment(MantisNode):
             # TODO: Refactor this to make it so I can select spline index
             spline_index = self.evaluate_input("Spline Index")
             spline = curve.data.splines[spline_index]
-            splines_factors = [ [] for i in range (spline_index-1)]
+            splines_factors = [ [] for i in range (spline_index)]
             factors = [0.0]
             points = spline.bezier_points if spline.type == 'BEZIER' else spline.points
             total_length=0.0
