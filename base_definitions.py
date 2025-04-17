@@ -285,6 +285,17 @@ def poll_node_tree(self, object):
         return True
     return False
 
+# TODO: try and remove the extra loop used here... but it is OK for now
+def should_remove_socket(node, socket):
+    # a function to check if the socket is in the interface
+    id_found = False
+    for item in node.node_tree.interface.items_tree:
+        if item.item_type != "SOCKET": continue
+        if item.identifier == socket.identifier:
+            id_found = True; break
+    return not id_found
+
+
 # TODO: try to check identifiers instead of name.
 def node_group_update(node, force = False):
     if not node.is_updating:
@@ -376,6 +387,8 @@ def node_group_update(node, force = False):
                     continue
                 elif (socket_map_in is None) or socket.identifier in socket_map_in.keys():
                     remove_me.append(socket)
+                elif should_remove_socket(node, socket):
+                    remove_me.append(socket)
             while remove_me:
                 node.inputs.remove(remove_me.pop())
             
@@ -383,6 +396,8 @@ def node_group_update(node, force = False):
             remove_me=[]
             for socket in node.outputs:
                 if (socket_map_out is None) or socket.identifier in socket_map_out.keys():
+                    remove_me.append(socket)
+                elif should_remove_socket(node, socket):
                     remove_me.append(socket)
             while remove_me:
                 node.inputs.remove(remove_me.pop())
