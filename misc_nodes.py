@@ -1237,7 +1237,7 @@ class UtilityMatrixFromXForm(MantisNode):
         elif hasattr(self.GetxForm().bObject, "matrix_world"):
             self.parameters["Matrix"] = self.GetxForm().bObject.matrix_world.copy()
         else:
-          prRed(f"Could not find matrix for {self} - check if the referenced object exists.")
+            prRed(f"Could not find matrix for {self} - check if the referenced object exists.")
         self.prepared = True; self.executed = True
 
 

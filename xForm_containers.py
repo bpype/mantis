@@ -38,6 +38,13 @@ def get_parent(node_container, type = 'XFORM'):
                 return None # then there's no parent!
     return None
 
+def get_matrix(node):
+    matrix = node.evaluate_input('Matrix')
+    if matrix is None:
+        node_line, socket = trace_single_line(node, "Matrix")
+        raise RuntimeError(wrapRed(f"No matrix found for Armature {node}"))
+    return matrix
+
 class xFormArmature(MantisNode):
     '''A node representing an armature object'''
     bObject = None
@@ -60,9 +67,7 @@ class xFormArmature(MantisNode):
         self.node_type = 'XFORM'
 
     def bPrepare(self, bContext=None):
-        if not ( matrix := self.evaluate_input('Matrix')):
-            raise RuntimeError(wrapRed(f"No matrix found for Armature {self}"))
-        self.parameters['Matrix'] = matrix
+        self.parameters['Matrix'] = get_matrix(self)
         self.prepared = True
 
     def bExecute(self, bContext = None,):
@@ -152,8 +157,6 @@ class xFormArmature(MantisNode):
             ob.data.edit_bones.remove(ob.data.edit_bones[0])
         # bContext.view_layer.objects.active = prevAct
 
-        
-        
         self.executed = True
     
 
@@ -236,7 +239,6 @@ class xFormBone(MantisNode):
         self.init_parameters()
         self.set_traverse([("Relationship", "xForm Out")])
         self.node_type = 'XFORM'
-        self.prepared = True
         self.bObject=None
     
     def bGetParentArmature(self):
@@ -273,9 +275,7 @@ class xFormBone(MantisNode):
         # otherwise, no need to do anything.
     
     def bPrepare(self, bContext=None):
-        if not ( matrix := self.evaluate_input('Matrix')):
-            raise RuntimeError(wrapRed(f"No matrix found for Bone {self}"))
-        self.parameters['Matrix'] = matrix
+        self.parameters['Matrix'] = get_matrix(self)
         self.prepared = True
     
     def bExecute(self, bContext = None,): #possibly will need to pass context?
@@ -693,10 +693,9 @@ class xFormGeometryObject(MantisNode):
             self.bObject.data = trace[-1].node.bGetObject()
         
         reset_object_data(self.bObject)
-        if not ( matrix := self.evaluate_input('Matrix')):
-            raise RuntimeError(wrapRed(f"No matrix found for Bone {self}"))
+        matrix= get_matrix(self)
         self.parameters['Matrix'] = matrix
-        self.matrix_world = matrix
+        self.prepared = True
         self.prepared = True
 
     def bExecute(self, bContext = None,):
@@ -798,10 +797,8 @@ class xFormObjectInstance(MantisNode):
         if (not self.bObject):
                 self.bObject = data.objects.new(self.evaluate_input("Name"), empty_mesh)
         reset_object_data(self.bObject)
-        if not ( matrix := self.evaluate_input('Matrix')):
-            raise RuntimeError(wrapRed(f"No matrix found for Bone {self}"))
+        matrix= get_matrix(self)
         self.parameters['Matrix'] = matrix
-        self.matrix_world = matrix
         self.prepared = True
 
     def bExecute(self, bContext = None,):
