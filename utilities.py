@@ -266,11 +266,11 @@ def schema_dependency_handle_item(schema, all_nc, item,):
     hierarchy = True
     from .base_definitions import from_name_filter, to_name_filter
     if item.in_out == 'INPUT':
-        c = schema.dependencies
-        hc = schema.hierarchy_dependencies
+        dependencies = schema.dependencies
+        hierarchy_dependencies = schema.hierarchy_dependencies
         if item.parent and item.parent.name == 'Array':
-            for t in ['SchemaArrayInput', 'SchemaArrayInputGet']:
-                if (nc := all_nc.get( (*schema.signature, t) )):
+            for schema_idname in ['SchemaArrayInput', 'SchemaArrayInputGet',]:
+                if (nc := all_nc.get( (*schema.signature, schema_idname) )):
                     for to_link in nc.outputs[item.name].links:
                         if to_link.to_socket in to_name_filter:
                             # hierarchy_reason='a'
@@ -279,24 +279,24 @@ def schema_dependency_handle_item(schema, all_nc, item,):
                         if from_link.from_socket in from_name_filter:
                             hierarchy = False
                             # hierarchy_reason='b'
-                    if from_link.from_node not in c:
+                    if from_link.from_node not in dependencies:
                         if hierarchy:
-                            hc.append(from_link.from_node)
-                        c.append(from_link.from_node)
+                            hierarchy_dependencies.append(from_link.from_node)
+                        dependencies.append(from_link.from_node)
         if item.parent and item.parent.name == 'Constant':
             if nc := all_nc.get((*schema.signature, 'SchemaConstInput')):
                 for to_link in nc.outputs[item.name].links:
                     if to_link.to_socket in to_name_filter:
-                        # hierarchy_reason='c'
+                        # hierarchy_reason='dependencies'
                         hierarchy = False
                 for from_link in schema.inputs[item.identifier].links:
                     if from_link.from_socket in from_name_filter:
                         # hierarchy_reason='d'
                         hierarchy = False
-                if from_link.from_node not in c:
+                if from_link.from_node not in dependencies:
                     if hierarchy:
-                        hc.append(from_link.from_node)
-                    c.append(from_link.from_node)
+                        hierarchy_dependencies.append(from_link.from_node)
+                    dependencies.append(from_link.from_node)
         if item.parent and item.parent.name == 'Connection':
             if nc := all_nc.get((*schema.signature, 'SchemaIncomingConnection')):
                 for to_link in nc.outputs[item.name].links:
@@ -307,10 +307,10 @@ def schema_dependency_handle_item(schema, all_nc, item,):
                     if from_link.from_socket in from_name_filter:
                         # hierarchy_reason='f'
                         hierarchy = False
-                if from_link.from_node not in c:
+                if from_link.from_node not in dependencies:
                     if hierarchy:
-                        hc.append(from_link.from_node)
-                    c.append(from_link.from_node)
+                        hierarchy_dependencies.append(from_link.from_node)
+                    dependencies.append(from_link.from_node)
 
 def init_schema_dependencies(schema, all_nc, raise_errors=False):
     """ Initialize the dependencies for Schema, and mark them as hierarchy or non-hierarchy dependencies
