@@ -3,7 +3,7 @@ from .utilities import (prRed, prGreen, prPurple, prWhite,
                               wrapRed, wrapGreen, wrapPurple, wrapWhite,
                               wrapOrange,)
 from .utilities import init_connections, init_dependencies
-from .base_definitions import SchemaUINode, custom_props_types, MantisNodeGroup
+from .base_definitions import SchemaUINode, custom_props_types, MantisNodeGroup, replace_types
 from .node_container_common import setup_custom_props_from_np
 # a class that solves Schema nodes
 from bpy.types import NodeGroupInput, NodeGroupOutput
@@ -511,6 +511,14 @@ class SchemaSolver:
         for signature, node in frame_mantis_nodes.items():
             self.solved_nodes[signature]=node
             if node.node_type == "DUMMY_SCHEMA":
+                # make sure to add the nodes to the group's sockets if the user set them directly
+                from .readtree import make_connections_to_ng_dummy
+                make_connections_to_ng_dummy(
+                    self.node.base_tree,
+                    self.autogen_path_names,
+                    {}, # just pass an empty dict, this argument is not needed in this context
+                    self.all_nodes,
+                    node)
                 from .utilities import init_schema_dependencies
                 init_schema_dependencies(node, self.all_nodes)
             else:
