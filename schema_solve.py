@@ -504,10 +504,14 @@ class SchemaSolver:
                 continue
             # for any of the special cases, we hit a 'continue' block. So this connection is not special, and is made here.
             connection = link_node_containers(self.autogen_path_names, ui_link, frame_mantis_nodes, from_suffix=self.index_str(), to_suffix=self.index_str())
-
-        for k,v in frame_mantis_nodes.items():
-            self.solved_nodes[k]=v
-            init_dependencies(v) # it is hard to overstate how important this single line of code is
+        
+        for signature, node in frame_mantis_nodes.items():
+            self.solved_nodes[signature]=node
+            if node.node_type == "DUMMY_SCHEMA":
+                from .utilities import init_schema_dependencies
+                init_schema_dependencies(node, self.all_nodes)
+            else:
+                init_dependencies(node) # it is hard to overstate how important this single line of code is
         
         self.prepare_nodes(unprepared)
         
