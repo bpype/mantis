@@ -213,7 +213,10 @@ class SchemaSolver:
         from .utilities import get_link_in_out
         # see, here I can just use the schema node
         _from_name, to_name = get_link_in_out(ui_link)
-        to_node = frame_mantis_nodes[(*self.autogen_path_names, to_name+self.index_str())]
+        if to_name in replace_types:
+            to_node = self.schema_nodes[(*self.autogen_path_names, to_name)]
+        else:
+            to_node = frame_mantis_nodes[(*self.autogen_path_names, to_name+self.index_str())]
         # this self.index_link is only used here?
         if self.index_link is None:
             # this should be impossible because the Schema gets an auto-generated Int input.
@@ -398,7 +401,7 @@ class SchemaSolver:
             if sum([dep.prepared for dep in nc.hierarchy_dependencies]) == len(nc.hierarchy_dependencies):
                 nc.bPrepare()
                 if nc.node_type == 'DUMMY_SCHEMA':
-                    schema_solver = self.solve_nested_schema(nc)
+                    self.solve_nested_schema(nc)
 
             else: # Keeping this for-loop as a fallback, it should never add dependencies though
                 for dep in nc.hierarchy_dependencies:
