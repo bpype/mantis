@@ -900,6 +900,7 @@ class NodeSocket:
     def flush_links(self):
         """ Removes dead links from this socket."""
         self.links = [l for l in self.links if l.is_alive]
+        self.links.sort(key=lambda a : -a.multi_input_sort_id)
         self.is_linked = bool(self.links)
         
     @property
