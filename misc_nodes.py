@@ -123,7 +123,7 @@ def array_choose_relink(node, indices, array_input, output, ):
     """
         Used to choose the correct link to send out of an array-choose node.
     """
-    from .utilities import init_connections, init_dependencies
+    from .utilities import init_dependencies
     keep_links = []
     init_my_connections=[]
     for index in indices:
@@ -135,20 +135,13 @@ def array_choose_relink(node, indices, array_input, output, ):
         for l in keep_links:
             l.from_node.outputs[l.from_socket].connect(to_node, link.to_socket)
         link.die()
-        if to_node.node_type == "DUMMY_SCHEMA":
-            continue # can't init the dependencies here... trust it will happen elsewhere
-        init_dependencies(to_node)
-    for n in init_my_connections:
-        init_connections(n) # I am not 100% sure this is necessary.
-    node.hierarchy_connections, node.connections = [], []
-    node.hierarchy_dependencies, node.dependencies = [], []
 
 
 def array_choose_data(node, data, output):
     """
         Used to choose the correct data to send out of an array-choose node.
     """
-    from .utilities import init_connections, init_dependencies
+    from .utilities import init_dependencies
     # We need to make new outputs and link from each one based on the data in the array...
     node.outputs.init_sockets([output+"."+str(i).zfill(4) for i in range(len(data)) ])
     for i, data_item in enumerate(data):
@@ -159,12 +152,6 @@ def array_choose_data(node, data, output):
             # Make a link from the new output.
             node.outputs[output+"."+str(i).zfill(4)].connect(to_node, link.to_socket)
         link.die()
-        if to_node.node_type == "DUMMY_SCHEMA":
-            continue # can't init the dependencies here... trust it will happen elsewhere
-        init_dependencies(to_node)
-    init_connections(node)# I am not 100% sure this is necessary.
-    node.hierarchy_connections, node.connections = [], []
-    node.hierarchy_dependencies, node.dependencies = [], []
 
 #*#-------------------------------#++#-------------------------------#*#
 # U T I L I T Y   N O D E S
