@@ -352,10 +352,17 @@ def parse_tree(base_tree):
     solve_only_these = set(solve_only_these)
 
     solve_layer = unsolved_schema.copy(); solve_layer.extend(roots)
-    
+    from .schema_containers import TellClasses as schema_classes
     while(solve_layer):
         n = solve_layer.pop()
-        if n not in solve_only_these: # removes the unneeded node from the solve-layer
+        # Remove schema nodes if they were added in error.
+        if isinstance(n, tuple(schema_classes())):
+            if n in solve_only_these:
+                solve_only_these.remove(n)
+            continue
+        # Check if this node, or any nodes that depend on it, are in the list.
+        for child in [n]+ n.hierarchy_connections:
+            if child in solve_only_these: # removes the unneeded node from the solve-layer
             continue
 
         if n.signature in all_schema.keys():
