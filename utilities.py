@@ -380,7 +380,7 @@ def get_all_dependencies(nc):
     while (len(check_nodes) > 0):
         node = check_nodes.pop()
         nodes_checked.add (node)
-        connected_nodes = node.hierarchy_dependencies.copy()
+        connected_nodes = node.hierarchy_dependencies
         for new_node in connected_nodes:
             if new_node in nodes:
                 continue
