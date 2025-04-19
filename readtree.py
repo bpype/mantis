@@ -305,7 +305,7 @@ def parse_tree(base_tree):
     
     start_time = time.time()
     roots, array_nodes = [], []
-    from .misc_nodes import UtilityArrayGet
+    from .base_definitions import array_output_types
     for mantis_node in all_mantis_nodes.values():
         if mantis_node.node_type in ["DUMMY"]: # clean up the groups
             if mantis_node.prototype.bl_idname in ("MantisNodeGroup", "NodeGroupOutput"):
@@ -315,7 +315,7 @@ def parse_tree(base_tree):
         init_dependencies(mantis_node); init_connections(mantis_node)
         check_and_add_root(mantis_node, roots, include_non_hierarchy=True)
         # Array nodes need a little special treatment, they're quasi-schemas
-        if isinstance(mantis_node, UtilityArrayGet):
+        if mantis_node.__class__.__name__ in array_output_types:
             array_nodes.append(mantis_node)
 
     from collections import deque

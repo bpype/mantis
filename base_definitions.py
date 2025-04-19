@@ -584,8 +584,8 @@ SOCKETS_ADDED=[("DeformerMorphTargetDeform", 'INPUT', 'BooleanSocket', "Use Shap
 # replace names with bl_idnames for reading the tree and solving schemas.
 replace_types = ["NodeGroupInput", "NodeGroupOutput", "SchemaIncomingConnection",
                  "SchemaArrayInput", "SchemaArrayInputAll", "SchemaConstInput", "SchemaConstOutput",
-                 "SchemaIndex", "SchemaOutgoingConnection", "SchemaConstantOutput", "SchemaArrayOutput",
-                 "SchemaArrayInputGet",]
+                 "SchemaIndex", "SchemaOutgoingConnection", "SchemaArrayOutput","SchemaArrayInputGet",
+                ]
 
 # anything that gets properties added in the graph... this is a clumsy approach but I need to watch for this
 #   in schema generation and this is the easiest way to do it for now.
@@ -599,7 +599,10 @@ to_name_filter = [
                    "Deform Bones",
                  ]
 
-
+# nodes that must be solved as if they were Schema because they send arrays out.
+array_output_types = [
+    'UtilityArrayGet', 'UtilityKDChoosePoint', 'UtilityKDChooseXForm',
+]
 
 class MantisNode:
     """
@@ -838,6 +841,8 @@ class NodeLink:
         #     return wrapWhite(link_string)
     
     def die(self):
+        if "Choose" in "".join(self.from_node.signature[1:]):
+            prRed(f"End of life: {self}")
         self.is_alive = False
         self.to_node.inputs[self.to_socket].flush_links()
         self.from_node.outputs[self.from_socket].flush_links()
