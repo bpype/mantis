@@ -841,8 +841,6 @@ class NodeLink:
         #     return wrapWhite(link_string)
     
     def die(self):
-        if "Choose" in "".join(self.from_node.signature[1:]):
-            prRed(f"End of life: {self}")
         self.is_alive = False
         self.to_node.inputs[self.to_socket].flush_links()
         self.from_node.outputs[self.from_socket].flush_links()
