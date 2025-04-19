@@ -251,7 +251,12 @@ def get_schema_length_dependencies(node, all_nodes={}):
         This function will also recursively search for dependencies in its sub-trees.
     """
     deps = []
-    prepare_links_to = ['Schema Length','Array', 'Index']
+    prepare_links_to = ['Schema Length', 'Array', 'Index']
+    if node.node_type == "DUMMY_SCHEMA":
+        for item in node.prototype.node_tree.interface.items_tree:
+            if item.item_type == 'PANEL': continue
+            if item.parent:# and item.parent.name == 'Array':
+                prepare_links_to.append(item.identifier)
     def extend_dependencies_from_inputs(node):
         for inp in node.inputs.values():
             for l in inp.links:
@@ -356,8 +361,8 @@ def parse_tree(base_tree):
                 if dep not in schema_solve_done and (dep in solve_only_these):
                     if dep.prepared: # HACK HACK HACK
                         continue 
-                        # For some reason, the Schema Solver is able to detect and resolve dependencies outside
-                        #  of solve_only_these. So I have to figure out why.
+                        # For some reason, the Schema Solver is able to detect and resolve
+                        # dependencies outside of solve_only_these. So I have to figure out why.
                     solve_layer.appendleft(n)
                     break
             else:
