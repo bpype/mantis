@@ -1309,6 +1309,8 @@ class UtilitySetBoneLength(MantisNode):
             matrix[3][3] = self.evaluate_input("Length")
             self.parameters["Length"] = self.evaluate_input("Length")
             self.parameters["Bone Matrix"] = matrix
+        else:
+            raise RuntimeError(f"Cannot get matrix for {self}")
         self.prepared = True
         self.executed = True
 
