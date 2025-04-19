@@ -316,7 +316,7 @@ def parse_tree(base_tree):
     from collections import deque
     unsolved_schema = deque()
 
-    from .base_definitions import array_output_types
+    from .base_definitions import array_output_types, GraphError
     for mantis_node in all_mantis_nodes.values():
         if mantis_node.node_type in ["DUMMY"]: # clean up the groups
             if mantis_node.prototype.bl_idname in ("MantisNodeGroup", "NodeGroupOutput"):
@@ -387,6 +387,7 @@ def parse_tree(base_tree):
                 for conn in n.hierarchy_connections:
                     if conn not in schema_solve_done and conn not in solve_layer:
                         solve_layer.appendleft(conn)
+            continue
         else:
             for dep in n.hierarchy_dependencies:
                 if dep not in schema_solve_done:
@@ -400,6 +401,10 @@ def parse_tree(base_tree):
                 for conn in n.hierarchy_connections:
                     if conn not in schema_solve_done and conn not in solve_layer:
                         solve_layer.appendleft(conn)
+                continue
+        # If the above does not cover every case, there is an error in the graph
+        if (n in solve_only_these):
+            raise GraphError("ERROR: Mantis has failed to build the graph. Please Report this as a bug.")
     if unsolved_schema:
         raise RuntimeError("Failed to resolve all schema declarations")
     # I had a problem with this looping forever. I think it is resolved... but I don't know lol
