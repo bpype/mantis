@@ -482,7 +482,7 @@ def execute_tree(nodes, base_tree, context, error_popups = False):
                 raise GraphError("There is probably a cycle somewhere in the graph.")
             i+=1    
             n = xForm_pass.pop()
-            if visited.get(n.signature):
+            if visited.get(n.signature) is not None:
                 visited[n.signature]+=1
             else:
                 visited[n.signature]=0
