@@ -89,7 +89,7 @@ class SchemaSolver:
         for item in self.tree.interface.items_tree:
             if item.item_type == 'PANEL': continue
             parent_name='Constant'
-            if item.parent.name != '': # in an "orphan" item this is left blank , it is not None or an AttributeError.
+            if item.parent.name != '': # in an "prphan" item this is left blank , it is not None or an AttributeError.
                 parent_name = item.parent.name
             match parent_name:
                 case 'Connection':
@@ -120,9 +120,6 @@ class SchemaSolver:
                             self.array_input_connections[item.identifier]=[]
                         if in_links := self.node.inputs[item.identifier].links:
                             self.array_input_connections[item.identifier]=in_links.copy()
-                            for l in in_links:
-                                if l.from_node.prepared==False:
-                                    raise RuntimeError(f"Cannot execute Schema: {self.node}, dependency {l.from_node} for Array Inputs is unresolved.")
                     else: # OUTPUT
                         if item.identifier not in self.array_output_connections.keys():
                             self.array_output_connections[item.identifier]=[]
@@ -523,7 +520,6 @@ class SchemaSolver:
                     self.all_nodes,
                     node)
                 from .utilities import init_schema_dependencies
-                prGreen(node)
                 init_schema_dependencies(node, self.all_nodes)
             else:
                 init_dependencies(node) # it is hard to overstate how important this single line of code is
