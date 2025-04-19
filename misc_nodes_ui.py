@@ -1,6 +1,6 @@
 import bpy
 from bpy.types import Node
-from .base_definitions import MantisUINode
+from .base_definitions import MantisUINode, get_signature_from_edited_tree
 
 
 from .utilities import (prRed, prGreen, prPurple, prWhite,
@@ -338,7 +338,6 @@ class UtilityMetaRigNode(Node, MantisUINode):
         self.initialized = True
     
     def display_update(self, parsed_tree, context):
-        from .base_definitions import get_signature_from_edited_tree
         nc = parsed_tree.get(get_signature_from_edited_tree(self, context))
         if nc:
             self.armature= nc.evaluate_input("Meta-Armature")
@@ -396,7 +395,6 @@ class UtilityDriverVariableNode(Node, MantisUINode):
         self.initialized = True
     
     def display_update(self, parsed_tree, context):
-        from .base_definitions import get_signature_from_edited_tree
         if self.inputs["Variable Type"].is_linked:
             if context.space_data:
                 node_tree = context.space_data.path[0].node_tree
@@ -477,7 +475,6 @@ class UtilityDriverNode(Node, MantisUINode):
     def display_update(self, parsed_tree, context):
         if not self.inputs["Driver Type"].is_linked:
             dType = self.inputs["Driver Type"].default_value
-        from .base_definitions import get_signature_from_edited_tree
         nc = parsed_tree.get(get_signature_from_edited_tree(self, context))
         if nc:
             dType = nc.evaluate_input("Driver Type")
@@ -575,7 +572,6 @@ class UtilityCatStringsNode(Node, MantisUINode):
         return self.name
         
     def display_update(self, parsed_tree, context):
-        from .base_definitions import get_signature_from_edited_tree
         if context.space_data:
             nc = parsed_tree.get(get_signature_from_edited_tree(self, context))
             self.inputs['String_1'].display_text = ""
@@ -619,7 +615,6 @@ class InputExistingGeometryObjectNode(Node, MantisUINode):
         self.initialized = True
     
     def display_update(self, parsed_tree, context):
-        from .base_definitions import get_signature_from_edited_tree
         nc = parsed_tree.get(get_signature_from_edited_tree(self, context))
         if nc: # this is done here so I don't have to define yet another custom socket.
             self.object_reference = bpy.data.objects.get(nc.evaluate_input("Name"))
@@ -828,7 +823,6 @@ class UtilityTransformationMatrix(Node, MantisUINode):
 
 
     def display_update(self, parsed_tree, context):
-        from .base_definitions import get_signature_from_edited_tree
         operation = self.inputs['Operation'].default_value
         if self.inputs['Operation'].is_linked:
             if context.space_data:
