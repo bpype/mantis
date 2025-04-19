@@ -40,6 +40,10 @@ class SchemaSolver:
             self.index_link = self.node.inputs['Schema Length'].links[0]
         else:
             self.index_link = None
+        # this should never happen, but it's OK to check.
+        if self.node.inputs["Schema Length"].is_linked:
+            if (other := self.node.inputs['Schema Length'].links[0].from_node).prepared == False:
+                raise RuntimeError(f"Schema Length cannot be determined for {self.node} because {other} is not prepared.")
         self.solve_length = self.node.evaluate_input("Schema Length")
         # I'm making this a property of the solver because the solver's data is modified as it solves each iteration
         self.index = 0
@@ -120,6 +124,11 @@ class SchemaSolver:
                             self.array_input_connections[item.identifier]=[]
                         if in_links := self.node.inputs[item.identifier].links:
                             self.array_input_connections[item.identifier]=in_links.copy()
+                            # I am tempted to put a check here, but it is sufficient to
+                            # rely on hierarchy links ensuring the arrays are prepared.
+                            # and testing here for un-prepared arrays will mess up schema
+                            # relationships in non-hierarchy situations.
+                            # Still, I'd like to have an easier time catching these problems.
                     else: # OUTPUT
                         if item.identifier not in self.array_output_connections.keys():
                             self.array_output_connections[item.identifier]=[]
