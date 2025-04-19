@@ -362,8 +362,9 @@ def parse_tree(base_tree):
             continue
         # Check if this node, or any nodes that depend on it, are in the list.
         for child in [n]+ n.hierarchy_connections:
-            if child in solve_only_these: # removes the unneeded node from the solve-layer
-            continue
+            if child in solve_only_these: break
+            else: # removes the unneeded node from the solve-layer
+                continue
 
         if n.signature in all_schema.keys():
             for dep in n.hierarchy_dependencies:
