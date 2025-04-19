@@ -311,19 +311,17 @@ def schema_dependency_handle_item(schema, all_nc, item,):
                             hierarchy_dependencies.append(from_link.from_node)
                         dependencies.append(from_link.from_node)
 
-def init_schema_dependencies(schema, all_nc, raise_errors=False):
+def init_schema_dependencies(schema, all_nc):
     """ Initialize the dependencies for Schema, and mark them as hierarchy or non-hierarchy dependencies
         Non-hierarchy dependencies are e.g. drivers and custom transforms.
     """
-    from .utilities import get_node_prototype
-    np = get_node_prototype(schema.signature, schema.base_tree)
-    if np is None:
-        return
-    tree = np.node_tree
+    tree = schema.prototype.node_tree
     if tree is None:
-        return
+        raise RuntimeError(f"Cannot get dependencies for schema {schema}")
     schema.dependencies = []
     schema.hierarchy_dependencies = []
+    for l in schema.inputs["Schema Length"].links:
+        schema.hierarchy_dependencies.append(l.from_node)
     if tree.interface:
         for item in tree.interface.items_tree:
             if item.item_type == 'PANEL':
