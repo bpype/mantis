@@ -304,7 +304,11 @@ def parse_tree(base_tree):
     prGreen(f"Pulling data from tree took {time.time() - data_start_time} seconds")
     
     start_time = time.time()
+    solve_only_these = []; solve_only_these.extend(list(all_schema.values()))
     roots, array_nodes = [], []
+    from collections import deque
+    unsolved_schema = deque()
+
     from .base_definitions import array_output_types
     for mantis_node in all_mantis_nodes.values():
         if mantis_node.node_type in ["DUMMY"]: # clean up the groups
@@ -316,23 +320,24 @@ def parse_tree(base_tree):
         check_and_add_root(mantis_node, roots, include_non_hierarchy=True)
         # Array nodes need a little special treatment, they're quasi-schemas
         if mantis_node.__class__.__name__ in array_output_types:
+            solve_only_these.append(mantis_node)
             array_nodes.append(mantis_node)
 
-    from collections import deque
-    unsolved_schema = deque()
-    solve_only_these = []; solve_only_these.extend(list(all_schema.values()))
-    for schema in all_schema.values():
-        # We can remove the schema that are inside another schema tree.
+    from itertools import chain
+    for schema in chain(all_schema.values(), array_nodes):
+        # We must remove the schema/array nodes that are inside a schema tree.
         for i in range(len(schema.signature)-1): # -1, we don't want to check this node, obviously
             if parent := all_schema.get(schema.signature[:i+1]):
                 # This will be solved along with its parent schema.
                 solve_only_these.remove(schema)
                 break
-        else:
+    for schema in all_schema.values():
+            if schema not in solve_only_these: continue
             init_schema_dependencies(schema, all_mantis_nodes)
             solve_only_these.extend(get_schema_length_dependencies(schema, all_mantis_nodes))
             unsolved_schema.append(schema)
     for array in array_nodes:
+        if array not in solve_only_these: continue
         solve_only_these.extend(get_schema_length_dependencies(array))
     solve_only_these.extend(array_nodes)
     schema_solve_done = set()
