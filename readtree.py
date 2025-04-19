@@ -373,7 +373,10 @@ def parse_tree(base_tree):
                 if dep not in schema_solve_done:
                     break
             else:
-                n.bPrepare()
+                try:
+                    n.bPrepare()
+                except Exception as e:
+                    raise execution_error_cleanup(n, e)
                 schema_solve_done.add(n)
                 for conn in n.hierarchy_connections:
                     if conn not in schema_solve_done and conn not in solve_layer:
