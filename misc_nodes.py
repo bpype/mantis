@@ -1251,8 +1251,11 @@ class UtilityGetBoneLength(MantisNode):
         self.node_type = "UTILITY"
 
     def bPrepare(self, bContext = None,):
-        if l := self.evaluate_input("Bone Matrix"):
+        if (l := self.evaluate_input("Bone Matrix")) is not None:
             self.parameters["Bone Length"] = l[3][3]
+        else:
+            other = self.inputs["Bone Matrix"].links[0].from_node
+            raise RuntimeError(f"Cannot get matrix for {self} from {other}")
         self.prepared = True
         self.executed = True
 
@@ -1598,7 +1601,6 @@ class UtilityArrayLength(MantisNode):
         self.node_type = "UTILITY"
 
     def bPrepare(self, bContext = None,):
-        prGreen("Beans")
         self.parameters["Length"] = len(self.inputs["Array"].links)
         self.prepared, self.executed = True, True
 
