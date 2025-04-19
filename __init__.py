@@ -122,10 +122,13 @@ utility_category = [
         NodeItem("UtilityCombineVector"),
         NodeItem("UtilityIntToString"),
         NodeItem("UtilityArrayGet"),
+        NodeItem("UtilityArrayLength"),
         NodeItem("UtilityChoose"),
         NodeItem("UtilityCompare"),
         NodeItem("UtilityPrint"),
         NodeItem("UtilitySeparateVector"),
+        NodeItem("UtilityKDChoosePoint"),
+        NodeItem("UtilityKDChooseXForm"),
     ]
 matrix_category = [
         NodeItem("UtilityMetaRig"),

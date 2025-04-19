@@ -30,6 +30,8 @@ def TellClasses():
              UtilityMatricesFromCurve,
              UtilityNumberOfCurveSegments,
              UtilityMatrixFromCurveSegment,
+             UtilityKDChoosePoint,
+             UtilityKDChooseXForm,
             #  ScaleBoneLengthNode,
              UtilityMetaRigNode,
              UtilityBonePropertiesNode,
@@ -56,6 +58,7 @@ def TellClasses():
 
              UtilityIntToString,
              UtilityArrayGet,
+             UtilityArrayLength,
              #
              UtilityCompare,
              UtilityChoose,
@@ -318,6 +321,65 @@ class UtilityMatricesFromCurve(Node, MantisUINode):
         o = self.outputs.new("MatrixSocket", "Matrices")
         o.display_shape = 'SQUARE_DOT'
         self.initialized = True
+
+def display_update_choose_nearest(self, parsed_tree, context):
+    number_of_points = self.inputs['Number to Find'].default_value
+    if self.inputs["Number to Find"].is_linked:
+        mantis_node = parsed_tree.get(get_signature_from_edited_tree(self, context))
+        number_of_points = mantis_node.evaluate_input("Number to Find")
+    elif number_of_points == 0:
+        self.inputs['Number to Find'].default_value=1
+    if number_of_points > 1:
+        # then we need to make it an array out
+        self.outputs.display_shape = 'SQUARE_DOT'
+    else:
+        self.outputs.display_shape = 'CIRCLE'
+
+class UtilityKDChoosePoint(Node, MantisUINode):
+    """Chooses the nearest point with a KD Tree."""
+    bl_idname = "UtilityKDChoosePoint"
+    bl_label = "Choose Nearest Point"
+    bl_icon = "NODE"
+    
+    initialized : bpy.props.BoolProperty(default = False)
+    mantis_node_class_name=bl_idname
+    
+    def init(self, context):
+        self.inputs.new("VectorSocket", "Reference Point")
+        a = self.inputs.new('VectorSocket', 'Points', use_multi_input=True)
+        a.display_shape='SQUARE_DOT'
+        s = self.inputs.new("UnsignedIntSocket", "Number to Find")
+        s.default_value=1
+        self.outputs.new("VectorSocket", "Result Point")
+        self.outputs.new("UnsignedIntSocket", "Result Index")
+        self.outputs.new("FloatSocket", "Result Distance")
+        self.initialized = True
+    
+    def display_update(self, parsed_tree, context):
+        display_update_choose_nearest(self, parsed_tree, context)
+
+class UtilityKDChooseXForm(Node, MantisUINode):
+    """Chooses the nearest xForm with a KD Tree."""
+    bl_idname = "UtilityKDChooseXForm"
+    bl_label = "Choose Nearest xForm"
+    bl_icon = "NODE"
+    
+    initialized : bpy.props.BoolProperty(default = False)
+    mantis_node_class_name=bl_idname
+    
+    def init(self, context):
+        self.inputs.new("VectorSocket", "Reference Point")
+        self.inputs.new('xFormSocket', 'xForm Nodes', use_multi_input=True)
+        self.inputs.new("FloatFactorSocket", "Get Point Head/Tail")
+        s = self.inputs.new("UnsignedIntSocket", "Number to Find")
+        s.default_value=1
+        self.outputs.new("xFormSocket", "Result xForm")
+        self.outputs.new("UnsignedIntSocket", "Result Index")
+        self.outputs.new("FloatSocket", "Result Distance")
+        self.initialized = True
+    
+    def display_update(self, parsed_tree, context):
+        display_update_choose_nearest(self, parsed_tree, context)
 
 class UtilityMetaRigNode(Node, MantisUINode):
     """Gets a matrix from a meta-rig bone."""
@@ -926,13 +988,37 @@ class UtilityArrayGet(Node, MantisUINode):
 
     def insert_link(self, link):
         super().insert_link(link)
-        prGreen(link.from_node.name, link.from_socket.identifier, link.to_node.name, link.to_socket.identifier)
         if link.to_socket.identifier == self.inputs['Array'].identifier:
             from_socket = link.from_socket
-            print (from_socket.color)
             if hasattr(from_socket, "color"):
                 self.inputs['Array'].color = from_socket.color
                 self.outputs['Output'].color = from_socket.color
+
+class UtilityArrayLength(Node, MantisUINode):
+    """Gets The length of an array."""
+    bl_idname = "UtilityArrayLength"
+    bl_label  = "Array Length"
+    bl_icon   = "NODE"
+    initialized : bpy.props.BoolProperty(default = False)
+    mantis_node_class_name=bl_idname
+    
+    def init(self, context):
+        s = self.inputs.new("WildcardSocket", "Array", use_multi_input=True)
+        s.display_shape = 'SQUARE_DOT'
+        self.outputs.new("UnsignedIntSocket", "Length")
+        self.initialized = True
+    
+    def update(self):
+        wildcard_color = (0.0,0.0,0.0,0.0)
+        if self.inputs['Array'].is_linked == False:
+            self.inputs['Array'].color = wildcard_color
+
+    def insert_link(self, link):
+        super().insert_link(link)
+        if link.to_socket.identifier == self.inputs['Array'].identifier:
+            from_socket = link.from_socket
+            if hasattr(from_socket, "color"):
+                self.inputs['Array'].color = from_socket.color
 
 
 class UtilityCompare(Node, MantisUINode):

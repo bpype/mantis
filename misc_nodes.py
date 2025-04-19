@@ -26,6 +26,8 @@ def TellClasses():
              UtilityMatricesFromCurve,
              UtilityNumberOfCurveSegments,
              UtilityMatrixFromCurveSegment,
+             UtilityKDChoosePoint,
+             UtilityKDChooseXForm,
              UtilityMetaRig,
              UtilityBoneProperties,
              UtilityDriverVariable,
@@ -49,6 +51,7 @@ def TellClasses():
              UtilityTransformationMatrix,
              UtilityIntToString,
              UtilityArrayGet,
+             UtilityArrayLength,
              UtilitySetBoneMatrixTail,
              # Control flow switches
              UtilityCompare,
@@ -91,6 +94,73 @@ def cleanup_curve(curve_name : str, execution_id : str) -> None:
         m_name = curve_name+'.'+str(hash(curve.name+'.'+ execution_id))
         if (mesh := bpy.data.meshes.get(m_name)):
             bpy.data.meshes.remove(mesh)
+
+def kd_find(node, points, ref_pt, num_points):
+        if num_points == 0:
+            raise RuntimeError(f"Cannot find 0 points for {node}")
+        from mathutils import kdtree
+        kd = kdtree.KDTree(len(points))
+        for i, pt in enumerate(points):
+            try:
+                kd.insert(pt, i)
+            except (TypeError, ValueError) as e:
+                prRed(f"Cannot get point from for {node}")
+                raise e
+        kd.balance()
+        try:
+            if num_points == 1: # make it a list to keep it consistent with
+                result = [kd.find(ref_pt)] # find_n which returns a list
+            else:
+                result = kd.find_n(ref_pt, num_points)
+            # the result of kd.find has some other stuff we don't care about
+        except (TypeError, ValueError) as e:
+            prRed(f"Reference Point {ref_pt} invalid for {node}")
+            raise e
+        return result
+
+
+def array_choose_relink(node, indices, array_input, output, ):
+    """
+        Used to choose the correct link to send out of an array-choose node.
+    """
+    from .utilities import init_connections, init_dependencies
+    keep_links = []
+    init_my_connections=[]
+    for index in indices:
+        l = node.inputs[array_input].links[index]
+        keep_links.append(l)
+        init_my_connections.append(l.from_node)
+    for link in node.outputs[output].links:
+        to_node = link.to_node
+        for l in keep_links:
+            l.from_node.outputs[l.from_socket].connect(to_node, link.to_socket)
+        link.die()
+        init_dependencies(to_node)
+    for n in init_my_connections:
+        init_connections(n) # I am not 100% sure this is necessary.
+    node.hierarchy_connections, node.connections = [], []
+    node.hierarchy_dependencies, node.dependencies = [], []
+
+
+def array_choose_data(node, data, output):
+    """
+        Used to choose the correct data to send out of an array-choose node.
+    """
+    from .utilities import init_connections, init_dependencies
+    # We need to make new outputs and link from each one based on the data in the array...
+    node.outputs.init_sockets([output+"."+str(i).zfill(4) for i in range(len(data)) ])
+    for i, data_item in enumerate(data):
+        node.parameters[output+"."+str(i).zfill(4)] = data_item
+    for link in node.outputs[output].links:
+        to_node = link.to_node
+        for i in range(len(data)):
+            # Make a link from the new output.
+            node.outputs[output+"."+str(i).zfill(4)].connect(to_node, link.to_socket)
+        link.die()
+        init_dependencies(to_node)
+    init_connections(node)# I am not 100% sure this is necessary.
+    node.hierarchy_connections, node.connections = [], []
+    node.hierarchy_dependencies, node.dependencies = [], []
 
 #*#-------------------------------#++#-------------------------------#*#
 # U T I L I T Y   N O D E S
@@ -476,6 +546,94 @@ class UtilityMatrixFromCurveSegment(MantisNode):
     
     def bFinalize(self, bContext=None):
         cleanup_curve(self.evaluate_input("Curve"), self.base_tree.execution_id)
+
+class UtilityKDChoosePoint(MantisNode):
+    def __init__(self, signature, base_tree):
+        super().__init__(signature, base_tree)
+        inputs = [
+          "Reference Point"  ,
+          "Points"           ,
+          "Number to Find"   ,
+        ]
+        outputs = [
+          "Result Point"     ,
+          "Result Index"     ,
+          "Result Distance"  ,
+        ]
+        self.inputs.init_sockets(inputs)
+        self.outputs.init_sockets(outputs)
+        self.init_parameters()
+        self.node_type = "UTILITY"
+
+    def bPrepare(self, bContext = None,):
+        from mathutils import Vector
+        points= []
+        ref_point = self.evaluate_input('Reference Point')
+        num_points = self.evaluate_input('Number to Find')
+        for i, l in enumerate(self.inputs['Points'].links):
+            pt = self.evaluate_input('Points', i)
+            points.append(pt)
+            if not isinstance(pt, Vector):
+                prRed(f"Cannot get point from {l.from_node} for {self}")
+        assert ref_point is not None, wrapRed(f"Reference Point {ref_point} is invalid in node {self}")
+        result = kd_find(self, points, ref_point, num_points)
+        indices = [ found_point[1] for found_point in result  ]
+        distances  = [ found_point[2] for found_point in result  ]
+        array_choose_relink(self, indices, "Points", "Result Point")
+        array_choose_data(self, indices, "Result Index")
+        array_choose_data(self, distances, "Result Distance")
+        self.prepared, self.executed = True, True
+        
+
+
+class UtilityKDChooseXForm(MantisNode):
+    def __init__(self, signature, base_tree):
+        super().__init__(signature, base_tree)
+        inputs = [
+          "Reference Point"      ,
+          "xForm Nodes"          ,
+          "Get Point Head/Tail"  ,
+          "Number to Find"       ,
+        ]
+        outputs = [
+          "Result xForm"     ,
+          "Result Index"     ,
+          "Result Distance"  ,
+        ]
+        self.inputs.init_sockets(inputs)
+        self.outputs.init_sockets(outputs)
+        self.init_parameters()
+        self.node_type = "UTILITY"
+
+    def bPrepare(self, bContext = None,):
+        if len(self.hierarchy_dependencies)==0 and len(self.hierarchy_connections)==0 and \
+                 len(self.connections)==0 and len(self.dependencies)==0:
+            self.prepared, self.executed = True, True
+            return #Either it is already done or it doesn't matter.
+        from mathutils import Vector
+        points= []
+        ref_point = self.evaluate_input('Reference Point')
+        num_points = self.evaluate_input('Number to Find')
+        for i, l in enumerate(self.inputs['xForm Nodes'].links):
+            matrix = l.from_node.evaluate_input('Matrix')
+            if matrix is None:
+                raise GraphError(f"Cannot get point from {l.from_node} for {self}. Does it have a matrix?")
+            pt = matrix.translation
+            if head_tail := self.evaluate_input("Get Point Head/Tail"):
+                # get the Y-axis of the basis, assume it is normalized
+                y_axis = Vector((matrix[0][1],matrix[1][1], matrix[2][1]))
+                pt = pt.lerp(pt+y_axis*matrix[3][3], head_tail)
+            points.append(pt)
+            if not isinstance(pt, Vector):
+                prRed(f"Cannot get point from {l.from_node} for {self}")
+        assert ref_point is not None, wrapRed(f"Reference Point {ref_point} is invalid in node {self}")
+        result = kd_find(self, points, ref_point, num_points)
+        indices = [ found_point[1] for found_point in result  ]
+        distances  = [ found_point[2] for found_point in result  ]
+        array_choose_relink(self, indices, "xForm Nodes", "Result xForm")
+        array_choose_data(self, indices, "Result Index")
+        array_choose_data(self, distances, "Result Distance")
+        self.prepared, self.executed = True, True
 
 class UtilityMetaRig(MantisNode):
     '''A node representing an armature object'''
@@ -1403,45 +1561,44 @@ class UtilityArrayGet(MantisNode):
         self.node_type = "UTILITY"
 
     def bPrepare(self, bContext = None,):
-      if self.prepared == False:
-        # sort the array entries
-        for inp in self.inputs.values():
-            inp.links.sort(key=lambda a : -a.multi_input_sort_id)
-        oob   = self.evaluate_input("OoB Behaviour")
-        index = self.evaluate_input("Index")
+        if len(self.hierarchy_dependencies)==0 and len(self.hierarchy_connections)==0 and \
+                 len(self.connections)==0 and len(self.dependencies)==0:
+            self.prepared, self.executed = True, True
+            return #Either it is already done or it doesn't matter.
+        elif self.prepared == False:
+            # sort the array entries
+            for inp in self.inputs.values():
+                inp.links.sort(key=lambda a : -a.multi_input_sort_id)
+            oob   = self.evaluate_input("OoB Behaviour")
+            index = self.evaluate_input("Index")
 
-        from .utilities import cap, wrap
-        
-        # we must assume that the array has sent the correct number of links
+            from .utilities import cap, wrap
+            # we must assume that the array has sent the correct number of links
+            if oob == 'WRAP':
+                index = index % len(self.inputs['Array'].links)
+            if oob == 'HOLD':
+                index = cap(index, len(self.inputs['Array'].links)-1)
+            array_choose_relink(self, [index], "Array", "Output")
+        self.prepared, self.executed = True, True
 
-        if oob == 'WRAP':
-            index = index % len(self.inputs['Array'].links)
-        if oob == 'HOLD':
-            index = cap(index, len(self.inputs['Array'].links)-1)
+class UtilityArrayLength(MantisNode):
+    def __init__(self, signature, base_tree):
+        super().__init__(signature, base_tree)
+        inputs = [
+          "Array"           ,
+        ]
+        outputs = [
+          "Length"          ,
+        ]
+        self.inputs.init_sockets(inputs)
+        self.outputs.init_sockets(outputs)
+        self.init_parameters()
+        self.node_type = "UTILITY"
 
-        # relink the connections and then kill all the links to and from the array
-        from .utilities import init_connections, init_dependencies
-        l = self.inputs["Array"].links[index]
-        for link in self.outputs["Output"].links:
-            to_node = link.to_node
-            l.from_node.outputs[l.from_socket].connect(to_node, link.to_socket)
-            link.die()
-            init_dependencies(to_node)
-        from_node=l.from_node
-        for inp in self.inputs.values():
-            for l in inp.links:
-              l.die()
-        init_connections(from_node)
-        if self in from_node.hierarchy_connections:
-          raise RuntimeError()
-        # this is intentional because the Array Get is kind of a weird hybrid between a Utility and a Schema
-        # so it should be removed from the tree when it is done. it has already dealt with the actual links.
-        # however I think this is redundant. Check.
-        self.hierarchy_connections, self.connections = [], []
-        self.hierarchy_dependencies, self.dependencies = [], []
-
-        self.prepared = True
-        self.executed = True
+    def bPrepare(self, bContext = None,):
+        prGreen("Beans")
+        self.parameters["Length"] = len(self.inputs["Array"].links)
+        self.prepared, self.executed = True, True
 
 class UtilitySetBoneMatrixTail(MantisNode):
     def __init__(self, signature, base_tree):
@@ -1476,7 +1633,6 @@ class UtilityPrint(MantisNode):
           "Input"         ,
         ]
         self.inputs.init_sockets(inputs)
-        self.outputs.init_sockets(outputs)
         self.init_parameters()
         self.node_type = "UTILITY"
 
