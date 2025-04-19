@@ -270,10 +270,6 @@ def schema_dependency_handle_item(schema, all_nc, item,):
         if item.parent and item.parent.name == 'Array':
             for schema_idname in ['SchemaArrayInput', 'SchemaArrayInputGet', 'SchemaArrayInputAll']:
                 if (nc := all_nc.get( (*schema.signature, schema_idname) )):
-                    for to_link in nc.outputs[item.name].links:
-                        if to_link.to_socket in to_name_filter:
-                            # hierarchy_reason='a'
-                            hierarchy = False
                     for from_link in schema.inputs[item.identifier].links:
                         if from_link.from_socket in from_name_filter:
                             hierarchy = False
@@ -284,10 +280,6 @@ def schema_dependency_handle_item(schema, all_nc, item,):
                             dependencies.append(from_link.from_node)
         if item.parent and item.parent.name == 'Constant':
             if nc := all_nc.get((*schema.signature, 'SchemaConstInput')):
-                for to_link in nc.outputs[item.name].links:
-                    if to_link.to_socket in to_name_filter:
-                        # hierarchy_reason='dependencies'
-                        hierarchy = False
                 for from_link in schema.inputs[item.identifier].links:
                     if from_link.from_socket in from_name_filter:
                         # hierarchy_reason='d'
@@ -298,10 +290,6 @@ def schema_dependency_handle_item(schema, all_nc, item,):
                         dependencies.append(from_link.from_node)
         if item.parent and item.parent.name == 'Connection':
             if nc := all_nc.get((*schema.signature, 'SchemaIncomingConnection')):
-                for to_link in nc.outputs[item.name].links:
-                    if to_link.to_socket in to_name_filter:
-                        # hierarchy_reason='e'
-                        hierarchy = False
                 for from_link in schema.inputs[item.identifier].links:
                     if from_link.from_socket in from_name_filter:
                         # hierarchy_reason='f'
