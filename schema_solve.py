@@ -621,8 +621,13 @@ class SchemaSolver:
         
     def solve(self):
         if self.solve_length < 1:
+            from .base_definitions import GraphError
+            for o in self.node.outputs:
+                if o.is_linked:
+                    raise GraphError(f"ERROR: Schema {self.signature} has a length"
+                                     " of 0 but other nodes depend on it.")
             print (f"WARN: Schema {self.signature} has a length of 0 or less and will not expand.")
-            return {} # just don't do anything. This may cause errors if the Schema has dependencies - that's OK.
+            return {} # just don't do anything - it's OK to have a noop schema if it doesn't have dependencies.
         for index in range(self.solve_length):
             self.index = index
             frame_mantis_nodes = self.solve_iteration()
