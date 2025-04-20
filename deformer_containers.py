@@ -1,11 +1,12 @@
 from .node_container_common import *
 from .xForm_containers import xFormGeometryObject
 from .misc_nodes import InputExistingGeometryObject
-from .base_definitions import MantisNode
-
+from .base_definitions import MantisNode, MantisSocketTemplate
 from .utilities import (prRed, prGreen, prPurple, prWhite, prOrange,
                         wrapRed, wrapGreen, wrapPurple, wrapWhite,
                         wrapOrange,)
+
+from bpy.types import NodeTree
 
 def TellClasses():
              
@@ -36,7 +37,25 @@ def GetxForm(nc):
             return node
     raise GraphError("%s is not connected to a downstream xForm" % nc)
 
-class DeformerArmature(MantisNode):
+class MantisDeformerNode(MantisNode):
+    def __init__(self, signature : tuple,
+                 base_tree : NodeTree,
+                 socket_templates : list[MantisSocketTemplate]=[]):
+        super().__init__(signature, base_tree, socket_templates)
+        self.node_type = 'LINK'
+        self.prepared = True
+    # we need evaluate_input to have the same behaviour as links.
+    def evaluate_input(self, input_name, index=0):
+        if ('Target' in input_name):
+            socket = self.inputs.get(input_name)
+            if socket.is_linked:
+                return socket.links[0].from_node
+            return None
+            
+        else:
+            return super().evaluate_input(input_name, index)
+
+class DeformerArmature(MantisDeformerNode):
     '''A node representing an armature deformer'''
 
     def __init__(self, signature, base_tree):
@@ -201,7 +220,7 @@ class DeformerArmature(MantisNode):
             self.copy_weights()
 
 
-class DeformerHook(MantisNode):
+class DeformerHook(MantisDeformerNode):
     '''A node representing a hook deformer'''
 
     def __init__(self, signature, base_tree):
@@ -266,7 +285,7 @@ class DeformerHook(MantisNode):
         # I like this, it is perhaps a little innefficient but can be improved later on
 
 
-class DeformerMorphTarget(MantisNode):
+class DeformerMorphTarget(MantisDeformerNode):
     '''A node representing an armature deformer'''
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree)
@@ -322,7 +341,7 @@ class DeformerMorphTarget(MantisNode):
 
 
 
-class DeformerMorphTargetDeform(MantisNode):
+class DeformerMorphTargetDeform(MantisDeformerNode):
     '''A node representing an armature deformer'''
 
     def __init__(self, signature, base_tree):
