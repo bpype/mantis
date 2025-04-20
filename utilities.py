@@ -806,8 +806,8 @@ def FindNearestPointOnWireMesh(m, pointsList):
                     offset = 0
                     break
                 else:
-                    curDist = ( (sqrt((m.vertices[vertData[i][0]].co - p).length)) +
-                                (sqrt((m.vertices[vertData[i][1]].co - p).length)) )/2
+                    curDist = ( ((m.vertices[vertData[i][0]].co - p).length) +
+                                ((m.vertices[vertData[i][1]].co - p).length) )/2
                 if (curDist < prevDist):
                     v1 = vertData[i]
                     v2 = vertData[i+1]
