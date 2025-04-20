@@ -128,6 +128,7 @@ utility_category = [
         NodeItem("UtilityCompare"),
         NodeItem("UtilityPrint"),
         NodeItem("UtilitySeparateVector"),
+        NodeItem("UtilityGetNearestFactorOnCurve"),
         NodeItem("UtilityKDChoosePoint"),
         NodeItem("UtilityKDChooseXForm"),
     ]
@@ -138,6 +139,7 @@ matrix_category = [
         NodeItem("UtilityNumberOfCurveSegments"),
         NodeItem("UtilityMatrixFromCurveSegment"),
         NodeItem("UtilityPointFromCurve"),
+        NodeItem("UtilityGetCurvePoint"),
         NodeItem("UtilityPointFromBoneMatrix"),
         NodeItem("UtilitySetBoneLength"),
         NodeItem("UtilityGetBoneLength"),

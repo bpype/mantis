@@ -1,7 +1,7 @@
 import bpy
 from bpy.types import Node
 from .base_definitions import MantisUINode, get_signature_from_edited_tree
-
+from .misc_nodes_socket_templates import *
 
 from .utilities import (prRed, prGreen, prPurple, prWhite,
                               prOrange,
@@ -30,6 +30,8 @@ def TellClasses():
              UtilityMatricesFromCurve,
              UtilityNumberOfCurveSegments,
              UtilityMatrixFromCurveSegment,
+             UtilityGetCurvePoint,
+             UtilityGetNearestFactorOnCurve,
              UtilityKDChoosePoint,
              UtilityKDChooseXForm,
             #  ScaleBoneLengthNode,
@@ -304,6 +306,38 @@ class UtilityMatrixFromCurveSegment(Node, MantisUINode):
         self.inputs.new('UnsignedIntSocket', 'Segment Index')
         self.outputs.new("MatrixSocket", "Matrix")
         self.initialized = True
+
+class UtilityGetCurvePoint(Node, MantisUINode):
+    bl_idname = 'UtilityGetCurvePoint'
+    bl_label = "Get Curve Point"
+    bl_icon = 'NODE'
+    initialized : bpy.props.BoolProperty(default = False)
+    mantis_node_class_name=bl_idname
+
+    def init(self, context):
+        self.init_sockets(GetCurvePointSockets)
+        self.initialized = True
+
+    def display_update(self, parsed_tree, context):
+        self.outputs["Point"].hide=False
+        self.outputs["Left Handle"].hide=True
+        self.outputs["Right Handle"].hide=True
+        spline_index = self.inputs['Spline Index'].default_value
+        index = self.inputs['Index'].default_value
+        curve = self.inputs['Curve'].default_value
+        if self.inputs['Spline Index'].is_linked or self.inputs['Index'].is_linked \
+            or self.inputs['Curve'].is_linked:
+            mantis_node = parsed_tree.get(get_signature_from_edited_tree(self, context))
+            spline_index = mantis_node.evaluate_input("Spline Index")
+            index = mantis_node.evaluate_input("Index")
+            curve = mantis_node.evaluate_input("Curve")
+        if curve := bpy.data.objects.get(curve):
+            if curve.type != "CURVE":
+                self.outputs["Point"].hide=True
+            spline = curve.data.splines[spline_index]
+            if spline.type == 'BEZIER':
+                self.outputs["Left Handle"].hide=False
+                self.outputs["Right Handle"].hide=False
     
 class UtilityMatricesFromCurve(Node, MantisUINode):
     """Gets a matrix from a curve."""
@@ -334,6 +368,17 @@ def display_update_choose_nearest(self, parsed_tree, context):
         self.outputs.display_shape = 'SQUARE_DOT'
     else:
         self.outputs.display_shape = 'CIRCLE'
+
+class UtilityGetNearestFactorOnCurve(Node, MantisUINode):
+    bl_idname = 'UtilityGetNearestFactorOnCurve'
+    bl_label = "Get Factor on Curve at Point"
+    bl_icon = 'NODE'
+    initialized : bpy.props.BoolProperty(default = False)
+    mantis_node_class_name=bl_idname
+
+    def init(self, context):
+        self.init_sockets(GetNearestFactorOnCurveSockets)
+        self.initialized = True
 
 class UtilityKDChoosePoint(Node, MantisUINode):
     """Chooses the nearest point with a KD Tree."""

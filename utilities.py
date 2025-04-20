@@ -724,36 +724,154 @@ def SetRibbonData(m, ribbon):
         #if this is a circle, the last v in vertData has a length, otherwise 0
     return ribbonData, totalLength
 
+def WireMeshEdgeLengths(m, wire):
+    circle = False
+    vIndex = wire.copy()
+    for e in m.edges:
+        if ((e.vertices[0] == vIndex[-1]) and (e.vertices[1] == vIndex[0])):
+            #this checks for an edge between the first and last vertex in the wire
+            circle = True
+            break
+    lengths = []
+    for i in range(len(vIndex)):
+        v = m.vertices[vIndex[i]]
+        if (circle == True):
+            vNextInd = vIndex[old_bad_wrap_that_should_be_refactored((i+1), len(vIndex) - 1)]
+        else:
+            vNextInd = vIndex[cap((i+1), len(vIndex) - 1 )]
+        vNext = m.vertices[vNextInd]
+        lengths.append(( v.co - vNext.co ).length)
+    #if this is a circular wire mesh, this should wrap instead of cap
+    return lengths
 
-def mesh_from_curve(crv, context,):
+def GetDataFromWire(m, wire):
+    vertData = []
+    vIndex = wire.copy()
+    lengths = WireMeshEdgeLengths(m, wire)
+    lengths.append(0)
+    totalLength = sum(lengths)
+    for i, vInd in enumerate(vIndex):
+        #-1 to avoid IndexError
+        vNext = vIndex[ (old_bad_wrap_that_should_be_refactored(i+1, len(vIndex) - 1)) ]
+        vertData.append((vInd, vNext, lengths[i]))
+    #if this is a circle, the last v in vertData has a length, otherwise 0
+    return vertData, totalLength
+
+def DetectWireEdges(mesh):
+    # Returns a list of vertex indices belonging to wire meshes
+    # NOTE: this assumes a mesh object with only wire meshes
+    ret = []
+    import bmesh
+    bm = bmesh.new()
+    try:
+        bm.from_mesh(mesh)
+        ends = []
+        for v in bm.verts:
+            if (len(v.link_edges) == 1):
+                ends.append(v.index)
+        for e in bm.edges:
+            assert (e.is_wire == True),"This function can only run on wire meshes"
+            if (e.verts[1].index - e.verts[0].index != 1):
+                ends.append(e.verts[1].index)
+                ends.append(e.verts[0].index)
+        for i in range(len(ends)//2): # // is floor division
+            beg = ends[i*2]
+            end = ends[(i*2)+1]
+            indices = [(j + beg) for j in range ((end - beg) + 1)]
+            ret.append(indices)
+    finally:
+        bm.free()
+        return ret
+
+def FindNearestPointOnWireMesh(m, pointsList):
+    from mathutils import Vector
+    from mathutils.geometry import intersect_point_line
+    from math import sqrt
+    wires = DetectWireEdges(m)
+    ret = []
+    # prevFactor = None
+    for wire, points in zip(wires, pointsList):
+        vertData, total_length = GetDataFromWire(m, wire)
+        factorsOut = []
+        for p in points:
+            prevDist = float('inf')
+            curDist  = float('inf')
+            v1 = None
+            v2 = None
+            for i in range(len(vertData) - 1):
+                #but it shouldn't check the last one
+                if (p == m.vertices[i].co):
+                    v1 = vertData[i]
+                    v2 = vertData[i+1]
+                    offset = 0
+                    break
+                else:
+                    curDist = ( (sqrt((m.vertices[vertData[i][0]].co - p).length)) +
+                                (sqrt((m.vertices[vertData[i][1]].co - p).length)) )/2
+                if (curDist < prevDist):
+                    v1 = vertData[i]
+                    v2 = vertData[i+1]
+                    prevDist = curDist
+                    offset = intersect_point_line(p, m.vertices[v1[0]].co, 
+                                                     m.vertices[v2[0]].co)[1]
+            if (offset < 0):
+                offset = 0
+            elif (offset > 1):
+                offset = 1
+            # Assume the vertices are in order
+            v1Length = 0
+            v2Length = v2[2]
+            for i in range(v1[0]):
+                v1Length += vertData[i][2]
+            factor = ((offset * (v2Length)) + v1Length )/total_length
+            factor = wrap(0, 1, factor) # doesn't hurt to wrap it if it's over 1 or less than 0
+            factorsOut.append(factor)
+        ret.append( factorsOut )
+    return ret
+
+
+def mesh_from_curve(crv, context, ribbon=True):
     """Utility function for converting a mesh to a curve
        which will return the correct mesh even with modifiers"""
     import bpy
+    m = None
     bevel = crv.data.bevel_depth
     extrude = crv.data.extrude
     offset = crv.data.offset
-    if (len(crv.modifiers) > 0):
-        do_unlink = False
-        if (not context.scene.collection.all_objects.get(crv.name)):
-            context.collection.objects.link(crv) # i guess this forces the dg to update it?
-            do_unlink = True
-        dg = context.view_layer.depsgraph
-        # just gonna modify it for now lol
-        EnsureCurveIsRibbon(crv)
-        # try:
-        dg.update()
-        mOb = crv.evaluated_get(dg)
-        m = bpy.data.meshes.new_from_object(mOb)
-        m.name=crv.data.name+'_mesh'
-        if (do_unlink):
-            context.collection.objects.unlink(crv)
-    else: # (ಥ﹏ಥ) why can't I just use this !
-        # for now I will just do it like this
-        EnsureCurveIsRibbon(crv)
-        m = bpy.data.meshes.new_from_object(crv)
-    crv.data.bevel_depth = bevel
-    crv.data.extrude = extrude
-    crv.data.offset = offset
+    try:
+        if (len(crv.modifiers) > 0):
+            do_unlink = False
+            if (not context.scene.collection.all_objects.get(crv.name)):
+                context.collection.objects.link(crv) # i guess this forces the dg to update it?
+                do_unlink = True
+            dg = context.view_layer.depsgraph
+            # just gonna modify it for now lol
+            if ribbon:
+                EnsureCurveIsRibbon(crv)
+            else:
+                crv.data.bevel_depth=0
+                crv.data.extrude=0
+                crv.data.offset=0
+            # try:
+            dg.update()
+            mOb = crv.evaluated_get(dg)
+            m = bpy.data.meshes.new_from_object(mOb)
+            m.name=crv.data.name+'_mesh'
+            if (do_unlink):
+                context.collection.objects.unlink(crv)
+        else: # (ಥ﹏ಥ) why can't I just use this !
+            # for now I will just do it like this
+            if ribbon:
+                EnsureCurveIsRibbon(crv)
+            else:
+                crv.data.bevel_depth=0
+                crv.data.extrude=0
+                crv.data.offset=0
+            m = bpy.data.meshes.new_from_object(crv)
+    finally:
+        crv.data.bevel_depth = bevel
+        crv.data.extrude = extrude
+        crv.data.offset = offset
     return m
 
 def DetectRibbon(f, bm, skipMe):

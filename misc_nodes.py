@@ -1,8 +1,7 @@
 from .node_container_common import *
 from .base_definitions import MantisNode, NodeSocket
-
 from .xForm_containers import xFormArmature, xFormBone
-
+from .misc_nodes_socket_templates import *
 from math import pi, tau
 
 def TellClasses():
@@ -26,6 +25,8 @@ def TellClasses():
              UtilityMatricesFromCurve,
              UtilityNumberOfCurveSegments,
              UtilityMatrixFromCurveSegment,
+             UtilityGetCurvePoint,
+             UtilityGetNearestFactorOnCurve,
              UtilityKDChoosePoint,
              UtilityKDChooseXForm,
              UtilityMetaRig,
@@ -77,14 +78,15 @@ def matrix_from_head_tail(head, tail, normal=None):
         m = m.transposed().to_4x4()
     return m
 
-def get_ribbon_mesh_from_curve(curve_name : str, execution_id : str, bContext):
+def get_mesh_from_curve(curve_name : str, execution_id : str, bContext, ribbon=True):
         from bpy import data
         curve = data.objects.get(curve_name)
         assert curve.type == 'CURVE', f"ERROR: object is not a curve: {curve_name}"
         from .utilities import mesh_from_curve
-        m_name = curve_name+'.'+str(hash(curve_name+'.'+execution_id))
+        curve_type='ribbon' if ribbon else 'wire'
+        m_name = curve_name+'.'+str(hash(curve_name+'.'+curve_type+'.'+execution_id))
         if not (m := data.meshes.get(m_name)):
-            m = mesh_from_curve(curve, bContext)
+            m = mesh_from_curve(curve, bContext, ribbon)
             m.name = m_name
         return m
 
@@ -302,7 +304,7 @@ class UtilityMatrixFromCurve(MantisNode):
             mat[3][3] = 1.0
         else:
             if bContext is None: bContext = bpy.context # is this wise?
-            m = get_ribbon_mesh_from_curve(curve.name, self.base_tree.execution_id, bContext)
+            m = get_mesh_from_curve(curve.name, self.base_tree.execution_id, bContext)
             from .utilities import data_from_ribbon_mesh
             #
             num_divisions = self.evaluate_input("Total Divisions")
@@ -359,7 +361,7 @@ class UtilityPointFromCurve(MantisNode):
             raise GraphError(f"ERROR: Object {curve.name} is not a curve.")
         else:
             if bContext is None: bContext = bpy.context # is this wise?
-            m = get_ribbon_mesh_from_curve(curve.name, self.base_tree.execution_id, bContext)
+            m = get_mesh_from_curve(curve.name, self.base_tree.execution_id, bContext)
             from .utilities import data_from_ribbon_mesh
             #
             num_divisions = 1
@@ -406,7 +408,7 @@ class UtilityMatricesFromCurve(MantisNode):
             m[3][3] = 1.0
         else:
             if bContext is None: bContext = bpy.context # is this wise?
-            mesh = get_ribbon_mesh_from_curve(curve.name, self.base_tree.execution_id, bContext)
+            mesh = get_mesh_from_curve(curve.name, self.base_tree.execution_id, bContext)
             from .utilities import data_from_ribbon_mesh
             num_divisions = self.evaluate_input("Total Divisions")
             factors = [0.0] + [(1/num_divisions*(i+1)) for i in range(num_divisions)]
@@ -497,7 +499,7 @@ class UtilityMatrixFromCurveSegment(MantisNode):
             raise GraphError(f"ERROR: Object {curve.name} is not a curve.")
         else:
             if bContext is None: bContext = bpy.context # is this wise?
-            m = get_ribbon_mesh_from_curve(curve.name, self.base_tree.execution_id, bContext)
+            m = get_mesh_from_curve(curve.name, self.base_tree.execution_id, bContext)
             from .utilities import data_from_ribbon_mesh
             # this section is dumb, but it is because the data_from_ribbon_mesh
             #  function is designed to pull data from many splines at once (for optimization)
@@ -537,6 +539,58 @@ class UtilityMatrixFromCurveSegment(MantisNode):
     
     def bFinalize(self, bContext=None):
         cleanup_curve(self.evaluate_input("Curve"), self.base_tree.execution_id)
+
+class UtilityGetCurvePoint(MantisNode):
+    def __init__(self, signature, base_tree):
+        super().__init__(signature, base_tree, GetCurvePointSockets)
+        self.init_parameters()
+        self.node_type = "UTILITY"
+    
+    def bPrepare(self, bContext=None):
+        import bpy
+        curve = bpy.data.objects.get(self.evaluate_input("Curve"))
+        if not curve:
+            raise RuntimeError(f"No curve found for {self}.")
+        elif curve.type != "CURVE":
+            raise GraphError(f"ERROR: Object {curve.name} is not a curve.")
+        spline = curve.data.splines[self.evaluate_input("Spline Index")]
+        if spline.type == 'BEZIER':
+            bez_pt = spline.bezier_points[self.evaluate_input("Index")]
+            self.parameters["Point"]=bez_pt.co
+            self.parameters["Left Handle"]=bez_pt.handle_left
+            self.parameters["Right Handle"]=bez_pt.handle_right
+        else:
+            pt = spline.points[self.evaluate_input("Index")]
+            self.parameters["Point"]=(pt.co[0], pt.co[1], pt.co[2])
+        self.prepared, self.executed = True, True
+
+class UtilityGetNearestFactorOnCurve(MantisNode):
+    def __init__(self, signature, base_tree):
+        super().__init__(signature, base_tree, GetNearestFactorOnCurveSockets)
+        self.init_parameters()
+        self.node_type = "UTILITY"
+    
+    def bPrepare(self, bContext = None,):
+        import bpy
+        curve = bpy.data.objects.get(self.evaluate_input("Curve"))
+        if not curve:
+            raise RuntimeError(f"No curve found for {self}.")
+        elif curve.type != "CURVE":
+            raise GraphError(f"ERROR: Object {curve.name} is not a curve.")
+        else:
+            if bContext is None: bContext = bpy.context # is this wise?
+            m = get_mesh_from_curve(curve.name,
+                                    self.base_tree.execution_id,
+                                    bContext, ribbon=False)
+            # this is confusing but I am not re-writing these old functions
+            from .utilities import FindNearestPointOnWireMesh as nearest_point
+            spline_index = self.evaluate_input("Spline Index")
+            ref_pt = self.evaluate_input("Reference Point")
+            splines_points = [ [] for i in range (spline_index)]
+            splines_points.append([ref_pt])
+            pt =  nearest_point(m, splines_points)[spline_index][0]
+            self.parameters["Factor"] = pt
+        self.prepared, self.executed = True, True
 
 class UtilityKDChoosePoint(MantisNode):
     def __init__(self, signature, base_tree):
