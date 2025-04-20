@@ -899,6 +899,13 @@ class xFormCurvePin(MantisNode):
         ob = data.objects.get(self.evaluate_input("Name"))
         if not ob:
             ob = data.objects.new(self.evaluate_input("Name"), None)
+            ob.lock_location   = [True, True, True]
+            ob.lock_rotation   = [True, True, True]
+            ob.lock_scale      = [True, True, True]
+            ob.lock_rotation_w = True
+            ob.empty_display_type = 'CONE'
+            ob.empty_display_size = 0.10
+
         self.bObject = ob
         
         reset_object_data(ob)
@@ -936,12 +943,10 @@ class xFormCurvePin(MantisNode):
         # now if all goes well... the matrix will be correct.
         dg = bContext.view_layer.depsgraph
         dg.update()
-        # and the matrix should be correct now.
-        self.parameters['Matrix'] = ob.matrix_world
-        self.prepared = True
-    
-    def bExecute(self, bContext=None):
+        # and the matrix should be correct now - copy because it may be modified
+        self.parameters['Matrix'] = ob.matrix_world.copy() 
         print( wrapGreen("Created Curve Pin: ") + wrapOrange(self.bObject.name) )
+        self.prepared = True; self.executed = True
 
     def bFinalize(self, bContext = None):
         finish_drivers(self)
