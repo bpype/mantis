@@ -242,11 +242,6 @@ def get_schema_length_dependencies(node, all_nodes={}):
     """
     deps = []
     prepare_links_to = ['Schema Length', 'Array', 'Index']
-    if node.node_type == "DUMMY_SCHEMA":
-        for item in node.prototype.node_tree.interface.items_tree:
-            if item.item_type == 'PANEL': continue
-            if item.parent:
-                prepare_links_to.append(item.identifier)
     def extend_dependencies_from_inputs(node):
         for inp in node.inputs.values():
             for l in inp.links:
@@ -342,27 +337,16 @@ def parse_tree(base_tree):
     solve_only_these = set(solve_only_these)
 
     solve_layer = unsolved_schema.copy(); solve_layer.extend(roots)
-    from .schema_containers import TellClasses as schema_classes
     while(solve_layer):
         n = solve_layer.pop()
-        # Remove schema nodes if they were added in error.
-        if isinstance(n, tuple(schema_classes())):
-            if n in solve_only_these:
-                solve_only_these.remove(n)
+        if n not in solve_only_these:
             continue
-        # Check if this node, or any nodes that depend on it, are in the list.
-        for child in [n]+ n.hierarchy_connections:
-            if child in solve_only_these: break
-            else: # removes the unneeded node from the solve-layer
-                continue
 
         if n.signature in all_schema.keys():
             for dep in n.hierarchy_dependencies:
                 if dep not in schema_solve_done and (dep in solve_only_these):
-                    if dep.prepared: # HACK HACK HACK
+                    if dep.prepared:
                         continue 
-                        # For some reason, the Schema Solver is able to detect and resolve
-                        # dependencies outside of solve_only_these. So I have to figure out why.
                     solve_layer.appendleft(n)
                     break
             else:
@@ -393,9 +377,6 @@ def parse_tree(base_tree):
                     if conn not in schema_solve_done and conn not in solve_layer:
                         solve_layer.appendleft(conn)
                 continue
-        # If the above does not cover every case, there is an error in the graph
-        if (n in solve_only_these):
-            raise GraphError("ERROR: Mantis has failed to build the graph. Please Report this as a bug.")
     if unsolved_schema:
         raise RuntimeError("Failed to resolve all schema declarations")
     # I had a problem with this looping forever. I think it is resolved... but I don't know lol

@@ -401,23 +401,39 @@ class SchemaSolver:
         connection = incoming.from_node.outputs[incoming.from_socket].connect(node=to_node, socket=ui_link.to_socket.name)
         init_connections(incoming.from_node)
                     
+    def test_is_sub_schema(self, other):
+        for i in range(len(other.natural_signature)-1): # -1, we don't want to check this node, obviously
+            if self.node.natural_signature[:i+1]:
+                return False
+        return True
+
     def prepare_nodes(self, unprepared):
         # At this point, we've already run a pretty exhaustive preperation phase to prep the schema's dependencies
         # So we should not need to add any new dependencies unless there is a bug elsewhere.
         # and in fact, I could skip this in some cases, and should investigate if profiling reveals a slowdown here.
+        forbidden=set()
+        # forbid some nodes - they aren't necessary to solve the schema & cause problems.
         while unprepared:
             nc = unprepared.pop()
             if sum([dep.prepared for dep in nc.hierarchy_dependencies]) == len(nc.hierarchy_dependencies):
                 nc.bPrepare()
                 if nc.node_type == 'DUMMY_SCHEMA':
                     self.solve_nested_schema(nc)
-
+            elif nc.node_type == 'DUMMY_SCHEMA' and not self.test_is_sub_schema(nc):
+                forbidden.add(nc)
+                continue # do NOT add this as a dependency.
             else: # Keeping this for-loop as a fallback, it should never add dependencies though
+                can_add_me = True
                 for dep in nc.hierarchy_dependencies:
                     if not dep.prepared and dep not in unprepared:
+                        if dep in forbidden:
+                            can_add_me=False
+                            forbidden.add(nc) # forbid the parent, too
+                            continue
                         prOrange(f"Adding dependency... {dep}")
                         unprepared.appendleft(dep)
-                unprepared.appendleft(nc) # just rotate them until they are ready.
+                if can_add_me:
+                    unprepared.appendleft(nc) # just rotate them until they are ready.
 
     def solve_iteration(self):
         """ Solve an iteration of the schema.
