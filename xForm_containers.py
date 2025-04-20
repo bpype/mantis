@@ -884,6 +884,8 @@ class xFormCurvePin(MantisNode):
                 elif isinstance(driver, UtilitySwitch):
                     xf=driver.GetxForm()
                     prop_amount = xf.evaluate_input(driver.evaluate_input('Parameter'))
+                else:
+                    return
                 for template in self.socket_templates:
                     if template.name == socket_name: break
                 setattr(constraint, template.blender_property, prop_amount )
