@@ -90,16 +90,6 @@ def insert_lazy_parents(nc):
             init_dependencies(inherit_nc)
     return inherit_nc
 
-
-from_name_filter = ["Driver", ]
-
-to_name_filter = [
-                   "Custom Object xForm Override",
-                   "Custom Object",
-                   "Deform Bones"
-                 ]
-
-
 # *** # *** # *** # *** # *** # *** # *** # *** # *** # *** # *** # *** # *** # *** #
 #                                  DATA FROM NODES                                  #
 # *** # *** # *** # *** # *** # *** # *** # *** # *** # *** # *** # *** # *** # *** #
