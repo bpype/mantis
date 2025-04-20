@@ -98,6 +98,7 @@ xForm_category = [
         NodeItem("xFormBoneNode"),
         NodeItem("xFormArmatureNode"),
         NodeItem("xFormObjectInstance"),
+        NodeItem("xFormCurvePin"),
     ]
 driver_category = [
         NodeItem("LinkDrivenParameter"),

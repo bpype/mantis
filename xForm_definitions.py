@@ -15,6 +15,7 @@ def TellClasses():
         xFormArmatureNode,
         xFormGeometryObjectNode,
         xFormObjectInstance,
+        xFormCurvePin,
         ]
 
 def default_traverse(self, socket):
@@ -365,6 +366,21 @@ class xFormObjectInstance(Node, xFormNode):
             self.inputs['Name'].display_text = ""
             if nc:
                 self.inputs['Name'].display_text = nc.evaluate_input("Name")
+
+from .xForm_containers import xFormCurvePinSockets
+class xFormCurvePin(Node, xFormNode):
+    """"A node representing a curve pin"""
+    bl_idname = "xFormCurvePin"
+    bl_label = "Curve Pin"
+    bl_icon = "FORCE_CURVE"
+    initialized : bpy.props.BoolProperty(default = False)
+    mantis_node_class_name=bl_idname
+    
+    def init(self, context):
+        self.init_sockets(xFormCurvePinSockets)
+        self.use_custom_color = True
+        self.color = xFormColor
+        self.initialized = True
 
 for cls in TellClasses():
     cls.set_mantis_class()

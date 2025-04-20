@@ -9,6 +9,7 @@ def TellClasses():
              xFormBone,
              xFormGeometryObject,
              xFormObjectInstance,
+             xFormCurvePin,
            ]
 
 #*#-------------------------------#++#-------------------------------#*#
@@ -840,7 +841,108 @@ class xFormObjectInstance(MantisNode):
             print (wrapGreen(i), wrapWhite(self), wrapPurple(driver_key))
             prOrange(driver_item)
         finish_drivers(self)
-            
+
+    def bGetObject(self, mode = 'POSE'):
+        return self.bObject
+
+from .base_definitions import MantisSocketTemplate as SockTemplate
+xFormCurvePinSockets = [
+    NameTemplate := SockTemplate(
+        name="Name", is_input=True,  bl_idname='StringSocket',
+        default_value='Curve Pin', blender_property='name' ),
+    ParentCurveTemplate := SockTemplate(
+        name="Parent Curve", is_input=True,  bl_idname='xFormSocket', ),
+    FactorTemplate := SockTemplate(
+        name="Curve Pin Factor", is_input=True,  bl_idname='FloatFactorSocket',
+        default_value=0.0, blender_property='offset_factor' ),
+    ForwardAxisTemplate := SockTemplate(
+        name="Forward Axis", is_input=True,  bl_idname='EnumFollowPathForwardAxis',
+        default_value="FORWARD_Y", blender_property='forward_axis' ),
+    UpAxisTemplate := SockTemplate(
+        name="Up Axis", is_input=True,  bl_idname='EnumUpAxis',
+        default_value="UP_Z", blender_property='up_axis' ),
+    xFormOutTemplate := SockTemplate(
+        name="xForm Out", is_input=False,  bl_idname='xFormSocket', ),
+]
+
+class xFormCurvePin(MantisNode):
+    """An xForm pinned to a specific location on a curve."""
+    def __init__(self, signature, base_tree):
+        super().__init__(signature, base_tree,xFormCurvePinSockets)
+        self.init_parameters(additional_parameters={"Matrix":None})
+        self.node_type = "XFORM"
+        self.bObject = None
+
+    def prep_driver_values(self, constraint):
+        from .misc_nodes import UtilityDriver, UtilitySwitch
+        for socket_name in ["Curve Pin Factor", "Forward Axis","Up Axis",]:
+            if self.inputs[socket_name].is_linked:
+                link = self.inputs[socket_name].links[0]
+                driver = link.from_node
+                if isinstance(driver, UtilityDriver):
+                    prop_amount = driver.evaluate_input("Property")
+                elif isinstance(driver, UtilitySwitch):
+                    xf=driver.GetxForm()
+                    prop_amount = xf.evaluate_input(driver.evaluate_input('Parameter'))
+                for template in self.socket_templates:
+                    if template.name == socket_name: break
+                setattr(constraint, template.blender_property, prop_amount )
+
+    def bPrepare(self, bContext = None,):
+        from bpy import data
         
+        if not bContext: # lol
+            import bpy
+            bContext = bpy.context
+        ob = data.objects.get(self.evaluate_input("Name"))
+        if not ob:
+            ob = data.objects.new(self.evaluate_input("Name"), None)
+        self.bObject = ob
+        
+        reset_object_data(ob)
+        # Link to Scene:
+        if (ob.name not in bContext.view_layer.active_layer_collection.collection.objects):
+            bContext.view_layer.active_layer_collection.collection.objects.link(ob)
+        
+        node_line = trace_single_line(self, "Parent Curve")[0][1:] # slice excludes self
+        for other_node in node_line:
+            if other_node.node_type == 'XFORM':
+                break
+        else:
+            raise GraphError(f"ERROR: {self} is not connected to a parent curve")
+        if isinstance(other_node, (xFormArmature, xFormBone, xFormObjectInstance,)):
+            raise GraphError(f"ERROR: {self} must be connected to curve,"
+                              " not {other_node.__class__.__name__}")
+        curve=other_node.bGetObject()
+        if curve.type != 'CURVE':
+            raise GraphError(f"ERROR: {self} must be connected to curve,"
+                              " not {curve.type}")
+        c = ob.constraints.new("FOLLOW_PATH")
+        c.target = curve
+        c.use_fixed_location = True
+        c.use_curve_radius = True
+        c.use_curve_follow = True
+        c.name = "Curve Pin"
+
+        props_sockets = self.gen_property_socket_map()
+        del props_sockets['name']
+        evaluate_sockets(self, c, props_sockets)
+        # this isn't usually run on xForm nodes so for now I need to set the
+        #   driver's default values manually if I want a matrix now.
+        # because the drivers may not have initialized yet.
+        self.prep_driver_values(c)
+        # now if all goes well... the matrix will be correct.
+        dg = bContext.view_layer.depsgraph
+        dg.update()
+        # and the matrix should be correct now.
+        self.parameters['Matrix'] = ob.matrix_world
+        self.prepared = True
+    
+    def bExecute(self, bContext=None):
+        print( wrapGreen("Created Curve Pin: ") + wrapOrange(self.bObject.name) )
+
+    def bFinalize(self, bContext = None):
+        finish_drivers(self)
+            
     def bGetObject(self, mode = 'POSE'):
         return self.bObject

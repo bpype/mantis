@@ -154,6 +154,7 @@ def TellClasses() -> List[MantisSocket]:
              EnumRotationStretchTo,
              EnumTrackAxis,
              EnumUpAxis,
+             EnumFollowPathForwardAxis,
              EnumLockAxis,
              EnumLimitMode,
              EnumYScaleMode,
@@ -1378,6 +1379,36 @@ class EnumUpAxis(MantisSocket):
         description="Up Axis",
         default = 'UP_X',
         #options = {'ENUM_FLAG'},
+        update = update_socket,)
+    color_simple = cString
+    color : bpy.props.FloatVectorProperty(default=cString, size=4)
+    input : bpy.props.BoolProperty(default =False,)
+    def draw(self, context, layout, node, text):
+        ChooseDraw(self, context, layout, node, text)
+    def draw_color(self, context, node):
+        return self.color
+    @classmethod
+    def draw_color_simple(self):
+        return self.color_simple
+
+# Follow Track Forward axis
+eForwardAxis = (('FORWARD_X',        "X",  "X",  0),
+                ('FORWARD_Y',        "Y",  "Y",  1),
+                ('FORWARD_Z',        "Z",  "Z",  2),
+                ('TRACK_NEGATIVE_X', "-X", "-X", 3),
+                ('TRACK_NEGATIVE_Y', "-Y", "-Y", 4),
+                ('TRACK_NEGATIVE_Z', "-Z", "-Z", 5),)
+
+class EnumFollowPathForwardAxis(MantisSocket):
+    '''Custom node socket type'''
+    bl_idname = 'EnumFollowPathForwardAxis'
+    bl_label = "Forward Axis"
+    
+    default_value: bpy.props.EnumProperty(
+        items=eForwardAxis,
+        name="Forward Axis",
+        description="Forward Axis",
+        default = 'FORWARD_X',
         update = update_socket,)
     color_simple = cString
     color : bpy.props.FloatVectorProperty(default=cString, size=4)

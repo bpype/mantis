@@ -133,10 +133,6 @@ def evaluate_sockets(nc, c, props_sockets):
                 setattr(ob, att_name, val)
             except Exception as e:
                 prRed(ob, att_name, val); raise e
-    # HACK I think I should do this in __init__
-    if not hasattr(nc, "drivers"):
-        nc.drivers = {}
-    # end HACK
     for prop, (sock, default) in props_sockets.items():
         # c = nc.bObject
         # annoyingly, sometimes the socket is an array
@@ -250,12 +246,12 @@ def finish_driver(nc, driver_item, prop):
             else:
                 bone_col = nc.bGetParentArmature().pose.bones
             driver["owner"] = bone_col[nc.bObject] # we use "unsafe" brackets instead of get() because we want to see any errors that occur
+        elif nc.node_type in ['XFORM',] and nc.__class__.__name__ in ['xFormCurvePin']:
+            driver["owner"] = nc.bObject.constraints[0]
         else:
             driver["owner"] = nc.bObject
-        # prPurple("Successfully created driver for %s" % prop)
         driver["prop"] = prop
         return driver
-        # prWhite(driver)
     else:
         prOrange("Provider", driver_provider)
         prGreen("socket", driver_socket)
@@ -265,10 +261,8 @@ def finish_driver(nc, driver_item, prop):
         return None
 
 def finish_drivers(nc):
-    # gonna make this into a common function...
     drivers = []
     if not hasattr(nc, "drivers"):
-        # prGreen(f"No Drivers to construct for {nc}")
         return # HACK
     for driver_item, prop in nc.drivers.items():
         if isinstance(prop, list):
