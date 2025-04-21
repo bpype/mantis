@@ -684,7 +684,6 @@ class LinkInverseKinematics(MantisLinkNode):
 
         props_sockets = self.gen_property_socket_map()
         evaluate_sockets(self, c, props_sockets)
-        print (props_sockets)
         c.use_location   = self.evaluate_input("Position") > 0
         c.use_rotation   = self.evaluate_input("Rotation") > 0
         self.executed = True
