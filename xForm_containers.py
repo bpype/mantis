@@ -692,11 +692,11 @@ class xFormGeometryObject(MantisNode):
             self.bObject = bpy.data.objects.new(self.evaluate_input("Name"), data)
         if self.bObject and (self.inputs["Geometry"].is_linked and self.bObject.type  in ["MESH", "CURVE"]):
             self.bObject.data = trace[-1].node.bGetObject()
-        
         reset_object_data(self.bObject)
         matrix= get_matrix(self)
         self.parameters['Matrix'] = matrix
-        self.prepared = True
+        self.bSetParent()
+        self.bObject.matrix_world = matrix
         self.prepared = True
 
     def bExecute(self, bContext = None,):
@@ -715,10 +715,6 @@ class xFormGeometryObject(MantisNode):
         self.executed = True
 
     def bFinalize(self, bContext = None):
-        self.bSetParent()
-        matrix = self.evaluate_input("Matrix")
-        self.parameters['Matrix'] = matrix
-        self.bObject.matrix_world = matrix
         for i, (driver_key, driver_item) in enumerate(self.drivers.items()):
             print (wrapGreen(i), wrapWhite(self), wrapPurple(driver_key))
             prOrange(driver_item)
@@ -800,6 +796,8 @@ class xFormObjectInstance(MantisNode):
         reset_object_data(self.bObject)
         matrix= get_matrix(self)
         self.parameters['Matrix'] = matrix
+        self.bSetParent()
+        self.bObject.matrix_world = matrix
         self.prepared = True
 
     def bExecute(self, bContext = None,):
@@ -833,10 +831,6 @@ class xFormObjectInstance(MantisNode):
         modifier.node_group = ng
         modifier["Socket_0"] = source_ob
         modifier["Socket_1"] = self.evaluate_input("As Instance")
-        self.bSetParent()
-        matrix = self.evaluate_input("Matrix") # has to be done after parenting
-        self.parameters['Matrix'] = matrix
-        self.bObject.matrix_world = matrix
         for i, (driver_key, driver_item) in enumerate(self.drivers.items()):
             print (wrapGreen(i), wrapWhite(self), wrapPurple(driver_key))
             prOrange(driver_item)
