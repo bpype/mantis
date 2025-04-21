@@ -6,6 +6,8 @@ from .utilities import (prRed, prGreen, prPurple, prWhite, prOrange,
                         wrapRed, wrapGreen, wrapPurple, wrapWhite,
                         wrapOrange,)
 
+from .deformer_socket_templates import *
+
 from bpy.types import NodeTree
 
 def TellClasses():
@@ -224,24 +226,11 @@ class DeformerHook(MantisDeformerNode):
     '''A node representing a hook deformer'''
 
     def __init__(self, signature, base_tree):
-        super().__init__(signature, base_tree)
-        inputs = [
-            "Hook Target",
-            "Index",
-            "Deformer",
-        ]
-        outputs = [
-          "Deformer"
-        ]
+        super().__init__(signature, base_tree, HookSockets)
         # now set up the traverse target...
-        self.outputs.init_sockets(outputs)
-        self.inputs.init_sockets(inputs)
         self.init_parameters(additional_parameters={"Name":None})
         self.set_traverse([("Deformer", "Deformer")])
-        self.node_type = "LINK"
         self.prepared = True
-
-
 
     def GetxForm(self, socket="Deformer"):
         if socket == "Deformer":
@@ -258,17 +247,30 @@ class DeformerHook(MantisDeformerNode):
         mod_name = self.evaluate_input("Name")
         target_node = self.evaluate_input('Hook Target')
         target = target_node.bGetObject(); subtarget = ""
+        props_sockets = self.gen_property_socket_map()
         if isinstance(target, Bone) or isinstance(target, PoseBone):
             subtarget = target.name; target = target.id_data
         ob=self.GetxForm().bGetObject()
         reuse = False
         for m in ob.modifiers:
             if  m.type == 'HOOK' and m.object == target and m.subtarget == subtarget:
-                d = m; reuse = True; break
+                if self.evaluate_input("Influence") != m.strength:
+                    continue # make a new modifier so they can have different strengths
+                if ob.animation_data: # this can be None
+                    drivers = ob.animation_data.drivers
+                    for k in props_sockets.keys():
+                        if driver := drivers.find(k):
+                            # TODO: I should check to see if the drivers are the same...
+                            break # continue searching for an equivalent modifier
+                    else: # There was no driver - use this one.
+                        d = m; reuse = True; break
+                else: # use this one, there can't be drivers without animation_data.
+                    d = m; reuse = True; break
         else:
             d = ob.modifiers.new(mod_name, type='HOOK')
             if d is None:
                 raise RuntimeError(f"Modifier was not created in node {self} -- the object is invalid.")
+        self.bObject = d
         self.get_target_and_subtarget(d, input_name="Hook Target")
         vertices_used=[]
         if reuse: # Get the verts in the list... filter out all the unneeded 0's
@@ -277,12 +279,18 @@ class DeformerHook(MantisDeformerNode):
             vertices_used = list(filter(lambda a : a != 0, vertices_used))
             if include_0: vertices_used.append(0)
         # now we add the selected vertex to the list, too
-        vertices_used.append(self.evaluate_input("Index"))
+        vertex = self.evaluate_input("Curve Point Index")
+        if ob.type == 'CURVE' and ob.data.splines[0].type == 'BEZIER' and \
+                      self.evaluate_input("Auto-Bezier"):
+            vertex*=3
+            vertices_used.extend([vertex, vertex+1, vertex+2])
+        else:
+            vertices_used.append(vertex)
         d.vertex_indices_set(vertices_used)
-        # todo: this should be able to take many indices in the future.
-        # since this only takes a single index, I can always hack together a shape-key solution to tilt...
-        # GN solution would work too, provided a separate object is made for it
-        # I like this, it is perhaps a little innefficient but can be improved later on
+        evaluate_sockets(self, d, props_sockets)
+        finish_drivers(self)
+        # todo: this node should be able to take many indices in the future.
+        # Also: I have a Geometry Nodes implementation of this I can use... maybe...
 
 
 class DeformerMorphTarget(MantisDeformerNode):

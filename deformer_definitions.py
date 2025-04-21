@@ -1,6 +1,7 @@
 import bpy
 from bpy.types import NodeTree, Node, NodeSocket
 from .base_definitions import MantisUINode, DeformerNode, get_signature_from_edited_tree
+from.deformer_socket_templates import *
 
 from .utilities import (prRed, prGreen, prPurple, prWhite, prOrange,
                         wrapRed, wrapGreen, wrapPurple, wrapWhite,
@@ -70,15 +71,8 @@ class DeformerHook(Node, DeformerNode):
     mantis_node_class_name=bl_idname
 
     def init(self, context):
-        self.inputs.new("DeformerSocket", "Deformer")
-        self.inputs.new('xFormSocket', "Hook Target")
-        self.inputs.new('IntSocket', "Index")
-        # self.inputs.new('StringSocket', "Blend Vertex Group")
-        # self.inputs.new('BooleanSocket', "Invert Vertex Group")
-        self.outputs.new('DeformerSocket', "Deformer")
+        self.init_sockets(HookSockets)
         self.initialized = True
-    
-    # def display_update(self, parsed_tree, context):
 
 
 from .utilities import get_socket_maps, relink_socket_map

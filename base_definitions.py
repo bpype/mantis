@@ -572,14 +572,17 @@ SOCKETS_REMOVED=[("UtilityDriverVariable", "Transform Channel"),
                  ("xFormRootNode","World Out"),
                  ("UtilitySwitch","xForm"),
                  ("LinkDrivenParameter", "Enable")]
-                  # Node Class           #Prior bl_idname  # prior name # new bl_idname # new name, # Multi
-SOCKETS_RENAMED=[ ("LinkDrivenParameter", "DriverSocket",   "Driver",     "FloatSocket",  "Value",  False)]
+                  # Node Class           #Prior bl_idname  # prior name # new bl_idname #       new name,          # Multi
+SOCKETS_RENAMED=[ ("LinkDrivenParameter", "DriverSocket",   "Driver",     "FloatSocket",        "Value",              False),
+                  ("DeformerHook",        "IntSocket",      "Index",      "UnsignedIntSocket",  "Curve Point Index",  False)]
 
                 # NODE CLASS NAME             IN_OUT    SOCKET TYPE     SOCKET NAME     INDEX   MULTI     DEFAULT
 SOCKETS_ADDED=[("DeformerMorphTargetDeform", 'INPUT', 'BooleanSocket', "Use Shape Key", 1,      False,    False),
                ("DeformerMorphTargetDeform", 'INPUT', 'BooleanSocket', "Use Offset",    2,      False,    True),
                ("UtilityFCurve",             'INPUT',  "eFCrvExtrapolationMode", "Extrapolation Mode", 0, False, 'CONSTANT'),
-               ("LinkCopyScale",             'INPUT',  "BooleanSocket", "Additive",     3,      False, False)]
+               ("LinkCopyScale",             'INPUT',  "BooleanSocket", "Additive",     3,      False,    False),
+               ("DeformerHook",              'INPUT',  "FloatFactorSocket", "Influence", 3,     False,    1.0),
+               ("DeformerHook",              'INPUT',  "BooleanSocket", "Auto-Bezier",   4,     False,    True),]
 
 # replace names with bl_idnames for reading the tree and solving schemas.
 replace_types = ["NodeGroupInput", "NodeGroupOutput", "SchemaIncomingConnection",
