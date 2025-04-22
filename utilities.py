@@ -159,6 +159,7 @@ def do_relink(node, s, map, in_out='INPUT', parent_name = ''):
                 else:
                     s = node.outputs.new(sock_type, name, identifier=interface_socket.identifier)
                 if parent_name == 'Array': s.display_shape='SQUARE_DOT'
+                if parent_name == 'Constant': s.display_shape='CIRCLE_DOT'
                 # then move it up and delete the other link.
                 # this also needs to modify the interface of the node tree.
             if isinstance(sub_val, NodeSocket):
@@ -208,6 +209,7 @@ def relink_socket_map_add_socket(node, socket_collection, item, in_out=None,):
     else:
         s = socket_collection.new(type=item.socket_type, name=item.name, identifier=item.identifier)
     if item.parent.name == 'Array': s.display_shape = 'SQUARE_DOT'
+    elif item.parent.name == 'Constant': s.display_shape='CIRCLE_DOT'
     return s
 
 # TODO REFACTOR THIS
