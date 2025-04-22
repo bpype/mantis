@@ -246,8 +246,10 @@ def finish_driver(nc, driver_item, prop):
             else:
                 bone_col = nc.bGetParentArmature().pose.bones
             driver["owner"] = bone_col[nc.bObject] # we use "unsafe" brackets instead of get() because we want to see any errors that occur
-        elif nc.node_type in ['XFORM',] and nc.__class__.__name__ in ['xFormCurvePin']:
-            driver["owner"] = nc.bObject.constraints[0]
+        # HACK having special cases here is indicitave of a deeper problem that should be refactored
+        elif nc.__class__.__name__ in ['xFormCurvePin'] and \
+                      prop in ['offset_factor', 'forward_axis', 'up_axis']:
+                driver["owner"] = nc.bObject.constraints['Curve Pin']
         else:
             driver["owner"] = nc.bObject
         driver["prop"] = prop

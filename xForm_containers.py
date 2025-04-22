@@ -855,6 +855,9 @@ xFormCurvePinSockets = [
     UpAxisTemplate := SockTemplate(
         name="Up Axis", is_input=True,  bl_idname='EnumUpAxis',
         default_value="UP_Z", blender_property='up_axis' ),
+    CurvePinDisplaySize := SockTemplate(
+        name="Display Size", is_input=True,  bl_idname='FloatPositiveSocket',
+        default_value=0.05, blender_property='empty_display_size'),
     xFormOutTemplate := SockTemplate(
         name="xForm Out", is_input=False,  bl_idname='xFormSocket', ),
 ]
@@ -928,8 +931,12 @@ class xFormCurvePin(MantisNode):
         c.name = "Curve Pin"
 
         props_sockets = self.gen_property_socket_map()
-        del props_sockets['name']
-        evaluate_sockets(self, c, props_sockets)
+        constraint_props_sockets = props_sockets.copy()
+        del constraint_props_sockets['name']; del constraint_props_sockets['empty_display_size']
+        del props_sockets['offset_factor']; del props_sockets['forward_axis']
+        del props_sockets['up_axis']
+        evaluate_sockets(self, c, constraint_props_sockets)
+        evaluate_sockets(self, self.bObject, props_sockets)
         # this isn't usually run on xForm nodes so for now I need to set the
         #   driver's default values manually if I want a matrix now.
         # because the drivers may not have initialized yet.
