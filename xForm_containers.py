@@ -692,6 +692,20 @@ class xFormGeometryObject(MantisNode):
             self.bObject = bpy.data.objects.new(self.evaluate_input("Name"), data)
         if self.bObject and (self.inputs["Geometry"].is_linked and self.bObject.type  in ["MESH", "CURVE"]):
             self.bObject.data = trace[-1].node.bGetObject()
+        # NOW: find out if we need to duplicate the object data.
+        dupe_data=False
+        node_line = trace_single_line(self, "Deformer")[0]
+        from .deformer_containers import DeformerHook
+        for deformer in node_line:
+            if isinstance(deformer, DeformerHook) and  \
+               deformer.evaluate_input("Affect Curve Radius") == True and \
+               self.bObject.type == 'CURVE':
+                    print(f"INFO: Duplicating data {self.bObject.data.name} in {self} so it can be used for drivers.")
+                    dupe_data=True; break
+        if dupe_data:
+            name = self.bObject.data.name
+            self.bObject.data=self.bObject.data.copy()
+            self.bObject.data.name = name+"_MANTIS"
         reset_object_data(self.bObject)
         matrix= get_matrix(self)
         self.parameters['Matrix'] = matrix

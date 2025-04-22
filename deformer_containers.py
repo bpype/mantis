@@ -232,6 +232,41 @@ class DeformerHook(MantisDeformerNode):
         self.set_traverse([("Deformer", "Deformer")])
         self.prepared = True
 
+    def driver_for_radius(self, object, hook, index, influence, bezier=True):
+        """ Creates a driver to control the radius of a curve point with the hook."""
+        var_template = {"owner":hook,
+                        "name":"a",
+                        "type":"TRANSFORMS",
+                        "space":'WORLD_SPACE',
+                        "channel":'SCALE_X',}
+        keys_template = [{"co":(0,0),
+                          "interpolation": "LINEAR",
+                          "type":"KEYFRAME",},
+                         {"co":(1,influence),
+                          "interpolation": "LINEAR",
+                          "type":"KEYFRAME",},]
+        if bezier:
+            owner=object.data.splines[0].bezier_points
+        else:
+            owner=object.data.splines[0].points
+        driver = {
+            "owner":owner[index],
+            "prop":"radius",
+            "ind":-1,
+            "extrapolation":"LINEAR",
+            "type":"AVERAGE",
+            "vars":[],
+            "keys":keys_template,
+        }
+        from .drivers import CreateDrivers
+        axes='XYZ'
+
+        for i in range(3):
+            var = var_template.copy()
+            var["channel"]="SCALE_"+axes[i]
+            driver["vars"].append(var)
+        CreateDrivers([driver])
+
     def GetxForm(self, socket="Deformer"):
         if socket == "Deformer":
             return GetxForm(self)
@@ -279,13 +314,27 @@ class DeformerHook(MantisDeformerNode):
             vertices_used = list(filter(lambda a : a != 0, vertices_used))
             if include_0: vertices_used.append(0)
         # now we add the selected vertex to the list, too
+        affect_radius=self.evaluate_input("Affect Curve Radius")
+        auto_bezier=self.evaluate_input("Auto-Bezier")
         vertex = self.evaluate_input("Curve Point Index")
-        if ob.type == 'CURVE' and ob.data.splines[0].type == 'BEZIER' and \
-                      self.evaluate_input("Auto-Bezier"):
+        if ob.type == 'CURVE' and ob.data.splines[0].type == 'BEZIER' and auto_bezier:
+            if affect_radius:
+                self.driver_for_radius(ob, target_node.bGetObject(), vertex, d.strength)
             vertex*=3
             vertices_used.extend([vertex, vertex+1, vertex+2])
         else:
             vertices_used.append(vertex)
+        # if we have a curve and it is NOT using auto-bezier for the verts..
+        if ob.type == 'CURVE' and ob.data.splines[0].type == 'BEZIER' and affect_radius and not auto_bezier:
+            print (f"WARN: {self}: \"Affect Radius\" may not behave as expected"
+                    " when used on Bezier curves without Auto-Bezier")
+            #bezier point starts at 1, and then every third vert, so 4, 7, 10...
+            if vertex%3==1:
+                self.driver_for_radius(ob, target_node.bGetObject(), vertex, d.strength)
+        if ob.type == 'CURVE' and ob.data.splines[0].type != 'BEZIER' and \
+                    affect_radius:
+            self.driver_for_radius(ob, target_node.bGetObject(), vertex, d.strength, bezier=False)
+            
         d.vertex_indices_set(vertices_used)
         evaluate_sockets(self, d, props_sockets)
         finish_drivers(self)
