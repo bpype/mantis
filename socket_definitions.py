@@ -1064,7 +1064,7 @@ class EnumCurveSocket(MantisSocket):
     color_simple = cString
     color : bpy.props.FloatVectorProperty(default=cString, size=4)
     def draw(self, context, layout, node, text):
-        if not (self.is_linked):
+        if not (self.is_linked) and not self.is_output:
             layout.prop_search(data=self, property="search_prop", search_data=bpy.data, search_property="objects", text="", icon="CURVE_DATA", results_are_suggestions=True)
         else:
             try:
