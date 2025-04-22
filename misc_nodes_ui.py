@@ -868,7 +868,7 @@ class UtilityBoneMatrixHeadTailFlip(Node, MantisUINode):
 class UtilityMatrixTransform(Node, MantisUINode):
     """Transforms a matrix by another."""
     bl_idname = "UtilityMatrixTransform"
-    bl_label = "Matrix Transform"
+    bl_label = "Multiply Matrices"
     bl_icon = "NODE"
     initialized : bpy.props.BoolProperty(default = False)
     mantis_node_class_name=bl_idname
