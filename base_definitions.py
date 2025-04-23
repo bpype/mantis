@@ -582,7 +582,9 @@ SOCKETS_ADDED=[("DeformerMorphTargetDeform", 'INPUT', 'BooleanSocket', "Use Shap
                ("UtilityFCurve",             'INPUT',  "eFCrvExtrapolationMode", "Extrapolation Mode", 0, False, 'CONSTANT'),
                ("LinkCopyScale",             'INPUT',  "BooleanSocket", "Additive",     3,      False,    False),
                ("DeformerHook",              'INPUT',  "FloatFactorSocket", "Influence", 3,     False,    1.0),
-               ("DeformerHook",              'INPUT',  "BooleanSocket", "Auto-Bezier",   4,     False,    True),]
+               ("DeformerHook",              'INPUT',  "BooleanSocket", "Auto-Bezier",   4,     False,    True),
+               ("UtilityCompare",            'INPUT',  "EnumCompareOperation", "Comparison", 0,  False,   'EQUAL'),
+               ]
 
 # replace names with bl_idnames for reading the tree and solving schemas.
 replace_types = ["NodeGroupInput", "NodeGroupOutput", "SchemaIncomingConnection",

@@ -880,7 +880,6 @@ class UtilityMatrixTransform(Node, MantisUINode):
         self.outputs.new("MatrixSocket", "Out Matrix")
         self.initialized = True
 
-from .misc_nodes import MatrixInvertSockets
 class UtilityMatrixInvert(Node, MantisUINode):
     """Inverts an invertable matrix, otherwise throws an error."""
     bl_idname = "UtilityMatrixInvert"
@@ -1089,9 +1088,7 @@ class UtilityCompare(Node, MantisUINode):
     mantis_node_class_name=bl_idname
     
     def init(self, context):
-        self.inputs.new("WildcardSocket", "A")
-        self.inputs.new("WildcardSocket", "B")
-        self.outputs.new("BooleanSocket", "Result")
+        self.init_sockets(CompareSockets)
         self.initialized = True
     
     def update(self):

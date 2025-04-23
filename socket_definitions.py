@@ -194,7 +194,8 @@ def TellClasses() -> List[MantisSocket]:
              MathFloatOperation,
              MathVectorOperation,
              MatrixTransformOperation,
-
+             #conditions
+             EnumCompareOperation,
              # Schema
              WildcardSocket,
             #  xFormArraySocket,
@@ -2401,6 +2402,36 @@ class MathIntOperation(MantisSocket):
     def draw_color_simple(self):
         return self.color_simple
 
+
+enumCompareOperations =  (('EQUAL', "Equal", "Equal"),
+                          ('NOT_EQUAL', "Not Equal", "Not Equal"),
+                          ('GREATER_THAN', "Greater Than", "Greater Than"),
+                          ('GREATER_THAN_EQUAL', "Greater Than or Equal", "Greater Than or Equal"),
+                          ('LESS_THAN', "Less Than", "Less Than"),
+                          ('LESS_THAN_EQUAL', "Equal or Less Than", "Equal or Less Than"),)
+
+class EnumCompareOperation(MantisSocket):
+    """Compare Operation"""
+    bl_idname = 'EnumCompareOperation'
+    bl_label = "Comparison"
+    
+    default_value :bpy.props.EnumProperty(
+        name="",
+        description="Comparison",
+        items=enumCompareOperations,
+        default='EQUAL',
+        update = update_socket,)
+    
+    color_simple = cString
+    color : bpy.props.FloatVectorProperty(default=cString, size=4)
+    input : bpy.props.BoolProperty(default =False,)
+    def draw(self, context, layout, node, text):
+        ChooseDraw(self, context, layout, node, text)
+    def draw_color(self, context, node):
+        return self.color
+    @classmethod
+    def draw_color_simple(self):
+        return self.color_simple
 
 class WildcardSocket(MantisSocket):
     """Some kind of node socket lol I donno"""

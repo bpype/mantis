@@ -1,6 +1,5 @@
 from .node_container_common import *
 from .base_definitions import MantisNode, NodeSocket
-from .base_definitions import MantisSocketTemplate as SockTemplate
 from .xForm_containers import xFormArmature, xFormBone
 from .misc_nodes_socket_templates import *
 from math import pi, tau
@@ -1534,13 +1533,6 @@ class UtilityMatrixTransform(MantisNode):
         self.prepared = True
         self.executed = True
 
-MatrixInvertSockets=[
-    Matrix1Template := SockTemplate(
-    name="Matrix 1", is_input=True,  bl_idname='MatrixSocket', ),
-    MatrixOutTemplate := SockTemplate(
-    name="Matrix", is_input=False,  bl_idname='MatrixSocket', ),
-]
-
 class UtilityMatrixInvert(MantisNode):
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, MatrixInvertSockets)
@@ -1727,26 +1719,34 @@ class UtilityPrint(MantisNode):
         #     prRed("No input to print.")
         self.executed = True
 
-
 class UtilityCompare(MantisNode):
     def __init__(self, signature, base_tree):
-        super().__init__(signature, base_tree)
-        inputs = [
-          "A"           ,
-          "B"           ,
-        ]
-        outputs = [
-          "Result"      ,
-        ]
-        self.inputs.init_sockets(inputs)
-        self.outputs.init_sockets(outputs)
+        super().__init__(signature, base_tree, CompareSockets)
         self.init_parameters()
         self.node_type = "UTILITY"
 
     def bPrepare(self, bContext = None,):
-        self.parameters["Result"] = self.evaluate_input("A") == self.evaluate_input("B")
+        operation=self.evaluate_input("Comparison")
+        a = self.evaluate_input("A")
+        b = self.evaluate_input("B")
+        if isinstance(a, str) and isinstance(b, str) and \
+              operation not in ['EQUAL', 'NOT_EQUAL']:
+                   raise GraphError("Strings do not have numerical value to"
+                                    " compute greater than or less than.")
+        match operation:
+            case "EQUAL":
+                self.parameters["Result"] = a == b
+            case "NOT_EQUAL":
+                self.parameters["Result"] = a != b
+            case "GREATER_THAN":
+                self.parameters["Result"] = a > b
+            case "GREATER_THAN_EQUAL":
+                self.parameters["Result"] = a >= b
+            case "LESS_THAN":
+                self.parameters["Result"] = a < b
+            case "LESS_THAN_EQUAL":
+                self.parameters["Result"] = a <= b
         self.prepared = True; self.executed = True
-
 
 class UtilityChoose(MantisNode):
     def __init__(self, signature, base_tree):
