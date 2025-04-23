@@ -330,9 +330,6 @@ def init_schema_dependencies(schema, all_nc):
                 continue
             schema_dependency_handle_item(schema, all_nc, item,)
 
-        
-
-
 def check_and_add_root(n, roots, include_non_hierarchy=False):
     if (include_non_hierarchy * len(n.dependencies)) > 0:
         return 

@@ -148,6 +148,7 @@ matrix_category = [
         NodeItem("UtilityMatrixFromXForm"),
         NodeItem("UtilityAxesFromMatrix"),
         NodeItem("UtilityMatrixTransform"),
+        NodeItem("UtilityMatrixInvert"),
         NodeItem("UtilityTransformationMatrix"),
         NodeItem("UtilitySetBoneMatrixTail"),
     ]

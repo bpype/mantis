@@ -1,5 +1,6 @@
 from .node_container_common import *
 from .base_definitions import MantisNode, NodeSocket
+from .base_definitions import MantisSocketTemplate as SockTemplate
 from .xForm_containers import xFormArmature, xFormBone
 from .misc_nodes_socket_templates import *
 from math import pi, tau
@@ -49,6 +50,7 @@ def TellClasses():
              UtilityAxesFromMatrix,
              UtilityBoneMatrixHeadTailFlip,
              UtilityMatrixTransform,
+             UtilityMatrixInvert,
              UtilityTransformationMatrix,
              UtilityIntToString,
              UtilityArrayGet,
@@ -1254,7 +1256,6 @@ class UtilityGeometryOfXForm(MantisNode):
         prOrange(f"WARN: Cannot retrieve data from {self}, the connected xForm is not a mesh or curve.")
         return None
 
-
 class UtilityNameOfXForm(MantisNode):
     '''A node representing existing object data'''
     def __init__(self, signature, base_tree):
@@ -1533,7 +1534,34 @@ class UtilityMatrixTransform(MantisNode):
         self.prepared = True
         self.executed = True
 
+MatrixInvertSockets=[
+    Matrix1Template := SockTemplate(
+    name="Matrix 1", is_input=True,  bl_idname='MatrixSocket', ),
+    MatrixOutTemplate := SockTemplate(
+    name="Matrix", is_input=False,  bl_idname='MatrixSocket', ),
+]
 
+class UtilityMatrixInvert(MantisNode):
+    def __init__(self, signature, base_tree):
+        super().__init__(signature, base_tree, MatrixInvertSockets)
+        self.init_parameters()
+        self.node_type = "UTILITY"
+
+    def bPrepare(self, bContext = None,):
+        from mathutils import Vector
+        mat1 = self.evaluate_input("Matrix 1")
+        if mat1:
+            mat1copy = mat1.copy()
+            try:
+                self.parameters["Matrix"] = mat1copy.inverted()
+            except ValueError as e:
+                prRed(f"ERROR: {self}: The matrix cannot be inverted.")
+                prOrange(mat1)
+                raise e
+        else:
+            raise RuntimeError(wrapRed(f"Node {self} did not receive all matrix inputs... found input 1? {mat1 is not None}"))
+        self.prepared = True
+        self.executed = True
 
 class UtilityTransformationMatrix(MantisNode):
     def __init__(self, signature, base_tree):
