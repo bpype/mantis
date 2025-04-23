@@ -2,7 +2,7 @@ from .utilities import (prRed, prGreen, prPurple, prWhite,
                               prOrange,
                               wrapRed, wrapGreen, wrapPurple, wrapWhite,
                               wrapOrange,)
-from .utilities import init_connections, init_dependencies
+from .utilities import init_connections, init_dependencies, get_link_in_out
 from .base_definitions import SchemaUINode, custom_props_types, MantisNodeGroup, replace_types
 from .node_container_common import setup_custom_props_from_np
 # a class that solves Schema nodes
@@ -185,7 +185,6 @@ class SchemaSolver:
 
 
     def handle_link_from_index_input(self, index, frame_mantis_nodes, ui_link):
-        from .utilities import get_link_in_out
         _from_name, to_name = get_link_in_out(ui_link)
         to_node = frame_mantis_nodes[ (*self.autogen_path_names, to_name+self.index_str()) ]
         if to_node.node_type in ['DUMMY', 'DUMMY_SCHEMA']:
@@ -219,7 +218,6 @@ class SchemaSolver:
         del to_node.inputs[ui_link.to_socket.name]
     
     def handle_link_from_schema_length_input(self, frame_mantis_nodes, ui_link):
-        from .utilities import get_link_in_out
         # see, here I can just use the schema node
         _from_name, to_name = get_link_in_out(ui_link)
         if to_name in replace_types:
@@ -237,16 +235,40 @@ class SchemaSolver:
             raise RuntimeError("I was expecting there to be an incoming connection here for Schema Length")
 
     def handle_link_from_incoming_connection_input(self, frame_mantis_nodes, ui_link):
-        from .utilities import get_link_in_out
         incoming = self.incoming_connections[ui_link.from_socket.name]
-        from_node = incoming.from_node
-        _from_name, to_name = get_link_in_out(ui_link)
-        to_node = frame_mantis_nodes[ (*self.autogen_path_names, to_name+self.index_str()) ]
-        connection = from_node.outputs[incoming.from_socket].connect(node=to_node, socket=ui_link.to_socket.name)
-        init_connections(from_node)
+        if incoming is not None:
+            from_node = incoming.from_node
+            _from_name, to_name = get_link_in_out(ui_link)
+            to_node = frame_mantis_nodes[ (*self.autogen_path_names, to_name+self.index_str()) ]
+            socket_name=ui_link.to_socket.name
+            if to_node.node_type in [ 'DUMMY_SCHEMA' ]:
+                socket_name=ui_link.to_socket.identifier
+            connection = from_node.outputs[incoming.from_socket].connect(node=to_node, socket=socket_name)
+            init_connections(from_node)
+
+    def handle_link_to_outgoing_connection_output(self, frame_mantis_nodes, ui_link,):
+        mantis_incoming_node = self.schema_nodes[*self.tree_path_names,  'SchemaIncomingConnection']
+        for mantis_link in mantis_incoming_node.outputs[ui_link.to_socket.name].links:
+            to_mantis_node, to_mantis_socket = mantis_link.to_node, mantis_link.to_socket
+            from_name = get_link_in_out(ui_link)[0]
+            from_mantis_node = self.solved_nodes[ (*self.autogen_path_names, from_name+self.prev_index_str()) ]
+            to_mantis_node = frame_mantis_nodes[ (*self.autogen_path_names, to_mantis_node.signature[-1]+self.index_str()) ]
+            from_socket_name = ui_link.from_socket.name
+            if from_mantis_node.node_type in ['DUMMY_SCHEMA']:
+                from_socket_name = ui_link.from_socket.identifier
+            connection = from_mantis_node.outputs[from_socket_name].connect(node=to_mantis_node, socket=to_mantis_socket)
+            # We want to delete the links from the tree into the schema node.
+            # TODO: this is not robust enough and I do not feel sure this is doing the right thing.
+            if existing_link := self.incoming_connections[ui_link.to_socket.name]:
+                if existing_link.to_node == self.node:
+                    print ("INFO: Deleting...", existing_link)
+                    if self.node.signature[-1] in existing_link.to_node.signature:
+                        existing_link.die()
+            # BUG may exist here.
+            self.incoming_connections[ui_link.to_socket.name] = connection
+        
 
     def handle_link_from_constant_input(self, frame_mantis_nodes, ui_link, to_ui_node):
-        from .utilities import get_link_in_out
         incoming = self.constant_in[ui_link.from_socket.name]
         from_node = incoming.from_node
         to_name = get_link_in_out(ui_link)[1]
@@ -259,7 +281,6 @@ class SchemaSolver:
         init_connections(from_node)
     
     def handle_link_to_array_input_get(self, frame_mantis_nodes, ui_link, index):
-        from .utilities import get_link_in_out
         from_name, to_name = get_link_in_out(ui_link)
         from_nc = frame_mantis_nodes[(*self.autogen_path_names, from_name+self.index_str())]
         to_nc = self.schema_nodes[(*self.tree_path_names, to_name)]
@@ -274,7 +295,6 @@ class SchemaSolver:
         connection = from_nc.outputs[ui_link.from_socket.name].connect(node=to_nc, socket=ui_link.to_socket.name)
     
     def handle_link_from_array_input(self, frame_mantis_nodes, ui_link, index):
-        from .utilities import get_link_in_out
         get_index = index
         try:
             incoming = self.array_input_connections[ui_link.from_socket.identifier][get_index]
@@ -294,7 +314,6 @@ class SchemaSolver:
         init_connections(incoming.from_node)
 
     def handle_link_from_array_input_all(self, frame_mantis_nodes, ui_link):
-        from .utilities import get_link_in_out
         all_links = self.array_input_connections[ui_link.from_socket.identifier]
         to_name = get_link_in_out(ui_link)[1]
         to_node = frame_mantis_nodes[(*self.autogen_path_names, to_name+self.index_str())]
@@ -302,11 +321,13 @@ class SchemaSolver:
         for l in all_links:
             # we need to copy the link with the new from-node info
             from .base_definitions import NodeLink
-            connection = NodeLink(l.from_node, l.from_socket, to_node, ui_link.to_socket.name, l.multi_input_sort_id)
+            to_socket_name=ui_link.to_socket.name
+            if to_node.node_type in ['DUMMY_SCHEMA']:
+                to_socket_name=ui_link.to_socket.identifier
+            connection = NodeLink(l.from_node, l.from_socket, to_node, to_socket_name, l.multi_input_sort_id)
             to_node.flush_links()
 
     def handle_link_to_constant_output(self, frame_mantis_nodes, index, ui_link,  to_ui_node):
-        from .utilities import get_link_in_out
         to_node = self.schema_nodes[(*self.tree_path_names, to_ui_node.bl_idname)]
         expose_when = to_node.evaluate_input('Expose when N==')
         # HACK here to force it to work with ordinary node groups, which don't seem to set this value correctly.
@@ -322,7 +343,6 @@ class SchemaSolver:
 
     # WTF is even happening here?? TODO BUG HACK
     def handle_link_to_array_output(self, frame_mantis_nodes, index, ui_link, to_ui_node, from_ui_node):# if this duplicated code works, dedupe!
-        from .utilities import get_link_in_out
         to_node = self.schema_nodes[(*self.tree_path_names, to_ui_node.bl_idname)] # get it by [], we want a KeyError if this fails
         for outgoing in self.array_output_connections[ui_link.to_socket.identifier]:
             # print (type(outgoing))
@@ -381,7 +401,6 @@ class SchemaSolver:
                 connection = from_node.outputs[ui_link.from_socket.name].connect(node=to_node, socket=outgoing.to_socket)
 
     def handle_link_from_array_input_get(self, frame_mantis_nodes, index, ui_link, from_ui_node ):
-        from .utilities import get_link_in_out
         get_index = index
         from_node = self.schema_nodes[(*self.tree_path_names, from_ui_node.bl_idname)]
         from .utilities import cap, wrap
@@ -456,8 +475,7 @@ class SchemaSolver:
                                         SchemaOutgoingConnection,
                                         SchemaIncomingConnection,)
         
-        from .utilities import clear_reroutes
-        from .utilities import get_link_in_out, link_node_containers
+        from .utilities import clear_reroutes, link_node_containers
 
         self.set_index_strings()
         frame_mantis_nodes = {}
@@ -472,22 +490,7 @@ class SchemaSolver:
             ui_link = self.held_links.pop()
             to_ui_node = ui_link.to_socket.node; from_ui_node = ui_link.from_socket.node
             if isinstance(to_ui_node, SchemaOutgoingConnection):
-                mantis_incoming_node = self.schema_nodes[*self.tree_path_names,  'SchemaIncomingConnection']
-                for mantis_link in mantis_incoming_node.outputs[ui_link.to_socket.name].links:
-                    to_mantis_node, to_mantis_socket = mantis_link.to_node, mantis_link.to_socket
-                    from_name = get_link_in_out(ui_link)[0]
-                    from_mantis_node = self.solved_nodes[ (*self.autogen_path_names, from_name+self.prev_index_str()) ]
-                    to_mantis_node = frame_mantis_nodes[ (*self.autogen_path_names, to_mantis_node.signature[-1]+self.index_str()) ]
-                    connection = from_mantis_node.outputs[ui_link.from_socket.name].connect(node=to_mantis_node, socket=to_mantis_socket)
-                    # We want to delete the links from the tree into the schema node.
-                    # TODO: this is not robust enough and I do not feel sure this is doing the right thing.
-                    if existing_link := self.incoming_connections[ui_link.to_socket.name]:
-                        if existing_link.to_node == self.node:
-                            print ("Deleting...", existing_link)
-                            if self.node.signature[-1] in existing_link.to_node.signature:
-                                existing_link.die()
-                    # BUG may exist here.
-                    self.incoming_connections[ui_link.to_socket.name] = connection
+                self.handle_link_to_outgoing_connection_output(frame_mantis_nodes, ui_link)
 
         # Get the rerouted links from the graph. We don't really need to do this every iteration.
         # TODO: use profiling to determine if this is slow; if so: copy & reuse the data, refactor the pop()'s out.
@@ -597,7 +600,10 @@ class SchemaSolver:
                         if outgoing:
                             to_node = outgoing.to_node
                             from_node =frame_nc[(*self.autogen_path_names, from_np.name+self.index_str()) ]
-                            connection = from_node.outputs[link.from_socket.name].connect(node=to_node, socket=outgoing.to_socket)
+                            from_socket_name = link.from_socket.name
+                            if from_node.node_type in ['DUMMY_SCHEMA']:
+                                from_socket_name = link.from_socket.identifier
+                            connection = from_node.outputs[from_socket_name].connect(node=to_node, socket=outgoing.to_socket)
                             # we need to kill the link between the Schema itself and the next node and update the deps. Otherwise:confusing bugs.
                             outgoing.die(); init_dependencies(to_node)
                     # else: # the node just isn't connected out this socket.
