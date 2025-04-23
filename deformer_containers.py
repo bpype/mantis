@@ -234,8 +234,14 @@ class DeformerHook(MantisDeformerNode):
 
     def driver_for_radius(self, object, hook, index, influence, bezier=True):
         """ Creates a driver to control the radius of a curve point with the hook."""
+        from bpy.types import Bone, PoseBone
         var_template = {"owner":hook,
                         "name":"a",
+                        "type":"TRANSFORMS",
+                        "space":'WORLD_SPACE',
+                        "channel":'SCALE_X',}
+        var1_template = {"owner":hook.id_data,
+                        "name":"b",
                         "type":"TRANSFORMS",
                         "space":'WORLD_SPACE',
                         "channel":'SCALE_X',}
@@ -258,6 +264,9 @@ class DeformerHook(MantisDeformerNode):
             "vars":[],
             "keys":keys_template,
         }
+        if isinstance(hook, (Bone, PoseBone)):
+            driver['type']='SCRIPTED'
+            driver['expression']="(1/b)*a"
         from .drivers import CreateDrivers
         axes='XYZ'
 
@@ -265,6 +274,10 @@ class DeformerHook(MantisDeformerNode):
             var = var_template.copy()
             var["channel"]="SCALE_"+axes[i]
             driver["vars"].append(var)
+            if isinstance(hook, (Bone, PoseBone)):
+                var1=var1_template.copy()
+                var['channel']="SCALE_"+axes[1]
+                driver['vars'].append(var1)
         CreateDrivers([driver])
 
     def GetxForm(self, socket="Deformer"):
@@ -280,6 +293,8 @@ class DeformerHook(MantisDeformerNode):
         from bpy.types import Bone, PoseBone, Object
         prGreen(f"Executing Hook Deform Node: {self}")
         mod_name = self.evaluate_input("Name")
+        affect_radius = self.evaluate_input("Affect Curve Radius")
+        auto_bezier = self.evaluate_input("Auto-Bezier")
         target_node = self.evaluate_input('Hook Target')
         target = target_node.bGetObject(); subtarget = ""
         props_sockets = self.gen_property_socket_map()
@@ -314,8 +329,6 @@ class DeformerHook(MantisDeformerNode):
             vertices_used = list(filter(lambda a : a != 0, vertices_used))
             if include_0: vertices_used.append(0)
         # now we add the selected vertex to the list, too
-        affect_radius=self.evaluate_input("Affect Curve Radius")
-        auto_bezier=self.evaluate_input("Auto-Bezier")
         vertex = self.evaluate_input("Curve Point Index")
         if ob.type == 'CURVE' and ob.data.splines[0].type == 'BEZIER' and auto_bezier:
             if affect_radius:
