@@ -1470,10 +1470,10 @@ class UtilityAxesFromMatrix(MantisNode):
     def bPrepare(self, bContext = None,):
         from mathutils import Vector
         if matrix := self.evaluate_input("Matrix"):
-            matrix= matrix.copy().to_3x3()
-            self.parameters['X Axis'] = matrix @ Vector((1,0,0))
-            self.parameters['Y Axis'] = matrix @ Vector((0,1,0))
-            self.parameters['Z Axis'] = matrix @ Vector((0,0,1))
+            matrix= matrix.copy().to_3x3(); matrix.transpose()
+            self.parameters['X Axis'] = matrix[0]
+            self.parameters['Y Axis'] = matrix[1]
+            self.parameters['Z Axis'] = matrix[2]
         self.prepared = True; self.executed = True
 
 
