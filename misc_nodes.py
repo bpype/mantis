@@ -50,6 +50,7 @@ def TellClasses():
              UtilityBoneMatrixHeadTailFlip,
              UtilityMatrixTransform,
              UtilityMatrixInvert,
+             UtilityMatrixCompose,
              UtilityTransformationMatrix,
              UtilityIntToString,
              UtilityArrayGet,
@@ -1552,6 +1553,25 @@ class UtilityMatrixInvert(MantisNode):
                 raise e
         else:
             raise RuntimeError(wrapRed(f"Node {self} did not receive all matrix inputs... found input 1? {mat1 is not None}"))
+        self.prepared = True
+        self.executed = True
+
+
+class UtilityMatrixCompose(MantisNode):
+    def __init__(self, signature, base_tree):
+        super().__init__(signature, base_tree, MatrixComposeSockets)
+        self.init_parameters()
+        self.node_type = "UTILITY"
+
+    def bPrepare(self, bContext = None,):
+        from mathutils import Matrix
+        matrix= Matrix.Identity(3)
+        matrix[0] = self.evaluate_input('X Basis Vector')
+        matrix[1] = self.evaluate_input('Y Basis Vector')
+        matrix[2] = self.evaluate_input('Z Basis Vector')
+        matrix.transpose(); matrix=matrix.to_4x4()
+        matrix.translation = self.evaluate_input('Translation')
+        self.parameters['Matrix']=matrix
         self.prepared = True
         self.executed = True
 

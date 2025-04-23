@@ -56,6 +56,7 @@ def TellClasses():
              UtilityBoneMatrixHeadTailFlip,
              UtilityMatrixTransform,
              UtilityMatrixInvert,
+             UtilityMatrixCompose,
              UtilityTransformationMatrix,
              UtilitySetBoneMatrixTail,
 
@@ -890,6 +891,18 @@ class UtilityMatrixInvert(Node, MantisUINode):
     
     def init(self, context):
         self.init_sockets(MatrixInvertSockets)
+        self.initialized = True
+
+class UtilityMatrixCompose(Node, MantisUINode):
+    """Inverts an invertable matrix, otherwise throws an error."""
+    bl_idname = "UtilityMatrixCompose"
+    bl_label = "Compose Matrix"
+    bl_icon = "NODE"
+    initialized : bpy.props.BoolProperty(default = False)
+    mantis_node_class_name=bl_idname
+    
+    def init(self, context):
+        self.init_sockets(MatrixComposeSockets)
         self.initialized = True
 
 class UtilityMatrixSetLocation(Node, MantisUINode):

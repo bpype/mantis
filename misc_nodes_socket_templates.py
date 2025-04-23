@@ -32,6 +32,14 @@ MatrixInvertSockets=[
     name="Matrix", is_input=False,  bl_idname='MatrixSocket', ),
 ]
 
+MatrixComposeSockets=[
+    XBasisVector := SockTemplate(
+    name="X Basis Vector", is_input=True,  bl_idname='VectorSocket', ),
+    YBasisVector := replace(XBasisVector, name="Y Basis Vector"),
+    ZBasisVector := replace(XBasisVector, name="Z Basis Vector"),
+    Translation := replace(XBasisVector, name="Translation"),
+    MatrixOutTemplate,
+]
 CompareSockets = [
     ComparisonOperation := SockTemplate( name='Comparison',
             is_input=True, bl_idname="EnumCompareOperation",

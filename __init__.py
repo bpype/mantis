@@ -16,7 +16,7 @@ from .utilities import prRed
 
 MANTIS_VERSION_MAJOR=0
 MANTIS_VERSION_MINOR=10
-MANTIS_VERSION_SUB=7
+MANTIS_VERSION_SUB=8
 
 classLists = [module.TellClasses() for module in [
  link_definitions,
@@ -149,6 +149,7 @@ matrix_category = [
         NodeItem("UtilityAxesFromMatrix"),
         NodeItem("UtilityMatrixTransform"),
         NodeItem("UtilityMatrixInvert"),
+        NodeItem("UtilityMatrixCompose"),
         NodeItem("UtilityTransformationMatrix"),
         NodeItem("UtilitySetBoneMatrixTail"),
     ]
