@@ -22,7 +22,7 @@ def reset_object_data(ob):
     ob.animation_data_clear() # this is a little dangerous. TODO find a better solution since this can wipe animation the user wants to keep
     ob.modifiers.clear() # I would also like a way to copy modifiers and their settings, or bake them down. oh well
 
-def get_parent(node_container, type = 'XFORM'):
+def get_parent_node(node_container, type = 'XFORM'):
     # type variable for selecting whether to get either 
     #   the parent xForm  or the inheritance node
     node_line, socket = trace_single_line(node_container, "Relationship")
@@ -45,6 +45,31 @@ def get_matrix(node):
         node_line, socket = trace_single_line(node, "Matrix")
         raise RuntimeError(wrapRed(f"No matrix found for Armature {node}"))
     return matrix
+
+def set_object_parent(node):
+        parent_nc = get_parent_node(node, type='LINK')
+        if (parent_nc):
+            parent = None
+            if node.inputs["Relationship"].is_linked:
+                trace = trace_single_line(node, "Relationship")
+                for other_node in trace[0]:
+                    if other_node is node: continue # lol
+                    if (other_node.node_type == 'XFORM'):
+                        parent = other_node; break
+                if parent is None:
+                    prWhite(f"INFO: no parent set for {node}.")
+                    return
+                prWhite(f"INFO: setting parent of {node} to {other_node}.")
+                
+                if (parent.bObject) is None:
+                    raise GraphError(f"Could not get parent object from node {parent} for {node}")
+                if isinstance(parent, xFormBone):
+                    armOb= parent.bGetParentArmature()
+                    node.bObject.parent = armOb
+                    node.bObject.parent_type = 'BONE'
+                    node.bObject.parent_bone = parent.bObject
+                else:
+                    node.bObject.parent = parent.bGetObject()
 
 class xFormArmature(MantisNode):
     '''A node representing an armature object'''
@@ -120,12 +145,7 @@ class xFormArmature(MantisNode):
         ob.matrix_world = matrix.copy()
         ob.data.pose_position = 'REST'
         
-        if True:
-            from bpy.types import EditBone
-            parent_nc = get_parent(self, type='LINK')
-            if parent_nc:
-                parent = parent_nc.inputs['Parent'].links[0].from_node.bGetObject(mode = 'OBJECT')
-                ob.parent = parent
+        set_object_parent(self)
             
         
         # Link to Scene:
@@ -255,7 +275,7 @@ class xFormBone(MantisNode):
     def bSetParent(self, eb):
         # print (self.bObject)
         from bpy.types import EditBone
-        parent_nc = get_parent(self, type='LINK')
+        parent_nc = get_parent_node(self, type='LINK')
         # print (self, parent_nc.inputs['Parent'].from_node)
         parent=None
         if parent_nc.inputs['Parent'].links[0].from_node.node_type == 'XFORM':
@@ -265,10 +285,6 @@ class xFormBone(MantisNode):
 
         if isinstance(parent, EditBone):
             eb.parent = parent
-        
-        #DUMMY
-        # I NEED TO GET THE LINK NC
-        # IDIOT
             
         eb.use_connect = parent_nc.evaluate_input("Connected")
         eb.use_inherit_rotation = parent_nc.evaluate_input("Inherit Rotation")
@@ -636,32 +652,6 @@ class xFormGeometryObject(MantisNode):
         self.bObject = None
         self.has_shape_keys = False
 
-    def bSetParent(self):
-        from bpy.types import Object
-        parent_nc = get_parent(self, type='LINK')
-        if (parent_nc):
-            parent = None
-            if self.inputs["Relationship"].is_linked:
-                trace = trace_single_line(self, "Relationship")
-                for node in trace[0]:
-                    if node is self: continue # lol
-                    if (node.node_type == 'XFORM'):
-                        parent = node; break
-                if parent is None:
-                    prWhite(f"INFO: no parent set for {self}.")
-                    return
-                
-                if (parent_object := parent.bGetObject()) is None:
-                    raise GraphError(f"Could not get parent object from node {parent} for {self}")
-                if isinstance(parent, xFormBone):
-                    armOb= parent.bGetParentArmature()
-                    self.bObject.parent = armOb
-                    self.bObject.parent_type = 'BONE'
-                    self.bObject.parent_bone = parent.bObject
-                    # self.bObject.matrix_parent_inverse = parent.parameters["Matrix"].inverted()
-                elif isinstance(parent_object, Object):
-                    self.bObject.parent = parent.bGetObject()
-
     def bPrepare(self, bContext = None,):
         import bpy
         if not self.evaluate_input("Name"):
@@ -708,7 +698,7 @@ class xFormGeometryObject(MantisNode):
         reset_object_data(self.bObject)
         matrix= get_matrix(self)
         self.parameters['Matrix'] = matrix
-        self.bSetParent()
+        set_object_parent(self)
         self.bObject.matrix_world = matrix
         self.prepared = True
 
@@ -765,32 +755,6 @@ class xFormObjectInstance(MantisNode):
         self.bObject = None
         self.has_shape_keys = False # Shape Keys will make a dupe so this is OK
 
-    def bSetParent(self):
-        from bpy.types import Object
-        parent_nc = get_parent(self, type='LINK')
-        if (parent_nc):
-            parent = None
-            if self.inputs["Relationship"].is_linked:
-                trace = trace_single_line(self, "Relationship")
-                for node in trace[0]:
-                    if node is self: continue # lol
-                    if (node.node_type == 'XFORM'):
-                        parent = node; break
-                if parent is None:
-                    prWhite(f"INFO: no parent set for {self}.")
-                    return
-                
-                if (parent_object := parent.bGetObject()) is None:
-                    raise GraphError(f"Could not get parent object from node {parent} for {self}")
-                if isinstance(parent, xFormBone):
-                    armOb= parent.bGetParentArmature()
-                    self.bObject.parent = armOb
-                    self.bObject.parent_type = 'BONE'
-                    self.bObject.parent_bone = parent.bObject
-                    # self.bObject.matrix_parent_inverse = parent.parameters["Matrix"].inverted()
-                elif isinstance(parent_object, Object):
-                    self.bObject.parent = parent.bGetObject()
-
     def bPrepare(self, bContext = None,):
         from bpy import data
         empty_mesh = data.meshes.get("MANTIS_EMPTY_MESH")
@@ -809,7 +773,7 @@ class xFormObjectInstance(MantisNode):
         reset_object_data(self.bObject)
         matrix= get_matrix(self)
         self.parameters['Matrix'] = matrix
-        self.bSetParent()
+        set_object_parent(self)
         self.bObject.matrix_world = matrix
         self.prepared = True
 
