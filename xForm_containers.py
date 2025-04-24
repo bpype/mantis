@@ -448,9 +448,7 @@ class xFormBone(MantisNode):
             # This may be driven, so let's do this:
             if do_prints: print (value)
             if (isinstance(value, tuple)):
-                # it's either a CombineThreeBool or a CombineVector.
-                prRed("COMITTING SUICIDE NOW!!")
-                bpy.ops.wm.quit_blender()
+                raise RuntimeError(f"The custom property type is not supported: {self}")
             if (isinstance(value, MantisDriver)):
                 # the value should be the default for its socket...
                 if do_prints: print (type(self.parameters[inp.name]))
@@ -464,8 +462,6 @@ class xFormBone(MantisNode):
                 driver = value
                 value = type_val_map[type(self.parameters[inp.name])]
             if (value is None):
-                prRed("This is probably not supposed to happen")
-                value = 0
                 raise RuntimeError("Could not set value of custom parameter")
                 # it creates a more confusing error later sometimes, better to catch it here.
             
@@ -487,7 +483,6 @@ class xFormBone(MantisNode):
                 default=value,)
             #if a number
 
-            
             if type(value) == float:
                 ui_data.update(
                     min = inp.min,
@@ -538,7 +533,6 @@ class xFormBone(MantisNode):
             'bbone_scalein'              : ("BBone Scale-In", (1,1,1)),
             'bbone_scaleout'             : ("BBone Scale-Out", (1,1,1)),
             }
-            prRed("BBone Implementation is not complete, expect errors and missing features for now")
             evaluate_sockets(self, pb, props_sockets)
             # we need to clear this stuff since our only real goal was to get some drivers from the above
             for attr_name in props_sockets.keys():
