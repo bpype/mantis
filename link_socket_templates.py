@@ -9,7 +9,7 @@ TargetTemplate : SockTemplate = SockTemplate(
     name="Target", is_input=True,  bl_idname='xFormSocket', )
 Head_Tail_Template : SockTemplate = SockTemplate(
     name="Head/Tail", is_input=True,  bl_idname='FloatFactorSocket',
-    default_value=1.0, blender_property='head_tail' )
+    default_value=0.0, blender_property='head_tail' )
 UseBBoneTemplate : SockTemplate = SockTemplate(
     name="UseBBone", is_input=True,  bl_idname='BooleanSocket',
     default_value=False, blender_property='use_bbone_shape' )
