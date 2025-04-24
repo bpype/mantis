@@ -266,17 +266,16 @@ class DeformerHook(MantisDeformerNode):
         }
         if isinstance(hook, (Bone, PoseBone)):
             driver['type']='SCRIPTED'
-            driver['expression']="(1/b)*a"
+            driver['expression']="(((1/b)*a)+((1/b_001)*a_001)+((1/b_002)*a_002))/3"
         from .drivers import CreateDrivers
         axes='XYZ'
-
         for i in range(3):
             var = var_template.copy()
             var["channel"]="SCALE_"+axes[i]
             driver["vars"].append(var)
             if isinstance(hook, (Bone, PoseBone)):
                 var1=var1_template.copy()
-                var['channel']="SCALE_"+axes[1]
+                var1['channel']="SCALE_"+axes[i]
                 driver['vars'].append(var1)
         CreateDrivers([driver])
 
