@@ -377,15 +377,14 @@ class xFormBone(MantisNode):
                     b.bbone_custom_handle_end = self.bGetParentArmature().data.bones[custom_handle]
             except KeyError:
                 prRed("Warning: BBone start or end handle not set because of missing bone in armature.")
-            
-            b.bbone_curveinx = self.evaluate_input("BBone X Curve-In")
-            b.bbone_curveinz = self.evaluate_input("BBone Z Curve-In")
-            b.bbone_curveoutx = self.evaluate_input("BBone X Curve-Out")
-            b.bbone_curveoutz = self.evaluate_input("BBone Z Curve-Out")
-            # 'bbone_curveinx'             : ("BBone X Curve-In", pb.bone.bbone_curveinx),
-            # 'bbone_curveinz'             : ("BBone Z Curve-In", pb.bone.bbone_curveinz),
-            # 'bbone_curveoutx'            : ("BBone X Curve-Out", pb.bone.bbone_curveoutx),
-            # 'bbone_curveoutz'            : ("BBone Z Curve-Out", pb.bone.bbone_curveoutz),
+
+            bone_props_socket= {
+                'bbone_curveinx'     : ("BBone X Curve-In", 0.0),
+                'bbone_curveinz'     : ("BBone Z Curve-In", 0.0),
+                'bbone_curveoutx'    : ("BBone X Curve-Out", 0.0),
+                'bbone_curveoutz'    : ("BBone Z Curve-Out", 0.0),
+            }
+            evaluate_sockets(self, b, bone_props_socket)
             # TODO this section should be done with props-socket thing
             b.bbone_handle_use_scale_start = self.evaluate_input("BBone Start Handle Scale")
             b.bbone_handle_use_scale_end = self.evaluate_input("BBone End Handle Scale")
