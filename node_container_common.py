@@ -2,7 +2,8 @@ from .utilities import (prRed, prGreen, prPurple, prWhite,
                               prOrange,
                               wrapRed, wrapGreen, wrapPurple, wrapWhite,
                               wrapOrange,)
-from .base_definitions import GraphError, NodeSocket
+from .base_definitions import GraphError, NodeSocket, MantisNode
+from collections.abc import Callable
 # BE VERY CAREFUL
 # the x_containers files import * from this file
 # so all the top-level imports are carried over
@@ -62,6 +63,30 @@ def trace_single_line_up(node_container, output_name,):
                 else:
                     break
     return nodes, socket
+
+def trace_line_up_branching(node : MantisNode, output_name : str,
+        break_condition : Callable = lambda node : False):
+    """ Returns all leaf nodes at the ends of branching lines from an output."""
+    leaf_nodes = []
+    if hasattr(node, "outputs"):
+        # Trace a single line
+        if (socket := node.outputs.get(output_name) ):
+            check_sockets=[socket]
+            while (check_sockets):
+                # This is bad, but it's efficient for nodes that only expect
+                #  one path along the given line
+                socket = check_sockets.pop()
+                for link in socket.links:
+                    other = link.to_node.inputs.get(link.to_socket)
+                    if (other):
+                        socket = other
+                        if break_condition(socket.node):
+                            leaf_nodes.append(socket.node)
+                        if socket.can_traverse:
+                            check_sockets.append(socket.traverse_target)
+                        else: # this is an input.
+                            leaf_nodes.append(socket.node)
+    return leaf_nodes
 
 def setup_custom_props(nc):
     from .utilities import get_node_prototype
