@@ -900,6 +900,22 @@ class xFormCurvePin(MantisNode):
         if curve.type != 'CURVE':
             raise GraphError(f"ERROR: {self} must be connected to curve,"
                               " not {curve.type}")
+        # we'll limit all the transforms so we can parent it
+        #  because it is annoying to have a cluttered outliner.
+        c = ob.constraints.new("LIMIT_LOCATION")
+        for max_min in ['max','min']:
+            for axis in "xyz":
+                setattr(c, "use_"+max_min+"_"+axis, True)
+                setattr(c, max_min+"_"+axis, 0.0)
+        c = ob.constraints.new("LIMIT_ROTATION")
+        for axis in "xyz":
+            setattr(c, "use_limit_"+axis, True)
+            setattr(c, max_min+"_"+axis, 0.0)
+        c = ob.constraints.new("LIMIT_SCALE")
+        for max_min in ['max','min']:
+            for axis in "xyz":
+                setattr(c, "use_"+max_min+"_"+axis, True)
+                setattr(c, max_min+"_"+axis, 1.0)
         c = ob.constraints.new("FOLLOW_PATH")
         c.target = curve
         c.use_fixed_location = True
@@ -922,7 +938,8 @@ class xFormCurvePin(MantisNode):
         dg = bContext.view_layer.depsgraph
         dg.update()
         # and the matrix should be correct now - copy because it may be modified
-        self.parameters['Matrix'] = ob.matrix_world.copy() 
+        self.parameters['Matrix'] = ob.matrix_world.copy()
+        ob.parent=curve
         print( wrapGreen("Created Curve Pin: ") + wrapOrange(self.bObject.name) )
         self.prepared = True; self.executed = True
 
