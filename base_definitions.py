@@ -609,6 +609,31 @@ array_output_types = [
     'UtilityArrayGet', 'UtilityKDChoosePoint', 'UtilityKDChooseXForm',
 ]
 
+# TODO:
+#   - get the execution context in the execution code
+#   - from there, begin to use it for stuff I can't do without it
+#   - and slowly start transferring stuff to it
+
+# The Mantis Overlay class is used to store node-tree specific information
+#  such as inputs and outputs
+# used for e.g. allowing strings to pass as $variables in node names
+class MantisOverlay():
+    def __init__( self, parent, inputs, outputs, ):
+        pass
+
+# The MantisExecutionContext class is used to store the execution-specific variables
+# that are used when executing the tree
+# Importantly, it is NOT used to store variables between solutions, these belong to the
+#   tree itself.
+class MantisExecutionContext():
+    def __init__(
+            self,
+            base_tree,
+    ):
+        self.base_tree = base_tree
+        self.execution_id = base_tree.execution_id
+        self.b_objects=[] # objects created by Mantis during execution
+
 class MantisNode:
     """
         This class contains the basic interface for a Mantis Node.
@@ -617,7 +642,7 @@ class MantisNode:
     """
     def __init__(self, signature : tuple,
                  base_tree : bpy.types.NodeTree,
-                 socket_templates : list[MantisSocketTemplate]=[]):
+                 socket_templates : list[MantisSocketTemplate]=[],):
         self.base_tree=base_tree
         self.signature = signature
         self.inputs = MantisNodeSocketCollection(node=self, is_input=True)
@@ -630,6 +655,11 @@ class MantisNode:
         self.prepared = False
         self.executed = False
         self.socket_templates = socket_templates
+        self.mContext = None # for now I am gonna set this at runtime
+        # I know it isn't "beautiful OOP" or whatever, but it is just easier
+        # code should be simple and do things in the simplest way.
+        # in the future I can refactor it, but it will require changes to 100+
+        #  classes, instead of adding about 5 lines of code elsewhere.
         if self.socket_templates:
             self.init_sockets()
 
@@ -945,9 +975,3 @@ class MantisNodeSocketCollection(dict):
         """Makes the class iterable"""
         return iter(self.values())
 
-# The Mantis Solver class is used to store the execution-specific variables that are used
-#   when executing the tree
-class MantisSolver():
-    pass
-
-# GOAL: make the switch to "group overlay" paradigm

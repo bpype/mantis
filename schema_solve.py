@@ -142,6 +142,7 @@ class SchemaSolver:
         for prototype_ui_node in self.tree.nodes:
             mantis_node_name = prototype_ui_node.name
             index_str = self.index_str()
+            mContext=self.node.mContext
             if isinstance(prototype_ui_node, SchemaUINode):
                 continue  # IGNORE the schema interface nodes, we already made them in __init__()
                 # they are reused for each iteration.
@@ -182,6 +183,8 @@ class SchemaSolver:
             if mantis_node.__class__.__name__ in custom_props_types:
                 setup_custom_props_from_np(mantis_node, prototype_ui_node)
             mantis_node.fill_parameters(prototype_ui_node)
+            # be sure to pass on the Mantis Context to them
+            mantis_node.mContext=mContext
 
 
     def handle_link_from_index_input(self, index, frame_mantis_nodes, ui_link):

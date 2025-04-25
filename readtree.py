@@ -282,7 +282,10 @@ def get_schema_length_dependencies(node, all_nodes={}):
 def parse_tree(base_tree):
     from uuid import uuid4
     base_tree.execution_id = uuid4().__str__() # set the unique id of this execution
-   
+    
+    from .base_definitions import MantisExecutionContext
+    mContext = MantisExecutionContext(base_tree=base_tree)
+
     import time
     data_start_time = time.time()
     # annoyingly I have to pass in values for all of the dicts because if I initialize them in the function call
@@ -303,6 +306,8 @@ def parse_tree(base_tree):
 
     from .base_definitions import array_output_types, GraphError
     for mantis_node in all_mantis_nodes.values():
+        # add the Mantis Context here, so that it available during parsing.
+        mantis_node.mContext = mContext
         if mantis_node.node_type in ["DUMMY"]: # clean up the groups
             if mantis_node.prototype.bl_idname in ("MantisNodeGroup", "NodeGroupOutput"):
                 continue
@@ -404,6 +409,8 @@ def parse_tree(base_tree):
         if (nc.node_type in ['XFORM']) and ("Relationship" in nc.inputs.keys()):
             if (new_nc := insert_lazy_parents(nc)):
                 kept_nc[new_nc.signature]=new_nc
+                # be sure to add the Mantis context.
+                new_nc.mContext =mContext
         kept_nc[nc.signature]=nc
     prWhite(f"Parsing tree took {time.time()-start_time} seconds.")
     prWhite("Number of Nodes: %s" % (len(kept_nc)))
@@ -449,7 +456,6 @@ def execution_error_cleanup(node, exception, switch_objects = [] ):
         ob.data.pose_position = 'POSE'
     prRed(f"Error: {exception} in node {node}")
     return exception
-
 
 def execute_tree(nodes, base_tree, context, error_popups = False):
     import bpy
