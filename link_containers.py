@@ -44,6 +44,7 @@ class MantisLinkNode(MantisNode):
         super().__init__(signature, base_tree, socket_templates)
         self.node_type = 'LINK'
         self.prepared = True
+        self.bObject=[]
 
     def evaluate_input(self, input_name, index=0):
         # should catch 'Target', 'Pole Target' and ArmatureConstraint targets, too
@@ -81,6 +82,16 @@ class MantisLinkNode(MantisNode):
             else:
                 c.space_object=xf
     
+    def GetxForm(nc, output_name="Output Relationship"):
+        break_condition= lambda node : node.node_type=='XFORM'
+        xforms = trace_line_up_branching(nc, output_name, break_condition)
+        return_me=[]
+        for xf in xforms:
+            if xf.node_type != 'XFORM':
+                continue
+            return_me.append(xf)
+        return return_me
+    
     def bFinalize(self, bContext=None):
         finish_drivers(self)
 
@@ -88,12 +99,6 @@ class MantisLinkNode(MantisNode):
 # L I N K   N O D E S
 #*#-------------------------------#++#-------------------------------#*#
 
-def GetxForm(nc):
-    trace = trace_single_line_up(nc, "Output Relationship")
-    for node in trace[0]:
-        if (node.node_type == 'XFORM'):
-            return node
-    raise GraphError("%s is not connected to a downstream xForm" % nc)
 
 class LinkInherit(MantisLinkNode):
     '''A node representing inheritance'''
@@ -104,7 +109,7 @@ class LinkInherit(MantisLinkNode):
         self.set_traverse([('Parent', 'Inheritance')])
         self.executed = True
     
-    def GetxForm(self): # DUPLICATED, TODO fix this
+    def GetxForm(self):
         # I think this is only run in display update.
         trace = trace_single_line_up(self, "Inheritance")
         for node in trace[0]:
@@ -121,23 +126,21 @@ class LinkCopyLocation(MantisLinkNode):
         additional_parameters = { "Name":None }
         self.init_parameters(additional_parameters=additional_parameters)
         self.set_traverse([("Input Relationship", "Output Relationship")])
-        
-    def GetxForm(self):
-        return GetxForm(self)
 
     def bExecute(self, context):
         prepare_parameters(self)
-        c = self.GetxForm().bGetObject().constraints.new('COPY_LOCATION')
-        self.get_target_and_subtarget(c)
-        print(wrapGreen("Creating ")+wrapWhite("Copy Location")+
-             wrapGreen(" Constraint for bone: ") +
-             wrapOrange(self.GetxForm().bGetObject().name))
-        if constraint_name := self.evaluate_input("Name"):
-            c.name = constraint_name
-        self.bObject = c
-        self.set_custom_space()
-        props_sockets = self.gen_property_socket_map()
-        evaluate_sockets(self, c, props_sockets)
+        for xf in self.GetxForm():
+            c = xf.bGetObject().constraints.new('COPY_LOCATION')
+            self.get_target_and_subtarget(c)
+            print(wrapGreen("Creating ")+wrapWhite("Copy Location")+
+                wrapGreen(" Constraint for bone: ") +
+                wrapOrange(xf.bGetObject().name))
+            if constraint_name := self.evaluate_input("Name"):
+                c.name = constraint_name
+            self.bObject.append(c)
+            self.set_custom_space()
+            props_sockets = self.gen_property_socket_map()
+            evaluate_sockets(self, c, props_sockets)
         self.executed = True
         
 class LinkCopyRotation(MantisLinkNode):
@@ -148,32 +151,30 @@ class LinkCopyRotation(MantisLinkNode):
         additional_parameters = { "Name":None }
         self.init_parameters(additional_parameters=additional_parameters)
         self.set_traverse([("Input Relationship", "Output Relationship")])
-        
-    def GetxForm(self):
-        return GetxForm(self)
 
     def bExecute(self, context):
         prepare_parameters(self)
-        c = self.GetxForm().bGetObject().constraints.new('COPY_ROTATION')
-        self.get_target_and_subtarget(c)
-        print(wrapGreen("Creating ")+wrapWhite("Copy Rotation")+
-             wrapGreen(" Constraint for bone: ") +
-             wrapOrange(self.GetxForm().bGetObject().name))
-        
-        rotation_order = self.evaluate_input("RotationOrder")
-        if ((rotation_order == 'QUATERNION') or (rotation_order == 'AXIS_ANGLE')):
-            c.euler_order = 'AUTO'
-        else:
-            try:
-                c.euler_order = rotation_order
-            except TypeError: # it's a driver or incorrect
+        for xf in self.GetxForm():
+            c = xf.bGetObject().constraints.new('COPY_ROTATION')
+            self.get_target_and_subtarget(c)
+            print(wrapGreen("Creating ")+wrapWhite("Copy Rotation")+
+                wrapGreen(" Constraint for bone: ") +
+                wrapOrange(xf.bGetObject().name))
+            
+            rotation_order = self.evaluate_input("RotationOrder")
+            if ((rotation_order == 'QUATERNION') or (rotation_order == 'AXIS_ANGLE')):
                 c.euler_order = 'AUTO'
-        if constraint_name := self.evaluate_input("Name"):
-            c.name = constraint_name
-        self.bObject = c
-        self.set_custom_space()
-        props_sockets = self.gen_property_socket_map()
-        evaluate_sockets(self, c, props_sockets)
+            else:
+                try:
+                    c.euler_order = rotation_order
+                except TypeError: # it's a driver or incorrect
+                    c.euler_order = 'AUTO'
+            if constraint_name := self.evaluate_input("Name"):
+                c.name = constraint_name
+            self.bObject.append(c)
+            self.set_custom_space()
+            props_sockets = self.gen_property_socket_map()
+            evaluate_sockets(self, c, props_sockets)
         self.executed = True
         
 class LinkCopyScale(MantisLinkNode):
@@ -184,36 +185,34 @@ class LinkCopyScale(MantisLinkNode):
         additional_parameters = { "Name":None }
         self.init_parameters(additional_parameters=additional_parameters)
         self.set_traverse([("Input Relationship", "Output Relationship")])
-    
-    def GetxForm(self):
-        return GetxForm(self)
 
     def bExecute(self, context):
         prepare_parameters(self)
-        c = self.GetxForm().bGetObject().constraints.new('COPY_SCALE')
-        self.get_target_and_subtarget(c)
-        print(wrapGreen("Creating ")+wrapWhite("Copy Scale")+
-             wrapGreen(" Constraint for bone: ") +
-             wrapOrange(self.GetxForm().bGetObject().name))
-        if constraint_name := self.evaluate_input("Name"):
-            c.name = constraint_name
-        self.bObject = c
-        if self.inputs["Owner Space"].is_connected and self.inputs["Owner Space"].links[0].from_node.node_type == 'XFORM':
-            c.owner_space='CUSTOM'
-            xf = self.inputs["Owner Space"].links[0].from_node.bGetObject(mode="OBJECT")
-            if isinstance(xf, Bone):
-                c.space_object=self.inputs["Owner Space"].links[0].from_node.bGetParentArmature(); c.space_subtarget=xf.name
-            else:
-                c.space_object=xf
-        if self.inputs["Target Space"].is_connected and self.inputs["Target Space"].links[0].from_node.node_type == 'XFORM':
-            c.target_space='CUSTOM'
-            xf = self.inputs["Target Space"].links[0].from_node.bGetObject(mode="OBJECT")
-            if isinstance(xf, Bone):
-                c.space_object=self.inputs["Owner Space"].links[0].from_node.bGetParentArmature(); c.space_subtarget=xf.name
-            else:
-                c.space_object=xf
-        props_sockets = self.gen_property_socket_map()
-        evaluate_sockets(self, c, props_sockets)   
+        for xf in self.GetxForm():
+            c = xf.bGetObject().constraints.new('COPY_SCALE')
+            self.get_target_and_subtarget(c)
+            print(wrapGreen("Creating ")+wrapWhite("Copy Scale")+
+                wrapGreen(" Constraint for bone: ") +
+                wrapOrange(xf.bGetObject().name))
+            if constraint_name := self.evaluate_input("Name"):
+                c.name = constraint_name
+            self.bObject.append(c)
+            if self.inputs["Owner Space"].is_connected and self.inputs["Owner Space"].links[0].from_node.node_type == 'XFORM':
+                c.owner_space='CUSTOM'
+                xf = self.inputs["Owner Space"].links[0].from_node.bGetObject(mode="OBJECT")
+                if isinstance(xf, Bone):
+                    c.space_object=self.inputs["Owner Space"].links[0].from_node.bGetParentArmature(); c.space_subtarget=xf.name
+                else:
+                    c.space_object=xf
+            if self.inputs["Target Space"].is_connected and self.inputs["Target Space"].links[0].from_node.node_type == 'XFORM':
+                c.target_space='CUSTOM'
+                xf = self.inputs["Target Space"].links[0].from_node.bGetObject(mode="OBJECT")
+                if isinstance(xf, Bone):
+                    c.space_object=self.inputs["Owner Space"].links[0].from_node.bGetParentArmature(); c.space_subtarget=xf.name
+                else:
+                    c.space_object=xf
+            props_sockets = self.gen_property_socket_map()
+            evaluate_sockets(self, c, props_sockets)   
         self.executed = True 
             
 
@@ -225,23 +224,21 @@ class LinkCopyTransforms(MantisLinkNode):
         additional_parameters = { "Name":None }
         self.init_parameters(additional_parameters=additional_parameters)
         self.set_traverse([("Input Relationship", "Output Relationship")])
-        
-    def GetxForm(self):
-        return GetxForm(self)
 
     def bExecute(self, context):
         prepare_parameters(self)
-        c = self.GetxForm().bGetObject().constraints.new('COPY_TRANSFORMS')
-        self.get_target_and_subtarget(c)
-        print(wrapGreen("Creating ")+wrapWhite("Copy Transforms")+
-             wrapGreen(" Constraint for bone: ") +
-             wrapOrange(self.GetxForm().bGetObject().name))
-        if constraint_name := self.evaluate_input("Name"):
-            c.name = constraint_name
-        self.bObject = c
-        self.set_custom_space()
-        props_sockets = self.gen_property_socket_map()
-        evaluate_sockets(self, c, props_sockets)  
+        for xf in self.GetxForm():
+            c = xf.bGetObject().constraints.new('COPY_TRANSFORMS')
+            self.get_target_and_subtarget(c)
+            print(wrapGreen("Creating ")+wrapWhite("Copy Transforms")+
+                wrapGreen(" Constraint for bone: ") +
+                wrapOrange(xf.bGetObject().name))
+            if constraint_name := self.evaluate_input("Name"):
+                c.name = constraint_name
+            self.bObject.append(c)
+            self.set_custom_space()
+            props_sockets = self.gen_property_socket_map()
+            evaluate_sockets(self, c, props_sockets)  
         self.executed = True
 
 class LinkTransformation(MantisLinkNode):
@@ -251,51 +248,49 @@ class LinkTransformation(MantisLinkNode):
         super().__init__(signature, base_tree, LinkTransformationSockets)
         self.init_parameters(additional_parameters={"Name":None })
         self.set_traverse([("Input Relationship", "Output Relationship")])
-        
-    def GetxForm(self):
-        return GetxForm(self)
 
     def bExecute(self, context):
         prepare_parameters(self)
-        c = self.GetxForm().bGetObject().constraints.new('TRANSFORM')
-        self.get_target_and_subtarget(c)
-        print(wrapGreen("Creating ")+wrapWhite("Transformation")+
-             wrapGreen(" Constraint for bone: ") +
-             wrapOrange(self.GetxForm().bGetObject().name))
-        if constraint_name := self.evaluate_input("Name"):
-            c.name = constraint_name
-        self.bObject = c
-        self.set_custom_space()
-        props_sockets = self.gen_property_socket_map()
-        # we have to fix the blender-property for scale/rotation
-        # because Blender stores these separately.
-        # I do not care that this code is ugly.
-        from_replace, to_replace = '', ''
-        if self.evaluate_input("Map From") == 'ROTATION':
-            from_replace='_rot'
-        elif self.evaluate_input("Map From") == 'SCALE':
-            from_replace='_scale'
-        if self.evaluate_input("Map To") == 'ROTATION':
-            to_replace='_rot'
-        elif self.evaluate_input("Map To") == 'SCALE':
-            to_replace='_scale'
-        if from_replace:
-            for axis in ['x', 'y', 'z']:
-                stub='from_min_'+axis
-                props_sockets[stub+from_replace]=props_sockets[stub]
-                del props_sockets[stub]
-                stub='from_max_'+axis
-                props_sockets[stub+from_replace]=props_sockets[stub]
-                del props_sockets[stub]
-        if to_replace:
-            for axis in ['x', 'y', 'z']:
-                stub='to_min_'+axis
-                props_sockets[stub+to_replace]=props_sockets[stub]
-                del props_sockets[stub]
-                stub='to_max_'+axis
-                props_sockets[stub+to_replace]=props_sockets[stub]
-                del props_sockets[stub]
-        evaluate_sockets(self, c, props_sockets)  
+        for xf in self.GetxForm():
+            c = xf.bGetObject().constraints.new('TRANSFORM')
+            self.get_target_and_subtarget(c)
+            print(wrapGreen("Creating ")+wrapWhite("Transformation")+
+                wrapGreen(" Constraint for bone: ") +
+                wrapOrange(xf.bGetObject().name))
+            if constraint_name := self.evaluate_input("Name"):
+                c.name = constraint_name
+            self.bObject.append(c)
+            self.set_custom_space()
+            props_sockets = self.gen_property_socket_map()
+            # we have to fix the blender-property for scale/rotation
+            # because Blender stores these separately.
+            # I do not care that this code is ugly.
+            from_replace, to_replace = '', ''
+            if self.evaluate_input("Map From") == 'ROTATION':
+                from_replace='_rot'
+            elif self.evaluate_input("Map From") == 'SCALE':
+                from_replace='_scale'
+            if self.evaluate_input("Map To") == 'ROTATION':
+                to_replace='_rot'
+            elif self.evaluate_input("Map To") == 'SCALE':
+                to_replace='_scale'
+            if from_replace:
+                for axis in ['x', 'y', 'z']:
+                    stub='from_min_'+axis
+                    props_sockets[stub+from_replace]=props_sockets[stub]
+                    del props_sockets[stub]
+                    stub='from_max_'+axis
+                    props_sockets[stub+from_replace]=props_sockets[stub]
+                    del props_sockets[stub]
+            if to_replace:
+                for axis in ['x', 'y', 'z']:
+                    stub='to_min_'+axis
+                    props_sockets[stub+to_replace]=props_sockets[stub]
+                    del props_sockets[stub]
+                    stub='to_max_'+axis
+                    props_sockets[stub+to_replace]=props_sockets[stub]
+                    del props_sockets[stub]
+            evaluate_sockets(self, c, props_sockets)  
         self.executed = True
 
 class LinkLimitLocation(MantisLinkNode):
@@ -303,24 +298,20 @@ class LinkLimitLocation(MantisLinkNode):
         super().__init__(signature, base_tree, LinkLimitLocationScaleSockets)
         self.init_parameters(additional_parameters={ "Name":None })
         self.set_traverse([("Input Relationship", "Output Relationship")])
-        
-    def GetxForm(self):
-        return GetxForm(self)
 
     def bExecute(self, context):
         prepare_parameters(self)
-        c = self.GetxForm().bGetObject().constraints.new('LIMIT_LOCATION')
-        #
-        print(wrapGreen("Creating ")+wrapWhite("Limit Location")+
-             wrapGreen(" Constraint for bone: ") +
-             wrapOrange(self.GetxForm().bGetObject().name))
-        
-        if constraint_name := self.evaluate_input("Name"):
-            c.name = constraint_name
-        self.bObject = c
-        self.set_custom_space()
-        props_sockets = self.gen_property_socket_map()
-        evaluate_sockets(self, c, props_sockets)
+        for xf in self.GetxForm():
+            c = xf.bGetObject().constraints.new('LIMIT_LOCATION')
+            print(wrapGreen("Creating ")+wrapWhite("Limit Location")+
+                wrapGreen(" Constraint for bone: ") +
+                wrapOrange(xf.bGetObject().name))
+            if constraint_name := self.evaluate_input("Name"):
+                c.name = constraint_name
+            self.bObject.append(c)
+            self.set_custom_space()
+            props_sockets = self.gen_property_socket_map()
+            evaluate_sockets(self, c, props_sockets)
         self.executed = True
         
 class LinkLimitRotation(MantisLinkNode):
@@ -328,23 +319,21 @@ class LinkLimitRotation(MantisLinkNode):
         super().__init__(signature, base_tree, LinkLimitRotationSockets)
         self.init_parameters(additional_parameters={ "Name":None })
         self.set_traverse([("Input Relationship", "Output Relationship")])
-        
-    def GetxForm(self):
-        return GetxForm(self)
 
     def bExecute(self, context):
         prepare_parameters(self)
-        c = self.GetxForm().bGetObject().constraints.new('LIMIT_ROTATION')
-        print(wrapGreen("Creating ")+wrapWhite("Limit Rotation")+
-             wrapGreen(" Constraint for bone: ") +
-             wrapOrange(self.GetxForm().bGetObject().name))
-        
-        if constraint_name := self.evaluate_input("Name"):
-            c.name = constraint_name
-        self.bObject = c
-        self.set_custom_space()
-        props_sockets = self.gen_property_socket_map()
-        evaluate_sockets(self, c, props_sockets)
+        for xf in self.GetxForm():
+            c = xf.bGetObject().constraints.new('LIMIT_ROTATION')
+            print(wrapGreen("Creating ")+wrapWhite("Limit Rotation")+
+                wrapGreen(" Constraint for bone: ") +
+                wrapOrange(xf.bGetObject().name))
+            
+            if constraint_name := self.evaluate_input("Name"):
+                c.name = constraint_name
+            self.bObject.append(c)
+            self.set_custom_space()
+            props_sockets = self.gen_property_socket_map()
+            evaluate_sockets(self, c, props_sockets)
         self.executed = True
 
 class LinkLimitScale(MantisLinkNode):
@@ -352,23 +341,21 @@ class LinkLimitScale(MantisLinkNode):
         super().__init__(signature, base_tree, LinkLimitLocationScaleSockets)
         self.init_parameters(additional_parameters={ "Name":None })
         self.set_traverse([("Input Relationship", "Output Relationship")])
-    
-    def GetxForm(self):
-        return GetxForm(self)
 
     def bExecute(self, context):
         prepare_parameters(self)
-        c = self.GetxForm().bGetObject().constraints.new('LIMIT_SCALE')
-        print(wrapGreen("Creating ")+wrapWhite("Limit Scale")+
-             wrapGreen(" Constraint for bone: ") +
-             wrapOrange(self.GetxForm().bGetObject().name))
-        
-        if constraint_name := self.evaluate_input("Name"):
-            c.name = constraint_name
-        self.bObject = c
-        self.set_custom_space()
-        props_sockets = self.gen_property_socket_map()
-        evaluate_sockets(self, c, props_sockets)
+        for xf in self.GetxForm():
+            c = xf.bGetObject().constraints.new('LIMIT_SCALE')
+            print(wrapGreen("Creating ")+wrapWhite("Limit Scale")+
+                wrapGreen(" Constraint for bone: ") +
+                wrapOrange(xf.bGetObject().name))
+            
+            if constraint_name := self.evaluate_input("Name"):
+                c.name = constraint_name
+            self.bObject.append(c)
+            self.set_custom_space()
+            props_sockets = self.gen_property_socket_map()
+            evaluate_sockets(self, c, props_sockets)
         self.executed = True
  
 class LinkLimitDistance(MantisLinkNode):
@@ -376,23 +363,21 @@ class LinkLimitDistance(MantisLinkNode):
         super().__init__(signature, base_tree, LinkLimitDistanceSockets)
         self.init_parameters(additional_parameters={ "Name":None })
         self.set_traverse([("Input Relationship", "Output Relationship")])
-        
-    def GetxForm(self):
-        return GetxForm(self)
 
     def bExecute(self, context):
         prepare_parameters(self)
-        print(wrapGreen("Creating ")+wrapWhite("Limit Distance")+
-             wrapGreen(" Constraint for bone: ") +
-             wrapOrange(self.GetxForm().bGetObject().name))
-        c = self.GetxForm().bGetObject().constraints.new('LIMIT_DISTANCE')
-        self.get_target_and_subtarget(c)
-        if constraint_name := self.evaluate_input("Name"):
-            c.name = constraint_name
-        self.bObject = c
-        self.set_custom_space()
-        props_sockets = self.gen_property_socket_map()
-        evaluate_sockets(self, c, props_sockets)
+        for xf in self.GetxForm():
+            print(wrapGreen("Creating ")+wrapWhite("Limit Distance")+
+                wrapGreen(" Constraint for bone: ") +
+                wrapOrange(xf.bGetObject().name))
+            c = xf.bGetObject().constraints.new('LIMIT_DISTANCE')
+            self.get_target_and_subtarget(c)
+            if constraint_name := self.evaluate_input("Name"):
+                c.name = constraint_name
+            self.bObject.append(c)
+            self.set_custom_space()
+            props_sockets = self.gen_property_socket_map()
+            evaluate_sockets(self, c, props_sockets)
         self.executed = True
 
 # Tracking
@@ -402,26 +387,24 @@ class LinkStretchTo(MantisLinkNode):
         super().__init__(signature, base_tree, LinkStretchToSockets)
         self.init_parameters(additional_parameters={ "Name":None })
         self.set_traverse([("Input Relationship", "Output Relationship")])
-        
-    def GetxForm(self):
-        return GetxForm(self)
 
     def bExecute(self, context):
         prepare_parameters(self)
-        print(wrapGreen("Creating ")+wrapWhite("Stretch-To")+
-             wrapGreen(" Constraint for bone: ") +
-             wrapOrange(self.GetxForm().bGetObject().name))
-        c = self.GetxForm().bGetObject().constraints.new('STRETCH_TO')
-        self.get_target_and_subtarget(c)
-        if constraint_name := self.evaluate_input("Name"):
-            c.name = constraint_name
-        self.bObject = c
-        props_sockets = self.gen_property_socket_map()
-        evaluate_sockets(self, c, props_sockets)
-        
-        if (self.evaluate_input("Original Length") == 0):
-            # this is meant to be set automatically.
-            c.rest_length = self.GetxForm().bGetObject().bone.length
+        for xf in self.GetxForm():
+            print(wrapGreen("Creating ")+wrapWhite("Stretch-To")+
+                wrapGreen(" Constraint for bone: ") +
+                wrapOrange(xf.bGetObject().name))
+            c = xf.bGetObject().constraints.new('STRETCH_TO')
+            self.get_target_and_subtarget(c)
+            if constraint_name := self.evaluate_input("Name"):
+                c.name = constraint_name
+            self.bObject.append(c)
+            props_sockets = self.gen_property_socket_map()
+            evaluate_sockets(self, c, props_sockets)
+            
+            if (self.evaluate_input("Original Length") == 0):
+                # this is meant to be set automatically.
+                c.rest_length = xf.bGetObject().bone.length
         self.executed = True
 
 class LinkDampedTrack(MantisLinkNode):
@@ -430,21 +413,19 @@ class LinkDampedTrack(MantisLinkNode):
         self.init_parameters(additional_parameters={ "Name":None })
         self.set_traverse([("Input Relationship", "Output Relationship")])
 
-    def GetxForm(self):
-        return GetxForm(self)
-
     def bExecute(self, context):
         prepare_parameters(self)
-        print(wrapGreen("Creating ")+wrapWhite("Damped Track")+
-             wrapGreen(" Constraint for bone: ") +
-             wrapOrange(self.GetxForm().bGetObject().name))
-        c = self.GetxForm().bGetObject().constraints.new('DAMPED_TRACK')
-        self.get_target_and_subtarget(c)
-        if constraint_name := self.evaluate_input("Name"):
-            c.name = constraint_name
-        self.bObject = c
-        props_sockets = self.gen_property_socket_map()
-        evaluate_sockets(self, c, props_sockets)
+        for xf in self.GetxForm():
+            print(wrapGreen("Creating ")+wrapWhite("Damped Track")+
+                wrapGreen(" Constraint for bone: ") +
+                wrapOrange(xf.bGetObject().name))
+            c = xf.bGetObject().constraints.new('DAMPED_TRACK')
+            self.get_target_and_subtarget(c)
+            if constraint_name := self.evaluate_input("Name"):
+                c.name = constraint_name
+            self.bObject.append(c)
+            props_sockets = self.gen_property_socket_map()
+            evaluate_sockets(self, c, props_sockets)
         self.executed = True
 
 class LinkLockedTrack(MantisLinkNode):
@@ -453,21 +434,19 @@ class LinkLockedTrack(MantisLinkNode):
         self.init_parameters(additional_parameters={"Name":None })
         self.set_traverse([("Input Relationship", "Output Relationship")])
 
-    def GetxForm(self):
-        return GetxForm(self)
-
     def bExecute(self, context):
         prepare_parameters(self)
-        print(wrapGreen("Creating ")+wrapWhite("Locked Track")+
-             wrapGreen(" Constraint for bone: ") +
-             wrapOrange(self.GetxForm().bGetObject().name))
-        c = self.GetxForm().bGetObject().constraints.new('LOCKED_TRACK')
-        self.get_target_and_subtarget(c)
-        if constraint_name := self.evaluate_input("Name"):
-            c.name = constraint_name
-        self.bObject = c
-        props_sockets = self.gen_property_socket_map()
-        evaluate_sockets(self, c, props_sockets)
+        for xf in self.GetxForm():
+            print(wrapGreen("Creating ")+wrapWhite("Locked Track")+
+                wrapGreen(" Constraint for bone: ") +
+                wrapOrange(xf.bGetObject().name))
+            c = xf.bGetObject().constraints.new('LOCKED_TRACK')
+            self.get_target_and_subtarget(c)
+            if constraint_name := self.evaluate_input("Name"):
+                c.name = constraint_name
+            self.bObject.append(c)
+            props_sockets = self.gen_property_socket_map()
+            evaluate_sockets(self, c, props_sockets)
         self.executed = True
 
 class LinkTrackTo(MantisLinkNode):
@@ -476,21 +455,19 @@ class LinkTrackTo(MantisLinkNode):
         self.init_parameters(additional_parameters={"Name":None })
         self.set_traverse([("Input Relationship", "Output Relationship")])
 
-    def GetxForm(self):
-        return GetxForm(self)
-
     def bExecute(self, context):
         prepare_parameters(self)
-        print(wrapGreen("Creating ")+wrapWhite("Track-To")+
-             wrapGreen(" Constraint for bone: ") +
-             wrapOrange(self.GetxForm().bGetObject().name))
-        c = self.GetxForm().bGetObject().constraints.new('TRACK_TO')
-        self.get_target_and_subtarget(c)
-        if constraint_name := self.evaluate_input("Name"):
-            c.name = constraint_name
-        self.bObject = c
-        props_sockets = self.gen_property_socket_map()
-        evaluate_sockets(self, c, props_sockets)
+        for xf in self.GetxForm():
+            print(wrapGreen("Creating ")+wrapWhite("Track-To")+
+                wrapGreen(" Constraint for bone: ") +
+                wrapOrange(xf.bGetObject().name))
+            c = xf.bGetObject().constraints.new('TRACK_TO')
+            self.get_target_and_subtarget(c)
+            if constraint_name := self.evaluate_input("Name"):
+                c.name = constraint_name
+            self.bObject.append(c)
+            props_sockets = self.gen_property_socket_map()
+            evaluate_sockets(self, c, props_sockets)
         self.executed = True
 
 
@@ -500,33 +477,28 @@ class LinkInheritConstraint(MantisLinkNode):
         self.init_parameters(additional_parameters={"Name":None })
         self.set_traverse([("Input Relationship", "Output Relationship")])
 
-    def GetxForm(self):
-        return GetxForm(self)
-
     def bExecute(self, context):
         prepare_parameters(self)
-        print(wrapGreen("Creating ")+wrapWhite("Child-Of")+
-             wrapGreen(" Constraint for bone: ") +
-             wrapOrange(self.GetxForm().bGetObject().name))
-        c = self.GetxForm().bGetObject().constraints.new('CHILD_OF')
-        self.get_target_and_subtarget(c)
-        if constraint_name := self.evaluate_input("Name"):
-            c.name = constraint_name
-        self.bObject = c
-        
-        props_sockets = self.gen_property_socket_map()
-        evaluate_sockets(self, c, props_sockets)
-        c.set_inverse_pending
-        self.executed = True
+        for xf in self.GetxForm():
+            print(wrapGreen("Creating ")+wrapWhite("Child-Of")+
+                wrapGreen(" Constraint for bone: ") +
+                wrapOrange(xf.bGetObject().name))
+            c = xf.bGetObject().constraints.new('CHILD_OF')
+            self.get_target_and_subtarget(c)
+            if constraint_name := self.evaluate_input("Name"):
+                c.name = constraint_name
+            self.bObject.append(c)
+            
+            props_sockets = self.gen_property_socket_map()
+            evaluate_sockets(self, c, props_sockets)
+            c.set_inverse_pending
+            self.executed = True
 
 class LinkInverseKinematics(MantisLinkNode):
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, LinkInverseKinematicsSockets)
         self.init_parameters(additional_parameters={"Name":None })
         self.set_traverse([("Input Relationship", "Output Relationship")])
-        
-    def GetxForm(self):
-        return GetxForm(self)
     
     def get_base_ik_bone(self, ik_bone):
         chain_length : int = (self.evaluate_input("Chain Length"))
@@ -545,10 +517,10 @@ class LinkInverseKinematics(MantisLinkNode):
     # be clamped in that range.
     # so we simply wrap the value.
     # not very efficient but it's OK
-    def set_pole_angle(self, angle: float) -> None:
+    def set_pole_angle(self, constraint, angle: float) -> None:
         from math import pi
         from .utilities import wrap
-        self.bObject.pole_angle = wrap(-pi, pi, angle)
+        constraint.pole_angle = wrap(-pi, pi, angle)
     
     def calc_pole_angle_pre(self, c, ik_bone):
         """
@@ -631,7 +603,7 @@ class LinkInverseKinematics(MantisLinkNode):
             dot_after=current_knee_direction.dot(knee_direction)
             if dot_after < dot_before: # they are somehow less aligned
                 prPurple("Mantis has gone down an unexpected code path. Please report this as a bug.")
-                angle = -angle; self.set_pole_angle(angle)
+                angle = -angle; self.set_pole_angle(c, angle)
                 dg.update()
 
         # now we can do a bisect search to find the best value.
@@ -656,7 +628,7 @@ class LinkInverseKinematics(MantisLinkNode):
                 break
             # get the center-point betweeen the bounds
             try_angle = lower_bounds + (upper_bounds-lower_bounds)/2
-            self.set_pole_angle(try_angle); dg.update()
+            self.set_pole_angle(c, try_angle); dg.update()
             prev_error = error
             error = signed_angle((base_ik_bone.tail-center_point), knee_direction, ik_axis)
             error_identical+= int(error == prev_error)
@@ -666,39 +638,41 @@ class LinkInverseKinematics(MantisLinkNode):
 
     def bExecute(self, context):
         prepare_parameters(self)
-        print(wrapGreen("Creating ")+wrapOrange("Inverse Kinematics")+
-             wrapGreen(" Constraint for bone: ") +
-             wrapOrange(self.GetxForm().bGetObject().name))
-        ik_bone = self.GetxForm().bGetObject()
-        c = self.GetxForm().bGetObject().constraints.new('IK')
-        self.get_target_and_subtarget(c)
-        self.get_target_and_subtarget(c, input_name = 'Pole Target')
-        if constraint_name := self.evaluate_input("Name"):
-            c.name = constraint_name
-        
-        self.bObject = c
-        c.chain_count = 1 # so that, if there are errors, this doesn't print
-        #  a whole bunch of circular dependency crap from having infinite chain length
-        if (c.pole_target):
-            self.set_pole_angle(self.calc_pole_angle_pre(c, ik_bone))
+        for xf in self.GetxForm():
+            print(wrapGreen("Creating ")+wrapOrange("Inverse Kinematics")+
+                wrapGreen(" Constraint for bone: ") +
+                wrapOrange(xf.bGetObject().name))
+            ik_bone = xf.bGetObject()
+            c = xf.bGetObject().constraints.new('IK')
+            self.get_target_and_subtarget(c)
+            self.get_target_and_subtarget(c, input_name = 'Pole Target')
+            if constraint_name := self.evaluate_input("Name"):
+                c.name = constraint_name
+            
+            self.bObject.append(c)
+            c.chain_count = 1 # so that, if there are errors, this doesn't print
+            #  a whole bunch of circular dependency crap from having infinite chain length
+            if (c.pole_target):
+                self.set_pole_angle(c, self.calc_pole_angle_pre(c, ik_bone))
 
-        props_sockets = self.gen_property_socket_map()
-        evaluate_sockets(self, c, props_sockets)
-        c.use_location   = self.evaluate_input("Position") > 0
-        c.use_rotation   = self.evaluate_input("Rotation") > 0
+            props_sockets = self.gen_property_socket_map()
+            evaluate_sockets(self, c, props_sockets)
+            c.use_location   = self.evaluate_input("Position") > 0
+            c.use_rotation   = self.evaluate_input("Rotation") > 0
         self.executed = True
 
     def bFinalize(self, bContext = None):
         # adding a test here
         if bContext:
-            ik_bone = self.GetxForm().bGetObject(mode='POSE')
-            if self.bObject.pole_target:
-                prWhite(f"Fine-tuning IK Pole Angle for {self}")
-                # make sure to enable it first
-                enabled_before = self.bObject.mute
-                self.bObject.mute = False
-                self.calc_pole_angle_post(self.bObject, ik_bone, bContext)
-                self.bObject.mute = enabled_before
+            for i, constraint in enumerate(self.bObject):
+                ik_bone = self.GetxForm()[i].bGetObject(mode='POSE')
+                if constraint.pole_target:
+                    prWhite(f"Fine-tuning IK Pole Angle for {self}")
+                    # make sure to enable it first
+                    enabled_before = constraint.mute
+                    constraint.mute = False
+                    self.calc_pole_angle_post(constraint, ik_bone, bContext)
+                    constraint.mute = enabled_before
         super().bFinalize(bContext)
         
 
@@ -727,38 +701,35 @@ class LinkDrivenParameter(MantisLinkNode):
         self.init_parameters(additional_parameters={ "Name":None })
         self.set_traverse([("Input Relationship", "Output Relationship")])
 
-    def GetxForm(self):
-        return GetxForm(self)
-
     def bExecute(self, bContext = None,):
         prepare_parameters(self)
         prGreen("Executing Driven Parameter node")
         prop = self.evaluate_input("Parameter")
         index = self.evaluate_input("Index")
         value = self.evaluate_input("Value")
-        xf = self.GetxForm()
-        ob = xf.bGetObject(mode="POSE")
-        # IMPORTANT: this node only works on pose bone attributes.
-        self.bObject = ob
-        length=1
-        if hasattr(ob, prop):
-            try:
-                length = len(getattr(ob, prop))
-            except TypeError:
-                pass
-            except AttributeError:
-                pass
-        else:
-            raise AttributeError(f"Cannot Set value {prop} on object because it does not exist.")
-        def_value = 0.0
-        if length>1:
-            def_value=[0.0]*length
-            self.parameters["Value"] = tuple( 0.0 if i != index else value for i in range(length))
+        for xf in self.GetxForm():
+            ob = xf.bGetObject(mode="POSE")
+            # IMPORTANT: this node only works on pose bone attributes.
+            self.bObject.append(ob)
+            length=1
+            if hasattr(ob, prop):
+                try:
+                    length = len(getattr(ob, prop))
+                except TypeError:
+                    pass
+                except AttributeError:
+                    pass
+            else:
+                raise AttributeError(f"Cannot Set value {prop} on object because it does not exist.")
+            def_value = 0.0
+            if length>1:
+                def_value=[0.0]*length
+                self.parameters["Value"] = tuple( 0.0 if i != index else value for i in range(length))
 
-        props_sockets = {
-            prop: ("Value", def_value)
-        }
-        evaluate_sockets(self, ob, props_sockets)
+            props_sockets = {
+                prop: ("Value", def_value)
+            }
+            evaluate_sockets(self, ob, props_sockets)
 
         self.executed = True
 
@@ -785,35 +756,35 @@ class LinkArmature(MantisLinkNode):
         self.set_traverse([("Input Relationship", "Output Relationship")])
         setup_custom_props(self) # <-- this takes care of the runtime-added sockets
 
-    def GetxForm(self):
-        return GetxForm(self)
-
     def bExecute(self, bContext = None,):
-        prGreen("Creating Armature Constraint for bone: \""+ self.GetxForm().bGetObject().name + "\"")
         prepare_parameters(self)
-        c = self.GetxForm().bGetObject().constraints.new('ARMATURE')
-        if constraint_name := self.evaluate_input("Name"):
-            c.name = constraint_name
-        self.bObject = c
-        # get number of targets
-        num_targets = len( list(self.inputs.values())[6:] )//2
-        
-        props_sockets = self.gen_property_socket_map()
-        targets_weights = {}
-        for i in range(num_targets):
-            target = c.targets.new()
-            target_input_name = list(self.inputs.keys())[i*2+6  ]
-            weight_input_name = list(self.inputs.keys())[i*2+6+1]
-            self.get_target_and_subtarget(target, target_input_name)
-            weight_value=self.evaluate_input(weight_input_name)
-            if not isinstance(weight_value, float):
-                weight_value=0
-            targets_weights[i]=weight_value
-            props_sockets["targets[%d].weight" % i] = (weight_input_name, 0)
-            # targets_weights.append({"weight":(weight_input_name, 0)})
-        evaluate_sockets(self, c, props_sockets)
-        for target, value in targets_weights.items():
-            c.targets[target].weight=value
+        for xf in self.GetxForm():
+            print(wrapGreen("Creating ")+wrapOrange("Armature")+
+                wrapGreen(" Constraint for bone: ") +
+                wrapOrange(xf.bGetObject().name))
+            c = xf.bGetObject().constraints.new('ARMATURE')
+            if constraint_name := self.evaluate_input("Name"):
+                c.name = constraint_name
+            self.bObject.append(c)
+            # get number of targets
+            num_targets = len( list(self.inputs.values())[6:] )//2
+            
+            props_sockets = self.gen_property_socket_map()
+            targets_weights = {}
+            for i in range(num_targets):
+                target = c.targets.new()
+                target_input_name = list(self.inputs.keys())[i*2+6  ]
+                weight_input_name = list(self.inputs.keys())[i*2+6+1]
+                self.get_target_and_subtarget(target, target_input_name)
+                weight_value=self.evaluate_input(weight_input_name)
+                if not isinstance(weight_value, float):
+                    weight_value=0
+                targets_weights[i]=weight_value
+                props_sockets["targets[%d].weight" % i] = (weight_input_name, 0)
+                # targets_weights.append({"weight":(weight_input_name, 0)})
+            evaluate_sockets(self, c, props_sockets)
+            for target, value in targets_weights.items():
+                c.targets[target].weight=value
         self.executed = True
 
 class LinkSplineIK(MantisLinkNode):
@@ -824,25 +795,22 @@ class LinkSplineIK(MantisLinkNode):
         self.init_parameters(additional_parameters={"Name":None })
         self.set_traverse([("Input Relationship", "Output Relationship")])
 
-    def GetxForm(self):
-        return GetxForm(self)
-
     def bExecute(self, bContext = None,):
         prepare_parameters(self)
-        if not self.inputs['Target'].is_linked:
-            print(f"INFO: {self} is not connected to any target, it will not be generated.")
-            return
-        prGreen("Creating Spline-IK Constraint for bone: \""+ self.GetxForm().bGetObject().name + "\"")
-        c = self.GetxForm().bGetObject().constraints.new('SPLINE_IK')
-        # set the spline - we need to get the right one 
-        spline_index = self.evaluate_input("Spline Index")
-        from .utilities import get_extracted_spline_object
-        proto_curve = self.inputs['Target'].links[0].from_node.bGetObject()
-        curve = get_extracted_spline_object(proto_curve, spline_index, self.mContext)
-        c.target=curve
-        if constraint_name := self.evaluate_input("Name"):
-            c.name = constraint_name
-        self.bObject = c
-        props_sockets = self.gen_property_socket_map()
-        evaluate_sockets(self, c, props_sockets)
+        for xf in self.GetxForm():
+            print(wrapGreen("Creating ")+wrapOrange("Spline-IK")+
+                wrapGreen(" Constraint for bone: ") +
+                wrapOrange(xf.bGetObject().name))
+            c = xf.bGetObject().constraints.new('SPLINE_IK')
+            # set the spline - we need to get the right one 
+            spline_index = self.evaluate_input("Spline Index")
+            from .utilities import get_extracted_spline_object
+            proto_curve = self.inputs['Target'].links[0].from_node.bGetObject()
+            curve = get_extracted_spline_object(proto_curve, spline_index, self.mContext)
+            c.target=curve
+            if constraint_name := self.evaluate_input("Name"):
+                c.name = constraint_name
+            self.bObject.append(c)
+            props_sockets = self.gen_property_socket_map()
+            evaluate_sockets(self, c, props_sockets)
         self.executed = True

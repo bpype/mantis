@@ -8,7 +8,6 @@ from collections.abc import Callable
 # the x_containers files import * from this file
 # so all the top-level imports are carried over
 
-
 #TODO: refactor the socket definitions so this becomes unnecessary.
 def get_socket_value(node_socket):
     value = None
@@ -17,8 +16,6 @@ def get_socket_value(node_socket):
     if node_socket.bl_idname == 'MatrixSocket':
         value =  node_socket.TellValue()
     return value
-
-
 
 # TODO: modify this to work with multi-input nodes
 def trace_single_line(node_container, input_name, link_index=0):
@@ -38,7 +35,6 @@ def trace_single_line(node_container, input_name, link_index=0):
             else:
                 break
     return nodes, socket
-
 
 # this is same as the other, just flip from/to and in/out
 def trace_single_line_up(node_container, output_name,):
@@ -82,7 +78,7 @@ def trace_line_up_branching(node : MantisNode, output_name : str,
                         socket = other
                         if break_condition(socket.node):
                             leaf_nodes.append(socket.node)
-                        if socket.can_traverse:
+                        elif socket.can_traverse:
                             check_sockets.append(socket.traverse_target)
                         else: # this is an input.
                             leaf_nodes.append(socket.node)
@@ -137,14 +133,13 @@ def check_for_driver(node_container, input_name, index = None):
         prop = prop[index]
     return (prop.__class__.__name__ == 'MantisDriver')
 
-
 # TODO: this should handle sub-properties better
-def evaluate_sockets(nc, c, props_sockets):
+def evaluate_sockets(nc, b_object, props_sockets,):
     # this is neccesary because some things use dict properties for dynamic properties and setattr doesn't work
     def safe_setattr(ob, att_name, val):
         if ob.__class__.__name__ in ["NodesModifier"]:
             ob[att_name]=val
-        elif c.__class__.__name__ in ["Key"]:
+        elif b_object.__class__.__name__ in ["Key"]:
             if not val: val=0
             ob.key_blocks[att_name].value=val
         elif "]." in att_name:
@@ -152,14 +147,13 @@ def evaluate_sockets(nc, c, props_sockets):
             prop=att_name.split('[')[0]
             prop1=att_name.split('.')[1]
             index = int(att_name.split('[')[1][0])
-            setattr(getattr(c, prop)[index], prop1, val)
+            setattr(getattr(b_object, prop)[index], prop1, val)
         else:
             try:
                 setattr(ob, att_name, val)
             except Exception as e:
                 prRed(ob, att_name, val); raise e
     for prop, (sock, default) in props_sockets.items():
-        # c = nc.bObject
         # annoyingly, sometimes the socket is an array
         index = None
         if isinstance(sock, tuple):
@@ -168,8 +162,8 @@ def evaluate_sockets(nc, c, props_sockets):
             sock = (sock, index)
             original_prop = prop
             # TODO: deduplicate this terrible hack
-            if ("." in prop) and not c.__class__.__name__ in ["Key"]: # this is a property of a property...
-                sub_props = [c]
+            if ("." in prop) and not b_object.__class__.__name__ in ["Key"]: # this is a property of a property...
+                sub_props = [b_object]
                 while ("." in prop):
                     split_prop = prop.split(".")
                     prop = split_prop[1]
@@ -183,59 +177,58 @@ def evaluate_sockets(nc, c, props_sockets):
                 safe_setattr(sub_props[-1], prop, default)
             # this is really stupid
             else:
-                safe_setattr(c, prop, default)
+                safe_setattr(b_object, prop, default)
             if nc.node_type in ['LINK',]:
-                printname  = wrapOrange(nc.GetxForm().bGetObject().name)
+                printname  = wrapOrange(b_object.id_data.name)
             elif nc.node_type in ['XFORM',]:
                 printname  = wrapOrange(nc.bGetObject().name)
             else:
                 printname = wrapOrange(nc)
             print("Adding driver %s to %s in %s" % (wrapPurple(original_prop), wrapWhite(nc.signature[-1]), printname))
-            if c.__class__.__name__ in ["NodesModifier"]:
+            if b_object.__class__.__name__ in ["NodesModifier"]:
                 nc.drivers[sock] = "[\""+original_prop+"\"]" # lol. It is a dict element not a "true" property
-            elif c.__class__.__name__ in ["Key"]:
+            elif b_object.__class__.__name__ in ["Key"]:
                 nc.drivers[sock] = "key_blocks[\""+original_prop+"\"].value"
             else:
                 nc.drivers[sock] = original_prop
         else: # here we can do error checking for the socket if needed
             if (index is not None):
-                safe_setattr(c, prop, nc.evaluate_input(sock)[index])
+                safe_setattr(b_object, prop, nc.evaluate_input(sock)[index])
             else:                    # 'mute' is better than 'enabled'
                 # UGLY HACK          # because it is available in older
                 if (prop == 'mute'): # Blenders.
-                    safe_setattr(c, prop, not bool(nc.evaluate_input(sock)))
+                    safe_setattr(b_object, prop, not bool(nc.evaluate_input(sock)))
                 elif (prop == 'hide'): # this will not cast it for me, annoying.
-                    safe_setattr(c, prop, bool(nc.evaluate_input(sock)))
+                    safe_setattr(b_object, prop, bool(nc.evaluate_input(sock)))
                 else:
                     try:
-                        # prRed(c.name, nc, prop, nc.evaluate_input(sock) )
+                        # prRed(b_object.name, nc, prop, nc.evaluate_input(sock) )
                         # print( nc.evaluate_input(sock))
                     # value_eval = nc.evaluate_input(sock)
                     # just wanna see if we are dealing with some collection
                     # check hasattr in case it is one of those ["such-and-such"] props, and ignore those
-                        if hasattr(c, prop) and (not isinstance(getattr(c, prop), str)) and hasattr(getattr(c, prop), "__getitem__"):
+                        if hasattr(b_object, prop) and (not isinstance(getattr(b_object, prop), str)) and hasattr(getattr(b_object, prop), "__getitem__"):
                             # prGreen("Doing the thing")
                             for val_index, value in enumerate(nc.evaluate_input(sock)):
                                 # assume this will work, both because val should have the right number of elements, and because this should be the right data type.
                                 from .drivers import MantisDriver
                                 if isinstance(value, MantisDriver):
-                                    getattr(c,prop)[val_index] =  default[val_index]
+                                    getattr(b_object,prop)[val_index] =  default[val_index]
                                     print("Adding driver %s to %s in %s" % (wrapPurple(prop), wrapWhite(nc.signature[-1]), nc))
                                     try:
                                         nc.drivers[sock].append((prop, val_index))
                                     except:
                                         nc.drivers[sock] = [(prop, val_index)]
                                 else:
-                                    getattr(c,prop)[val_index] =  value
+                                    getattr(b_object,prop)[val_index] =  value
                         else:
-                            # prOrange("Skipping the Thing", getattr(c, prop))
-                            safe_setattr(c, prop, nc.evaluate_input(sock))
+                            # prOrange("Skipping the Thing", getattr(b_object, prop))
+                            safe_setattr(b_object, prop, nc.evaluate_input(sock))
                     except Exception as e:
-                        prRed(c, nc, prop, sock, nc.evaluate_input(sock))
+                        prRed(b_object, nc, prop, sock, nc.evaluate_input(sock))
                         raise e
 
-
-def finish_driver(nc, driver_item, prop):
+def finish_driver(nc, b_object, driver_item, prop):
     # prWhite(nc, prop)
     index = driver_item[1]; driver_sock = driver_item[0]
     driver_trace = trace_single_line(nc, driver_sock)
@@ -247,12 +240,8 @@ def finish_driver(nc, driver_item, prop):
     else:
         driver = driver_provider.parameters[driver_socket.name].copy()
     if driver:
-        # todo: deduplicate this terrible hack
-        c = None # no idea what this c and sub_prop thing is, HACK?
-        if hasattr(nc, "bObject"):
-            c = nc.bObject # STUPID                 # stupid and bad HACK here too
         if ("." in prop) and nc.__class__.__name__ != "DeformerMorphTargetDeform": # this is a property of a property...
-            sub_props = [c]
+            sub_props = [b_object]
             while ("." in prop):
                 split_prop = prop.split(".")
                 prop = split_prop[1]
@@ -270,13 +259,13 @@ def finish_driver(nc, driver_item, prop):
                 bone_col = nc.bGetParentArmature().data.bones
             else:
                 bone_col = nc.bGetParentArmature().pose.bones
-            driver["owner"] = bone_col[nc.bObject] # we use "unsafe" brackets instead of get() because we want to see any errors that occur
+            driver["owner"] = bone_col[b_object] # we use "unsafe" brackets instead of get() because we want to see any errors that occur
         # HACK having special cases here is indicitave of a deeper problem that should be refactored
         elif nc.__class__.__name__ in ['xFormCurvePin'] and \
                       prop in ['offset_factor', 'forward_axis', 'up_axis']:
-                driver["owner"] = nc.bObject.constraints['Curve Pin']
+                driver["owner"] = b_object.constraints['Curve Pin']
         else:
-            driver["owner"] = nc.bObject
+            driver["owner"] = b_object
         driver["prop"] = prop
         return driver
     else:
@@ -292,10 +281,16 @@ def finish_drivers(nc):
     if not hasattr(nc, "drivers"):
         return # HACK
     for driver_item, prop in nc.drivers.items():
-        if isinstance(prop, list):
-            for sub_item in prop:
-                drivers.append(finish_driver(nc, (driver_item, sub_item[1]), sub_item[0]))
-        else:
-            drivers.append(finish_driver(nc, driver_item, prop))
+        b_objects = [nc.bObject]
+        if nc.node_type == 'LINK':
+            b_objects = nc.bObject # this is already a list
+        for b_object in b_objects:
+            if isinstance(prop, list):
+                for sub_item in prop:
+                        drivers.append(finish_driver(nc, b_object, (driver_item, sub_item[1]), sub_item[0]))
+                else:
+                    drivers.append(finish_driver(nc, b_object, (driver_item, sub_item[1]), sub_item[0]))
+            else:
+                drivers.append(finish_driver(nc, b_object, driver_item, prop))
     from .drivers import CreateDrivers
     CreateDrivers(drivers)

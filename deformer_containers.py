@@ -1,5 +1,5 @@
 from .node_container_common import *
-from .xForm_containers import xFormGeometryObject
+from .xForm_containers import xFormGeometryObject, xFormObjectInstance
 from .misc_nodes import InputExistingGeometryObject
 from .base_definitions import MantisNode, MantisSocketTemplate
 from .utilities import (prRed, prGreen, prPurple, prWhite, prOrange,
@@ -19,25 +19,16 @@ def TellClasses():
              DeformerMorphTargetDeform,
            ]
 
+# object instance probably can't use the deformer but it doesn't hurt to try.
+deformable_types= (xFormGeometryObject, InputExistingGeometryObject, xFormObjectInstance)
 
 def trace_xForm_back(nc, socket):
-    from .xForm_containers import xFormGeometryObject
-    from .misc_nodes import InputExistingGeometryObject
-    from bpy.types import Object
     if (trace := trace_single_line(nc, socket)[0] ) :
         for i in range(len(trace)): # have to look in reverse, actually
-            if ( isinstance(trace[ i ], xFormGeometryObject ) ) or ( isinstance(trace[ i ], InputExistingGeometryObject ) ):
+            if ( isinstance(trace[ i ], deformable_types ) ):
                 return trace[ i ].bGetObject()
         raise GraphError(wrapRed(f"No other object found for {nc}."))
 
-
-# semi-duplicated from link_containers
-def GetxForm(nc):
-    trace = trace_single_line_up(nc, "Deformer")
-    for node in trace[0]:
-        if (node.__class__ in [xFormGeometryObject, InputExistingGeometryObject]):
-            return node
-    raise GraphError("%s is not connected to a downstream xForm" % nc)
 
 class MantisDeformerNode(MantisNode):
     def __init__(self, signature : tuple,
@@ -46,6 +37,7 @@ class MantisDeformerNode(MantisNode):
         super().__init__(signature, base_tree, socket_templates)
         self.node_type = 'LINK'
         self.prepared = True
+        self.bObject=[]
     # we need evaluate_input to have the same behaviour as links.
     def evaluate_input(self, input_name, index=0):
         if ('Target' in input_name):
@@ -56,6 +48,16 @@ class MantisDeformerNode(MantisNode):
             
         else:
             return super().evaluate_input(input_name, index)
+    
+    def GetxForm(nc, output_name="Deformer"):
+        break_condition= lambda node : node.__class__ in deformable_types
+        xforms = trace_line_up_branching(nc, output_name, break_condition)
+        return_me=[]
+        for xf in xforms:
+            if xf.node_type != 'XFORM':
+                continue
+            return_me.append(xf)
+        return return_me
 
 class DeformerArmature(MantisDeformerNode):
     '''A node representing an armature deformer'''
@@ -88,7 +90,7 @@ class DeformerArmature(MantisDeformerNode):
 
     def GetxForm(self, socket="Deformer"):
         if socket == "Deformer":
-            return GetxForm(self)
+            return super().GetxForm()
         else:
             trace_xForm_back(self, socket)
     
@@ -113,8 +115,8 @@ class DeformerArmature(MantisDeformerNode):
     def bExecute(self, bContext = None,):
         self.executed = True
     
-    def initialize_vgroups(self,):
-        ob = self.GetxForm().bGetObject()
+    def initialize_vgroups(self, xf):
+        ob = xf.bGetObject()
         armOb = self.bGetParentArmature()
         for b in armOb.data.bones:
             if b.use_deform == False:
@@ -125,10 +127,10 @@ class DeformerArmature(MantisDeformerNode):
                 num_verts = len(ob.data.vertices)
                 vg.add(range(num_verts), 0, 'REPLACE')
     
-    def copy_weights(self):
+    def copy_weights(self, xf):
         # we'll use modifiers for this, maybe use GN for it in the future tho
         import bpy
-        ob = self.GetxForm().bGetObject()
+        ob = xf.bGetObject()
         try:
             copy_from = self.GetxForm(socket="Copy Skin Weights From")
         except GraphError:
@@ -162,64 +164,55 @@ class DeformerArmature(MantisDeformerNode):
     def bFinalize(self, bContext=None):
         prGreen("Executing Armature Deform Node")
         mod_name = self.evaluate_input("Name")
-        d = self.GetxForm().bGetObject().modifiers.new(mod_name, type='ARMATURE')
-        if d is None:
-            raise RuntimeError(f"Modifier was not created in node {self} -- the object is invalid.")
-        self.bObject = d
-        d.object = self.bGetParentArmature()
-        props_sockets = {
-        'vertex_group'               : ("Blend Vertex Group", ""),
-        'invert_vertex_group'        : ("Invert Vertex Group", ""),
-        'use_deform_preserve_volume' : ("Preserve Volume", False),
-        'use_multi_modifier'         : ("Use Multi Modifier", False),
-        'use_bone_envelopes'         : ("Use Envelopes", False),
-        'use_vertex_groups'          : ("Use Vertex Groups", False),
-        }
-        evaluate_sockets(self, d, props_sockets)
-        #
-        if (skin_method := self.evaluate_input("Skinning Method")) == "AUTOMATIC_HEAT":
-            # This is bad and leads to somewhat unpredictable
-            #  behaviour, e.g. what object will be selected? What mode?
-            # also bpy.ops is ugly and prone to error when used in
-            #  scripts. I don't intend to use bpy.ops when I can avoid it.
-            import bpy
-            self.initialize_vgroups()
-            bContext.view_layer.depsgraph.update()
-            ob = self.GetxForm().bGetObject()
-            armOb = self.bGetParentArmature()
-            deform_bones = []
-            for pb in armOb.pose.bones:
-                if pb.bone.use_deform == True:
-                    deform_bones.append(pb)
-            
-            context_override = {
-                                  'active_object':ob,
-                                  'selected_objects':[ob, armOb],
-                                  'active_pose_bone':deform_bones[0],
-                                  'selected_pose_bones':deform_bones,}
+        for xf in self.GetxForm():
+            ob = xf.bGetObject()
+            d = ob.modifiers.new(mod_name, type='ARMATURE')
+            if d is None:
+                raise RuntimeError(f"Modifier was not created in node {self} -- the object is invalid.")
+            self.bObject.append(d)
+            d.object = self.bGetParentArmature()
+            props_sockets = {
+            'vertex_group'               : ("Blend Vertex Group", ""),
+            'invert_vertex_group'        : ("Invert Vertex Group", ""),
+            'use_deform_preserve_volume' : ("Preserve Volume", False),
+            'use_multi_modifier'         : ("Use Multi Modifier", False),
+            'use_bone_envelopes'         : ("Use Envelopes", False),
+            'use_vertex_groups'          : ("Use Vertex Groups", False),
+            }
+            evaluate_sockets(self, d, props_sockets)
             #
-            # with bContext.temp_override(**{'active_object':armOb}):
-            #     bpy.ops.object.mode_set(mode='POSE')
-            #     bpy.ops.pose.select_all(action='SELECT')
-            for b in armOb.data.bones:
-                b.select = True
-            with bContext.temp_override(**context_override):
-                bpy.ops.paint.weight_paint_toggle()
-                bpy.ops.paint.weight_from_bones(type='AUTOMATIC')
-                bpy.ops.paint.weight_paint_toggle()
-            for b in armOb.data.bones:
-                b.select = False
-                #
-            # with bContext.temp_override(**{'active_object':armOb}):
-            #     bpy.ops.object.mode_set(mode='POSE')
-            #     bpy.ops.pose.select_all(action='DESELECT') 
-            #     bpy.ops.object.mode_set(mode='OBJECT')
-            # TODO: modify Blender to make this available as a Python API function.
-        elif skin_method == "EXISTING_GROUPS":
-            pass
-        elif skin_method == "COPY_FROM_OBJECT":
-            self.initialize_vgroups()
-            self.copy_weights()
+            if (skin_method := self.evaluate_input("Skinning Method")) == "AUTOMATIC_HEAT":
+                # This is bad and leads to somewhat unpredictable
+                #  behaviour, e.g. what object will be selected? What mode?
+                # also bpy.ops is ugly and prone to error when used in
+                #  scripts. I don't intend to use bpy.ops when I can avoid it.
+                import bpy
+                self.initialize_vgroups(xf)
+                bContext.view_layer.depsgraph.update()
+                armOb = self.bGetParentArmature()
+                deform_bones = []
+                for pb in armOb.pose.bones:
+                    if pb.bone.use_deform == True:
+                        deform_bones.append(pb)
+                context_override = {
+                                    'active_object':ob,
+                                    'selected_objects':[ob, armOb],
+                                    'active_pose_bone':deform_bones[0],
+                                    'selected_pose_bones':deform_bones,}
+                for b in armOb.data.bones:
+                    b.select = True
+                with bContext.temp_override(**context_override):
+                    bpy.ops.paint.weight_paint_toggle()
+                    bpy.ops.paint.weight_from_bones(type='AUTOMATIC')
+                    bpy.ops.paint.weight_paint_toggle()
+                for b in armOb.data.bones:
+                    b.select = False
+                # TODO: modify Blender to make this available as a Python API function.
+            elif skin_method == "COPY_FROM_OBJECT":
+                self.initialize_vgroups(xf)
+                self.copy_weights(xf)
+            # elif skin_method == "EXISTING_GROUPS":
+            #     pass
 
 
 class DeformerHook(MantisDeformerNode):
@@ -278,12 +271,6 @@ class DeformerHook(MantisDeformerNode):
                 var1['channel']="SCALE_"+axes[i]
                 driver['vars'].append(var1)
         CreateDrivers([driver])
-
-    def GetxForm(self, socket="Deformer"):
-        if socket == "Deformer":
-            return GetxForm(self)
-        else:
-            trace_xForm_back(self, socket)
             
     def bExecute(self, bContext = None,):
         self.executed = True
@@ -299,62 +286,62 @@ class DeformerHook(MantisDeformerNode):
         props_sockets = self.gen_property_socket_map()
         if isinstance(target, Bone) or isinstance(target, PoseBone):
             subtarget = target.name; target = target.id_data
-        ob=self.GetxForm().bGetObject()
-
-        if ob.type == 'CURVE':
-            spline_index = self.evaluate_input("Spline Index")
-            from .utilities import get_extracted_spline_object
-            ob = get_extracted_spline_object(ob, spline_index, self.mContext)
-        
-        reuse = False
-        for m in ob.modifiers:
-            if  m.type == 'HOOK' and m.object == target and m.subtarget == subtarget:
-                if self.evaluate_input("Influence") != m.strength:
-                    continue # make a new modifier so they can have different strengths
-                if ob.animation_data: # this can be None
-                    drivers = ob.animation_data.drivers
-                    for k in props_sockets.keys():
-                        if driver := drivers.find(k):
-                            # TODO: I should check to see if the drivers are the same...
-                            break # continue searching for an equivalent modifier
-                    else: # There was no driver - use this one.
-                        d = m; reuse = True; break
-                else: # use this one, there can't be drivers without animation_data.
-                    d = m; reuse = True; break
-        else:
-            d = ob.modifiers.new(mod_name, type='HOOK')
-            if d is None:
-                raise RuntimeError(f"Modifier was not created in node {self} -- the object is invalid.")
-        self.bObject = d
-        self.get_target_and_subtarget(d, input_name="Hook Target")
-        vertices_used=[]
-        if reuse: # Get the verts in the list... filter out all the unneeded 0's
-            vertices_used = list(d.vertex_indices)
-            include_0 = 0 in vertices_used
-            vertices_used = list(filter(lambda a : a != 0, vertices_used))
-            if include_0: vertices_used.append(0)
-        # now we add the selected vertex to the list, too
-        vertex = self.evaluate_input("Point Index")
-        if ob.type == 'CURVE' and ob.data.splines[0].type == 'BEZIER' and auto_bezier:
-            if affect_radius:
-                self.driver_for_radius(ob, target_node.bGetObject(), vertex, d.strength)
-            vertex*=3
-            vertices_used.extend([vertex, vertex+1, vertex+2])
-        else:
-            vertices_used.append(vertex)
-        # if we have a curve and it is NOT using auto-bezier for the verts..
-        if ob.type == 'CURVE' and ob.data.splines[0].type == 'BEZIER' and affect_radius and not auto_bezier:
-            print (f"WARN: {self}: \"Affect Radius\" may not behave as expected"
-                    " when used on Bezier curves without Auto-Bezier")
-            #bezier point starts at 1, and then every third vert, so 4, 7, 10...
-            if vertex%3==1:
-                self.driver_for_radius(ob, target_node.bGetObject(), vertex, d.strength)
-        if ob.type == 'CURVE' and ob.data.splines[0].type != 'BEZIER' and \
-                    affect_radius:
-            self.driver_for_radius(ob, target_node.bGetObject(), vertex, d.strength, bezier=False)
+        for xf in self.GetxForm():
+            ob=xf.bGetObject()
+            if ob.type == 'CURVE':
+                spline_index = self.evaluate_input("Spline Index")
+                from .utilities import get_extracted_spline_object
+                ob = get_extracted_spline_object(ob, spline_index, self.mContext)
             
-        d.vertex_indices_set(vertices_used)
-        evaluate_sockets(self, d, props_sockets)
+            reuse = False
+            for m in ob.modifiers:
+                if  m.type == 'HOOK' and m.object == target and m.subtarget == subtarget:
+                    if self.evaluate_input("Influence") != m.strength:
+                        continue # make a new modifier so they can have different strengths
+                    if ob.animation_data: # this can be None
+                        drivers = ob.animation_data.drivers
+                        for k in props_sockets.keys():
+                            if driver := drivers.find(k):
+                                # TODO: I should check to see if the drivers are the same...
+                                break # continue searching for an equivalent modifier
+                        else: # There was no driver - use this one.
+                            d = m; reuse = True; break
+                    else: # use this one, there can't be drivers without animation_data.
+                        d = m; reuse = True; break
+            else:
+                d = ob.modifiers.new(mod_name, type='HOOK')
+                if d is None:
+                    raise RuntimeError(f"Modifier was not created in node {self} -- the object is invalid.")
+            self.bObject.append(d)
+            self.get_target_and_subtarget(d, input_name="Hook Target")
+            vertices_used=[]
+            if reuse: # Get the verts in the list... filter out all the unneeded 0's
+                vertices_used = list(d.vertex_indices)
+                include_0 = 0 in vertices_used
+                vertices_used = list(filter(lambda a : a != 0, vertices_used))
+                if include_0: vertices_used.append(0)
+            # now we add the selected vertex to the list, too
+            vertex = self.evaluate_input("Point Index")
+            if ob.type == 'CURVE' and ob.data.splines[0].type == 'BEZIER' and auto_bezier:
+                if affect_radius:
+                    self.driver_for_radius(ob, target_node.bGetObject(), vertex, d.strength)
+                vertex*=3
+                vertices_used.extend([vertex, vertex+1, vertex+2])
+            else:
+                vertices_used.append(vertex)
+            # if we have a curve and it is NOT using auto-bezier for the verts..
+            if ob.type == 'CURVE' and ob.data.splines[0].type == 'BEZIER' and affect_radius and not auto_bezier:
+                print (f"WARN: {self}: \"Affect Radius\" may not behave as expected"
+                        " when used on Bezier curves without Auto-Bezier")
+                #bezier point starts at 1, and then every third vert, so 4, 7, 10...
+                if vertex%3==1:
+                    self.driver_for_radius(ob, target_node.bGetObject(), vertex, d.strength)
+            if ob.type == 'CURVE' and ob.data.splines[0].type != 'BEZIER' and \
+                        affect_radius:
+                self.driver_for_radius(ob, target_node.bGetObject(), vertex, d.strength, bezier=False)
+                
+            d.vertex_indices_set(vertices_used)
+            evaluate_sockets(self, d, props_sockets)
         finish_drivers(self)
         # todo: this node should be able to take many indices in the future.
         # Also: I have a Geometry Nodes implementation of this I can use... maybe...
@@ -385,7 +372,7 @@ class DeformerMorphTarget(MantisDeformerNode):
     def GetxForm(self, trace_input="Object"):
         trace = trace_single_line(self, trace_input)
         for node in trace[0]:
-            if (node.__class__ in [xFormGeometryObject, InputExistingGeometryObject]):
+            if (isinstance(node, deformable_types)):
                 return node
         raise GraphError("%s is not connected to an upstream xForm" % self)
 
@@ -436,17 +423,12 @@ class DeformerMorphTargetDeform(MantisDeformerNode):
         self.node_type = "LINK"
         self.prepared = True
         self.executed = True
-        self.bObject = None
         setup_custom_props(self)
-
-    def GetxForm(self):
-        return GetxForm(self)
     
     # bpy.data.node_groups["Morph Deform.045"].nodes["Named Attribute.020"].data_type = 'FLOAT_VECTOR'
     # bpy.context.object.add_rest_position_attribute = True
 
-
-    def gen_morph_target_modifier(self, context):
+    def gen_morph_target_modifier(self, xf, context):
         # first let's see if this is a no-op
         targets = []
         for k,v in self.inputs.items():
@@ -459,15 +441,15 @@ class DeformerMorphTargetDeform(MantisDeformerNode):
         from .geometry_node_graphgen import gen_morph_target_nodes
         m, props_sockets = gen_morph_target_nodes(
                             self.evaluate_input("Name"),
-                            self.GetxForm().bGetObject(),
+                            xf.bGetObject(),
                             targets,
                             context,
                             use_offset=self.evaluate_input("Use Offset"))
-        self.bObject = m
+        self.bObject.append(m)
         evaluate_sockets(self, m, props_sockets)
         finish_drivers(self)
 
-    def gen_shape_key(self, context): # TODO: make this a feature of the node definition that appears only when there are no prior deformers - and shows a warning!
+    def gen_shape_key(self, xf, context): # TODO: make this a feature of the node definition that appears only when there are no prior deformers - and shows a warning!
         # TODO: the below works well, but it is quite slow. It does not seem to have better performence. Its only advantage is export to FBX.
         # there are a number of things I need to fix here
         #   - reuse shape keys if possible
@@ -483,7 +465,6 @@ class DeformerMorphTargetDeform(MantisDeformerNode):
         from time import time
         start_time = time()
         from bpy import data
-        xf = self.GetxForm()
         ob = xf.bGetObject()
         dg = context.view_layer.depsgraph
         dg.update()
@@ -541,7 +522,7 @@ class DeformerMorphTargetDeform(MantisDeformerNode):
                 sk = keys.get(mt_name)
                 sk.relative_key = keys.get(rel)
         
-        self.bObject = sk.id_data
+        self.bObject.append(sk.id_data)
         evaluate_sockets(self, sk.id_data, props_sockets)
         finish_drivers(self)
         prWhite(f"Initializing morph target took {time() -start_time} seconds")
@@ -549,9 +530,9 @@ class DeformerMorphTargetDeform(MantisDeformerNode):
 
     def bFinalize(self, bContext=None):
         prGreen(f"Executing Morph Deform node {self}")
+        use_shape_keys = self.evaluate_input("Use Shape Key")
         # if there is a not a prior deformer then there should be an option to use plain 'ol shape keys
         # GN is always desirable as an option though because it can be baked & many other reasons
-        use_shape_keys = self.evaluate_input("Use Shape Key")
         if use_shape_keys: # check and see if we can.
             if self.inputs.get("Deformer"): # I guess this isn't available in some node group contexts... bad. FIXME
                 if (links := self.inputs["Deformer"].links):
@@ -560,7 +541,8 @@ class DeformerMorphTargetDeform(MantisDeformerNode):
                     elif links[0].from_node.parameters.get("Use Shape Key") == False:
                         use_shape_keys = False
         self.parameters["Use Shape Key"] = use_shape_keys
-        if use_shape_keys:
-            self.gen_shape_key(bContext)
-        else:
-            self.gen_morph_target_modifier(bContext)
+        for xf in self.GetxForm():
+            if use_shape_keys:
+                self.gen_shape_key(xf, bContext)
+            else:
+                self.gen_morph_target_modifier(xf, bContext)
