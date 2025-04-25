@@ -63,13 +63,11 @@ def TellClasses():
              UtilityPrint,
             ]
 
-
 def matrix_from_head_tail(head, tail, normal=None):
     from mathutils import Vector, Quaternion, Matrix
     if normal is None:
         rotation = Vector((0,1,0)).rotation_difference((tail-head).normalized()).to_matrix()
         m= Matrix.LocRotScale(head, rotation, None)
-        m[3][3] = (tail-head).length
     else: # construct a basis matrix
         m = Matrix.Identity(3)
         axis = (tail-head).normalized()
@@ -78,6 +76,8 @@ def matrix_from_head_tail(head, tail, normal=None):
         m[1]=axis
         m[2]=normal
         m = m.transposed().to_4x4()
+        m.translation=head.copy()
+    m[3][3]=(tail-head).length
     return m
 
 def get_mesh_from_curve(curve_name : str, execution_id : str, bContext, ribbon=True):
@@ -278,17 +278,7 @@ class UtilityMatrixFromCurve(MantisNode):
     '''Get a matrix from a curve'''
 
     def __init__(self, signature, base_tree):
-        super().__init__(signature, base_tree)
-        inputs = [
-          "Curve"            ,
-          "Total Divisions"  ,
-          "Matrix Index"     ,
-        ]
-        outputs = [
-          "Matrix" ,
-        ]
-        self.inputs.init_sockets(inputs)
-        self.outputs.init_sockets(outputs)
+        super().__init__(signature, base_tree, MatrixFromCurveSockets)
         self.init_parameters()
         self.node_type = "UTILITY"
 
@@ -311,19 +301,21 @@ class UtilityMatrixFromCurve(MantisNode):
             #
             num_divisions = self.evaluate_input("Total Divisions")
             m_index = self.evaluate_input("Matrix Index")
+            spline_index = self.evaluate_input("Spline Index")
+            splines_factors = [ [] for i in range (spline_index)]
             factors = [1/num_divisions*m_index, 1/num_divisions*(m_index+1)]
-            data = data_from_ribbon_mesh(m, [factors], curve.matrix_world)
-            head=data[0][0][0]
-            tail= data[0][0][1]
+            splines_factors.append(factors)
+            data = data_from_ribbon_mesh(m, splines_factors, curve.matrix_world)
+            head=data[spline_index][0][0]
+            tail= data[spline_index][0][1]
             axis = (tail-head).normalized()
-            normal=data[0][2][0]
+            normal=data[spline_index][2][0]
             # make sure the normal is perpendicular to the tail
             from .utilities import make_perpendicular
             normal = make_perpendicular(axis, normal)
             mat = matrix_from_head_tail(head, tail, normal)
             # this is in world space... let's just convert it back
             mat.translation = head - curve.location
-            mat[3][3]=(tail-head).length
 
             # TODO HACK TODO
             # all the nodes should work in world-space, and it should be the responsibility
@@ -341,16 +333,7 @@ class UtilityPointFromCurve(MantisNode):
     '''Get a point from a curve'''
 
     def __init__(self, signature, base_tree):
-        super().__init__(signature, base_tree)
-        inputs = [
-          "Curve"       ,
-          "Factor"      ,
-        ]
-        outputs = [
-          "Point" ,
-        ]
-        self.inputs.init_sockets(inputs)
-        self.outputs.init_sockets(outputs)
+        super().__init__(signature, base_tree, PointFromCurveSockets)
         self.init_parameters()
         self.node_type = "UTILITY"
 
@@ -367,9 +350,12 @@ class UtilityPointFromCurve(MantisNode):
             from .utilities import data_from_ribbon_mesh
             #
             num_divisions = 1
+            spline_index = self.evaluate_input("Spline Index")
+            splines_factors = [ [] for i in range (spline_index)]
             factors = [self.evaluate_input("Factor")]
-            data = data_from_ribbon_mesh(m, [factors], curve.matrix_world)
-            p = data[0][0][0] - curve.location
+            splines_factors.append(factors)
+            data = data_from_ribbon_mesh(m, splines_factors, curve.matrix_world)
+            p = data[spline_index][0][0] - curve.location
         self.parameters["Point"] = p
         self.prepared, self.executed = True, True
     
@@ -380,16 +366,7 @@ class UtilityMatricesFromCurve(MantisNode):
     '''Get matrices from a curve'''
 
     def __init__(self, signature, base_tree):
-        super().__init__(signature, base_tree)
-        inputs = [
-          "Curve"            ,
-          "Total Divisions"  ,
-        ]
-        outputs = [
-          "Matrices" ,
-        ]
-        self.inputs.init_sockets(inputs)
-        self.outputs.init_sockets(outputs)
+        super().__init__(signature, base_tree, MatricesFromCurveSockets)
         self.init_parameters()
         self.node_type = "UTILITY"
 
@@ -413,17 +390,20 @@ class UtilityMatricesFromCurve(MantisNode):
             mesh = get_mesh_from_curve(curve.name, self.base_tree.execution_id, bContext)
             from .utilities import data_from_ribbon_mesh
             num_divisions = self.evaluate_input("Total Divisions")
+            spline_index = self.evaluate_input("Spline Index")
+            splines_factors = [ [] for i in range (spline_index)]
             factors = [0.0] + [(1/num_divisions*(i+1)) for i in range(num_divisions)]
-            data = data_from_ribbon_mesh(mesh, [factors], curve.matrix_world)
-            
-            # 0 is the spline index. 0 selects points as opposed to normals or whatever.
+            splines_factors.append(factors)
+            data = data_from_ribbon_mesh(mesh, splines_factors, curve.matrix_world)
+            # [spline_index][points,tangents,normals][datapoint_index]
             from .utilities import make_perpendicular
-            matrices = [matrix_from_head_tail(
-                data[0][0][i], 
-                data[0][0][i+1],
-                make_perpendicular((data[0][0][i+1]-data[0][0][i]).normalized(), data[0][2][i]),) \
-                    for i in range(num_divisions)]
-        
+            matrices=[]
+            for i in range(num_divisions):
+                m = matrix_from_head_tail (
+                data[spline_index][0][i], data[spline_index][0][i+1],
+                make_perpendicular((data[spline_index][0][i+1]-data[spline_index][0][i]).normalized(), data[spline_index][2][i]),)
+                m.translation = data[spline_index][0][i] - curve.location
+                matrices.append(m)
 
         for link in self.outputs["Matrices"].links:
             for i, m in enumerate(matrices):
@@ -478,17 +458,7 @@ class UtilityNumberOfCurveSegments(MantisNode):
 
 class UtilityMatrixFromCurveSegment(MantisNode):
     def __init__(self, signature, base_tree):
-        super().__init__(signature, base_tree)
-        inputs = [
-          "Curve"            ,
-          "Spline Index"     ,
-          "Segment Index"    ,
-        ]
-        outputs = [
-          "Matrix"           ,
-        ]
-        self.inputs.init_sockets(inputs)
-        self.outputs.init_sockets(outputs)
+        super().__init__(signature, base_tree, MatrixFromCurveSegmentSockets)
         self.init_parameters()
         self.node_type = "UTILITY"
 
@@ -535,7 +505,6 @@ class UtilityMatrixFromCurveSegment(MantisNode):
             normal = make_perpendicular(axis, normal)
             m = matrix_from_head_tail(head, tail, normal)
             m.translation = head - curve.location
-            m[3][3]=(tail-head).length
             self.parameters["Matrix"] = m
         self.prepared, self.executed = True, True
     
@@ -1712,8 +1681,6 @@ class UtilitySetBoneMatrixTail(MantisNode):
       self.parameters["Result"] = matrix_from_head_tail(matrix.translation, self.evaluate_input("Tail Location"))
       self.prepared = True
       self.executed = True
-
-
 
 class UtilityPrint(MantisNode):
     def __init__(self, signature, base_tree):

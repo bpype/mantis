@@ -678,17 +678,6 @@ class xFormGeometryObject(MantisNode):
         # NOW: find out if we need to duplicate the object data.
         dupe_data=False
         node_line = trace_single_line(self, "Deformer")[0]
-        from .deformer_containers import DeformerHook
-        for deformer in node_line:
-            if isinstance(deformer, DeformerHook) and  \
-               deformer.evaluate_input("Affect Curve Radius") == True and \
-               self.bObject.type == 'CURVE':
-                    print(f"INFO: Duplicating data {self.bObject.data.name} in {self} so it can be used for drivers.")
-                    dupe_data=True; break
-        if dupe_data:
-            name = self.bObject.data.name
-            self.bObject.data=self.bObject.data.copy()
-            self.bObject.data.name = name+"_MANTIS"
         reset_object_data(self.bObject)
         matrix= get_matrix(self)
         self.parameters['Matrix'] = matrix
@@ -811,12 +800,14 @@ class xFormObjectInstance(MantisNode):
         return self.bObject
 
 from .base_definitions import MantisSocketTemplate as SockTemplate
+from .misc_nodes_socket_templates import SplineIndexTemplate
 xFormCurvePinSockets = [
     NameTemplate := SockTemplate(
         name="Name", is_input=True,  bl_idname='StringSocket',
         default_value='Curve Pin', blender_property='name' ),
     ParentCurveTemplate := SockTemplate(
         name="Parent Curve", is_input=True,  bl_idname='xFormSocket', ),
+    SplineIndexTemplate,
     FactorTemplate := SockTemplate(
         name="Curve Pin Factor", is_input=True,  bl_idname='FloatFactorSocket',
         default_value=0.0, blender_property='offset_factor' ),
@@ -877,9 +868,6 @@ class xFormCurvePin(MantisNode):
         self.bObject = ob
         
         reset_object_data(ob)
-        # Link to Scene:
-        if (ob.name not in bContext.view_layer.active_layer_collection.collection.objects):
-            bContext.view_layer.active_layer_collection.collection.objects.link(ob)
         
         node_line = trace_single_line(self, "Parent Curve")[0][1:] # slice excludes self
         for other_node in node_line:
@@ -896,6 +884,16 @@ class xFormCurvePin(MantisNode):
                               " not {curve.type}")
         # we'll limit all the transforms so we can parent it
         #  because it is annoying to have a cluttered outliner.
+        #
+        # always do this so that everything stays consistent.
+        spline_index = self.evaluate_input("Spline Index")
+        from .utilities import get_extracted_spline_object
+        curve = get_extracted_spline_object(curve, spline_index, self.mContext)
+        # Link to Scene:
+        for link_me in [ob, curve]:
+            if (link_me.name not in bContext.view_layer.active_layer_collection.collection.objects):
+                bContext.view_layer.active_layer_collection.collection.objects.link(link_me)
+
         c = ob.constraints.new("LIMIT_LOCATION")
         for max_min in ['max','min']:
             for axis in "xyz":

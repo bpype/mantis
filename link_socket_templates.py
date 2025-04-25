@@ -1,6 +1,7 @@
 from .base_definitions import MantisSocketTemplate as SockTemplate
 from bpy import app
 
+from .misc_nodes_socket_templates import SplineIndexTemplate
 # Socket Templates we will reuse:
 # inputs:
 InputRelationshipTemplate : SockTemplate = SockTemplate(
@@ -384,6 +385,7 @@ LinkArmatureSockets=[
 LinkSplineIKSockets = [
     InputRelationshipTemplate,
     TargetTemplate,
+    SplineIndexTemplate,
     ChainLengthTemplate,
     SockTemplate(name="Even Divisions", bl_idname="BooleanSocket", is_input=True,
                  default_value=False, blender_property='use_even_divisions'),
@@ -405,4 +407,4 @@ LinkSplineIKSockets = [
 
 # Remove this socket because of Blender changes.
 if (app.version >= (4, 5, 0)):
-    LinkSplineIKSockets.pop(8)
+    LinkSplineIKSockets.pop(9)

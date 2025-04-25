@@ -73,6 +73,22 @@ class DeformerHook(Node, DeformerNode):
     def init(self, context):
         self.init_sockets(HookSockets)
         self.initialized = True
+    
+    def display_update(self, parsed_tree, context):
+        curve_sockets = [
+            self.inputs["Affect Curve Radius"],
+            self.inputs['Auto-Bezier'],
+            self.inputs['Spline Index'],
+        ]
+        is_curve_hook=True
+        if self.outputs["Deformer"].is_linked:
+            from bpy.types import Object
+            if (mantis_node := parsed_tree.get(get_signature_from_edited_tree(self, context))):
+                if (xF_node := mantis_node.GetxForm()):
+                    if (ob := xF_node.bObject) and isinstance (xF_node, Object):
+                        if ob.type != 'CURVE': is_curve_hook=False
+        for socket in curve_sockets:
+            socket.hide=not is_curve_hook
 
 
 from .utilities import get_socket_maps, relink_socket_map

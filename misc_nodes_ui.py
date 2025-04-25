@@ -257,10 +257,7 @@ class UtilityMatrixFromCurve(Node, MantisUINode):
     mantis_node_class_name=bl_idname
     
     def init(self, context):
-        curv = self.inputs.new("EnumCurveSocket", "Curve")
-        self.inputs.new('IntSocket', 'Total Divisions')
-        self.inputs.new('IntSocket', 'Matrix Index')
-        self.outputs.new("MatrixSocket", "Matrix")
+        self.init_sockets(MatrixFromCurveSockets)
         self.initialized = True
 
 class UtilityPointFromCurve(Node, MantisUINode):
@@ -273,9 +270,7 @@ class UtilityPointFromCurve(Node, MantisUINode):
     mantis_node_class_name=bl_idname
     
     def init(self, context):
-        curv = self.inputs.new("EnumCurveSocket", "Curve")
-        self.inputs.new('FloatFactorSocket', 'Factor')
-        self.outputs.new("VectorSocket", "Point")
+        self.init_sockets(PointFromCurveSockets)
         self.initialized = True
 
 class UtilityNumberOfCurveSegments(Node, MantisUINode):
@@ -303,15 +298,12 @@ class UtilityMatrixFromCurveSegment(Node, MantisUINode):
     mantis_node_class_name=bl_idname
     
     def init(self, context):
-        self.inputs.new("EnumCurveSocket", "Curve")
-        self.inputs.new('UnsignedIntSocket', 'Spline Index')
-        self.inputs.new('UnsignedIntSocket', 'Segment Index')
-        self.outputs.new("MatrixSocket", "Matrix")
+        self.init_sockets(MatrixFromCurveSegmentSockets)
         self.initialized = True
 
 class UtilityGetCurvePoint(Node, MantisUINode):
     bl_idname = 'UtilityGetCurvePoint'
-    bl_label = "Get Curve Point"
+    bl_label = "Control Point from Curve"
     bl_icon = 'NODE'
     initialized : bpy.props.BoolProperty(default = False)
     mantis_node_class_name=bl_idname
@@ -351,11 +343,7 @@ class UtilityMatricesFromCurve(Node, MantisUINode):
     mantis_node_class_name=bl_idname
     
     def init(self, context):
-        curv = self.inputs.new("EnumCurveSocket", "Curve")
-        curv.icon = "OUTLINER_OB_CURVE"
-        self.inputs.new('IntSocket', 'Total Divisions')
-        o = self.outputs.new("MatrixSocket", "Matrices")
-        o.display_shape = 'SQUARE_DOT'
+        self.init_sockets(MatricesFromCurveSockets)
         self.initialized = True
 
 def display_update_choose_nearest(self, parsed_tree, context):

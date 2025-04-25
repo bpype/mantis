@@ -300,6 +300,12 @@ class DeformerHook(MantisDeformerNode):
         if isinstance(target, Bone) or isinstance(target, PoseBone):
             subtarget = target.name; target = target.id_data
         ob=self.GetxForm().bGetObject()
+
+        if ob.type == 'CURVE':
+            spline_index = self.evaluate_input("Spline Index")
+            from .utilities import get_extracted_spline_object
+            ob = get_extracted_spline_object(ob, spline_index, self.mContext)
+        
         reuse = False
         for m in ob.modifiers:
             if  m.type == 'HOOK' and m.object == target and m.subtarget == subtarget:
@@ -328,7 +334,7 @@ class DeformerHook(MantisDeformerNode):
             vertices_used = list(filter(lambda a : a != 0, vertices_used))
             if include_0: vertices_used.append(0)
         # now we add the selected vertex to the list, too
-        vertex = self.evaluate_input("Curve Point Index")
+        vertex = self.evaluate_input("Point Index")
         if ob.type == 'CURVE' and ob.data.splines[0].type == 'BEZIER' and auto_bezier:
             if affect_radius:
                 self.driver_for_radius(ob, target_node.bGetObject(), vertex, d.strength)

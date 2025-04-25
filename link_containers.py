@@ -829,9 +829,17 @@ class LinkSplineIK(MantisLinkNode):
 
     def bExecute(self, bContext = None,):
         prepare_parameters(self)
+        if not self.inputs['Target'].is_linked:
+            print(f"INFO: {self} is not connected to any target, it will not be generated.")
+            return
         prGreen("Creating Spline-IK Constraint for bone: \""+ self.GetxForm().bGetObject().name + "\"")
         c = self.GetxForm().bGetObject().constraints.new('SPLINE_IK')
-        self.get_target_and_subtarget(c)
+        # set the spline - we need to get the right one 
+        spline_index = self.evaluate_input("Spline Index")
+        from .utilities import get_extracted_spline_object
+        proto_curve = self.inputs['Target'].links[0].from_node.bGetObject()
+        curve = get_extracted_spline_object(proto_curve, spline_index, self.mContext)
+        c.target=curve
         if constraint_name := self.evaluate_input("Name"):
             c.name = constraint_name
         self.bObject = c

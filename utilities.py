@@ -671,20 +671,52 @@ def old_bad_wrap_that_should_be_refactored(val, maxValue, minValue = None):
     return val
     #TODO clean this up
 
+def extract_spline_suffix(spline_index):
+    return ".spline."+str(spline_index).zfill(3)+".extracted"
+
+def do_extract_spline(data, spline):
+    remove_me = []
+    for other_spline in data.splines:
+        if other_spline != spline: remove_me.append(other_spline)
+    while remove_me: data.splines.remove(remove_me.pop())
+
 def extract_spline(curve, spline_index):
-    spline_suffix = "spline."+str(spline_index).zfill(3)+".extracted"
-    new_ob=curve.copy(); new_ob.name=curve.name+spline_suffix
+    """ Given a curve object and spline index, returns a new object
+        containing only the selcted spline. The new object is bound to
+        the original curve.
+    """
+    if len(curve.data.splines) == 1:
+        return curve # nothing to do here.
+    spline_suffix = extract_spline_suffix(spline_index)
+    from bpy import data
+    if (new_ob := data.objects.get(curve.name+spline_suffix)) is None:
+        new_ob=curve.copy(); new_ob.name=curve.name+spline_suffix
+    # if the data exists, it is probably stale, so delete it and start over.
+    if (old_data := data.objects.get(curve.data.name+spline_suffix)) is not None:
+        data.curves.remove(old_data)
     new_data=curve.data.copy(); new_data.name=curve.data.name+spline_suffix
     new_ob.data = new_data
     # do not check for index error here, it is the calling function's responsibility
-    keep_me = new_data.splines[spline_index]
-    remove_me = []
-    for spline in new_data.splines:
-        if spline != keep_me:
-            remove_me.append(spline)
-    while remove_me:
-        new_data.splines.remove(remove_me.pop())
+    do_extract_spline(new_data, new_data.splines[spline_index])
+    # Set up a relationship between the new object and the old object
+    # now, weirdly enough - we can't use parenting very easily because Blender
+    # defines the parent on a curve relative to the evaluated path animation
+    # Setting the inverse matrix is too much work. Use Copy Transforms instead.
+    new_ob.constraints.clear(); new_ob.modifiers.clear()
+    c = new_ob.constraints.new("COPY_TRANSFORMS"); c.target=curve
+    new_ob.parent=curve
     return new_ob
+
+def get_extracted_spline_object(proto_curve, spline_index, mContext):
+    # we're storing it separately like this to ensure all nodes use the same
+    #   object if they extract the same spline for use by Mantis.
+    # this should be transparent to the user since it is working around a
+    #   a limitation in Blender.
+    if ( curve := mContext.b_objects.get(
+                proto_curve.name+extract_spline_suffix(spline_index))) is None:
+        curve = extract_spline(proto_curve, spline_index)
+        mContext.b_objects[curve.name] = curve
+    return curve
 
 def RibbonMeshEdgeLengths(m, ribbon):
     tE = ribbon[0]; bE = ribbon[1]; c = ribbon[2]

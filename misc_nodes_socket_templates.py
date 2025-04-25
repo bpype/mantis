@@ -1,11 +1,46 @@
 from .base_definitions import MantisSocketTemplate as SockTemplate
 from dataclasses import replace
 
-GetCurvePointSockets=[
+SplineIndexTemplate = SockTemplate(name="Spline Index",
+        bl_idname='UnsignedIntSocket', is_input=True, default_value=0,)
+
+MatrixFromCurveSockets=[
     CurveTemplate := SockTemplate(name="Curve", bl_idname='EnumCurveSocket', 
         is_input=True,),
-    SplineIndexTemplate := SockTemplate(name="Spline Index",
+    SplineIndexTemplate,
+    TotalDivisionsTemplate := SockTemplate(name="Total Divisions",
         bl_idname='UnsignedIntSocket', is_input=True, default_value=0,),
+    MatrixIndexTemplate := SockTemplate(name="Matrix Index",
+        bl_idname='UnsignedIntSocket', is_input=True, default_value=0,),
+    MatrixOutTemplate := SockTemplate(
+        name="Matrix", is_input=False,  bl_idname='MatrixSocket', ),
+]
+
+MatricesOutTemplate = replace(MatrixOutTemplate,
+        name='Matrices', use_multi_input=True)
+MatricesFromCurveSockets=MatrixFromCurveSockets.copy()
+MatricesFromCurveSockets[4] = MatricesOutTemplate
+MatricesFromCurveSockets.pop(3)
+
+MatrixFromCurveSegmentSockets=[
+    CurveTemplate,
+    SplineIndexTemplate,
+    SegmentIndexTemplate := replace(SplineIndexTemplate, name="Segment Index"),
+    MatrixOutTemplate,
+]
+
+PointFromCurveSockets=[
+    CurveTemplate,
+    SplineIndexTemplate,
+    FactorTemplate := SockTemplate(name="Factor", bl_idname='FloatFactorSocket', 
+        is_input=True,),
+    PointOutTemplate := SockTemplate(name="Point", bl_idname="VectorSocket",
+        is_input=False, )
+]
+
+GetCurvePointSockets=[
+    CurveTemplate,
+    SplineIndexTemplate,
     IndexTemplate := SockTemplate(name="Index",
         bl_idname='UnsignedIntSocket', is_input=True, default_value=0,),
     OutputPointTemplate := SockTemplate(name="Point",
@@ -28,8 +63,7 @@ GetNearestFactorOnCurveSockets=[
 MatrixInvertSockets=[
     Matrix1Template := SockTemplate(
     name="Matrix 1", is_input=True,  bl_idname='MatrixSocket', ),
-    MatrixOutTemplate := SockTemplate(
-    name="Matrix", is_input=False,  bl_idname='MatrixSocket', ),
+    MatrixOutTemplate,
 ]
 
 MatrixComposeSockets=[

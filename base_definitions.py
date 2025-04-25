@@ -233,11 +233,12 @@ class MantisUINode:
             identifier = template.name
             if template.identifier:
                 identifier = template.identifier
+            use_multi_input = template.use_multi_input if template.is_input else False
             socket = collection.new(
                 template.bl_idname,
                 template.name,
                 identifier=identifier,
-                use_multi_input=template.use_multi_input
+                use_multi_input=use_multi_input
             )
             socket.hide= template.hide
             if template.category:
@@ -247,7 +248,8 @@ class MantisUINode:
                 socket.default_value = template.default_value
                 # this can throw a TypeError - it is the caller's
                 #   responsibility to send the right type.
-        
+            if template.use_multi_input: # this is an array
+                socket.display_shape = 'SQUARE_DOT'
             
 class SchemaUINode(MantisUINode):
     mantis_node_library='.schema_containers'
@@ -574,16 +576,20 @@ SOCKETS_REMOVED=[("UtilityDriverVariable", "Transform Channel"),
                  ("LinkDrivenParameter", "Enable")]
                   # Node Class           #Prior bl_idname  # prior name # new bl_idname #       new name,          # Multi
 SOCKETS_RENAMED=[ ("LinkDrivenParameter", "DriverSocket",   "Driver",     "FloatSocket",        "Value",              False),
-                  ("DeformerHook",        "IntSocket",      "Index",      "UnsignedIntSocket",  "Curve Point Index",  False)]
+                  ("DeformerHook",        "IntSocket",      "Index",      "UnsignedIntSocket",  "Point Index",  False)]
 
                 # NODE CLASS NAME             IN_OUT    SOCKET TYPE     SOCKET NAME     INDEX   MULTI     DEFAULT
 SOCKETS_ADDED=[("DeformerMorphTargetDeform", 'INPUT', 'BooleanSocket', "Use Shape Key", 1,      False,    False),
                ("DeformerMorphTargetDeform", 'INPUT', 'BooleanSocket', "Use Offset",    2,      False,    True),
                ("UtilityFCurve",             'INPUT',  "eFCrvExtrapolationMode", "Extrapolation Mode", 0, False, 'CONSTANT'),
                ("LinkCopyScale",             'INPUT',  "BooleanSocket", "Additive",     3,      False,    False),
-               ("DeformerHook",              'INPUT',  "FloatFactorSocket", "Influence", 3,     False,    1.0),
-               ("DeformerHook",              'INPUT',  "BooleanSocket", "Auto-Bezier",   4,     False,    True),
-               ("UtilityCompare",            'INPUT',  "EnumCompareOperation", "Comparison", 0,  False,   'EQUAL'),
+               ("DeformerHook",              'INPUT',  "FloatFactorSocket", "Influence",3,      False,    1.0),
+               ("DeformerHook",              'INPUT',  "UnsignedIntSocket", "Spline Index", 2,  False,    0),
+               ("DeformerHook",              'INPUT',  "BooleanSocket", "Auto-Bezier",  5,      False,    True),
+               ("UtilityCompare",            'INPUT',  "EnumCompareOperation", "Comparison", 0, False,    'EQUAL'),
+               ("UtilityMatrixFromCurve",    'INPUT',  "UnsignedIntSocket", "Spline Index",  1, False,    0),
+               ("UtilityMatricesFromCurve",  'INPUT',  "UnsignedIntSocket", "Spline Index",  1, False,    0),
+               ("UtilityPointFromCurve",     'INPUT',  "UnsignedIntSocket", "Spline Index",  1, False,    0),
                ]
 
 # replace names with bl_idnames for reading the tree and solving schemas.
@@ -632,7 +638,7 @@ class MantisExecutionContext():
     ):
         self.base_tree = base_tree
         self.execution_id = base_tree.execution_id
-        self.b_objects=[] # objects created by Mantis during execution
+        self.b_objects={} # objects created by Mantis during execution
 
 class MantisNode:
     """
