@@ -671,6 +671,21 @@ def old_bad_wrap_that_should_be_refactored(val, maxValue, minValue = None):
     return val
     #TODO clean this up
 
+def extract_spline(curve, spline_index):
+    spline_suffix = "spline."+str(spline_index).zfill(3)+".extracted"
+    new_ob=curve.copy(); new_ob.name=curve.name+spline_suffix
+    new_data=curve.data.copy(); new_data.name=curve.data.name+spline_suffix
+    new_ob.data = new_data
+    # do not check for index error here, it is the calling function's responsibility
+    keep_me = new_data.splines[spline_index]
+    remove_me = []
+    for spline in new_data.splines:
+        if spline != keep_me:
+            remove_me.append(spline)
+    while remove_me:
+        new_data.splines.remove(remove_me.pop())
+    return new_ob
+
 def RibbonMeshEdgeLengths(m, ribbon):
     tE = ribbon[0]; bE = ribbon[1]; c = ribbon[2]
     lengths = []
