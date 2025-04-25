@@ -807,6 +807,9 @@ class LinkSplineIK(MantisLinkNode):
             from .utilities import get_extracted_spline_object
             proto_curve = self.inputs['Target'].links[0].from_node.bGetObject()
             curve = get_extracted_spline_object(proto_curve, spline_index, self.mContext)
+            # link it to the view layer
+            if (curve.name not in bContext.view_layer.active_layer_collection.collection.objects):
+                bContext.view_layer.active_layer_collection.collection.objects.link(curve)
             c.target=curve
             if constraint_name := self.evaluate_input("Name"):
                 c.name = constraint_name

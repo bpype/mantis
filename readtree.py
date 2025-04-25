@@ -463,10 +463,13 @@ def execute_tree(nodes, base_tree, context, error_popups = False):
     from .node_container_common import GraphError
     original_active = context.view_layer.objects.active
     start_execution_time = time()
+    mContext = None
 
     from collections import deque
     xForm_pass = deque()
     for nc in nodes.values():
+        if not mContext: # just grab one of these. this is a silly way to do this.
+            mContext = nc.mContext
         nc.prepared = False
         nc.executed = False
         check_and_add_root(nc, xForm_pass)
@@ -581,12 +584,13 @@ def execute_tree(nodes, base_tree, context, error_popups = False):
     finally:
         context.view_layer.objects.active = active
         # clear the selection first.
+        from itertools import chain
         for ob in context.selected_objects:
             try:
                 ob.select_set(False)
             except RuntimeError: # it isn't in the view layer
                 pass
-        for ob in select_me:
+        for ob in chain(select_me, mContext.b_objects.values()):
             try:
                 ob.select_set(True)
             except RuntimeError: # it isn't in the view layer
