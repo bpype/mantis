@@ -116,6 +116,8 @@ def get_socket_maps(node, force=False):
                     # HACK I need to add this special case because during file-load,
                     #  this value is None and should not be altered until it is set once.
                     continue
+                elif "Enum" in sock.bl_idname and isinstance(sock.get("default_value"), int):
+                    continue # for string enum properties that have not yet initialized (at startup)
                 elif (val := sock.default_value) is not None:
                     pass
                 elif not force:
@@ -127,6 +129,8 @@ def get_socket_maps(node, force=False):
                     map[sock.identifier]=None
                 else:
                     raise RuntimeError(f"ERROR: Could not get socket data for socket of type: {sock.bl_idname}")
+    if node.name == 'Morph Target XZ 4-shape':
+        raise NotImplementedError
     return maps
 
 # this function is completely overloaded with different purposes and code paths
