@@ -56,6 +56,8 @@ class MantisDeformerNode(MantisNode):
         for xf in xforms:
             if xf.node_type != 'XFORM':
                 continue
+            if xf in return_me:
+                continue
             return_me.append(xf)
         return return_me
 

@@ -89,6 +89,8 @@ class MantisLinkNode(MantisNode):
         for xf in xforms:
             if xf.node_type != 'XFORM':
                 continue
+            if xf in return_me:
+                continue
             return_me.append(xf)
         return return_me
     
@@ -797,6 +799,8 @@ class LinkSplineIK(MantisLinkNode):
 
     def bExecute(self, bContext = None,):
         prepare_parameters(self)
+        if not self.inputs['Target'].is_linked:
+            raise GraphError(f"ERROR: {self} is not connected to a target curve.")
         for xf in self.GetxForm():
             print(wrapGreen("Creating ")+wrapOrange("Spline-IK")+
                 wrapGreen(" Constraint for bone: ") +
