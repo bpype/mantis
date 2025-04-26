@@ -127,13 +127,10 @@ def array_choose_relink(node, indices, array_input, output, ):
     """
         Used to choose the correct link to send out of an array-choose node.
     """
-    from .utilities import init_dependencies
     keep_links = []
-    init_my_connections=[]
     for index in indices:
         l = node.inputs[array_input].links[index]
         keep_links.append(l)
-        init_my_connections.append(l.from_node)
     for link in node.outputs[output].links:
         to_node = link.to_node
         for l in keep_links:
@@ -145,7 +142,6 @@ def array_choose_data(node, data, output):
     """
         Used to choose the correct data to send out of an array-choose node.
     """
-    from .utilities import init_dependencies
     # We need to make new outputs and link from each one based on the data in the array...
     node.outputs.init_sockets([output+"."+str(i).zfill(4) for i in range(len(data)) ])
     for i, data_item in enumerate(data):
@@ -1752,10 +1748,20 @@ class UtilityChoose(MantisNode):
         self.node_type = "UTILITY"
 
     def bPrepare(self, bContext = None,):
+        prGreen(f"Executing Choose Node {self}")
+        print (self.parameters.items())
         condition = self.evaluate_input("Condition")
-        if condition:
-            self.parameters["Result"] = self.evaluate_input("B")
+        if self.evaluate_input('A') is not None and self.evaluate_input('B') is not None:
+            self.parameters['Result'] = self.evaluate_input('B') if condition else self.evaluate_input('A')
+        elif self.evaluate_input('A') is None and self.evaluate_input('B') is None:
+            if condition: link = self.inputs['B'].links[0]
+            else: link = self.inputs['A'].links[0]
+            from_node = link.from_node; from_socket  = link.from_socket
+            for link in self.outputs['Result'].links:
+                from_node.outputs[from_socket].connect(link.to_node, link.to_socket)
+                link.die()
+            self.flush_links()
+            # attempting to init the connections seems more error prone than leaving them be.
         else:
-            self.parameters["Result"] = self.evaluate_input("A")
-        self.prepared = True
-        self.executed = True
+            raise GraphError(f"Choose Node {self} has incorrect types.")
+        self.prepared = True; self.executed = True
