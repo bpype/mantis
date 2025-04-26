@@ -150,6 +150,7 @@ matrix_category = [
         NodeItem("UtilityMatrixTransform"),
         NodeItem("UtilityMatrixInvert"),
         NodeItem("UtilityMatrixCompose"),
+        NodeItem("UtilityMatrixAlignRoll"),
         NodeItem("UtilityTransformationMatrix"),
         NodeItem("UtilitySetBoneMatrixTail"),
     ]

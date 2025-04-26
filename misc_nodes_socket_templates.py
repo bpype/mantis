@@ -68,12 +68,23 @@ MatrixInvertSockets=[
 
 MatrixComposeSockets=[
     XBasisVector := SockTemplate(
-    name="X Basis Vector", is_input=True,  bl_idname='VectorSocket', ),
-    YBasisVector := replace(XBasisVector, name="Y Basis Vector"),
-    ZBasisVector := replace(XBasisVector, name="Z Basis Vector"),
+    name="X Basis Vector", is_input=True,  bl_idname='VectorSocket', 
+        default_value = (1.0, 0.0, 0.0) ),
+    YBasisVector := replace(XBasisVector, name="Y Basis Vector",
+        default_value = (0.0, 1.0, 0.0) ),
+    ZBasisVector := replace(XBasisVector, name="Z Basis Vector",
+        default_value = (0.0, 0.0, 1.0) ),
     Translation := replace(XBasisVector, name="Translation"),
     MatrixOutTemplate,
 ]
+
+MatrixAlignRollSockets=[
+    MatrixInTemplate := replace(Matrix1Template, name="Matrix"),
+    AlignVector := SockTemplate(name="Alignment Vector", is_input=True,
+       bl_idname='VectorSocket', default_value=(0.0,-1.0,0.0)),
+    MatrixOutTemplate,
+]
+
 CompareSockets = [
     ComparisonOperation := SockTemplate( name='Comparison',
             is_input=True, bl_idname="EnumCompareOperation",

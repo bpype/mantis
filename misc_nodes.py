@@ -51,6 +51,7 @@ def TellClasses():
              UtilityMatrixTransform,
              UtilityMatrixInvert,
              UtilityMatrixCompose,
+             UtilityMatrixAlignRoll,
              UtilityTransformationMatrix,
              UtilityIntToString,
              UtilityArrayGet,
@@ -64,7 +65,7 @@ def TellClasses():
             ]
 
 def matrix_from_head_tail(head, tail, normal=None):
-    from mathutils import Vector, Quaternion, Matrix
+    from mathutils import Vector, Matrix
     if normal is None:
         rotation = Vector((0,1,0)).rotation_difference((tail-head).normalized()).to_matrix()
         m= Matrix.LocRotScale(head, rotation, None)
@@ -1521,7 +1522,6 @@ class UtilityMatrixInvert(MantisNode):
         self.prepared = True
         self.executed = True
 
-
 class UtilityMatrixCompose(MantisNode):
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, MatrixComposeSockets)
@@ -1537,9 +1537,43 @@ class UtilityMatrixCompose(MantisNode):
         matrix.transpose(); matrix=matrix.to_4x4()
         matrix.translation = self.evaluate_input('Translation')
         self.parameters['Matrix']=matrix
-        self.prepared = True
-        self.executed = True
+        self.prepared = True; self.executed = True
 
+class UtilityMatrixAlignRoll(MantisNode):
+    def __init__(self, signature, base_tree):
+        super().__init__(signature, base_tree, MatrixAlignRollSockets)
+        self.init_parameters()
+        self.node_type = "UTILITY"
+
+    def bPrepare(self, bContext = None,):
+        from mathutils import Vector, Matrix
+        align_axis = Vector(self.evaluate_input('Alignment Vector'))
+        # why do I have to construct a vector here?
+        # why is the socket returning a bpy_prop_array ?
+        print(align_axis)
+        if align_axis.length_squared==0:
+            raise RuntimeError(f"WARN: cannot align matrix in {self}"
+                                " because the alignment vector is zero.")
+        input=self.evaluate_input('Matrix').copy()
+        y_axis= input.to_3x3().transposed()[1]
+        from .utilities import project_point_to_plane
+        projected=project_point_to_plane(
+            align_axis.normalized(), Vector((0,0,0)), y_axis).normalized()
+        # now that we have the projected vector, transform the points from
+        #   the plane of the y_axis to flat space and get the signed angle
+        from math import atan2
+        flattened = (input.to_3x3().inverted() @ projected)
+        rotation = Matrix.Rotation(atan2(flattened.x, flattened.z), 4, y_axis)
+        matrix = rotation @ input.copy()
+        matrix.translation=input.translation
+        matrix[3][3] = input[3][3]
+        self.parameters['Matrix'] = matrix
+        self.prepared = True; self.executed = True
+        # NOTE: I tried other ways of setting the matrix, including composing
+        #  it directly from the Y axis, the normalized projection of the align
+        #  axis, and their cross-product. That only nearly worked.
+        # this calculation should not work better, but it does. Why?
+        
 class UtilityTransformationMatrix(MantisNode):
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree)

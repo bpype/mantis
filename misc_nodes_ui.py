@@ -57,6 +57,7 @@ def TellClasses():
              UtilityMatrixTransform,
              UtilityMatrixInvert,
              UtilityMatrixCompose,
+             UtilityMatrixAlignRoll,
              UtilityTransformationMatrix,
              UtilitySetBoneMatrixTail,
 
@@ -891,6 +892,18 @@ class UtilityMatrixCompose(Node, MantisUINode):
     
     def init(self, context):
         self.init_sockets(MatrixComposeSockets)
+        self.initialized = True
+
+class UtilityMatrixAlignRoll(Node, MantisUINode):
+    """Aligns the Z axis of a matrix to point in a direction."""
+    bl_idname = "UtilityMatrixAlignRoll"
+    bl_label = "Align Matrix Roll"
+    bl_icon = "NODE"
+    initialized : bpy.props.BoolProperty(default = False)
+    mantis_node_class_name=bl_idname
+    
+    def init(self, context):
+        self.init_sockets(MatrixAlignRollSockets)
         self.initialized = True
 
 class UtilityMatrixSetLocation(Node, MantisUINode):
