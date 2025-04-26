@@ -31,6 +31,8 @@ def socket_seek(start_link, links):
     while(link.from_socket):
         for newlink in links:
             if link.from_socket.node.inputs:
+                if link.from_node.bl_idname != 'NodeReroute':
+                    return link.from_socket
                 if newlink.to_socket == link.from_socket.node.inputs[0]:
                     link=newlink; break
         else:
