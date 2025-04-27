@@ -108,17 +108,19 @@ class MantisTree(NodeTree):
         if (bpy.app.version >= (4,4,0)):
             fix_reroute_colors(self)
 
-    def update_tree(self, context = None):
+    def update_tree(self, context = None, force=False):
         if self.is_exporting:
             return
         my_hash = str( hash_tree(self) )
-        if my_hash != self.hash:
+        if my_hash != self.hash or force:
             self.hash = my_hash
             self.is_executing = True
             from . import readtree
             prGreen("Validating Tree: %s" % self.name)
             try:
-                scene = context.scene
+                import bpy # I am importing here so that the context passed in
+                # is used for display update... but I always want to do this
+                scene = bpy.context.scene
                 scene.render.use_lock_interface = True
                 self.parsed_tree = readtree.parse_tree(self)
                 if context:
@@ -681,6 +683,9 @@ class MantisNode:
         self.hierarchy_connections, self.connections = [], []
         self.hierarchy_dependencies, self.dependencies = [], []
         self.prepared, self.executed = False, False
+        self.execution_prepared = False
+        # the above is for tracking prep state in execution, so that I can avoid preparing nodes
+        #  again without changing the readtree code much.
         self.socket_templates = socket_templates
         self.mContext = None # for now I am gonna set this at runtime
         # I know it isn't "beautiful OOP" or whatever, but it is just easier
@@ -693,7 +698,8 @@ class MantisNode:
     def reset_execution(self) -> None:
         """ Reset the node for additional execution without re-building the tree."""
         self.drivers={}; self.bObject=None
-        self.prepared, self.executed = False, False
+        self.executed = False
+        self.execution_prepared = False
 
     def init_sockets(self) -> None:
         self.inputs.init_sockets(self.socket_templates)

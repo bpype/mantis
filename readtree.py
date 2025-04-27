@@ -471,10 +471,6 @@ def execute_tree(nodes, base_tree, context, error_popups = False):
         if not mContext: # just grab one of these. this is a silly way to do this.
             mContext = nc.mContext
         nc.reset_execution()
-        # in future, execute_tree only cares about node.executed; parse_tree does node.prepared
-        # will need much testing to get it working; for now continue to reset node.prepared here
-        # Once execute_tree is ready, I can remove this line and things will continue to work.
-        nc.prepared=False # TODO remove this line to avoid repeating work!
         check_and_add_root(nc, xForm_pass)
 
     executed = []
@@ -501,26 +497,27 @@ def execute_tree(nodes, base_tree, context, error_popups = False):
                 raise GraphError("There is a probably a cycle in the graph somewhere. Fix it!")
                 # we're trying to solve the halting problem at this point.. don't do that.
                 # TODO find a better way! there are algo's for this but they will require using a different solving algo, too
-            if n.prepared:
+            if n.execution_prepared:
                 continue
             if n.node_type not in ['XFORM', 'UTILITY']:
                 for dep in n.hierarchy_dependencies:
-                    if not dep.prepared:
+                    if not dep.execution_prepared:
                         xForm_pass.appendleft(n) # hold it
                         break
                 else:
-                    n.prepared=True
+                    n.execution_prepared=True
                     executed.append(n)
                     for conn in n.hierarchy_connections:
-                        if  not conn.prepared:
+                        if  not conn.execution_prepared:
                             xForm_pass.appendleft(conn)
             else:
                 for dep in n.hierarchy_dependencies:
-                    if not dep.prepared:
+                    if not dep.execution_prepared:
                         break
                 else:
                     try:
-                        n.bPrepare(context)
+                        if not n.prepared:
+                            n.bPrepare(context)
                         if not n.executed:
                             n.bExecute(context)
                         if (n.__class__.__name__ == "xFormArmature" ):
@@ -536,10 +533,10 @@ def execute_tree(nodes, base_tree, context, error_popups = False):
                             raise execution_error_cleanup(n, e,)
                         else:
                             raise e
-                    n.prepared=True
+                    n.execution_prepared=True
                     executed.append(n)
                     for conn in n.hierarchy_connections:
-                        if  not conn.prepared:
+                        if  not conn.execution_prepared:
                             xForm_pass.appendleft(conn)
         
 
@@ -550,7 +547,8 @@ def execute_tree(nodes, base_tree, context, error_popups = False):
 
         for n in executed:
             try:
-                n.bPrepare(context)
+                if not n.prepared:
+                    n.bPrepare(context)
                 if not n.executed:
                     n.bExecute(context)
             except Exception as e:
