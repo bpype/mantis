@@ -732,27 +732,22 @@ class MantisNode:
                 continue # will be filled by the node itself
             if not node_socket: #maybe the node socket has no name
                 if ( ( len(ui_node.inputs) == 0) and ( len(ui_node.outputs) == 1) ):
-                    # this is a simple input node.
-                    node_socket = ui_node.outputs[0]
+                    node_socket = ui_node.outputs[0] # this is a simple input node.
                 elif key == 'Name': # for Links we just use the Node Label, or if there is no label, the name.
                     self.parameters[key] = ui_node.label if ui_node.label else ui_node.name
                     continue
-                else:
-                    pass
             if node_socket:
-                if node_socket.bl_idname in  ['RelationshipSocket', 'xFormSocket']:
-                    continue
-                elif node_socket.is_linked and (not node_socket.is_output):
-                    pass # we will get the value from the link, because this is a linked input port.
-                # very importantly, we do not pass linked outputs- fill these because they are probably Input nodes.
+                if node_socket.bl_idname in  ['RelationshipSocket', 'xFormSocket']: continue
+                elif node_socket.is_linked and (not node_socket.is_output): continue
+                # we will get the value from the link, because this is a linked input port.
+                # very importantly, we do not pass linked outputs
+                # fill these because they are probably Input nodes.
                 elif hasattr(node_socket, "default_value"):
                     if (value := get_socket_value(node_socket)) is not None:
                         self.parameters[key] = value
-                        # TODO: try and remove the input if it is not needed (for performance speed)
                     else:
                         raise RuntimeError(wrapRed("No value found for " + self.__repr__() + " when filling out node parameters for " + ui_node.name + "::"+node_socket.name))
-                else:
-                    pass
+
     # I don't think this works! but I like the idea
     def call_on_all_ancestors(self, *args, **kwargs):
         """Resolve the dependencies of this node with the named method and its arguments.
@@ -776,13 +771,8 @@ class MantisNode:
             method(*args[0:], **kwargs)
             solved.add(node)
             can_solve.extendleft(filter(lambda a : a in all_dependencies, node.hierarchy_connections))
-            # prPurple(can_solve)
             if self in solved:
                 break
-        # else:
-        #     for dep in all_dependencies:
-        #         if dep not in solved:
-        #             prOrange(dep)
         return
     
     # gets targets for constraints and deformers and should handle all cases
