@@ -71,7 +71,13 @@ def set_object_parent(node):
                 else:
                     node.bObject.parent = parent.bGetObject()
 
-class xFormArmature(MantisNode):
+class xFormNode(MantisNode):
+    def __init__(self, signature, base_tree, socket_templates=[]):
+        super().__init__(signature, base_tree, socket_templates)
+        self.node_type = 'XFORM'
+        self.bObject=None
+
+class xFormArmature(xFormNode):
     '''A node representing an armature object'''
     bObject = None
     
@@ -90,7 +96,6 @@ class xFormArmature(MantisNode):
         self.outputs.init_sockets(outputs)
         self.init_parameters()
         self.set_traverse([("Relationship", "xForm Out")])
-        self.node_type = 'XFORM'
 
     def bPrepare(self, bContext=None):
         self.parameters['Matrix'] = get_matrix(self)
@@ -247,7 +252,7 @@ bone_inputs= [
          "Lock Rotation",
          "Lock Scale",
 ]
-class xFormBone(MantisNode):
+class xFormBone(xFormNode):
     '''A node representing a bone in an armature'''
     # DO: make a way to identify which armature this belongs to
     def __init__(self, signature, base_tree):
@@ -259,8 +264,6 @@ class xFormBone(MantisNode):
         self.outputs.init_sockets(outputs)
         self.init_parameters()
         self.set_traverse([("Relationship", "xForm Out")])
-        self.node_type = 'XFORM'
-        self.bObject=None
     
     def bGetParentArmature(self):
         finished = False
@@ -622,7 +625,7 @@ class xFormBone(MantisNode):
         # otherwise we will do this from the schema 
         # LEGIBILITY TODO - why? explain this?
 
-class xFormGeometryObject(MantisNode):
+class xFormGeometryObject(xFormNode):
     '''A node representing an armature object'''
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree)
@@ -642,8 +645,6 @@ class xFormGeometryObject(MantisNode):
         self.outputs.init_sockets(outputs)
         self.init_parameters()
         self.set_traverse([("Relationship", "xForm Out")])
-        self.node_type = "XFORM"
-        self.bObject = None
         self.has_shape_keys = False
 
     def bPrepare(self, bContext = None,):
@@ -710,8 +711,7 @@ class xFormGeometryObject(MantisNode):
     def bGetObject(self, mode = 'POSE'):
         return self.bObject
 
-
-class xFormObjectInstance(MantisNode):
+class xFormObjectInstance(xFormNode):
     """Represents an instance of an existing geometry object."""
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree)
@@ -734,8 +734,6 @@ class xFormObjectInstance(MantisNode):
         self.links = {} # leave this empty for now!
         # now set up the traverse target...
         self.set_traverse([("Relationship", "xForm Out")])
-        self.node_type = "XFORM"
-        self.bObject = None
         self.has_shape_keys = False # Shape Keys will make a dupe so this is OK
 
     def bPrepare(self, bContext = None,):
@@ -824,13 +822,11 @@ xFormCurvePinSockets = [
         name="xForm Out", is_input=False,  bl_idname='xFormSocket', ),
 ]
 
-class xFormCurvePin(MantisNode):
+class xFormCurvePin(xFormNode):
     """An xForm pinned to a specific location on a curve."""
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree,xFormCurvePinSockets)
         self.init_parameters(additional_parameters={"Matrix":None})
-        self.node_type = "XFORM"
-        self.bObject = None
 
     def prep_driver_values(self, constraint):
         from .misc_nodes import UtilityDriver, UtilitySwitch
