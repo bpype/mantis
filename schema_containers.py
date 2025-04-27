@@ -15,7 +15,6 @@ def TellClasses():
         SchemaIncomingConnection,
     ]
 
-
 def schema_init_sockets(nc, is_input = True, in_out='INPUT', category=''):
     from .utilities import tree_from_nc
     parent_tree = tree_from_nc(nc.signature, nc.base_tree)
@@ -33,11 +32,15 @@ def schema_init_sockets(nc, is_input = True, in_out='INPUT', category=''):
 
 
 class SchemaNode(MantisNode):
-    def __init__(self, signature, base_tree):
-        super().__init__(signature, base_tree)
+    def __init__(self, signature, base_tree, socket_templates=[]):
+        super().__init__(signature, base_tree, socket_templates)
         self.node_type = 'SCHEMA'
         self.prepared = True
         self.executed = True
+
+    def reset_execution(self):
+        super().reset_execution()
+        self.prepared, self.executed=True
 
 
 class SchemaIndex(SchemaNode):

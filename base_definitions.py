@@ -653,13 +653,11 @@ class MantisNode:
         self.signature = signature
         self.inputs = MantisNodeSocketCollection(node=self, is_input=True)
         self.outputs = MantisNodeSocketCollection(node=self, is_input=False)
-        self.parameters = {}
-        self.drivers = {}
+        self.parameters, self.drivers = {}, {}; self.bObject=None
         self.node_type='UNINITIALIZED'
         self.hierarchy_connections, self.connections = [], []
         self.hierarchy_dependencies, self.dependencies = [], []
-        self.prepared = False
-        self.executed = False
+        self.prepared, self.executed = False, False
         self.socket_templates = socket_templates
         self.mContext = None # for now I am gonna set this at runtime
         # I know it isn't "beautiful OOP" or whatever, but it is just easier
@@ -668,6 +666,11 @@ class MantisNode:
         #  classes, instead of adding about 5 lines of code elsewhere.
         if self.socket_templates:
             self.init_sockets()
+    
+    def reset_execution(self) -> None:
+        """ Reset the node for additional execution without re-building the tree."""
+        self.drivers={}; self.bObject=None
+        self.prepared, self.executed = False, False
 
     def init_sockets(self) -> None:
         self.inputs.init_sockets(self.socket_templates)

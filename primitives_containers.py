@@ -11,9 +11,19 @@ def TellClasses():
 # P R I M I T I V E S
 #*#-------------------------------#++#-------------------------------#*#
 
+class PrimitiveNode(MantisNode):
+
+    def __init__(self, signature, base_tree, socket_templates=[]):
+        super().__init__(signature, base_tree, socket_templates)
+        self.node_type = "UTILITY"
+        self.prepared = True
+    
+    def reset_execution(self):
+        super().reset_execution()
+        self.prepared=True
 
 
-class CirclePrimitive(MantisNode):
+class CirclePrimitive(PrimitiveNode):
     '''A node representing a Circle Primitive mesh'''
 
     def __init__(self, signature, base_tree):
@@ -30,10 +40,6 @@ class CirclePrimitive(MantisNode):
         self.inputs.init_sockets(inputs)
         self.outputs.init_sockets(outputs)
         self.init_parameters(additional_parameters=additional_parameters)
-        self.node_type = "UTILITY"
-        self.prepared = True
-
-
 
     def bGetObject(self):
         from bpy import data

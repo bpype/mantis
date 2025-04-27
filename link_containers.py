@@ -43,8 +43,7 @@ class MantisLinkNode(MantisNode):
                  socket_templates : list[SockTemplate]=[]):
         super().__init__(signature, base_tree, socket_templates)
         self.node_type = 'LINK'
-        self.prepared = True
-        self.bObject=[]
+        self.prepared = True; self.bObject=[]
 
     def evaluate_input(self, input_name, index=0):
         # should catch 'Target', 'Pole Target' and ArmatureConstraint targets, too
@@ -93,6 +92,10 @@ class MantisLinkNode(MantisNode):
                 continue
             return_me.append(xf)
         return return_me
+    
+    def reset_execution(self):
+        super().reset_execution()
+        self.prepared = True; self.bObject = []
     
     def bFinalize(self, bContext=None):
         finish_drivers(self)

@@ -293,4 +293,3 @@ def finish_drivers(nc):
             else:
                 drivers.append(finish_driver(nc, b_object, driver_item, prop))
     from .drivers import CreateDrivers
-    CreateDrivers(drivers)

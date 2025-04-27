@@ -154,11 +154,22 @@ def array_choose_data(node, data, output):
             node.outputs[output+"."+str(i).zfill(4)].connect(to_node, link.to_socket)
         link.die()
 
+
+#*#-------------------------------#++#-------------------------------#*#
+# B A S E  C L A S S E S
+#*#-------------------------------#++#-------------------------------#*#
+
+class SimpleInputNode(MantisNode):
+    def __init__(self, signature, base_tree, socket_templates=[]):
+        super().__init__(signature, base_tree, socket_templates)
+        self.node_type = 'UTILITY'
+        self.prepared, self.executed = True, True
+
 #*#-------------------------------#++#-------------------------------#*#
 # U T I L I T Y   N O D E S
 #*#-------------------------------#++#-------------------------------#*#
 
-class InputFloat(MantisNode):
+class InputFloat(SimpleInputNode):
     '''A node representing float input'''
     
     def __init__(self, signature, base_tree):
@@ -166,11 +177,8 @@ class InputFloat(MantisNode):
         outputs = ["Float Input"]
         self.outputs.init_sockets(outputs)
         self.init_parameters()
-        self.node_type = 'UTILITY'
-        self.prepared = True
-        self.executed = True
 
-class InputIntNode(MantisNode):
+class InputIntNode(SimpleInputNode):
     '''A node representing integer input'''
     
     def __init__(self, signature, base_tree):
@@ -178,11 +186,8 @@ class InputIntNode(MantisNode):
         outputs = ["Integer"]
         self.outputs.init_sockets(outputs)
         self.init_parameters()
-        self.node_type = 'UTILITY'
-        self.prepared = True
-        self.executed = True
     
-class InputVector(MantisNode):
+class InputVector(SimpleInputNode):
     '''A node representing vector input'''
     
     def __init__(self, signature, base_tree):
@@ -190,11 +195,8 @@ class InputVector(MantisNode):
         outputs = [""]
         self.outputs.init_sockets(outputs)
         self.init_parameters()
-        self.node_type = 'UTILITY'
-        self.prepared = True
-        self.executed = True
 
-class InputBoolean(MantisNode):
+class InputBoolean(SimpleInputNode):
     '''A node representing boolean input'''
     
     def __init__(self, signature, base_tree):
@@ -202,11 +204,8 @@ class InputBoolean(MantisNode):
         outputs = [""]
         self.outputs.init_sockets(outputs)
         self.init_parameters()
-        self.node_type = 'UTILITY'
-        self.prepared = True
-        self.executed = True
 
-class InputBooleanThreeTuple(MantisNode):
+class InputBooleanThreeTuple(SimpleInputNode):
     '''A node representing a tuple of three booleans'''
         
     def __init__(self, signature, base_tree):
@@ -214,11 +213,8 @@ class InputBooleanThreeTuple(MantisNode):
         outputs = [""]
         self.outputs.init_sockets(outputs)
         self.init_parameters()
-        self.node_type = 'UTILITY'
-        self.prepared = True
-        self.executed = True
     
-class InputRotationOrder(MantisNode):
+class InputRotationOrder(SimpleInputNode):
     '''A node representing string input for rotation order'''
         
     def __init__(self, signature, base_tree):
@@ -226,12 +222,8 @@ class InputRotationOrder(MantisNode):
         outputs = [""]
         self.outputs.init_sockets(outputs)
         self.init_parameters()
-        self.node_type = 'UTILITY'
-        self.prepared = True
-        self.executed = True
     
-
-class InputTransformSpace(MantisNode):
+class InputTransformSpace(SimpleInputNode):
     '''A node representing string input for transform space'''
         
     def __init__(self, signature, base_tree):
@@ -239,14 +231,11 @@ class InputTransformSpace(MantisNode):
         outputs = [""]
         self.outputs.init_sockets(outputs)
         self.init_parameters()
-        self.node_type = 'UTILITY'
-        self.prepared = True
-        self.executed = True
         
     def evaluate_input(self, input_name):
         return self.parameters[""]
     
-class InputString(MantisNode):
+class InputString(SimpleInputNode):
     '''A node representing string input'''
         
     def __init__(self, signature, base_tree):
@@ -254,12 +243,8 @@ class InputString(MantisNode):
         outputs = [""]
         self.outputs.init_sockets(outputs)
         self.init_parameters()
-        self.node_type = 'UTILITY'
-        self.prepared = True
-        self.executed = True
 
-    
-class InputMatrix(MantisNode):
+class InputMatrix(SimpleInputNode):
     '''A node representing axis-angle quaternion input'''
         
     def __init__(self, signature, base_tree):
@@ -267,9 +252,6 @@ class InputMatrix(MantisNode):
         outputs  = ["Matrix",]
         self.outputs.init_sockets(outputs)
         self.init_parameters()
-        self.node_type = 'UTILITY'
-        self.prepared = True
-        self.executed = True
 
 class UtilityMatrixFromCurve(MantisNode):
     '''Get a matrix from a curve'''
@@ -324,7 +306,6 @@ class UtilityMatrixFromCurve(MantisNode):
     
     def bFinalize(self, bContext=None):
         cleanup_curve(self.evaluate_input("Curve"), self.base_tree.execution_id)
-
 
 class UtilityPointFromCurve(MantisNode):
     '''Get a point from a curve'''
@@ -596,8 +577,6 @@ class UtilityKDChoosePoint(MantisNode):
         array_choose_data(self, indices, "Result Index")
         array_choose_data(self, distances, "Result Distance")
         self.prepared, self.executed = True, True
-        
-
 
 class UtilityKDChooseXForm(MantisNode):
     def __init__(self, signature, base_tree):
@@ -695,8 +674,7 @@ class UtilityMetaRig(MantisNode):
         self.prepared = True
         self.executed = True
 
-
-class UtilityBoneProperties(MantisNode):
+class UtilityBoneProperties(SimpleInputNode):
     '''A node representing a bone's gettable properties'''
 
     def __init__(self, signature, base_tree):
@@ -714,9 +692,6 @@ class UtilityBoneProperties(MantisNode):
         ]
         self.outputs.init_sockets(outputs)
         self.init_parameters()
-        self.node_type = "UTILITY"
-        self.prepared = True
-        self.executed = True
 
     def fill_parameters(self, prototype=None):
         return
@@ -744,6 +719,16 @@ class UtilityDriverVariable(MantisNode):
         self.init_parameters()
         self.node_type = "DRIVER" # MUST be run in Pose mode
         self.prepared = True
+    
+    def reset_execution(self):
+        super().reset_execution()
+        self.prepared=True
+        # set these back to None. HACK
+        if (out := self.outputs["Driver Variable"]).is_linked:
+            self.parameters[out.name] = None
+            for link in out.links:
+                link.to_node.parameters[link.to_socket] = None
+        # TODO don't do this here or in bExecute, wht was I thinking?
         
     def evaluate_input(self, input_name):
         if input_name == 'Property':
@@ -812,9 +797,6 @@ class UtilityDriverVariable(MantisNode):
                 link.to_node.parameters[link.to_socket] = my_var
         self.executed = True
             
-
-
-
 class UtilityKeyframe(MantisNode):
     '''A node representing a keyframe for a F-Curve'''
 
@@ -845,7 +827,6 @@ class UtilityKeyframe(MantisNode):
         self.prepared = True
         self.executed = True
 
-
 class UtilityFCurve(MantisNode):
     '''A node representing an armature object'''
 
@@ -863,6 +844,10 @@ class UtilityFCurve(MantisNode):
         self.node_type = "UTILITY"
         setup_custom_props(self)
         self.prepared = True
+    
+    def reset_execution(self):
+        super().reset_execution()
+        self.prepared=True
 
     def evaluate_input(self, input_name):
         return super().evaluate_input(input_name)
@@ -912,7 +897,13 @@ class UtilityDriver(MantisNode):
         self.node_type = "DRIVER" # MUST be run in Pose mode
         setup_custom_props(self)
         self.prepared = True
-
+    
+    def reset_execution(self):
+        super().reset_execution()
+        from .drivers import MantisDriver
+        self.parameters["Driver"]=MantisDriver()
+        self.prepared=True
+    
     def bExecute(self, bContext = None,):
         prepare_parameters(self)
         from .drivers import MantisDriver
@@ -946,7 +937,6 @@ class UtilityDriver(MantisNode):
         self.parameters["Driver"].update(my_driver)
         print("Initializing driver %s " % (wrapPurple(self.__repr__())) )
         self.executed = True
-
 
 class UtilitySwitch(MantisNode):
     '''A node representing an armature object'''
@@ -985,6 +975,12 @@ class UtilitySwitch(MantisNode):
             if (node.__class__ in [xFormArmature, xFormBone]):
                 return node #this will fetch the first one, that's good!
         return None
+    
+    def reset_execution(self):
+        super().reset_execution()
+        from .drivers import MantisDriver
+        self.parameters["Driver"]=MantisDriver()
+        self.prepared=True
 
     def bExecute(self, bContext = None,):
         #prepare_parameters(self)
@@ -1028,8 +1024,6 @@ class UtilitySwitch(MantisNode):
         print("Initializing driver %s " % (wrapPurple(self.__repr__())) )
         self.executed = True
 
-
-
 class UtilityCombineThreeBool(MantisNode):
     '''A node for combining three booleans into a boolean three-tuple'''
 
@@ -1055,7 +1049,6 @@ class UtilityCombineThreeBool(MantisNode):
           self.evaluate_input("Z"), )
         self.prepared = True
         self.executed = True
-
 
 # Note this is a copy of the above. This needs to be de-duplicated.
 class UtilityCombineVector(MantisNode):
@@ -1084,10 +1077,8 @@ class UtilityCombineVector(MantisNode):
           self.evaluate_input("X"),
           self.evaluate_input("Y"),
           self.evaluate_input("Z"), )
-        self.prepared = True
-        self.executed = True
+        self.prepared, self.executed = True, True
   
-
 class UtilitySeparateVector(MantisNode):
     '''A node for separating a vector into three floats'''
 
@@ -1110,8 +1101,7 @@ class UtilitySeparateVector(MantisNode):
         self.parameters["X"] = self.evaluate_input("Vector")[0]
         self.parameters["Y"] = self.evaluate_input("Vector")[1]
         self.parameters["Z"] = self.evaluate_input("Vector")[2]
-        self.prepared = True
-        self.executed = True
+        self.prepared, self.executed = True, True
 
 class UtilityCatStrings(MantisNode):
     '''A node representing an armature object'''
@@ -1132,9 +1122,9 @@ class UtilityCatStrings(MantisNode):
     
     def bPrepare(self, bContext = None,):
         self.parameters["OutputString"] = self.evaluate_input("String_1")+self.evaluate_input("String_2")
-        self.prepared = True
-        self.executed = True
+        self.prepared, self.executed = True, True
 
+# TODO move this to the Xform file
 class InputExistingGeometryObject(MantisNode):
     '''A node representing an existing object'''
 
@@ -1161,6 +1151,7 @@ class InputExistingGeometryObject(MantisNode):
         if self is None and (name := self.evaluate_input("Name")):
           prRed(f"No object found with name {name} in {self}")
         self.prepared = True; self.executed = True
+
     def bGetObject(self, mode=''):
         return self.bObject
 
@@ -1179,8 +1170,12 @@ class InputExistingGeometryData(MantisNode):
         self.outputs.init_sockets(outputs)
         self.init_parameters()
         self.node_type = "UTILITY"
-        self.prepared = True
-        self.executed = True
+        self.prepared = True; self.executed = True
+
+    def reset_execution(self):
+        super().reset_execution()
+        self.prepared, self.executed = True, True
+
     # the mode argument is only for interface consistency
     def bGetObject(self, mode=''):
         from bpy import data
@@ -1208,6 +1203,10 @@ class UtilityGeometryOfXForm(MantisNode):
         self.node_type = "UTILITY"
         self.prepared = True
         self.executed = True
+
+    def reset_execution(self):
+        super().reset_execution()
+        self.prepared, self.executed = True, True
 
     # mode for interface consistency
     def bGetObject(self, mode=''):
@@ -1268,8 +1267,7 @@ class UtilityGetBoneLength(MantisNode):
         else:
             other = self.inputs["Bone Matrix"].links[0].from_node
             raise RuntimeError(f"Cannot get matrix for {self} from {other}")
-        self.prepared = True
-        self.executed = True
+        self.prepared, self.executed = True, True
 
 class UtilityPointFromBoneMatrix(MantisNode):
     '''A node representing an armature object'''
@@ -1295,9 +1293,7 @@ class UtilityPointFromBoneMatrix(MantisNode):
         head, rotation, _scale = matrix.copy().decompose()
         tail = head.copy() + (rotation @ Vector((0,1,0)))*matrix[3][3]
         self.parameters["Point"] = head.lerp(tail, self.evaluate_input("Head/Tail"))
-        self.prepared = True
-        self.executed = True
-
+        self.prepared, self.executed = True, True
 
 class UtilitySetBoneLength(MantisNode):
     '''Sets the length of a Bone's matrix'''
@@ -1326,10 +1322,8 @@ class UtilitySetBoneLength(MantisNode):
             self.parameters["Bone Matrix"] = matrix
         else:
             raise RuntimeError(f"Cannot get matrix for {self}")
-        self.prepared = True
-        self.executed = True
+        self.prepared, self.executed = True, True
 
-  
 class UtilityMatrixSetLocation(MantisNode):
     '''Sets the location of a matrix'''
 
@@ -1355,8 +1349,7 @@ class UtilityMatrixSetLocation(MantisNode):
             loc = self.evaluate_input("Location")
             matrix[0][3] = loc[0]; matrix[1][3] = loc[1]; matrix[2][3] = loc[2]
             self.parameters["Matrix"] = matrix
-        self.prepared = True
-        self.executed = True
+        self.prepared, self.executed = True, True
 
 class UtilityMatrixGetLocation(MantisNode):
     '''Gets the location of a matrix'''
@@ -1378,7 +1371,6 @@ class UtilityMatrixGetLocation(MantisNode):
         if matrix := self.evaluate_input("Matrix"):
             self.parameters["Location"] = matrix.to_translation()
         self.prepared = True; self.executed = True
-
 
 class UtilityMatrixFromXForm(MantisNode):
     """Returns the matrix of the given xForm node."""
@@ -1415,7 +1407,6 @@ class UtilityMatrixFromXForm(MantisNode):
             prRed(f"Could not find matrix for {self} - check if the referenced object exists.")
         self.prepared = True; self.executed = True
 
-
 class UtilityAxesFromMatrix(MantisNode):
     """Returns the axes of the given matrix."""
     def __init__(self, signature, base_tree):
@@ -1441,7 +1432,6 @@ class UtilityAxesFromMatrix(MantisNode):
             self.parameters['Y Axis'] = matrix[1]
             self.parameters['Z Axis'] = matrix[2]
         self.prepared = True; self.executed = True
-
 
 class UtilityBoneMatrixHeadTailFlip(MantisNode):
     def __init__(self, signature, base_tree):
@@ -1472,7 +1462,6 @@ class UtilityBoneMatrixHeadTailFlip(MantisNode):
             self.parameters["Bone Matrix"] = new_mat
         self.prepared, self.executed = True, True
 
-
 class UtilityMatrixTransform(MantisNode):
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree)
@@ -1496,9 +1485,9 @@ class UtilityMatrixTransform(MantisNode):
             self.parameters["Out Matrix"] = mat2 @ mat1copy
             self.parameters["Out Matrix"].translation = mat1copy.to_translation()+ mat2.to_translation()
         else:
-            raise RuntimeError(wrapRed(f"Node {self} did not receive all matrix inputs... found input 1? {mat1 is not None}, 2? {mat2 is not None}"))
-        self.prepared = True
-        self.executed = True
+            raise RuntimeError(wrapRed(f"Node {self} did not receive all matrix inputs..."
+                            " found input 1? {mat1 is not None}, 2? {mat2 is not None}"))
+        self.prepared, self.executed = True, True
 
 class UtilityMatrixInvert(MantisNode):
     def __init__(self, signature, base_tree):
@@ -1514,13 +1503,12 @@ class UtilityMatrixInvert(MantisNode):
             try:
                 self.parameters["Matrix"] = mat1copy.inverted()
             except ValueError as e:
-                prRed(f"ERROR: {self}: The matrix cannot be inverted.")
-                prOrange(mat1)
+                prRed(f"ERROR: {self}: The matrix cannot be inverted."); prOrange(mat1)
                 raise e
         else:
-            raise RuntimeError(wrapRed(f"Node {self} did not receive all matrix inputs... found input 1? {mat1 is not None}"))
-        self.prepared = True
-        self.executed = True
+            raise RuntimeError(wrapRed(f"Node {self} did not receive all matrix inputs..."
+                                       " found input 1? {mat1 is not None}"))
+        self.prepared, self.executed = True, True
 
 class UtilityMatrixCompose(MantisNode):
     def __init__(self, signature, base_tree):
@@ -1604,10 +1592,7 @@ class UtilityTransformationMatrix(MantisNode):
             self.parameters["Matrix"] = Matrix.Scale(self.evaluate_input("W"), 4, Vector(self.evaluate_input("Vector")).normalized())
         else:
             raise NotImplementedError(self.evaluate_input("Operation").__repr__()+ "  Operation not yet implemented.")
-        self.prepared = True
-        self.executed = True
-
-
+        self.prepared = True; self.executed = True
 
 class UtilityIntToString(MantisNode):
     def __init__(self, signature, base_tree):
@@ -1630,8 +1615,7 @@ class UtilityIntToString(MantisNode):
         zeroes = self.evaluate_input("Zero Padding")
         # I'm casting to int because I want to support any number, even though the node asks for int.
         self.parameters["String"] = str(int(number)).zfill(int(zeroes))
-        self.prepared = True
-        self.executed = True
+        self.prepared = True; self.executed = True
 
 class UtilityArrayGet(MantisNode):
     def __init__(self, signature, base_tree):
@@ -1704,13 +1688,12 @@ class UtilitySetBoneMatrixTail(MantisNode):
         self.node_type = "UTILITY"
 
     def bPrepare(self, bContext = None,):
-      from mathutils import Matrix
-      matrix = self.evaluate_input("Matrix")
-      if matrix is None: matrix = Matrix.Identity(4)
-      #just do this for now lol
-      self.parameters["Result"] = matrix_from_head_tail(matrix.translation, self.evaluate_input("Tail Location"))
-      self.prepared = True
-      self.executed = True
+        from mathutils import Matrix
+        matrix = self.evaluate_input("Matrix")
+        if matrix is None: matrix = Matrix.Identity(4)
+        #just do this for now lol
+        self.parameters["Result"] = matrix_from_head_tail(matrix.translation, self.evaluate_input("Tail Location"))
+        self.prepared = True; self.executed = True
 
 class UtilityPrint(MantisNode):
     def __init__(self, signature, base_tree):
@@ -1725,15 +1708,11 @@ class UtilityPrint(MantisNode):
     def bPrepare(self, bContext = None,):
         if my_input := self.evaluate_input("Input"):
             print("Preparation phase: ", wrapWhite(self), wrapGreen(my_input))
-        # else:
-        #     prRed("No input to print.")
         self.prepared = True
 
     def bExecute(self, bContext = None,):
         if my_input := self.evaluate_input("Input"):
             print("Execution phase: ", wrapWhite(self), wrapGreen(my_input))
-        # else:
-        #     prRed("No input to print.")
         self.executed = True
 
 class UtilityCompare(MantisNode):
@@ -1780,6 +1759,12 @@ class UtilityChoose(MantisNode):
         self.outputs.init_sockets(outputs)
         self.init_parameters()
         self.node_type = "UTILITY"
+
+    def reset_execution(self):
+        prepared=self.prepared
+        super().reset_execution()
+        # prevent this node from attempting to prepare again.
+        self.prepared, self.executed = prepared, prepared
 
     def bPrepare(self, bContext = None,):
         prGreen(f"Executing Choose Node {self}")

@@ -60,6 +60,10 @@ class MantisDeformerNode(MantisNode):
                 continue
             return_me.append(xf)
         return return_me
+    
+    def reset_execution(self):
+        super().reset_execution()
+        self.bObject=[]; self.prepared=True
 
 class DeformerArmature(MantisDeformerNode):
     '''A node representing an armature deformer'''
@@ -429,6 +433,10 @@ class DeformerMorphTargetDeform(MantisDeformerNode):
     
     # bpy.data.node_groups["Morph Deform.045"].nodes["Named Attribute.020"].data_type = 'FLOAT_VECTOR'
     # bpy.context.object.add_rest_position_attribute = True
+
+    def reset_execution(self):
+        return super().reset_execution()
+        self.executed=True
 
     def gen_morph_target_modifier(self, xf, context):
         # first let's see if this is a no-op

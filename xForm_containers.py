@@ -79,7 +79,6 @@ class xFormNode(MantisNode):
 
 class xFormArmature(xFormNode):
     '''A node representing an armature object'''
-    bObject = None
     
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree)
@@ -109,9 +108,7 @@ class xFormArmature(xFormNode):
             raise RuntimeError("Incorrect context")
 
         name = self.evaluate_input("Name")
-
         matrix = self.parameters['Matrix']
-
         reset_transforms = False
 
         #check if an object by the name exists
@@ -149,19 +146,15 @@ class xFormArmature(xFormNode):
         self.bObject = ob.name
         ob.matrix_world = matrix.copy()
         ob.data.pose_position = 'REST'
-        
         set_object_parent(self)
-            
-        
+
         # Link to Scene:
         if (ob.name not in bContext.view_layer.active_layer_collection.collection.objects):
             bContext.view_layer.active_layer_collection.collection.objects.link(ob)
-        #self.bParent(bContext)
-        
+
         print( wrapGreen("Created Armature object: ")+ wrapWhite(ob.name))
         # Finalize the action
         # oddly, overriding context doesn't seem to work
-
         try:
             bpy.ops.object.select_all(action='DESELECT')
         except RuntimeError:
@@ -184,7 +177,6 @@ class xFormArmature(xFormNode):
         # bContext.view_layer.objects.active = prevAct
 
         self.executed = True
-    
 
     def bGetObject(self, mode = ''):
         import bpy; return bpy.data.objects[self.bObject]
@@ -266,7 +258,6 @@ class xFormBone(xFormNode):
         self.set_traverse([("Relationship", "xForm Out")])
     
     def bGetParentArmature(self):
-        finished = False
         if (trace := trace_single_line(self, "Relationship")[0] ) :
             for i in range(len(trace)):
                 # have to look in reverse, actually TODO
