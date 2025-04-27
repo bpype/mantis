@@ -1140,18 +1140,17 @@ class InputExistingGeometryObject(MantisNode):
         self.outputs.init_sockets(outputs)
         self.init_parameters()
         self.node_type = "XFORM"
-    
-    def bPrepare(self, bContext=None):
-        from bpy import data
-        name = self.evaluate_input("Name")
-        if name:
-          self.bObject = data.objects.get( name  )
-        else:
-          self.bObject = None
-        if self is None and (name := self.evaluate_input("Name")):
-          prRed(f"No object found with name {name} in {self}")
-        self.prepared = True; self.executed = True
 
+    def bExecute(self, bContext=None):
+        from bpy import data
+        ob = None
+        if name := self.evaluate_input("Name"):
+            ob= data.objects.get( name  )
+        if ob is None and name:
+            prRed(f"No object found with name {name} in {self}")
+        self.bObject=ob
+        self.prepared, self.executed = True, True
+    
     def bGetObject(self, mode=''):
         return self.bObject
 
@@ -1216,7 +1215,7 @@ class UtilityGeometryOfXForm(MantisNode):
         xf = self.inputs["xForm"].links[0].from_node
         if xf.node_type == 'XFORM':
             xf_ob = xf.bGetObject()
-            if xf_ob.type in ['MESH', 'CURVE']:
+            if (xf_ob is not None) and xf_ob.type in ['MESH', 'CURVE']:
                 return xf_ob.data
         prOrange(f"WARN: Cannot retrieve data from {self}, the connected xForm is not a mesh or curve.")
         return None
