@@ -1034,6 +1034,13 @@ class UtilityCombineThreeBool(MantisNode):
         self.outputs.init_sockets(outputs)
         self.init_parameters()
         self.node_type = "UTILITY"
+    
+    def reset_execution(self): # need to make sure any references are deleted
+        super().reset_execution() # so we prepare the node again to reset them
+        if self.parameters["Three-Bool"] is not None:
+            for param in self.parameters["Three-Bool"].values():
+                if isinstance(param, dict):
+                    self.prepared=False; break
 
     def bPrepare(self, bContext = None,):
         self.parameters["Three-Bool"] = (
@@ -1063,6 +1070,13 @@ class UtilityCombineVector(MantisNode):
         self.init_parameters()
         self.node_type = "UTILITY"
 
+    def reset_execution(self): # need to make sure any references are deleted
+        super().reset_execution() # so we prepare the node again to reset them
+        if self.parameters["Vector"] is not None:
+            for param in self.parameters["Vector"]:
+                if isinstance(param, dict):
+                    self.prepared=False; break
+    
     def bPrepare(self, bContext = None,):
         #prPurple("Executing CombineVector Node")
         prepare_parameters(self)
