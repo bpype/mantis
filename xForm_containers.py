@@ -77,6 +77,11 @@ class xFormNode(MantisNode):
         self.node_type = 'XFORM'
         self.bObject=None
 
+    # because new objects are created during prep phase
+    def reset_execution(self): 
+        super().reset_execution()
+        self.prepared=False
+
 class xFormArmature(xFormNode):
     '''A node representing an armature object'''
     
