@@ -722,13 +722,9 @@ class UtilityDriverVariable(MantisNode):
     
     def reset_execution(self):
         super().reset_execution()
+        # clear this to ensure there are no stale reference pointers
+        self.parameters["Driver Variable"] = None
         self.prepared=True
-        # set these back to None. HACK
-        if (out := self.outputs["Driver Variable"]).is_linked:
-            self.parameters[out.name] = None
-            for link in out.links:
-                link.to_node.parameters[link.to_socket] = None
-        # TODO don't do this here or in bExecute, wht was I thinking?
         
     def evaluate_input(self, input_name):
         if input_name == 'Property':
@@ -750,12 +746,13 @@ class UtilityDriverVariable(MantisNode):
     def bExecute(self, bContext = None,):
         prepare_parameters(self)
         #prPurple ("Executing Driver Variable Node")
-        xForm1 = self.GetxForm()
-        xForm2 = self.GetxForm(index=2)
+        xF1 = self.GetxForm()
+        xF2 = self.GetxForm(index=2)
         # kinda clumsy
-        if xForm1 : xForm1 = xForm1.bGetObject()
-        if xForm2 : xForm2 = xForm2.bGetObject()
-        
+        xForm1, xForm2 = None, None
+        if xF1 : xForm1 = xF1.bGetObject()
+        if xF2 : xForm2 = xF2.bGetObject()
+
         v_type = self.evaluate_input("Variable Type")
         i = self.evaluate_input("Property Index"); dVarChannel = ""
         if (i >= 0): #negative values will use the vector property.
@@ -790,11 +787,7 @@ class UtilityDriverVariable(MantisNode):
             "xForm 2"       : xForm2,#self.GetxForm(index = 2),
             "channel"       : dVarChannel,}
         
-        # Push parameter to downstream connected node.connected:
-        if (out := self.outputs["Driver Variable"]).is_linked:
-            self.parameters[out.name] = my_var
-            for link in out.links:
-                link.to_node.parameters[link.to_socket] = my_var
+        self.parameters["Driver Variable"] = my_var
         self.executed = True
             
 class UtilityKeyframe(MantisNode):
