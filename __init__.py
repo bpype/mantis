@@ -211,8 +211,10 @@ addon_keymaps = []
 
 # handlers! these have to be persistent
 from bpy.app.handlers import persistent
+from .base_definitions import hash_tree
 @persistent
 def update_handler(scene):
+    # return
     context=bpy.context
     if context.space_data:
         if not hasattr(context.space_data, "path"):
@@ -224,16 +226,7 @@ def update_handler(scene):
                 return 
             if node_tree.prevent_next_exec : pass
             elif node_tree.do_live_update and not (node_tree.is_executing):
-                prev_links = node_tree.num_links
-                node_tree.num_links = len(node_tree.links)
-                if (prev_links == -1):
-                    return
-                if prev_links != node_tree.num_links:
-                    node_tree.tree_valid = False
-                if node_tree.tree_valid == False:
-                        scene.render.use_lock_interface = True
-                        node_tree.update_tree(context)
-                        scene.render.use_lock_interface = False
+                node_tree.update_tree(context)
 
 @persistent
 def execute_handler(scene):
@@ -245,7 +238,7 @@ def execute_handler(scene):
         if not trees: return
         if (node_tree := trees[0]).bl_idname in ['MantisTree']:
             if node_tree.is_exporting:
-                return 
+                return
             if node_tree.prevent_next_exec : node_tree.prevent_next_exec = False
             elif node_tree.tree_valid and node_tree.do_live_update and not (node_tree.is_executing):
                 scene.render.use_lock_interface = True

@@ -54,12 +54,28 @@ def fix_reroute_colors(tree):
             rr = reroutes_without_color.pop()
             if rr.inputs[0].is_linked:
                 link = rr.inputs[0].links[0]
-                from_node = link.from_node
                 socket = socket_seek(link, tree.links)
                 if isinstance(socket, MantisSocket):
                     rr.socket_idname = socket.bl_idname
     except Exception as e:
         print(wrapOrange("WARN: Updating reroute color failed with exception: ")+wrapWhite(f"{e.__class__.__name__}"))
+
+#functions to identify the state of the system using hashes
+# this function runs a lot so it should be optimized as well as possible.
+def hash_tree(tree):
+    trees=set(); links=[]; hash_data=""
+    for node in tree.nodes:
+        hash_data+=str(node.name)
+        if hasattr(node, 'node_tree'):
+            trees.add(node.node_tree)
+    for other_tree in trees:
+        hash_data+=str(hash_tree(other_tree))
+    for link in tree.links:
+        links.append( link.from_node.name+link.from_socket.name+
+                      link.to_node.name+link.to_socket.name+
+                      str(link.multi_input_sort_id) )
+    links.sort(); hash_data+=''.join(links)
+    return hash(hash_data)
 
 class MantisTree(NodeTree):
     '''A custom node tree type that will show up in the editor type list'''
@@ -68,12 +84,14 @@ class MantisTree(NodeTree):
     bl_icon = 'OUTLINER_OB_ARMATURE'
     
     tree_valid:BoolProperty(default=False)
+    hash:StringProperty(default='')
     do_live_update:BoolProperty(default=True) # use this to disable updates for e.g. scripts
     num_links:IntProperty(default=-1)
     filepath:StringProperty(default="", subtype='FILE_PATH')
     is_executing:BoolProperty(default=False)
     is_exporting:BoolProperty(default=False)
     execution_id:StringProperty(default='')
+    # prev_execution_id:StringProperty(default='')
     mantis_version:IntVectorProperty(default=[0,9,2])
     # this prevents the node group from executing on the next depsgraph update
     # because I don't always have control over when the dg update happens.
@@ -93,26 +111,31 @@ class MantisTree(NodeTree):
     def update_tree(self, context = None):
         if self.is_exporting:
             return
-        # return
-        self.is_executing = True
-        from . import readtree
-        prGreen("Validating Tree: %s" % self.name)
-        try:
-            self.parsed_tree = readtree.parse_tree(self)
-            if context:
-                self.display_update(context)
-            self.is_executing = False
-            self.tree_valid = True
-        except GraphError as e:
-            prRed("Failed to update node tree due to error.")
-            self.tree_valid = False
-            self.is_executing = False
-            raise e
-        finally:
-            self.is_executing = False
+        my_hash = str( hash_tree(self) )
+        if my_hash != self.hash:
+            self.hash = my_hash
+            self.is_executing = True
+            from . import readtree
+            prGreen("Validating Tree: %s" % self.name)
+            try:
+                scene = context.scene
+                scene.render.use_lock_interface = True
+                self.parsed_tree = readtree.parse_tree(self)
+                if context:
+                    self.display_update(context)
+                self.tree_valid = True
+            except GraphError as e:
+                prRed("Failed to update node tree due to error.")
+                self.tree_valid = False
+                raise e
+            finally:
+                scene.render.use_lock_interface = False
+                self.is_executing = False
 
-    
     def display_update(self, context):
+        my_hash = str( hash_tree(self) )
+        if my_hash != self.hash:
+            return
         if self.is_exporting:
             return
         self.is_executing = True
