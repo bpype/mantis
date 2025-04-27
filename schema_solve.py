@@ -65,7 +65,7 @@ class SchemaSolver:
                 # the "original" signature of the schema UI group node since this schema
                 # solver may be in a nested schema, and its node's signature may have
                 # uuid/index attached.
-                get_sig = (*self.node.natural_signature, ui_node.bl_idname) 
+                get_sig = (*self.node.ui_signature, ui_node.bl_idname) 
                 if not (mantis_node := self.all_nodes.get(get_sig)): raise RuntimeError(wrapRed(f"Not found: {get_sig}"))
                 self.schema_nodes[signature] = mantis_node
                 mantis_node.fill_parameters(ui_node)
@@ -151,7 +151,8 @@ class SchemaSolver:
             elif prototype_ui_node.bl_idname in ['NodeGroupInput', 'NodeGroupOutput']:
                 continue # we converted these to Schema Nodes because they represent a Group input.
             signature = (*self.autogen_path_names, mantis_node_name+index_str)
-            prototype_mantis_node = self.all_nodes[(*self.signature, mantis_node_name)]
+            ui_signature=(*self.signature, mantis_node_name)
+            prototype_mantis_node = self.all_nodes[ui_signature]
             # the prototype_mantis_node was generated inside the schema when we parsed the tree.
             # it is the prototype of the mantis node which we make for this iteration
             # for Schema sub-nodes ... they need a prototype to init.
@@ -162,7 +163,7 @@ class SchemaSolver:
                 if ui_node.bl_idname in ["MantisNodeGroup", "MantisSchemaGroup"]:
                     mantis_node = prototype_mantis_node.__class__(
                         signature, prototype_mantis_node.base_tree, prototype=ui_node,
-                        natural_signature =  prototype_mantis_node.signature)
+                        ui_signature =  prototype_mantis_node.signature)
                     # now let's copy the links from the prototype node
                     if ui_node.bl_idname in ["MantisNodeGroup"]:
                         mantis_node.prepared = False
@@ -178,6 +179,7 @@ class SchemaSolver:
             else:
                 mantis_node = prototype_mantis_node.__class__(signature, prototype_mantis_node.base_tree)
             frame_mantis_nodes[mantis_node.signature] = mantis_node
+            mantis_node.ui_signature=ui_signature # set the natural signature to ensure we can access from the UI
             if mantis_node.prepared == False:
                 unprepared.append(mantis_node)
             if mantis_node.__class__.__name__ in custom_props_types:
@@ -185,6 +187,7 @@ class SchemaSolver:
             mantis_node.fill_parameters(prototype_ui_node)
             # be sure to pass on the Mantis Context to them
             mantis_node.mContext=mContext
+            
 
 
     def handle_link_from_index_input(self, index, frame_mantis_nodes, ui_link):
@@ -424,8 +427,8 @@ class SchemaSolver:
         init_connections(incoming.from_node)
                     
     def test_is_sub_schema(self, other):
-        for i in range(len(other.natural_signature)-1): # -1, we don't want to check this node, obviously
-            if self.node.natural_signature[:i+1]:
+        for i in range(len(other.ui_signature)-1): # -1, we don't want to check this node, obviously
+            if self.node.ui_signature[:i+1]:
                 return False
         return True
 
@@ -583,7 +586,7 @@ class SchemaSolver:
                 prOrange(f"Expanding Node Group {tree.name} in node {schema_nc}.")
             else:
                 prOrange(f"Expanding schema {tree.name} in node {schema_nc} with length {length}.")
-            solver = SchemaSolver(schema_nc, all_nodes, ui_node, schema_nc.natural_signature)
+            solver = SchemaSolver(schema_nc, all_nodes, ui_node, schema_nc.ui_signature)
             solved_nodes = solver.solve()
             schema_nc.prepared = True
             for k,v in solved_nodes.items():

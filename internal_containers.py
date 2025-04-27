@@ -4,7 +4,7 @@ from .base_definitions import MantisNode
 from uuid import uuid4
 
 class DummyNode(MantisNode):
-    def __init__(self, signature, base_tree, prototype = None, natural_signature=None):
+    def __init__(self, signature, base_tree, prototype = None, ui_signature=None):
         super().__init__(signature, base_tree)
         self.prototype = prototype
         self.node_type = 'DUMMY'
@@ -24,9 +24,9 @@ class DummyNode(MantisNode):
                 self.outputs[sock.identifier] = NodeSocket(is_input = False, name = sock.identifier, node = self)
                 self.parameters[sock.identifier]=None
         # keep track of the "natural signature" of Schema nodes - so that they are unambiguous
-        self.natural_signature=self.signature
-        if natural_signature:
-            self.natural_signature=natural_signature
+        self.ui_signature=self.signature
+        if ui_signature:
+            self.ui_signature=ui_signature
         # This is necessary for Schema to work if there are multiple Schema nodes using the same Schema tree.
         # this is ugly and I hate it.
 

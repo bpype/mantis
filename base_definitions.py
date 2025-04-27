@@ -676,6 +676,7 @@ class MantisNode:
                  socket_templates : list[MantisSocketTemplate]=[],):
         self.base_tree=base_tree
         self.signature = signature
+        self.ui_signature = signature
         self.inputs = MantisNodeSocketCollection(node=self, is_input=True)
         self.outputs = MantisNodeSocketCollection(node=self, is_input=False)
         self.parameters, self.drivers = {}, {}; self.bObject=None
