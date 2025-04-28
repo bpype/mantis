@@ -263,6 +263,7 @@ def default_update(ui_socket, context, do_execute=True):
     mantis_updated=True
     if (ui_socket.node.bl_idname in ["MantisNodeGroup", "MantisSchemaGroup"]):
         mantis_updated=False # this kind of socket can't be updated here (yet)
+        node_tree.update_tree(context, force=True)
     elif hasattr(ui_socket, 'default_value'):
         # we may not have to regenerate the tree; try and update the socket
         from .utilities import tree_from_nc
@@ -274,13 +275,16 @@ def default_update(ui_socket, context, do_execute=True):
                         tree_from_nc(mantis_node.ui_signature, node_tree) == ui_socket.node.id_data:
                 from .misc_nodes import SimpleInputNode
                 if isinstance(mantis_node, SimpleInputNode):
+                    node_updated = socket_update(mantis_node, ui_socket)
                     for l in mantis_node.outputs[ui_socket.name].links:
-                        node_updated = socket_update(l.to_node, ui_socket, l.to_socket)
+                        print (l.to_node, l.to_socket)
+                        node_updated = node_updated and socket_update(l.to_node, ui_socket, l.to_socket)
+                        print (node_updated)
                 else:
                     node_updated = socket_update(mantis_node, ui_socket)
                 # execute the tree if even one node didn't update
                 mantis_updated = node_updated and mantis_updated
-    node_tree.update_tree(context, force=not mantis_updated)
+        node_tree.update_tree(context)
     node_tree.display_update(context)
     if mantis_updated==False:
         try:
