@@ -70,13 +70,13 @@ class MantisVisualizeNode(Node):
             self.location = np.location # will get overwritten by Grandalf later.
         else:
             self.label = mantis_node.signature[-1] # which is be the unique name.
-            for inp in mantis_node.inputs.keys():
+            for inp in mantis_node.inputs:
                 match mode:
                     case "DEBUG_CONNECTIONS":
                         if not inp.is_connected:
                             continue
                 self.inputs.new('WildcardSocket', inp.name)
-            for out in mantis_node.outputs.keys():
+            for out in mantis_node.outputs:
                 match mode:
                     case "DEBUG_CONNECTIONS":
                         if not out.is_connected:
@@ -183,7 +183,7 @@ def visualize_tree(nodes, base_tree, context):
 
 
     from .utilities import SugiyamaGraph
-    SugiyamaGraph(vis_tree, 16)
+    SugiyamaGraph(vis_tree, 1) # this can take a really long time
 
 from .ops_nodegroup import mantis_tree_poll_op
 

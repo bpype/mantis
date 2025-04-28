@@ -415,7 +415,8 @@ def trace_all_nodes_from_root(root, nodes):
         connected_nodes = []
         for output in node.outputs:
             for l in output.links:
-                connected_nodes.append(l.to_node)
+                if l.to_node not in nodes:
+                    connected_nodes.append(l.to_node)
         for new_node in connected_nodes:
             nodes.add(new_node)
             if new_node not in nodes_checked:
