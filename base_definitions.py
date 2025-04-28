@@ -730,13 +730,51 @@ class MantisNode:
         for (a, b) in traversal_pairs:
             self.inputs[a].set_traverse_target(self.outputs[b])
             self.outputs[b].set_traverse_target(self.inputs[a])
-            
 
     def flush_links(self) -> None:
         for inp in self.inputs.values():
             inp.flush_links()
         for out in self.outputs.values():
             out.flush_links()
+    
+    def ui_modify_socket(self, ui_socket, socket_name=None) -> bool:
+        """ Handle changes in the node's UI. Updates the rig if possible."""
+        # Always update the node's data
+        change_handled=False
+        if socket_name is None: socket_name = ui_socket.name
+        value = ui_socket.default_value
+        try:
+            self.parameters[ui_socket.name]=value
+        except KeyError:
+            prRed(f"Unhandled change occured in socket {ui_socket.name} in node"
+                    f" {ui_socket.node.name} in tree {ui_socket.node.id_data.name}.")
+        for s_template in self.socket_templates:
+            if s_template.name==ui_socket.name:
+                if not s_template.blender_property: return False
+                if self.node_type == 'LINK':
+                    for b_ob in self.bObject:
+                        try:
+                            setattr(b_ob, s_template.blender_property, value)
+                            change_handled=True
+                        except Exception as e:
+                            print("Failed to update mantis socket because of %s" % e,
+                                  "Updating tree instead.")
+                else:
+                    try:
+                        setattr(self.bObject, s_template.blender_property, value)
+                        change_handled=True
+                    except Exception as e:
+                        print("Failed to update mantis socket because of %s" % e,
+                                "Updating tree instead.")
+        return change_handled
+    
+    # the goal here is to tag the node as unprepared
+    # but some nodes are always prepared, so we have to kick it forward.
+    def reset_execution_recursive(self):
+        self.reset_execution()
+        if self.prepared==False: return # all good from here
+        for conn in self.hierarchy_connections:
+            conn.reset_execution_recursive()
     
     def evaluate_input(self, input_name, index=0)  -> Any:
         from .node_container_common import trace_single_line

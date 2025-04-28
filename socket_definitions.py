@@ -231,8 +231,14 @@ def tell_valid_bl_idnames():
 #  Update Callbacks
 ########################################################################
 
-def default_update(socket, context, do_execute=True):
-    # return
+
+def socket_update(mantis_node, ui_socket, socket_name=None):
+    node_updated = mantis_node.ui_modify_socket(ui_socket, socket_name)
+    if not node_updated: # so that we can tag its dependencies
+        mantis_node.reset_execution_recursive()
+    return node_updated
+
+def default_update(ui_socket, context, do_execute=True):
     context = bpy.context
     if not context.space_data:
         return
@@ -241,52 +247,58 @@ def default_update(socket, context, do_execute=True):
     try:
         node_tree = context.space_data.path[0].node_tree
     except IndexError: # not in the UI, for example, in a script instead.
-        node_tree = None
         return
-    if hasattr(socket.node, "initialized"):
-        if not socket.node.initialized: return
+    if node_tree.is_executing or node_tree.is_exporting or not node_tree.do_live_update:
+        return
+    if hasattr(ui_socket.node, "initialized"):
+        if not ui_socket.node.initialized: return
+    elif hasattr(ui_socket.node, 'is_updating'):
+        if ui_socket.node.is_updating: return
     else: return
-    if node_tree.do_live_update and not (node_tree.is_executing or node_tree.is_exporting):
-        # I don't know how the tree can be valid at 0 nodes but doesn't hurt
-        #  to force it if this somehow happens.
-        if ((node_tree.tree_valid == False or len(node_tree.parsed_tree) == 0)
-             or socket.node.bl_idname in ["MantisNodeGroup"]):
-            # prGreen("Forcing Update From Socket Change.")
-            node_tree.update_tree(context)
-        elif (node_tree.tree_valid == True):
-            # prGreen("Partial Update From Socket Change.")
-            # We don't have to update the whole thing, just the socket
-            from .utilities import tree_from_nc
-            for nc in node_tree.parsed_tree.values():
-                try:
-                    if (tree_from_nc(nc.signature, nc.base_tree) == socket.node.id_data):
-                        if socket.node.name in nc.signature:
-                            getstring = socket.name
-                            if (getstring not in nc.parameters.keys()):
-                                prRed("Socket update failed for %s" % socket.name)
-                            else:
-                                nc.parameters[getstring] = socket.default_value
-                except AttributeError as e:
-                    prWhite(nc)
-                    prWhite(nc.inputs)
-                    raise e
-            # Now update the tree display:
-            node_tree.display_update(context)
+    # if the socket has survived THAT ordeal, then the context is OK.
+    # first, we try to update the Mantis tree in-situ.
+    # Some nodes can update their b-objects, others will have to force-update the tree
+    # because we just modified the data without modifying the topology of the graph.
+    # finally, try and execute it if mantis couldn't update the b_objects itself.
+    mantis_updated=True
+    if (ui_socket.node.bl_idname in ["MantisNodeGroup", "MantisSchemaGroup"]):
+        mantis_updated=False # this kind of socket can't be updated here (yet)
+    elif hasattr(ui_socket, 'default_value'):
+        # we may not have to regenerate the tree; try and update the socket
+        from .utilities import tree_from_nc
+        for mantis_node in node_tree.parsed_tree.values():
+            if mantis_node.node_type in ['DUMMY', 'DUMMY_SCHEMA']:
+                continue
+            # check to see if the mantis node is in the same ui-tree as this ui_socket
+            if mantis_node.ui_signature[-1] == ui_socket.node.name and \
+                        tree_from_nc(mantis_node.ui_signature, node_tree) == ui_socket.node.id_data:
+                from .misc_nodes import SimpleInputNode
+                if isinstance(mantis_node, SimpleInputNode):
+                    for l in mantis_node.outputs[ui_socket.name].links:
+                        node_updated = socket_update(l.to_node, ui_socket, l.to_socket)
+                else:
+                    node_updated = socket_update(mantis_node, ui_socket)
+                # execute the tree if even one node didn't update
+                mantis_updated = node_updated and mantis_updated
+    node_tree.update_tree(context, force=not mantis_updated)
+    node_tree.display_update(context)
+    if mantis_updated==False:
         try:
-            prPurple("calling Execute Tree from socket update")
+            prPurple(f"Executing tree after socket change: {ui_socket.node.name}:{ui_socket.name}")
             node_tree.execute_tree(context)
         except Exception as e:
             prRed("Automatic Tree Execution failed because of %s" % e)
-            # I don't want to deal with this right now TODO
-            # e.__traceback__.print_last() this isn't the same kind of traceback object as the traceback module
-            # socket.node.is_triggering_execute = True
 
 
 def update_socket(self, context,):
     default_update(self,context)
-    
 
-                        
+def driver_variable_socket_update(self, context):
+    default_update(self,context)
+    
+def driver_socket_update(self, context):
+    default_update(self,context)
+    
 def update_mute_socket(self, context):
     self.node.mute = not self.default_value
     default_update(self,context)
@@ -294,25 +306,15 @@ def update_mute_socket(self, context):
 def update_hide_socket(self, context):
     self.node.mute = self.default_value
     default_update(self,context)
+    
+def ik_chain_length_update_socket(self, context):
+    default_update(self,context)
+    # self.node.update_chain_length(context)
 
 def update_parent_node(self, context):
     default_update(self,context)
     if hasattr(self.node, "display_update"):
         self.node.display_update(context)
-    
-def ik_chain_length_update_socket(self, context):
-    default_update(self,context)
-    # self.node.update_chain_length(context)
-    
-# TODO: this is stupid. I don't know what I was trying to do when i made this
-# Driver Variable:
-def driver_variable_socket_update(self, context):
-    default_update(self,context)
-    # self.node.update_on_socket_change(context) # why?
-    
-def driver_socket_update(self, context):
-    default_update(self,context)
-    # self.node.update_on_socket_change(context) # same here, no idea
 
 def update_metarig_armature(self, context,):
     if self.search_prop:
