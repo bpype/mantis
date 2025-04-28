@@ -65,22 +65,22 @@ class MantisLinkNode(MantisNode):
         return props_sockets
     
     def set_custom_space(self):
-        c = self.bObject
-        if (os := self.inputs.get("Owner Space")) and os.is_connected and os.links[0].from_node.node_type == 'XFORM':
-            c.owner_space='CUSTOM'
-            xf = self.inputs["Owner Space"].links[0].from_node.bGetObject(mode="OBJECT")
-            if isinstance(xf, Bone):
-                c.space_object=self.inputs["Owner Space"].links[0].from_node.bGetParentArmature(); c.space_subtarget=xf.name
-            else:
-                c.space_object=xf
-        if ts := self.inputs.get("Target_Space") and ts.is_connected and ts.links[0].from_node.node_type == 'XFORM':
-            c.owner_space='CUSTOM'
-            xf = self.inputs["Target_Space Space"].links[0].from_node.bGetObject(mode="OBJECT")
-            if isinstance(xf, Bone):
-                c.space_object=self.inputs["Target_Space Space"].links[0].from_node.bGetParentArmature(); c.space_subtarget=xf.name
-            else:
-                c.space_object=xf
-    
+        for c in self.bObject:
+            if (os := self.inputs.get("Owner Space")) and os.is_connected and os.links[0].from_node.node_type == 'XFORM':
+                c.owner_space='CUSTOM'
+                xf = self.inputs["Owner Space"].links[0].from_node.bGetObject(mode="OBJECT")
+                if isinstance(xf, Bone):
+                    c.space_object=self.inputs["Owner Space"].links[0].from_node.bGetParentArmature(); c.space_subtarget=xf.name
+                else:
+                    c.space_object=xf
+            if ts := self.inputs.get("Target_Space") and ts.is_connected and ts.links[0].from_node.node_type == 'XFORM':
+                c.owner_space='CUSTOM'
+                xf = self.inputs["Target_Space Space"].links[0].from_node.bGetObject(mode="OBJECT")
+                if isinstance(xf, Bone):
+                    c.space_object=self.inputs["Target_Space Space"].links[0].from_node.bGetParentArmature(); c.space_subtarget=xf.name
+                else:
+                    c.space_object=xf
+        
     def GetxForm(nc, output_name="Output Relationship"):
         break_condition= lambda node : node.node_type=='XFORM'
         xforms = trace_line_up_branching(nc, output_name, break_condition)
