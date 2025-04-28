@@ -39,6 +39,12 @@ while (classLists):
 
 interface_classes = []
 
+try:
+    from .visualize import MantisVisualizeNode, MantisVisualizeOutput, MantisVisualizeTree
+    classes.extend([MantisVisualizeTree, MantisVisualizeNode, MantisVisualizeOutput, ])
+except ImportError:
+    pass # this feature is optional
+
 import nodeitems_utils
 from nodeitems_utils import NodeCategory, NodeItem
 
@@ -381,7 +387,6 @@ def register():
     # but I am a good citizen! so my addon won't mess up yours! probably...
 
 
-    
 
 def unregister():
     for tree in bpy.data.node_groups: # ensure it doesn't try to update while quitting.

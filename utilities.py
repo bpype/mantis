@@ -404,6 +404,23 @@ def get_all_nodes_of_type(base_tree, bl_idname):
         if hasattr(node, "node_tree"):
             check_nodes.extend(list(node.node_tree.nodes))
     return nodes
+
+def trace_all_nodes_from_root(root, nodes):
+    from .base_definitions import GraphError
+    """ find all dependencies for a mantis node"""
+    nodes.add(root); check_nodes = [root]
+    nodes_checked = set()
+    while (len(check_nodes) > 0):
+        node = check_nodes.pop(); nodes_checked.add (node)
+        connected_nodes = []
+        for output in node.outputs:
+            for l in output.links:
+                connected_nodes.append(l.to_node)
+        for new_node in connected_nodes:
+            nodes.add(new_node)
+            if new_node not in nodes_checked:
+                check_nodes.append(new_node)
+    return nodes
             
 ##################################################################################################
 # misc
