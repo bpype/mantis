@@ -135,9 +135,6 @@ class MantisTree(NodeTree):
                 self.is_executing = False
 
     def display_update(self, context):
-        my_hash = str( hash_tree(self) )
-        if my_hash != self.hash:
-            return
         if self.is_exporting:
             return
         self.is_executing = True
@@ -156,17 +153,20 @@ class MantisTree(NodeTree):
 
     def execute_tree(self,context, error_popups = False):
         self.prevent_next_exec = False
-        if self.is_exporting:
+        if not self.hash:
             return
-        # return
+        if self.is_exporting or self.is_executing:
+            return
         prGreen("Executing Tree: %s" % self.name)
         self.is_executing = True
         from . import readtree
         try:
+            context.scene.render.use_lock_interface = True
             readtree.execute_tree(self.parsed_tree, self, context, error_popups)
         except RecursionError as e:
             prRed("Recursion error while parsing tree.")
         finally:
+            context.scene.render.use_lock_interface = False
             self.is_executing = False
 
 class SchemaTree(NodeTree):

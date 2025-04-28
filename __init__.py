@@ -237,14 +237,11 @@ def execute_handler(scene):
         trees = [p.node_tree for p in context.space_data.path]
         if not trees: return
         if (node_tree := trees[0]).bl_idname in ['MantisTree']:
-            if node_tree.is_exporting:
-                return
-            if node_tree.prevent_next_exec : node_tree.prevent_next_exec = False
-            elif node_tree.tree_valid and node_tree.do_live_update and not (node_tree.is_executing):
-                scene.render.use_lock_interface = True
+            # check here instead of in execute_tree because these  values can be
+            #  modified at weird times and checking from the handler is more consistent
+            if ( node_tree.tree_valid) and ( node_tree.do_live_update ):
                 node_tree.execute_tree(context)
-                scene.render.use_lock_interface = False
-                node_tree.tree_valid = False
+                node_tree.tree_valid=False
 
 versioning_node_tasks = [
     #relevant bl_idnames      # task
@@ -346,29 +343,15 @@ def on_animation_playback_post_handler(scene,depsgraph):
     for t in bpy.data.node_groups:
         if t.bl_idname in ['MantisTree', 'SchemaTree']:
             t.is_executing = False
-@persistent
-def on_undo_pre_handler(scene): # the undo will trigger a depsgraph update
-    for t in bpy.data.node_groups: # so we enable prevent_next_exec.
-        if t.bl_idname in ['MantisTree', 'SchemaTree']:
-            t.prevent_next_exec = True
 
 @persistent
 def on_undo_post_handler(scene): # the undo will trigger a depsgraph update
     for t in bpy.data.node_groups: # so we enable prevent_next_exec.
         if t.bl_idname in ['MantisTree', 'SchemaTree']:
             t.prevent_next_exec = True
-
-@persistent
-def on_save_pre_handler(scene): # save-as will trigger a depsgraph update
-    for t in bpy.data.node_groups: # so we enable prevent_next_exec.
-        if t.bl_idname in ['MantisTree', 'SchemaTree']:
-            t.prevent_next_exec = True
-# annoyingly, regular save does not trigger a DG update so we also need this:
-@persistent
-def on_save_post_handler(scene): # The DG has already updated and we can disable this.
-    for t in bpy.data.node_groups:
-        if t.bl_idname in ['MantisTree', 'SchemaTree']:
-            t.prevent_next_exec = False
+            t.hash=""
+            # set the tree to invalid to trigger a tree update
+            # since the context data is wiped by an undo.
 
 def register():
     from bpy.utils import register_class
@@ -390,12 +373,10 @@ def register():
     # add the handlers
     bpy.app.handlers.depsgraph_update_pre.insert(0, update_handler)
     bpy.app.handlers.depsgraph_update_post.insert(0, execute_handler)
-    bpy.app.handlers.save_pre.insert(0, on_save_pre_handler)
-    bpy.app.handlers.save_post.insert(0, on_save_post_handler)
     bpy.app.handlers.load_post.insert(0, version_update_handler)
     bpy.app.handlers.animation_playback_pre.insert(0, on_animation_playback_pre_handler)
     bpy.app.handlers.animation_playback_post.insert(0, on_animation_playback_post_handler)
-    bpy.app.handlers.undo_pre.insert(0, on_undo_pre_handler)
+    bpy.app.handlers.undo_post.insert(0, on_undo_post_handler)
     # I'm adding mine in first to ensure other addons don't mess up mine
     # but I am a good citizen! so my addon won't mess up yours! probably...
 
