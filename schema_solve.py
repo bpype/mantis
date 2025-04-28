@@ -356,6 +356,7 @@ class SchemaSolver:
             from .schema_containers import SchemaIndex
             from_name = get_link_in_out(ui_link)[0]
             from_node = frame_mantis_nodes[ (*self.autogen_path_names, from_name+self.index_str()) ]
+            from_socket_name = ui_link.from_socket.name
             if not from_node:
                 from_node = self.schema_nodes[(*self.tree_path_names, from_ui_node.bl_idname)]
             to_node = outgoing.to_node
@@ -380,6 +381,8 @@ class SchemaSolver:
                     frame_mantis_nodes[sig]=nc_from
                     from_node = nc_from
                     self.solved_nodes[sig]=from_node
+            elif from_node.node_type == 'DUMMY_SCHEMA':
+                from_socket_name = ui_link.from_socket.identifier
 
             # I have a feeling that something bad will happen if both of these conditions (above and below) are true
             if to_node.node_type == 'DUMMY_SCHEMA' and to_node.prepared:
@@ -404,9 +407,9 @@ class SchemaSolver:
                                 else:
                                     print(n)
                             raise e
-                        connection = from_node.outputs[ui_link.from_socket.name].connect(node=out_node, socket=l.to_socket.name)
+                        connection = from_node.outputs[from_socket_name].connect(node=out_node, socket=l.to_socket.name)
             else:
-                connection = from_node.outputs[ui_link.from_socket.name].connect(node=to_node, socket=outgoing.to_socket)
+                connection = from_node.outputs[from_socket_name].connect(node=to_node, socket=outgoing.to_socket)
 
     def handle_link_from_array_input_get(self, frame_mantis_nodes, index, ui_link, from_ui_node ):
         get_index = index
