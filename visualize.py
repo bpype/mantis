@@ -31,6 +31,7 @@ class MantisVisualizeNode(Node):
             case 'XFORM':        self.color = (1.0 ,0.5, 0.0)
             case 'LINK':         self.color = (0.4 ,0.2, 1.0)
             case 'UTILITY':      self.color = (0.2 ,0.2, 0.2)
+            case 'DRIVER':       self.color = (0.7, 0.05, 0.8)
             case 'DUMMY_SCHEMA': self.color = (0.85 ,0.95, 0.9)
             case 'DUMMY':        self.color = (0.05 ,0.05, 0.15)
         self.name = '.'.join(mantis_node.signature[1:])
@@ -48,7 +49,7 @@ class MantisVisualizeNode(Node):
                 s = self.inputs.new('WildcardSocket', inp.name)
                 try:
                     if sock := np.inputs.get(inp.name):
-                        s.color = inp.color_simple
+                        s.color = sock.color_simple
                 except AttributeError: #default bl_idname types like Float and Vector, no biggie
                     pass
                 except KeyError:
@@ -62,7 +63,7 @@ class MantisVisualizeNode(Node):
                 s = self.outputs.new('WildcardSocket', out.name)
                 try:
                     if sock := np.outputs.get(out.name):
-                        s.color = out.color_simple
+                        s.color = sock.color_simple
                 except AttributeError: #default bl_idname types like Float and Vector, no biggie
                     pass
                 except KeyError:
@@ -83,8 +84,13 @@ class MantisVisualizeNode(Node):
                             continue
                 self.outputs.new('WildcardSocket', out.name)
 
-def gen_vis_node(mantis_node, vis_tree, links):
-    from .utilities import get_node_prototype
+def gen_vis_node( mantis_node, 
+                  vis_tree, 
+                  links,
+                  omit_simple=True,
+                 ):
+    if mantis_node.node_type == 'UTILITY':
+        return
     base_tree= mantis_node.base_tree
     vis = vis_tree.nodes.new('MantisVisualizeNode')
     vis.gen_data(mantis_node)
@@ -96,94 +102,108 @@ def gen_vis_node(mantis_node, vis_tree, links):
             links.add(l)
     return vis
                 
-def visualize_tree(nodes, base_tree, context):
+def visualize_tree(m_nodes, base_tree, context):
     # first create a MantisVisualizeTree
     from .readtree import check_and_add_root
     from .utilities import trace_all_nodes_from_root
     import bpy
-    trace_all_nodes=True
-    if trace_all_nodes:
-        roots=[]
-        for n in nodes.values():
-            check_and_add_root(n, roots)
-        mantis_nodes=set()
-        for r in roots:
-            nodes_from_root = ( trace_all_nodes_from_root(r, mantis_nodes))
-        if len(mantis_nodes) ==  0:
-            print ("No nodes to visualize")
-            return
-        all_links = set()
-        nodes={}
-        vis_tree = bpy.data.node_groups.new(base_tree.name+'_visualized', type='MantisVisualizeTree')
-    else:
-        mantis_nodes = list(base_tree.parsed_tree.values())
 
-    for m in mantis_nodes:
-        nodes[m.signature]=gen_vis_node(m, vis_tree,all_links)
-
-    for l in all_links:
-        if l.to_node.node_type in ['DUMMY_SCHEMA', 'DUMMY'] or \
-           l.from_node.node_type in ['DUMMY_SCHEMA', 'DUMMY']:
-            pass
-        # print (l.from_node.node_type, l.to_node.node_type)
-        # n_name_in = '.'.join(l.from_node.signature[1:])
-        # s_name_in = l.from_socket
-        # n_name_out = '.'.join(l.to_node.signature[1:])
-        # s_name_out = l.to_socket
-        # print (n_name_in, s_name_in, " --> ", n_name_out, s_name_out)
-        from_node=nodes[l.from_node.signature]
-        to_node=nodes[l.to_node.signature]
-        from_socket = from_node.outputs[l.from_socket]
-        to_socket = to_node.inputs[l.to_socket]
+    base_tree.is_executing=True
+    import cProfile
+    import pstats, io
+    from pstats import SortKey
+    with cProfile.Profile() as pr:
         try:
-            vis_tree.links.new(
-                input=from_socket,
-                output=to_socket,
-                )
-        except Exception as e:
-            print (type(e))
-            prRed(f"Could not make link {n_name_in}:{s_name_in}-->{n_name_out}:{s_name_out}")
-            print(e)
-            raise e
-    # at this point not all links are in the tree yet!
+            trace_all_nodes = True
+            all_links = set()
+            mantis_nodes=set()
+            nodes={}
+            if trace_all_nodes:
+                roots=[]
+                for n in m_nodes.values():
+                    check_and_add_root(n, roots)
+                for r in roots:
+                    trace_all_nodes_from_root(r, mantis_nodes)
+                if len(mantis_nodes) ==  0:
+                    print ("No nodes to visualize")
+                    return
+            else:
+                mantis_nodes = list(base_tree.parsed_tree.values())
 
-    def has_links (n):
-        for input in n.inputs:
-            if input.is_linked:
-                return True
-        for output in n.outputs:
-            if output.is_linked:
-                return True
-        return False
-    
-    no_links=[]
+            vis_tree = bpy.data.node_groups.new(base_tree.name+'_visualized', type='MantisVisualizeTree')
 
-    for n in vis_tree.nodes:
-        if not has_links(n):
-            no_links.append(n)
-    
-    def side_len(n):
-        from math import floor
-        side = floor(n**(1/2)) + 1
-        return side
-    side=side_len(len(no_links))
-    break_me = True
-    for i in range(side):
-        for j in range(side):
-            index = side*i+j
-            try:
-                n = no_links[index]
-                n.location.x = i*200
-                n.location.y = j*200
-            except IndexError:
-                break_me = True # it's too big, that's OK the square is definitely bigger
-                break
-        if break_me:
-            break
+            for m in mantis_nodes:
+                nodes[m.signature]=gen_vis_node(m, vis_tree,all_links)
 
+            for l in all_links:
+                if l.to_node.node_type in ['DUMMY_SCHEMA', 'DUMMY'] or \
+                l.from_node.node_type in ['DUMMY_SCHEMA', 'DUMMY']:
+                    pass
+                from_node=nodes.get(l.from_node.signature)
+                to_node=nodes.get(l.to_node.signature)
+                from_socket, to_socket = None, None
+                if from_node and to_node:
+                    from_socket = from_node.outputs.get(l.from_socket)
+                    to_socket = to_node.inputs.get(l.to_socket)
+                if from_socket and to_socket:
+                    try:
+                        vis_tree.links.new(
+                            input=from_socket,
+                            output=to_socket,
+                            )
+                    except Exception as e:
+                        print (type(e)); print(e)
+                        raise e
+            # at this point not all links are in the tree yet!
 
-    from .utilities import SugiyamaGraph
-    SugiyamaGraph(vis_tree, 1) # this can take a really long time
+            def has_links (n):
+                for input in n.inputs:
+                    if input.is_linked:
+                        return True
+                for output in n.outputs:
+                    if output.is_linked:
+                        return True
+                return False
+            
+            no_links=[]
+
+            for n in vis_tree.nodes:
+                if not has_links(n):
+                    no_links.append(n)
+            
+            while (no_links):
+                n = no_links.pop()
+                vis_tree.nodes.remove(n)
+            
+            # def side_len(n):
+            #     from math import floor
+            #     side = floor(n**(1/2)) + 1
+            #     return side
+            # side=side_len(len(no_links))
+            # break_me = True
+            # for i in range(side):
+            #     for j in range(side):
+            #         index = side*i+j
+            #         try:
+            #             n = no_links[index]
+            #             n.location.x = i*200
+            #             n.location.y = j*200
+            #         except IndexError:
+            #             break_me = True # it's too big, that's OK the square is definitely bigger
+            #             break
+            #     if break_me:
+            #         break
+            # from .utilities import SugiyamaGraph
+            # SugiyamaGraph(vis_tree, 1) # this can take a really long time
+        finally:
+            s = io.StringIO()
+            sortby = SortKey.TIME
+            ps = pstats.Stats(pr, stream=s).strip_dirs().sort_stats(sortby)
+            ps.print_stats(40) # print the top 20
+            print(s.getvalue())
+            base_tree.prevent_next_exec=True
+            base_tree.is_executing=False
+
 
 from .ops_nodegroup import mantis_tree_poll_op
 
