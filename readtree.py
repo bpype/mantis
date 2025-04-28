@@ -120,6 +120,7 @@ def make_connections_to_ng_dummy(base_tree, tree_path_names, local_nc, all_nc, n
                 # 
                 local_nc[sig] = nc_from; all_nc[sig] = nc_from
                 from_s = inp.name
+                nc_from.execution_prepared=True
             else:
                 prRed("No available auto-generated class for input", *tree_path_names, np.name, inp.name)
             nc_from.outputs[from_s].connect(node=nc_to, socket=to_s, sort_id=0)
@@ -476,12 +477,12 @@ def execute_tree(nodes, base_tree, context, error_popups = False):
             mContext = nc.mContext
         nc.reset_execution()
         check_and_add_root(nc, xForm_pass)
-
+    
     executed = []
 
     # check for cycles here by keeping track of the number of times a node has been visited.
     visited={}
-    check_max_len=len(nodes)**2 # seems too high but safe. In a well-ordered graph, I guess this number should be less than the number of nodes.
+    check_max_len=18#len(nodes)**2 # seems too high but safe. In a well-ordered graph, I guess this number should be less than the number of nodes.
     max_iterations = len(nodes)**2
     i = 0
     switch_me = [] # switch the mode on these objects
