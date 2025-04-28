@@ -615,6 +615,7 @@ SOCKETS_ADDED=[("DeformerMorphTargetDeform", 'INPUT', 'BooleanSocket', "Use Shap
                ("UtilityMatrixFromCurve",    'INPUT',  "UnsignedIntSocket", "Spline Index",  1, False,    0),
                ("UtilityMatricesFromCurve",  'INPUT',  "UnsignedIntSocket", "Spline Index",  1, False,    0),
                ("UtilityPointFromCurve",     'INPUT',  "UnsignedIntSocket", "Spline Index",  1, False,    0),
+               ("LinkCopyScale",             'INPUT',  "FloatFactorSocket", "Power",    5,      False,    1.0),
                ]
 
 # replace names with bl_idnames for reading the tree and solving schemas.
@@ -903,7 +904,7 @@ class MantisNode:
     def bFinalize(self, bContext=None):
         return
     def __repr__(self): 
-        return self.signature.__repr__()
+        return self.ui_signature.__repr__()
 
 # do I need this and the link class above?
 class DummyLink:

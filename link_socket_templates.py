@@ -131,6 +131,8 @@ LinkCopyScaleSockets = [
     SockTemplate(name='Additive', bl_idname = 'BooleanSocket', is_input=True,
                          default_value=False, blender_property='use_add'),
     AxeSockTemplate,
+    SockTemplate(name='Power', bl_idname = 'FloatFactorSocket', is_input=True,
+                         default_value=1.0, blender_property='power'),
     TargetSpaceTemplate,
     OwnerSpaceTemplate,
     InfluenceTemplate,
