@@ -743,6 +743,7 @@ class MantisNode:
         change_handled=False
         if socket_name is None: socket_name = ui_socket.name
         value = ui_socket.default_value
+        if socket_name == 'Enable': value = not value
         try:
             self.parameters[ui_socket.name]=value
         except KeyError:
