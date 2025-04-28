@@ -127,6 +127,9 @@ def make_connections_to_ng_dummy(base_tree, tree_path_names, local_nc, all_nc, n
 def gen_node_containers(base_tree, current_tree, tree_path_names, all_nc, local_nc, dummy_nodes, group_nodes, schema_nodes ):
     from .internal_containers import DummyNode
     for ui_node in current_tree.nodes:
+        # HACK I found that this isn't being set sometimes. I wonder why? It makes the most sense to do this here.
+        if hasattr(ui_node, 'initialized'): ui_node.initialized=True
+        # end HACK. TODO: find out why this is not set sometimes. This is only needed for UI socket change updates.
         if ui_node.bl_idname in ["NodeFrame", "NodeReroute"]:
             continue # not a Mantis Node
         if ui_node.bl_idname in ["NodeGroupInput", "NodeGroupOutput"]:
