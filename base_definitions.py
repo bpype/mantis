@@ -737,6 +737,25 @@ class MantisNode:
         for out in self.outputs.values():
             out.flush_links()
     
+    def update_socket_value(self, blender_property, value) -> bool:
+        change_handled=False
+        if self.node_type == 'LINK':
+            for b_ob in self.bObject:
+                try:
+                    setattr(b_ob, blender_property, value)
+                    change_handled=True
+                except Exception as e:
+                    print("Failed to update mantis socket because of %s" % e,
+                            "Updating tree instead.")
+        else:
+            try:
+                setattr(self.bObject, blender_property, value)
+                change_handled=True
+            except Exception as e:
+                print("Failed to update mantis socket because of %s" % e,
+                        "Updating tree instead.")
+        return change_handled
+
     def ui_modify_socket(self, ui_socket, socket_name=None) -> bool:
         """ Handle changes in the node's UI. Updates the rig if possible."""
         # Always update the node's data
@@ -751,22 +770,21 @@ class MantisNode:
                     f" {ui_socket.node.name} in tree {ui_socket.node.id_data.name}.")
         for s_template in self.socket_templates:
             if s_template.name==ui_socket.name:
+                change_handled = True
                 if not s_template.blender_property: return False
-                if self.node_type == 'LINK':
-                    for b_ob in self.bObject:
+                elif isinstance(s_template.blender_property, str):
+                    change_handled &= self.update_socket_value(
+                        s_template.blender_property, value)
+                else: # it is a tuple
+                    for i, prop in enumerate(s_template.blender_property):
                         try:
-                            setattr(b_ob, s_template.blender_property, value)
-                            change_handled=True
-                        except Exception as e:
-                            print("Failed to update mantis socket because of %s" % e,
-                                  "Updating tree instead.")
-                else:
-                    try:
-                        setattr(self.bObject, s_template.blender_property, value)
-                        change_handled=True
-                    except Exception as e:
-                        print("Failed to update mantis socket because of %s" % e,
-                                "Updating tree instead.")
+                            change_handled &= self.update_socket_value(
+                                prop, value[i])
+                        except IndexError:
+                            prRed(f"{ui_socket.name} does not have enough values to unpack"
+                                  " to update the Mantis tree. Please report this as a bug.")
+                            change_handled=False
+                break # we don't have to look through any more socket templates
         return change_handled
     
     # the goal here is to tag the node as unprepared

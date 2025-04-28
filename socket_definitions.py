@@ -277,9 +277,7 @@ def default_update(ui_socket, context, do_execute=True):
                 if isinstance(mantis_node, SimpleInputNode):
                     node_updated = socket_update(mantis_node, ui_socket)
                     for l in mantis_node.outputs[ui_socket.name].links:
-                        print (l.to_node, l.to_socket)
                         node_updated = node_updated and socket_update(l.to_node, ui_socket, l.to_socket)
-                        print (node_updated)
                 else:
                     node_updated = socket_update(mantis_node, ui_socket)
                 # execute the tree if even one node didn't update
