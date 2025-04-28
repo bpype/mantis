@@ -84,9 +84,10 @@ class DeformerHook(Node, DeformerNode):
         if self.outputs["Deformer"].is_linked:
             from bpy.types import Object
             if (mantis_node := parsed_tree.get(get_signature_from_edited_tree(self, context))):
-                if (xF_node := mantis_node.GetxForm()):
-                    if (ob := xF_node.bObject) and isinstance (xF_node, Object):
-                        if ob.type != 'CURVE': is_curve_hook=False
+                if (xforms := mantis_node.GetxForm()):
+                    for xF_node in xforms:
+                        if (ob := xF_node.bObject) and isinstance (xF_node, Object):
+                            if ob.type != 'CURVE': is_curve_hook=False
         for socket in curve_sockets:
             socket.hide=not is_curve_hook
 
