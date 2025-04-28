@@ -419,7 +419,6 @@ def parse_tree(base_tree):
     prWhite("Number of Nodes: %s" % (len(kept_nc)))
     return kept_nc
 
-
 def switch_mode(mode='OBJECT', objects = []):
     active = None
     if objects:
@@ -433,14 +432,16 @@ def switch_mode(mode='OBJECT', objects = []):
 
 def execution_error_cleanup(node, exception, switch_objects = [] ):
     from bpy import  context
+    ui_sig = None
     if node:
+        ui_sig = node.ui_signature
         # TODO: see about zooming-to-node.
         base_tree = node.base_tree
         tree = base_tree
         try:
             pass
             space = context.space_data
-            for name in node.signature[1:]:
+            for name in ui_sig[1:]:
                 for n in tree.nodes: n.select = False
                 n = tree.nodes[name]
                 n.select = True
@@ -452,12 +453,12 @@ def execution_error_cleanup(node, exception, switch_objects = [] ):
         finally:
             def error_popup_draw(self, context):
                 self.layout.label(text=f"Error: {exception}")
-                self.layout.label(text=f"see node: {node.signature[1:]}.")
+                self.layout.label(text=f"see node: {ui_sig[1:]}.")
             context.window_manager.popup_menu(error_popup_draw, title="Error", icon='ERROR')
     switch_mode(mode='OBJECT', objects=switch_objects)
     for ob in switch_objects:
         ob.data.pose_position = 'POSE'
-    prRed(f"Error: {exception} in node {node}")
+    prRed(f"Error: {exception} in node {ui_sig}")
     return exception
 
 def execute_tree(nodes, base_tree, context, error_popups = False):

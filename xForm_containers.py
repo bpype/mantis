@@ -302,7 +302,7 @@ class xFormBone(xFormNode):
         if (not isinstance(bContext, bpy.types.Context)):
             raise RuntimeError("Incorrect context")
         if not (xF := self.bGetParentArmature()):
-            raise RuntimeError("Could not create edit bone: ", name, " from node:", self.signature, " Reason: No armature object to add bone to.")
+            raise RuntimeError("Could not create edit bone: ", name, " from node:", self, " Reason: No armature object to add bone to.")
 
         matrix = self.parameters['Matrix']
         length = matrix[3][3]

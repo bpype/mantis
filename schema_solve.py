@@ -438,10 +438,14 @@ class SchemaSolver:
         # and in fact, I could skip this in some cases, and should investigate if profiling reveals a slowdown here.
         forbidden=set()
         # forbid some nodes - they aren't necessary to solve the schema & cause problems.
+        from .readtree import execution_error_cleanup
         while unprepared:
             nc = unprepared.pop()
             if sum([dep.prepared for dep in nc.hierarchy_dependencies]) == len(nc.hierarchy_dependencies):
-                nc.bPrepare()
+                try:
+                    nc.bPrepare()
+                except Exception as e:
+                    execution_error_cleanup(nc, e)
                 if nc.node_type == 'DUMMY_SCHEMA':
                     self.solve_nested_schema(nc)
             elif nc.node_type == 'DUMMY_SCHEMA' and not self.test_is_sub_schema(nc):
@@ -652,9 +656,9 @@ class SchemaSolver:
             from .base_definitions import GraphError
             for o in self.node.outputs:
                 if o.is_linked:
-                    raise GraphError(f"ERROR: Schema {self.signature} has a length"
+                    raise GraphError(f"ERROR: Schema {self} has a length"
                                      " of 0 but other nodes depend on it.")
-            print (f"WARN: Schema {self.signature} has a length of 0 or less and will not expand.")
+            print (f"WARN: Schema {self} has a length of 0 or less and will not expand.")
             return {} # just don't do anything - it's OK to have a noop schema if it doesn't have dependencies.
         for index in range(self.solve_length):
             self.index = index
