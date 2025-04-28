@@ -1147,8 +1147,12 @@ class InputExistingGeometryObject(MantisNode):
         self.outputs.init_sockets(outputs)
         self.init_parameters()
         self.node_type = "XFORM"
+    
+    def reset_execution(self):
+        super().reset_execution()
+        self.prepared=False
 
-    def bExecute(self, bContext=None):
+    def bPrepare(self, bContext=None):
         from bpy import data
         ob = None
         if name := self.evaluate_input("Name"):
