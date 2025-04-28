@@ -684,8 +684,13 @@ class xFormGeometryObject(xFormNode):
                     dupe_data=True; break
         if dupe_data:
             name = self.bObject.data.name
-            self.bObject.data=self.bObject.data.copy()
-            self.bObject.data.name = name+"_MANTIS"
+            # it has to be a curve
+            data = bpy.data.curves.get(self.bObject.data.name+"_MANTIS")
+            if not data:
+                data=self.bObject.data.copy()
+                data.name = name+"_MANTIS"
+                data.animation_data_clear() # clear the drivers if there are
+            self.bObject.data = data
         reset_object_data(self.bObject)
         matrix= get_matrix(self)
         self.parameters['Matrix'] = matrix
