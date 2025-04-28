@@ -721,7 +721,7 @@ class MantisNode:
                 continue
             if isinstance(s_template.blender_property, str):
                 props_sockets[s_template.blender_property]=(s_template.name, s_template.default_value)
-            elif isinstance(s_template.blender_property, tuple):
+            elif isinstance(s_template.blender_property, (tuple, list)):
                 for index, sub_prop in enumerate(s_template.blender_property):
                     props_sockets[sub_prop]=( (s_template.name, index),s_template.default_value[index] )
         return props_sockets
