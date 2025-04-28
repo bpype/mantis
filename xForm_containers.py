@@ -838,6 +838,7 @@ class xFormCurvePin(xFormNode):
     def prep_driver_values(self, constraint):
         from .misc_nodes import UtilityDriver, UtilitySwitch
         for socket_name in ["Curve Pin Factor", "Forward Axis","Up Axis",]:
+            if self.inputs.get(socket_name) is None: continue # in case it has been bypassed
             if self.inputs[socket_name].is_linked:
                 link = self.inputs[socket_name].links[0]
                 driver = link.from_node
