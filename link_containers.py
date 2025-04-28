@@ -253,6 +253,23 @@ class LinkTransformation(MantisLinkNode):
         super().__init__(signature, base_tree, LinkTransformationSockets)
         self.init_parameters(additional_parameters={"Name":None })
         self.set_traverse([("Input Relationship", "Output Relationship")])
+    
+    def ui_modify_socket(self, ui_socket, socket_name=None):
+        from_suffix, to_suffix = '', ''
+        if self.evaluate_input("Map From") == 'ROTATION': from_suffix='_rot'
+        elif self.evaluate_input("Map From") == 'SCALE': from_suffix='_scale'
+        if self.evaluate_input("Map To") == 'ROTATION': to_suffix='_rot'
+        elif self.evaluate_input("Map To") == 'SCALE': to_suffix='_scale'
+        if 'To' in ui_socket.name or 'From' in ui_socket.name and from_suffix or to_suffix:
+            for s_temp in self.socket_templates:
+                if s_temp.name == ui_socket.name: break
+            if 'from' in s_temp.blender_property:
+                socket_name=s_temp.blender_property+from_suffix
+            else:
+                socket_name=s_temp.blender_property+to_suffix
+            return self.update_socket_value(socket_name, ui_socket.default_value)
+        
+        return super().ui_modify_socket(ui_socket, socket_name)
 
     def bExecute(self, context):
         prepare_parameters(self)
@@ -270,22 +287,22 @@ class LinkTransformation(MantisLinkNode):
             # we have to fix the blender-property for scale/rotation
             # because Blender stores these separately.
             # I do not care that this code is ugly.
-            from_replace, to_replace = '', ''
+            from_suffix, to_replace = '', ''
             if self.evaluate_input("Map From") == 'ROTATION':
-                from_replace='_rot'
+                from_suffix='_rot'
             elif self.evaluate_input("Map From") == 'SCALE':
-                from_replace='_scale'
+                from_suffix='_scale'
             if self.evaluate_input("Map To") == 'ROTATION':
                 to_replace='_rot'
             elif self.evaluate_input("Map To") == 'SCALE':
                 to_replace='_scale'
-            if from_replace:
+            if from_suffix:
                 for axis in ['x', 'y', 'z']:
                     stub='from_min_'+axis
-                    props_sockets[stub+from_replace]=props_sockets[stub]
+                    props_sockets[stub+from_suffix]=props_sockets[stub]
                     del props_sockets[stub]
                     stub='from_max_'+axis
-                    props_sockets[stub+from_replace]=props_sockets[stub]
+                    props_sockets[stub+from_suffix]=props_sockets[stub]
                     del props_sockets[stub]
             if to_replace:
                 for axis in ['x', 'y', 'z']:
@@ -474,7 +491,6 @@ class LinkTrackTo(MantisLinkNode):
             props_sockets = self.gen_property_socket_map()
             evaluate_sockets(self, c, props_sockets)
         self.executed = True
-
 
 class LinkInheritConstraint(MantisLinkNode):
     def __init__(self, signature, base_tree):
