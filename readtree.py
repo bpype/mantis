@@ -482,7 +482,7 @@ def execute_tree(nodes, base_tree, context, error_popups = False):
 
     # check for cycles here by keeping track of the number of times a node has been visited.
     visited={}
-    check_max_len=18#len(nodes)**2 # seems too high but safe. In a well-ordered graph, I guess this number should be less than the number of nodes.
+    check_max_len=len(nodes)**2 # seems too high but safe. In a well-ordered graph, I guess this number should be less than the number of nodes.
     max_iterations = len(nodes)**2
     i = 0
     switch_me = [] # switch the mode on these objects
