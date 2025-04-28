@@ -689,7 +689,10 @@ class xFormGeometryObject(xFormNode):
         reset_object_data(self.bObject)
         matrix= get_matrix(self)
         self.parameters['Matrix'] = matrix
-        set_object_parent(self)
+        try:
+            set_object_parent(self)
+        except: # I guess it isn't ready yet. we'll do it later
+            pass # (This can happen when solving schema.)
         self.bObject.matrix_world = matrix
         self.prepared = True
 
@@ -709,6 +712,9 @@ class xFormGeometryObject(xFormNode):
         self.executed = True
 
     def bFinalize(self, bContext = None):
+        matrix= get_matrix(self)
+        set_object_parent(self)
+        self.bObject.matrix_world = matrix
         for i, (driver_key, driver_item) in enumerate(self.drivers.items()):
             print (wrapGreen(i), wrapWhite(self), wrapPurple(driver_key))
             prOrange(driver_item)
