@@ -206,7 +206,12 @@ def solve_schema_to_tree(nc, all_nc, roots=[], error_popups=False):
     prOrange(f"Expanding schema {tree.name} in node {nc} with length {length}.")
 
     solver = SchemaSolver(nc, all_nc, np, error_popups=error_popups)
-    solved_nodes = solver.solve()
+    try:
+        solved_nodes = solver.solve()
+    except Exception as e:
+    #     # the schema will run the error cleanup code, we just need to raise or not
+        if error_popups:
+            raise e
     prWhite(f"Schema declared {len(solved_nodes)} nodes.")
 
     # maybe this should be done in schema solver. TODO invesitigate a more efficient way

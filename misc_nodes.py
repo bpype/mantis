@@ -1,5 +1,5 @@
 from .node_container_common import *
-from .base_definitions import MantisNode, NodeSocket
+from .base_definitions import MantisNode, NodeSocket, FLOAT_EPSILON
 from .xForm_containers import xFormArmature, xFormBone
 from .misc_nodes_socket_templates import *
 from math import pi, tau
@@ -279,8 +279,17 @@ class UtilityMatrixFromCurve(MantisNode):
             from .utilities import data_from_ribbon_mesh
             #
             num_divisions = self.evaluate_input("Total Divisions")
+            if num_divisions <= 0:
+                raise GraphError("The number of divisions in the curve must be 1 or greater.")
             m_index = self.evaluate_input("Matrix Index")
+            if m_index >= num_divisions:
+                prRed(m_index, num_divisions)
+                raise GraphError(f"{self} tried to get a matrix-index greater the total number of divisions."
+                                  "The matrix index starts at 0. You're probably off by +1.")
             spline_index = self.evaluate_input("Spline Index")
+            if spline_index > len(curve.data.splines)-1:
+                raise GraphError(f"{self} is attempting to read from a spline in {curve.name} that does not exist."
+                                  " Try and reduce the value of Spline Index.")
             splines_factors = [ [] for i in range (spline_index)]
             factors = [1/num_divisions*m_index, 1/num_divisions*(m_index+1)]
             splines_factors.append(factors)
@@ -288,6 +297,8 @@ class UtilityMatrixFromCurve(MantisNode):
             head=data[spline_index][0][0]
             tail= data[spline_index][0][1]
             axis = (tail-head).normalized()
+            if axis.length_squared < FLOAT_EPSILON:
+                raise RuntimeError(f"Failed to read the curve {curve.name}.")
             normal=data[spline_index][2][0]
             # make sure the normal is perpendicular to the tail
             from .utilities import make_perpendicular

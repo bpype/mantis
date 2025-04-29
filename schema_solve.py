@@ -67,7 +67,8 @@ class SchemaSolver:
                 # solver may be in a nested schema, and its node's signature may have
                 # uuid/index attached.
                 get_sig = (*self.node.ui_signature, ui_node.bl_idname) 
-                if not (mantis_node := self.all_nodes.get(get_sig)): raise RuntimeError(wrapRed(f"Not found: {get_sig}"))
+                if not (mantis_node := self.all_nodes.get(get_sig)):
+                    raise RuntimeError(wrapRed(f"Not found: {get_sig}"))
                 self.schema_nodes[signature] = mantis_node
                 mantis_node.fill_parameters(ui_node)
             # HACK to make Group Nodes work
@@ -233,12 +234,12 @@ class SchemaSolver:
         # this self.index_link is only used here?
         if self.index_link is None:
             # this should be impossible because the Schema gets an auto-generated Int input.
-            raise NotImplementedError("This code should be unreachable. Please report this as a bug!")
+            raise NotImplementedError(" 241 This code should be unreachable. Please report this as a bug!")
         if (self.index_link.from_node):
             connection = self.index_link.from_node.outputs[self.index_link.from_socket].connect(node=to_node, socket=ui_link.to_socket.name)
         # otherwise we can autogen an int input I guess...?
         else:
-            raise RuntimeError("I was expecting there to be an incoming connection here for Schema Length")
+            raise RuntimeError("247 I This code should be unreachable. Please report this as a bug!")
 
     def handle_link_from_incoming_connection_input(self, frame_mantis_nodes, ui_link):
         incoming = self.incoming_connections[ui_link.from_socket.name]
@@ -465,6 +466,7 @@ class SchemaSolver:
         # So we should not need to add any new dependencies unless there is a bug elsewhere.
         # and in fact, I could skip this in some cases, and should investigate if profiling reveals a slowdown here.
         forbidden=set()
+        e = None
         # forbid some nodes - they aren't necessary to solve the schema & cause problems.
         while unprepared:
             nc = unprepared.pop()
@@ -473,7 +475,7 @@ class SchemaSolver:
                     nc.bPrepare()
                 except Exception as e:
                     e = execution_error_cleanup(nc, e, show_error = self.error_popups)
-                    raise e # always raise so that we don't enter an infinite loop.
+                    break
                 if nc.node_type == 'DUMMY_SCHEMA':
                     self.solve_nested_schema(nc)
             elif nc.node_type == 'DUMMY_SCHEMA' and not self.test_is_sub_schema(nc):
@@ -491,6 +493,8 @@ class SchemaSolver:
                         unprepared.appendleft(dep)
                 if can_add_me:
                     unprepared.appendleft(nc) # just rotate them until they are ready.
+            if e: # todo: need a way to crash Schema so I don't have to raise.
+                raise e
 
     def solve_iteration(self):
         """ Solve an iteration of the schema.
@@ -711,7 +715,13 @@ class SchemaSolver:
             return {} # just don't do anything - it's OK to have a noop schema if it doesn't have dependencies.
         for index in range(self.solve_length):
             self.index = index
-            frame_mantis_nodes = self.solve_iteration()
+            try:
+                frame_mantis_nodes = self.solve_iteration()
+            except Exception as e:
+                self.node.base_tree.hash=''
+                if self.error_popups == False:
+                    raise e
+                return {}
             for sig, nc in frame_mantis_nodes.items():
                 if nc.node_type == 'DUMMY_SCHEMA':
                     self.nested_schemas[sig] = nc
