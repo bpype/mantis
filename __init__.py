@@ -15,8 +15,8 @@ from .ops_generate_tree import GenerateMantisTree
 from .utilities import prRed
 
 MANTIS_VERSION_MAJOR=0
-MANTIS_VERSION_MINOR=10
-MANTIS_VERSION_SUB=12
+MANTIS_VERSION_MINOR=11
+MANTIS_VERSION_SUB=1
 
 classLists = [module.TellClasses() for module in [
  link_definitions,
@@ -39,11 +39,11 @@ while (classLists):
 
 interface_classes = []
 
-try:
-    from .visualize import MantisVisualizeNode, MantisVisualizeOutput, MantisVisualizeTree
-    classes.extend([MantisVisualizeTree, MantisVisualizeNode, MantisVisualizeOutput, ])
-except ImportError:
-    pass # this feature is optional
+# try:
+#     from .visualize import MantisVisualizeNode, MantisVisualizeOutput, MantisVisualizeTree
+#     classes.extend([MantisVisualizeTree, MantisVisualizeNode, MantisVisualizeOutput, ])
+# except ImportError:
+#     pass # this feature is optional
 
 import nodeitems_utils
 from nodeitems_utils import NodeCategory, NodeItem
