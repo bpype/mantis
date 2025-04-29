@@ -26,6 +26,7 @@ def error_popup_draw(self, context):
 
 mantis_root = ".".join(__name__.split('.')[:-1]) # absolute HACK
 
+from os import environ
 
 # https://docs.blender.org/api/master/bpy.types.NodeTree.html#bpy.types.NodeTree.valid_socket_type
 # thank you, Sverchok
@@ -913,8 +914,13 @@ class MantisNode:
         return
     def bFinalize(self, bContext=None):
         return
-    def __repr__(self): 
-        return self.signature.__repr__()
+    
+    if environ.get("DOERROR"):
+        def __repr__(self): 
+            return self.signature.__repr__()
+    else:
+        def __repr__(self): 
+            return self.ui_signature.__repr__()
 
 # do I need this and the link class above?
 class DummyLink:
