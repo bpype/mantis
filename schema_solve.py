@@ -584,7 +584,7 @@ class SchemaSolver:
             if isinstance(from_ui_node, SchemaArrayInputGet):
                 e = DeprecationWarning("This node is deprecated. Use an Entire Array Input and Array Get node instead.")
                 from_name, to_name = get_link_in_out(ui_link)
-                from_nc = frame_mantis_nodes[(*self.autogen_path_names, from_name+self.index_str())]
+                from_nc = self.schema_nodes.get((*self.autogen_path_names, from_name+self.index_str()), self.node)
                 # always raise this because it is deprecated.
                 raise execution_error_cleanup(from_nc, e, show_error=self.error_popups)
             
