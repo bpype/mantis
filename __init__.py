@@ -186,6 +186,9 @@ node_categories = [
 ]
 
 schema_category=[NodeItem(cls.bl_idname) for cls in schema_definitions.TellClasses()]
+# DEPRECATION:
+schema_category.pop() # remove the last item, SchemaArrayInputGet
+# TODO: make a nicer, cleaner way of doing this. will refactor node categories eventually.
 schema_categories = [
     SchemaNodeCategory('SCHEMA_SCHEMA', "Schema", items=schema_category),
 ]

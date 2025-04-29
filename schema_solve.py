@@ -286,18 +286,7 @@ class SchemaSolver:
         init_connections(from_node)
     
     def handle_link_to_array_input_get(self, frame_mantis_nodes, ui_link, index):
-        from_name, to_name = get_link_in_out(ui_link)
-        from_nc = frame_mantis_nodes[(*self.autogen_path_names, from_name+self.index_str())]
-        to_nc = self.schema_nodes[(*self.tree_path_names, to_name)]
-        # this only needs to be done once:
-        if index == 0: # BUG? HACK? TODO find out what is going on here.
-            # Kill the link between the schema node group and the node connecting to it
-            old_nc = self.all_nodes[(*self.tree_path_names, from_name)]
-            # I am not sure about this!
-            existing_link = old_nc.outputs[ui_link.from_socket.name].links[0]
-            existing_link.die()
-        #
-        connection = from_nc.outputs[ui_link.from_socket.name].connect(node=to_nc, socket=ui_link.to_socket.name)
+        raise NotImplementedError("This node is not supported.")
     
     def handle_link_from_array_input(self, frame_mantis_nodes, ui_link, index):
         get_index = index
@@ -584,13 +573,18 @@ class SchemaSolver:
                 self.held_links.append(ui_link)
                 continue 
             # HOLD these links until prep is done a little later
-            if isinstance(to_ui_node, (SchemaConstOutput, NodeGroupOutput)) or isinstance(to_ui_node, SchemaArrayOutput) or \
-                isinstance(from_ui_node, SchemaArrayInputGet):
+            if isinstance(to_ui_node, (SchemaConstOutput, NodeGroupOutput)) or isinstance(to_ui_node, SchemaArrayOutput):
                 if isinstance(from_ui_node, (MantisNodeGroup, SchemaGroup)):
                     self.handle_link_from_subschema_to_output(frame_mantis_nodes, ui_link, to_ui_node)
                     # both links are desirable to create, so don't continue here
                 awaiting_prep_stage.append(ui_link)
                 continue
+            if isinstance(from_ui_node, SchemaArrayInputGet):
+                e = NotImplementedError("This node is deprecated. Use an Entire Array Input and Array Get node instead.")
+                from_name, to_name = get_link_in_out(ui_link)
+                from_nc = frame_mantis_nodes[(*self.autogen_path_names, from_name+self.index_str())]
+                raise execution_error_cleanup(from_nc, e)
+            
             # for any of the special cases, we hit a 'continue' block. So this connection is not special, and is made here.
             connection = link_node_containers(self.autogen_path_names, ui_link, frame_mantis_nodes, from_suffix=self.index_str(), to_suffix=self.index_str())
         
