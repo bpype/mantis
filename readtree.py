@@ -197,7 +197,7 @@ def is_signature_in_other_signature(parent_signature, child_signature):
         return False
     return parent_signature[0:] == child_signature[:len(parent_signature)]
 
-def solve_schema_to_tree(nc, all_nc, roots=[]):
+def solve_schema_to_tree(nc, all_nc, roots=[], error_popups=False):
     from .utilities import get_node_prototype
     np = get_node_prototype(nc.signature, nc.base_tree)
     from .schema_solve import SchemaSolver
@@ -205,7 +205,7 @@ def solve_schema_to_tree(nc, all_nc, roots=[]):
     length = nc.evaluate_input("Schema Length")
     prOrange(f"Expanding schema {tree.name} in node {nc} with length {length}.")
 
-    solver = SchemaSolver(nc, all_nc, np)
+    solver = SchemaSolver(nc, all_nc, np, error_popups=error_popups)
     solved_nodes = solver.solve()
     prWhite(f"Schema declared {len(solved_nodes)} nodes.")
 
@@ -283,7 +283,7 @@ def get_schema_length_dependencies(node, all_nodes={}):
     return list(filter(deps_filter, deps))
 
 
-def parse_tree(base_tree):
+def parse_tree(base_tree, error_popups=False):
     from uuid import uuid4
     base_tree.execution_id = uuid4().__str__() # set the unique id of this execution
     
@@ -359,7 +359,7 @@ def parse_tree(base_tree):
                     solve_layer.appendleft(n)
                     break
             else:
-                solved_nodes = solve_schema_to_tree(n, all_mantis_nodes, roots)
+                solved_nodes = solve_schema_to_tree(n, all_mantis_nodes, roots, error_popups=error_popups)
                 unsolved_schema.remove(n)
                 schema_solve_done.add(n)
                 for node in solved_nodes.values():
@@ -380,7 +380,10 @@ def parse_tree(base_tree):
                 try:
                     n.bPrepare()
                 except Exception as e:
-                    raise execution_error_cleanup(n, e)
+                    e = execution_error_cleanup(n, e, show_error=error_popups)
+                    if error_popups == False:
+                        raise e
+                    
                 schema_solve_done.add(n)
                 for conn in n.hierarchy_connections:
                     if conn not in schema_solve_done and conn not in solve_layer:
@@ -431,31 +434,32 @@ def switch_mode(mode='OBJECT', objects = []):
                 ops.object.mode_set(mode=mode)
     return active
 
-def execution_error_cleanup(node, exception, switch_objects = [] ):
+def execution_error_cleanup(node, exception, switch_objects = [], show_error=False ):
     from bpy import  context
     ui_sig = None
-    if node:
-        ui_sig = node.ui_signature
-        # TODO: see about zooming-to-node.
-        base_tree = node.base_tree
-        tree = base_tree
-        try:
-            pass
-            space = context.space_data
-            for name in ui_sig[1:]:
-                for n in tree.nodes: n.select = False
-                n = tree.nodes[name]
-                n.select = True
-                tree.nodes.active = n
-                if hasattr(n, "node_tree"):
-                    tree = n.node_tree
-        except AttributeError: # not being run in node graph
-            pass
-        finally:
-            def error_popup_draw(self, context):
-                self.layout.label(text=f"Error: {exception}")
-                self.layout.label(text=f"see node: {ui_sig[1:]}.")
-            context.window_manager.popup_menu(error_popup_draw, title="Error", icon='ERROR')
+    if show_error: # show a popup and select the relevant nodes
+        if node:
+            ui_sig = node.ui_signature
+            # TODO: see about zooming-to-node.
+            base_tree = node.base_tree
+            tree = base_tree
+            try:
+                pass
+                space = context.space_data
+                for name in ui_sig[1:]:
+                    for n in tree.nodes: n.select = False
+                    n = tree.nodes[name]
+                    n.select = True
+                    tree.nodes.active = n
+                    if hasattr(n, "node_tree"):
+                        tree = n.node_tree
+            except AttributeError: # not being run in node graph
+                pass
+            finally:
+                def error_popup_draw(self, context):
+                    self.layout.label(text=f"Error: {exception}")
+                    self.layout.label(text=f"see node: {ui_sig[1:]}.")
+                context.window_manager.popup_menu(error_popup_draw, title="Error", icon='ERROR')
     switch_mode(mode='OBJECT', objects=switch_objects)
     for ob in switch_objects:
         ob.data.pose_position = 'POSE'
@@ -534,9 +538,8 @@ def execute_tree(nodes, base_tree, context, error_popups = False):
                             if isinstance(ob, bpy.types.Object):
                                 select_me.append(ob)
                     except Exception as e:
-                        if error_popups:
-                            raise execution_error_cleanup(n, e,)
-                        else:
+                        e = execution_error_cleanup(n, e, show_error=error_popups)
+                        if error_popups == False:
                             raise e
                     n.execution_prepared=True
                     executed.append(n)
@@ -557,9 +560,8 @@ def execute_tree(nodes, base_tree, context, error_popups = False):
                 if not n.executed:
                     n.bExecute(context)
             except Exception as e:
-                if error_popups:
-                    raise execution_error_cleanup(n, e,)
-                else:
+                e = execution_error_cleanup(n, e, show_error=error_popups)
+                if error_popups == False:
                     raise e
 
 
@@ -573,9 +575,8 @@ def execute_tree(nodes, base_tree, context, error_popups = False):
             try:
                 n.bFinalize(context)
             except Exception as e:
-                if error_popups:
-                    raise execution_error_cleanup(n, e,)
-                else:
+                e = execution_error_cleanup(n, e, show_error=error_popups)
+                if error_popups == False:
                     raise e
         
         tot_time = (time() - start_execution_time)
@@ -584,7 +585,7 @@ def execute_tree(nodes, base_tree, context, error_popups = False):
             context.view_layer.objects.active = original_active
             original_active.select_set(True)
     except Exception as e:
-        execution_error_cleanup(None, e, switch_me)
+        e = execution_error_cleanup(None, e, switch_me, show_error=error_popups)
         if error_popups == False:
             raise e
     finally:

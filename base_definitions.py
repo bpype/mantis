@@ -108,7 +108,7 @@ class MantisTree(NodeTree):
         if (bpy.app.version >= (4,4,0)):
             fix_reroute_colors(self)
 
-    def update_tree(self, context = None, force=False):
+    def update_tree(self, context = None, force=False, error_popups=False):
         if self.is_exporting:
             return
         my_hash = str( hash_tree(self) )
@@ -122,7 +122,7 @@ class MantisTree(NodeTree):
                 # is used for display update... but I always want to do this
                 scene = bpy.context.scene
                 scene.render.use_lock_interface = True
-                self.parsed_tree = readtree.parse_tree(self)
+                self.parsed_tree = readtree.parse_tree(self, error_popups)
                 if context:
                     self.display_update(context)
                 self.tree_valid = True

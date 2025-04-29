@@ -11,11 +11,12 @@ from bpy.types import NodeGroupInput, NodeGroupOutput
 from .readtree import execution_error_cleanup
 
 class SchemaSolver:
-    def __init__(self, schema_dummy, nodes, prototype, signature=None,):
+    def __init__(self, schema_dummy, nodes, prototype, signature=None, error_popups=False):
         self.all_nodes = nodes # this is the parsed tree from Mantis
         self.node = schema_dummy
         self.tree = prototype.node_tree
         self.uuid = self.node.uuid
+        self.error_popups = error_popups
         if signature:
             self.signature = signature
         else:
@@ -465,14 +466,14 @@ class SchemaSolver:
         # and in fact, I could skip this in some cases, and should investigate if profiling reveals a slowdown here.
         forbidden=set()
         # forbid some nodes - they aren't necessary to solve the schema & cause problems.
-        from .readtree import execution_error_cleanup
         while unprepared:
             nc = unprepared.pop()
             if sum([dep.prepared for dep in nc.hierarchy_dependencies]) == len(nc.hierarchy_dependencies):
                 try:
                     nc.bPrepare()
                 except Exception as e:
-                    execution_error_cleanup(nc, e)
+                    e = execution_error_cleanup(nc, e, show_error = self.error_popups)
+                    raise e # always raise so that we don't enter an infinite loop.
                 if nc.node_type == 'DUMMY_SCHEMA':
                     self.solve_nested_schema(nc)
             elif nc.node_type == 'DUMMY_SCHEMA' and not self.test_is_sub_schema(nc):
@@ -568,7 +569,8 @@ class SchemaSolver:
                         " inside another Schema. This is not currently supported. Try using a Constant Output" \
                         f" instead. Affected node: {from_ui_node.name}"
                         )
-                    raise execution_error_cleanup(self.node, e)
+                    e = execution_error_cleanup(self.node, e, show_error=self.error_popups)
+                    raise e # always raise this error because it is not implemented.
                     self.handle_link_from_subschema_to_output(frame_mantis_nodes, ui_link, to_ui_node)
                 self.held_links.append(ui_link)
                 continue 
@@ -580,10 +582,11 @@ class SchemaSolver:
                 awaiting_prep_stage.append(ui_link)
                 continue
             if isinstance(from_ui_node, SchemaArrayInputGet):
-                e = NotImplementedError("This node is deprecated. Use an Entire Array Input and Array Get node instead.")
+                e = DeprecationWarning("This node is deprecated. Use an Entire Array Input and Array Get node instead.")
                 from_name, to_name = get_link_in_out(ui_link)
                 from_nc = frame_mantis_nodes[(*self.autogen_path_names, from_name+self.index_str())]
-                raise execution_error_cleanup(from_nc, e)
+                # always raise this because it is deprecated.
+                raise execution_error_cleanup(from_nc, e, show_error=self.error_popups)
             
             # for any of the special cases, we hit a 'continue' block. So this connection is not special, and is made here.
             connection = link_node_containers(self.autogen_path_names, ui_link, frame_mantis_nodes, from_suffix=self.index_str(), to_suffix=self.index_str())
@@ -636,7 +639,7 @@ class SchemaSolver:
                 prOrange(f"Expanding Node Group {tree.name} in node {schema_nc}.")
             else:
                 prOrange(f"Expanding schema {tree.name} in node {schema_nc} with length {length}.")
-            solver = SchemaSolver(schema_nc, all_nodes, ui_node, schema_nc.ui_signature)
+            solver = SchemaSolver(schema_nc, all_nodes, ui_node, schema_nc.ui_signature, error_popups=self.error_popups)
             solved_nodes = solver.solve()
             schema_nc.prepared = True
             for k,v in solved_nodes.items():

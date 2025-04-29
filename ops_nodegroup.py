@@ -262,7 +262,7 @@ class ExecuteNodeTree(Operator):
             import pstats, io
             from pstats import SortKey
             with cProfile.Profile() as pr:
-                tree.update_tree(context)
+                tree.update_tree(context, error_popups = pass_error)
                 tree.execute_tree(context, error_popups = pass_error)
                 # from the Python docs at https://docs.python.org/3/library/profile.html#module-cProfile
                 s = io.StringIO()
@@ -273,7 +273,7 @@ class ExecuteNodeTree(Operator):
                 print(s.getvalue())
 
         else:
-            tree.update_tree(context)
+            tree.update_tree(context, error_popups = pass_error)
             tree.execute_tree(context, error_popups = pass_error)
         prGreen("Finished executing tree in %f seconds" % (time() - start_time))
         return {"FINISHED"}
