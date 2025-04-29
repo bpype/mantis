@@ -126,9 +126,10 @@ class MantisTree(NodeTree):
                 if context:
                     self.display_update(context)
                 self.tree_valid = True
-            except GraphError as e:
+            except Exception as e:
                 prRed("Failed to update node tree due to error.")
                 self.tree_valid = False
+                self.hash='' # unset the hash to mark the tree as un-parsed.
                 raise e
             finally:
                 scene.render.use_lock_interface = False
