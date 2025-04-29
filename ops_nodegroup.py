@@ -252,7 +252,6 @@ class ExecuteNodeTree(Operator):
         from os import environ
         start_time = time()
         do_profile=False
-        print (environ.get("DOPROFILE"))
         if environ.get("DOPROFILE"):
             do_profile=True
         pass_error = True

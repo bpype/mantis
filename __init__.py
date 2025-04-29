@@ -39,11 +39,11 @@ while (classLists):
 
 interface_classes = []
 
-# try:
-#     from .visualize import MantisVisualizeNode, MantisVisualizeOutput, MantisVisualizeTree
-#     classes.extend([MantisVisualizeTree, MantisVisualizeNode, MantisVisualizeOutput, ])
-# except ImportError:
-#     pass # this feature is optional
+
+from os import environ
+if environ.get("ENABLEVIS"):
+    from .visualize import MantisVisualizeNode, MantisVisualizeOutput, MantisVisualizeTree
+    classes.extend([MantisVisualizeTree, MantisVisualizeNode, MantisVisualizeOutput, ])
 
 import nodeitems_utils
 from nodeitems_utils import NodeCategory, NodeItem
