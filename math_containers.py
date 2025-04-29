@@ -8,6 +8,36 @@ def TellClasses():
             MathStaticVector,
            ]
 
+def math_operation(operation, a, b):
+    match operation:
+        case "ADD":
+            return a+b
+        case "SUBTRACT":
+            return a-b
+        case "MULTIPLY":
+            return a*b
+        case "DIVIDE":
+            return a/b
+        case "FLOOR_DIVIDE":
+            return a//b
+        case "MODULUS":
+            return a%b
+        case "POWER":
+            return a**b
+        case "ABSOLUTE":
+            return abs(a)
+        case "MAXIMUM":
+            return max(a, b)
+        case "MINIMUM":
+            return min(a, b)
+        case "GREATER THAN":
+            return float(a > b)
+        case "LESS THAN":
+            return float(a < b)
+        case" ARCTAN2":
+            from math import atan2
+            return atan2(a,b)
+
 #*#-------------------------------#++#-------------------------------#*#
 # M A T H  N O D E S
 #*#-------------------------------#++#-------------------------------#*#
@@ -32,32 +62,9 @@ class MathStaticInt(MantisNode):
 
     def bPrepare(self, bContext = None,):
         a = self.evaluate_input("Int A"); b = self.evaluate_input("Int B")
-        result = float("NaN")
-        if self.evaluate_input("Operation") == "ADD":
-            result = int(a+b)
-        if self.evaluate_input("Operation") == "SUBTRACT":
-            result = int(a-b)
-        if self.evaluate_input("Operation") == "MULTIPLY":
-            result = int(a*b)
-        if self.evaluate_input("Operation") == "FLOOR_DIVIDE":
-            result = a//b
-        if self.evaluate_input("Operation") == "MODULUS":
-            result = int(a%b)
-        if self.evaluate_input("Operation") == "POWER":
-            result = int(a**b)
-        if self.evaluate_input("Operation") == "ABSOLUTE":
-            result = int(abs(a))
-        if self.evaluate_input("Operation") == "MAXIMUM":
-            result = int(a if a <= b else b)
-        if self.evaluate_input("Operation") == "MINIMUM":
-            result = int(a if a >= b else b)
-        if self.evaluate_input("Operation") == "GREATER THAN":
-            result = int(a > b)
-        if self.evaluate_input("Operation") == "LESS THAN":
-            result = int(a < b)
-        self.parameters["Result Int"] = result
-        self.prepared = True
-        self.executed = True
+        result = math_operation(self.evaluate_input("Operation"), a, b)
+        self.parameters["Result Int"] = int(result)
+        self.prepared, self.executed = True, True
 
 class MathStaticFloat(MantisNode):
     '''A node representing an armature object'''
@@ -80,37 +87,9 @@ class MathStaticFloat(MantisNode):
 
     def bPrepare(self, bContext = None,):
         a = self.evaluate_input("Float A"); b = self.evaluate_input("Float B")
-        result = float("NaN")
-        if self.evaluate_input("Operation") == "ADD":
-            result = a+b
-        if self.evaluate_input("Operation") == "SUBTRACT":
-            result = a-b
-        if self.evaluate_input("Operation") == "MULTIPLY":
-            result = a*b
-        if self.evaluate_input("Operation") == "DIVIDE":
-            result = a/b
-        if self.evaluate_input("Operation") == "FLOOR_DIVIDE":
-            result = a//b
-        if self.evaluate_input("Operation") == "MODULUS":
-            result = a%b
-        if self.evaluate_input("Operation") == "POWER":
-            result = a**b
-        if self.evaluate_input("Operation") == "ABSOLUTE":
-            result = abs(a)
-        if self.evaluate_input("Operation") == "MAXIMUM":
-            result = a if a <= b else b
-        if self.evaluate_input("Operation") == "MINIMUM":
-            result = a if a >= b else b
-        if self.evaluate_input("Operation") == "GREATER THAN":
-            result = float(a > b)
-        if self.evaluate_input("Operation") == "LESS THAN":
-            result = float(a < b)
-        if self.evaluate_input("Operation") == "ARCTAN2":
-            from math import atan2
-            result = atan2(a,b)
+        result = math_operation(self.evaluate_input("Operation"), a, b)
         self.parameters["Result Float"] = result
-        self.prepared = True
-        self.executed = True
+        self.prepared, self.executed = True, True
 
 class MathStaticVector(MantisNode):
     '''A node representing an armature object'''
