@@ -696,6 +696,15 @@ class MantisNode:
         #  classes, instead of adding about 5 lines of code elsewhere.
         if self.socket_templates:
             self.init_sockets()
+
+    @property
+    def name(self):
+        return self.ui_signature[-1]
+    
+    @property
+    def bl_idname(self): # this and the above exist solely to maintain interface w/bpy.types.Node
+        from .utilities import get_node_prototype
+        return get_node_prototype(self.ui_signature, self.base_tree).bl_idname
     
     def reset_execution(self) -> None:
         """ Reset the node for additional execution without re-building the tree."""
@@ -904,7 +913,7 @@ class MantisNode:
     def bFinalize(self, bContext=None):
         return
     def __repr__(self): 
-        return self.ui_signature.__repr__()
+        return self.signature.__repr__()
 
 # do I need this and the link class above?
 class DummyLink:

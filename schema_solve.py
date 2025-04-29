@@ -3,12 +3,12 @@ from .utilities import (prRed, prGreen, prPurple, prWhite,
                               wrapRed, wrapGreen, wrapPurple, wrapWhite,
                               wrapOrange,)
 from .utilities import init_connections, init_dependencies, get_link_in_out
-from .base_definitions import SchemaUINode, custom_props_types, MantisNodeGroup, replace_types
+from .base_definitions import SchemaUINode, custom_props_types, MantisNodeGroup, SchemaGroup, replace_types
 from .node_container_common import setup_custom_props_from_np
 # a class that solves Schema nodes
 from bpy.types import NodeGroupInput, NodeGroupOutput
 
-
+from .readtree import execution_error_cleanup
 
 class SchemaSolver:
     def __init__(self, schema_dummy, nodes, prototype, signature=None,):
@@ -187,8 +187,6 @@ class SchemaSolver:
             mantis_node.fill_parameters(prototype_ui_node)
             # be sure to pass on the Mantis Context to them
             mantis_node.mContext=mContext
-            
-
 
     def handle_link_from_index_input(self, index, frame_mantis_nodes, ui_link):
         _from_name, to_name = get_link_in_out(ui_link)
@@ -337,6 +335,16 @@ class SchemaSolver:
     def handle_link_to_constant_output(self, frame_mantis_nodes, index, ui_link,  to_ui_node):
         to_node = self.schema_nodes[(*self.tree_path_names, to_ui_node.bl_idname)]
         expose_when = to_node.evaluate_input('Expose when N==')
+        from_name = get_link_in_out(ui_link)[0]
+        from bpy.types import NodeSocket
+        #use it directly if it is a mantis node; this happens when the previous node was a Schema
+        if isinstance( ui_link.from_socket, NodeSocket): # normal
+            from_node = frame_mantis_nodes[(*self.autogen_path_names, from_name+self.index_str()) ]
+        else: # it's a mantis socket, set manually while looping though prepped links
+            from_node = ui_link.from_socket.node
+        from_socket_name = ui_link.from_socket.name
+        if from_node.node_type == 'DUMMY_SCHEMA':
+            from_socket_name = ui_link.from_socket.identifier
         # HACK here to force it to work with ordinary node groups, which don't seem to set this value correctly.
         if to_ui_node.bl_idname == "NodeGroupOutput":
             expose_when = index # just set it directly since it is getting set to None somewhere (I should find out where tho)
@@ -344,23 +352,31 @@ class SchemaSolver:
         if index == expose_when:
             for outgoing in self.constant_out[ui_link.to_socket.name]:
                 to_node = outgoing.to_node
-                from_name = get_link_in_out(ui_link)[0]
-                from_node = frame_mantis_nodes[(*self.autogen_path_names, from_name+self.index_str()) ]
-                connection = from_node.outputs[ui_link.from_socket.name].connect(node=to_node, socket=outgoing.to_socket)
+                connection = from_node.outputs[from_socket_name].connect(node=to_node, socket=outgoing.to_socket)
+
+    def handle_link_from_subschema_to_output(self, frame_mantis_nodes, ui_link, to_ui_node):
+        # wire the schema node itself to the output so it will push the connections when solving
+        to_node = self.schema_nodes[(*self.tree_path_names, to_ui_node.bl_idname)]
+        from_name = get_link_in_out(ui_link)[0]
+        from_node = frame_mantis_nodes[ (*self.autogen_path_names, from_name+self.index_str()) ]
+        connection = from_node.outputs[ui_link.from_socket.identifier].connect(node=to_node, socket=ui_link.to_socket.name)
 
     # WTF is even happening here?? TODO BUG HACK
     def handle_link_to_array_output(self, frame_mantis_nodes, index, ui_link, to_ui_node, from_ui_node):# if this duplicated code works, dedupe!
         to_node = self.schema_nodes[(*self.tree_path_names, to_ui_node.bl_idname)] # get it by [], we want a KeyError if this fails
+        from_name = get_link_in_out(ui_link)[0]
+        from bpy.types import NodeSocket
+        #use it directly if it is a mantis node; this happens when the previous node was a Schema
+        if isinstance( ui_link.from_socket, NodeSocket): # normal
+            from_node = frame_mantis_nodes[(*self.autogen_path_names, from_name+self.index_str()) ]
+        else: # it's a mantis socket, set manually while looping though prepped links
+            from_node = ui_link.from_socket.node
+        from_socket_name = ui_link.from_socket.name
         for outgoing in self.array_output_connections[ui_link.to_socket.identifier]:
-            # print (type(outgoing))
-            from .schema_containers import SchemaIndex
-            from_name = get_link_in_out(ui_link)[0]
-            from_node = frame_mantis_nodes[ (*self.autogen_path_names, from_name+self.index_str()) ]
-            from_socket_name = ui_link.from_socket.name
             if not from_node:
                 from_node = self.schema_nodes[(*self.tree_path_names, from_ui_node.bl_idname)]
             to_node = outgoing.to_node
-
+            from .schema_containers import SchemaIndex
             if isinstance(from_node, SchemaIndex): # I think I need to dedup this stuff
                 # print("INDEX")
                 from .utilities import gen_nc_input_for_data
@@ -430,7 +446,24 @@ class SchemaSolver:
         to_node = frame_mantis_nodes[(*self.autogen_path_names, to_name+self.index_str())]
         connection = incoming.from_node.outputs[incoming.from_socket].connect(node=to_node, socket=ui_link.to_socket.name)
         init_connections(incoming.from_node)
-                    
+
+    def spoof_link_for_subschema_to_output_edge_case(self, ui_link, ):
+        to_ui_node = ui_link.to_socket.node
+        # ui_link is the link between the Schema & the output but we have mantis_links
+        # connected up correctly. between the output and the schema's generated nodes.
+        # so seek BACK from the output node and grab the from-node that is connected to
+        #  the link. then modify the ui_link to point to that node.
+        from .base_definitions import DummyLink 
+        if not isinstance(ui_link, DummyLink): # make it a Dummy so i can modify it
+            ui_link = DummyLink(ui_link.from_socket, ui_link.to_socket,
+                                multi_input_sort_id=ui_link.multi_input_sort_id)
+        to_node = self.schema_nodes[(*self.node.ui_signature, to_ui_node.bl_idname)]
+        for inp in to_node.inputs:
+            if inp.name == ui_link.to_socket.name: # the most recent one is from
+                l = inp.links[-1]; break # <----  this index of the outer schema
+        ui_link.from_nc = l.from_node; ui_link.from_socket = l.from_node.outputs[l.from_socket]
+        return ui_link
+
     def test_is_sub_schema(self, other):
         for i in range(len(other.ui_signature)-1): # -1, we don't want to check this node, obviously
             if self.node.ui_signature[:i+1]:
@@ -489,7 +522,6 @@ class SchemaSolver:
                                         SchemaConstOutput,
                                         SchemaOutgoingConnection,
                                         SchemaIncomingConnection,)
-        
         from .utilities import clear_reroutes, link_node_containers
 
         self.set_index_strings()
@@ -541,11 +573,22 @@ class SchemaSolver:
                 continue
             # HOLD these links to the next iteration:
             if isinstance(to_ui_node, SchemaOutgoingConnection):
+                if isinstance(from_ui_node, (MantisNodeGroup, SchemaGroup)):
+                    e = NotImplementedError(
+                        "You have connected a Node Group or Schema directly into an Outgoing Connection node"
+                        " inside another Schema. This is not currently supported. Try using a Constant Output" \
+                        f" instead. Affected node: {from_ui_node.name}"
+                        )
+                    raise execution_error_cleanup(self.node, e)
+                    self.handle_link_from_subschema_to_output(frame_mantis_nodes, ui_link, to_ui_node)
                 self.held_links.append(ui_link)
                 continue 
             # HOLD these links until prep is done a little later
             if isinstance(to_ui_node, (SchemaConstOutput, NodeGroupOutput)) or isinstance(to_ui_node, SchemaArrayOutput) or \
                 isinstance(from_ui_node, SchemaArrayInputGet):
+                if isinstance(from_ui_node, (MantisNodeGroup, SchemaGroup)):
+                    self.handle_link_from_subschema_to_output(frame_mantis_nodes, ui_link, to_ui_node)
+                    # both links are desirable to create, so don't continue here
                 awaiting_prep_stage.append(ui_link)
                 continue
             # for any of the special cases, we hit a 'continue' block. So this connection is not special, and is made here.
@@ -572,6 +615,10 @@ class SchemaSolver:
         while(awaiting_prep_stage):
             ui_link = awaiting_prep_stage.pop()
             to_ui_node = ui_link.to_socket.node; from_ui_node = ui_link.from_socket.node
+            # ugly workaround here in a very painful edge case...
+            if isinstance(from_ui_node, (MantisNodeGroup, SchemaGroup)):
+                ui_link=self.spoof_link_for_subschema_to_output_edge_case(ui_link)
+
             if isinstance(to_ui_node, (SchemaConstOutput, NodeGroupOutput)):
                 self.handle_link_to_constant_output(frame_mantis_nodes, self.index, ui_link,  to_ui_node)
             if isinstance(to_ui_node, SchemaArrayOutput):

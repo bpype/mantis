@@ -29,6 +29,7 @@ class DummyNode(MantisNode):
             self.ui_signature=ui_signature
         # This is necessary for Schema to work if there are multiple Schema nodes using the same Schema tree.
         # this is ugly and I hate it.
+        self.execution_prepared=True # in case it gets left behind in the tree as a dependency
 
 
 class NoOpNode(MantisNode):
