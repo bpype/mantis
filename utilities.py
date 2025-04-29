@@ -1063,8 +1063,11 @@ def data_from_ribbon_mesh(m, factorsList, mat, ribbons = None, fReport = None):
                 elif (targetLength == totalLength):
                     curFac = 1
                 else:
-                    # NOTE: This can be Zero. That should throw an error.
-                    curFac = 1 - (targetLengthAtEdge/ data[2]) #length
+                    # NOTE: This can be Zero. Find out why!
+                    if data[2] == 0:
+                        curFac=0
+                    else:
+                        curFac = 1 - (targetLengthAtEdge/ data[2]) #length
             t1 = m.vertices[data[0][0]]; b1 = m.vertices[data[0][1]]
             t2 = m.vertices[data[1][0]]; b2 = m.vertices[data[1][1]]
             #location
