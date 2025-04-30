@@ -210,8 +210,9 @@ def solve_schema_to_tree(nc, all_nc, roots=[], error_popups=False):
         solved_nodes = solver.solve()
     except Exception as e:
     #     # the schema will run the error cleanup code, we just need to raise or not
-        if error_popups:
-            raise e
+        solved_nodes = {}
+        nc.base_tree.hash=''
+        raise execution_error_cleanup(nc, e, show_error=error_popups)
     prWhite(f"Schema declared {len(solved_nodes)} nodes.")
 
     # maybe this should be done in schema solver. TODO invesitigate a more efficient way
@@ -364,7 +365,12 @@ def parse_tree(base_tree, error_popups=False):
                     solve_layer.appendleft(n)
                     break
             else:
-                solved_nodes = solve_schema_to_tree(n, all_mantis_nodes, roots, error_popups=error_popups)
+                try:
+                    solved_nodes = solve_schema_to_tree(n, all_mantis_nodes, roots, error_popups=error_popups)
+                except Exception as e:
+                    e = execution_error_cleanup(n, e, show_error=error_popups)
+                    if error_popups == False:
+                        raise e
                 unsolved_schema.remove(n)
                 schema_solve_done.add(n)
                 for node in solved_nodes.values():

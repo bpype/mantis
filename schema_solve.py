@@ -715,13 +715,7 @@ class SchemaSolver:
             return {} # just don't do anything - it's OK to have a noop schema if it doesn't have dependencies.
         for index in range(self.solve_length):
             self.index = index
-            try:
-                frame_mantis_nodes = self.solve_iteration()
-            except Exception as e:
-                self.node.base_tree.hash=''
-                if self.error_popups == False:
-                    raise e
-                return {}
+            frame_mantis_nodes = self.solve_iteration()
             for sig, nc in frame_mantis_nodes.items():
                 if nc.node_type == 'DUMMY_SCHEMA':
                     self.nested_schemas[sig] = nc
