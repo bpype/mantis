@@ -436,7 +436,10 @@ class SchemaSolver:
                     from_node = nc_from
                     self.solved_nodes[sig]=from_node
             elif from_node.node_type == 'DUMMY_SCHEMA':
-                from_socket_name = ui_link.from_socket.identifier
+                if isinstance( ui_link.from_socket, NodeSocket): # normal
+                    from_socket_name = ui_link.from_socket.identifier
+                else:
+                    from_socket_name = ui_link.from_socket.name
 
             # I have a feeling that something bad will happen if both of these conditions (above and below) are true
             if to_node.node_type == 'DUMMY_SCHEMA' and to_node.prepared:
