@@ -35,12 +35,14 @@ class SchemaNode(MantisNode):
     def __init__(self, signature, base_tree, socket_templates=[]):
         super().__init__(signature, base_tree, socket_templates)
         self.node_type = 'SCHEMA'
-        self.prepared = True
-        self.executed = True
+        self.prepared = True; self.executed = True
+        self.execution_prepared = True # should not affect execution!
 
     def reset_execution(self):
         super().reset_execution()
-        self.prepared, self.executed=True
+        self.prepared, self.executed = True, True
+        raise RuntimeError( "43 Code thought to unreachable has been reached."
+                           f"Please report this as a bug. {self}")
 
 
 class SchemaIndex(SchemaNode):
