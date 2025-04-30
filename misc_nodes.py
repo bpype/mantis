@@ -1788,20 +1788,20 @@ class UtilityChoose(MantisNode):
         self.prepared, self.executed = prepared, prepared
 
     def bPrepare(self, bContext = None,):
-        prGreen(f"Executing Choose Node {self}")
-        print (self.parameters.items())
-        condition = self.evaluate_input("Condition")
-        if self.evaluate_input('A') is not None and self.evaluate_input('B') is not None:
-            self.parameters['Result'] = self.evaluate_input('B') if condition else self.evaluate_input('A')
-        elif self.evaluate_input('A') is None and self.evaluate_input('B') is None:
-            if condition: link = self.inputs['B'].links[0]
-            else: link = self.inputs['A'].links[0]
-            from_node = link.from_node; from_socket  = link.from_socket
-            for link in self.outputs['Result'].links:
-                from_node.outputs[from_socket].connect(link.to_node, link.to_socket)
-                link.die()
-            self.flush_links()
-            # attempting to init the connections seems more error prone than leaving them be.
-        else:
-            raise GraphError(f"Choose Node {self} has incorrect types.")
+        if self.outputs['Result'].links: # otherwise this doesn't matter as it is not connected.
+            prGreen(f"Executing Choose Node {self}")
+            condition = self.evaluate_input("Condition")
+            if self.evaluate_input('A') is not None and self.evaluate_input('B') is not None:
+                self.parameters['Result'] = self.evaluate_input('B') if condition else self.evaluate_input('A')
+            elif self.evaluate_input('A') is None and self.evaluate_input('B') is None:
+                if condition: link = self.inputs['B'].links[0]
+                else: link = self.inputs['A'].links[0]
+                from_node = link.from_node; from_socket  = link.from_socket
+                for link in self.outputs['Result'].links:
+                    from_node.outputs[from_socket].connect(link.to_node, link.to_socket)
+                    link.die()
+                self.flush_links()
+                # attempting to init the connections seems more error prone than leaving them be.
+            else:
+                raise GraphError(f"Choose Node {self} has incorrect types.")
         self.prepared = True; self.executed = True
