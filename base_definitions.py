@@ -943,7 +943,7 @@ class DummyLink:
 
 def detect_hierarchy_link(from_node, from_socket, to_node, to_socket,):
     if to_node.node_type in ['DUMMY_SCHEMA', 'SCHEMA']:
-        return False
+        return False #TODO: find out if filtering SCHEMA types is wise
     if (from_socket in from_name_filter) or (to_socket in to_name_filter):
         return False
     # if from_node.__class__.__name__ in ["UtilityCombineVector", "UtilityCombineThreeBool"]:

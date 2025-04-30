@@ -287,9 +287,53 @@ class SchemaSolver:
         connection = from_node.outputs[incoming.from_socket].connect(node=to_node, socket=to_socket)
         init_connections(from_node)
     
-    def handle_link_to_array_input_get(self, frame_mantis_nodes, ui_link, index):
-        raise NotImplementedError("This node is not supported.")
-    
+    def handle_link_from_array_input_get(self, frame_mantis_nodes, ui_link ):
+        from_ui_node = ui_link.from_socket.node
+        from_node = self.schema_nodes[(*self.node.ui_signature, from_ui_node.bl_idname)]
+        from collections import deque
+        unprepared = deque(from_node.hierarchy_dependencies)
+        self.prepare_nodes(unprepared)
+        from .utilities import cap, wrap
+        get_index = from_node.evaluate_input("Index", self.index) # get the most recent link
+        # getting the link at self.index just saves the trouble of killing the old links
+        # that are left because this node is reused in each iteration of the schema
+        assert(get_index is not None), f"Cannot get index in {from_node}"
+        oob = from_node.evaluate_input("OoB Behaviour")
+        if oob == 'WRAP':
+            get_index = wrap(get_index, len(self.array_input_connections[ui_link.from_socket.identifier]), 0)
+        if oob == 'HOLD':
+            get_index = cap(get_index, len(self.array_input_connections[ui_link.from_socket.identifier]))
+        try:
+            incoming = self.array_input_connections[ui_link.from_socket.identifier][get_index]
+        except IndexError:
+            raise RuntimeError(f"The array index {get_index} is out of bounds. Size: "
+                               f"{len(self.array_input_connections[ui_link.from_socket.identifier])}")
+        to_name = get_link_in_out(ui_link)[1]
+        to_node = frame_mantis_nodes[(*self.autogen_path_names, to_name+self.index_str())]
+        from_socket = incoming.from_node.outputs[incoming.from_socket]
+        connection = from_socket.connect(to_node, ui_link.to_socket.name)
+        # TODO: kill links  to the array get that are no longer needed
+        # right now I inefficiently waste cpu-time solving extra nodes
+        # because I took the lazy way out
+
+
+    def handle_link_to_array_input_get(self, frame_mantis_nodes, ui_link):
+        from_name, to_name = get_link_in_out(ui_link)
+        from_nc = frame_mantis_nodes[(*self.autogen_path_names, from_name+self.index_str())]
+        to_nc = self.schema_nodes[(*self.tree_path_names, to_name)]
+        # this only needs to be done once:
+        if self.index == 0: # BUG? HACK? TODO find out what is going on here.
+            # Kill the link between the schema node group and the node connecting to it
+            old_nc = self.all_nodes[(*self.tree_path_names, from_name)]
+            # I am not sure about this!
+            existing_link = old_nc.outputs[ui_link.from_socket.name].links[0]
+            existing_link.die()
+        #
+        connection = from_nc.outputs[ui_link.from_socket.name].connect(node=to_nc, socket=ui_link.to_socket.name)
+        connection.is_hierarchy = True # we have to mark this because links to Schema are not usually hierarchy (?)
+        to_nc.hierarchy_dependencies.append(from_nc); from_nc.hierarchy_connections.append(to_nc)
+        # TODO: review the wisdom of this default.
+
     def handle_link_from_array_input(self, frame_mantis_nodes, ui_link, index):
         get_index = index
         try:
@@ -335,7 +379,10 @@ class SchemaSolver:
             from_node = ui_link.from_socket.node
         from_socket_name = ui_link.from_socket.name
         if from_node.node_type == 'DUMMY_SCHEMA':
-            from_socket_name = ui_link.from_socket.identifier
+            if isinstance( ui_link.from_socket, NodeSocket): # normal
+                from_socket_name = ui_link.from_socket.identifier
+            else:
+                from_socket_name = ui_link.from_socket.name
         # HACK here to force it to work with ordinary node groups, which don't seem to set this value correctly.
         if to_ui_node.bl_idname == "NodeGroupOutput":
             expose_when = index # just set it directly since it is getting set to None somewhere (I should find out where tho)
@@ -418,25 +465,6 @@ class SchemaSolver:
             else:
                 connection = from_node.outputs[from_socket_name].connect(node=to_node, socket=outgoing.to_socket)
 
-    def handle_link_from_array_input_get(self, frame_mantis_nodes, index, ui_link, from_ui_node ):
-        get_index = index
-        from_node = self.schema_nodes[(*self.tree_path_names, from_ui_node.bl_idname)]
-        from .utilities import cap, wrap
-        get_index = from_node.evaluate_input("Index", index)
-        oob = from_node.evaluate_input("OoB Behaviour")
-        # we must assume that the array has sent the correct number of links
-        if oob == 'WRAP':
-            get_index = wrap(get_index, len(self.array_input_connections[ui_link.from_socket.identifier])-1, 0)
-        if oob == 'HOLD':
-            get_index = cap(get_index, len(self.array_input_connections[ui_link.from_socket.identifier])-1)
-        try:
-            incoming = self.array_input_connections[ui_link.from_socket.identifier][get_index]
-        except IndexError:
-            raise RuntimeError(wrapRed("Dummy! You need to make it so Mantis checks if there are enough Array inputs! It should probably have a Get Index!"))
-        to_name = get_link_in_out(ui_link)[1]
-        to_node = frame_mantis_nodes[(*self.autogen_path_names, to_name+self.index_str())]
-        connection = incoming.from_node.outputs[incoming.from_socket].connect(node=to_node, socket=ui_link.to_socket.name)
-        init_connections(incoming.from_node)
 
     def spoof_link_for_subschema_to_output_edge_case(self, ui_link, ):
         to_ui_node = ui_link.to_socket.node
@@ -470,17 +498,20 @@ class SchemaSolver:
         # forbid some nodes - they aren't necessary to solve the schema & cause problems.
         while unprepared:
             nc = unprepared.pop()
+            if nc.node_type == 'DUMMY_SCHEMA' and not self.test_is_sub_schema(nc):
+                forbidden.add(nc) # do NOT add this as a dependency.
+            if nc in forbidden: continue # trying to resolve dependencies for.
             if sum([dep.prepared for dep in nc.hierarchy_dependencies]) == len(nc.hierarchy_dependencies):
                 try:
                     nc.bPrepare()
+                    if nc.node_type == 'DUMMY_SCHEMA':
+                        self.solve_nested_schema(nc)
                 except Exception as e:
-                    e = execution_error_cleanup(nc, e, show_error = self.error_popups)
+                    raise execution_error_cleanup(nc, e, show_error = False)
                     break
-                if nc.node_type == 'DUMMY_SCHEMA':
-                    self.solve_nested_schema(nc)
-            elif nc.node_type == 'DUMMY_SCHEMA' and not self.test_is_sub_schema(nc):
-                forbidden.add(nc)
-                continue # do NOT add this as a dependency.
+                if not nc.prepared:
+                    raise RuntimeError( f"{nc} has failed to prepare."
+                             " Please report this as a bug in mantis." )
             else: # Keeping this for-loop as a fallback, it should never add dependencies though
                 can_add_me = True
                 for dep in nc.hierarchy_dependencies:
@@ -493,8 +524,7 @@ class SchemaSolver:
                         unprepared.appendleft(dep)
                 if can_add_me:
                     unprepared.appendleft(nc) # just rotate them until they are ready.
-            if e: # todo: need a way to crash Schema so I don't have to raise.
-                raise e
+
 
     def solve_iteration(self):
         """ Solve an iteration of the schema.
@@ -539,6 +569,7 @@ class SchemaSolver:
 
         # Now we handle ui_links in the current frame, including those ui_links between Schema nodes and "real" nodes
         awaiting_prep_stage = []
+        array_input_get_link = []
         for ui_link in ui_links:
             to_ui_node = ui_link.to_socket.node; from_ui_node = ui_link.from_socket.node
 
@@ -557,7 +588,7 @@ class SchemaSolver:
                     self.handle_link_from_constant_input( frame_mantis_nodes, ui_link, to_ui_node)
                 continue 
             if isinstance(to_ui_node, SchemaArrayInputGet):
-                self.handle_link_to_array_input_get( frame_mantis_nodes, ui_link, self.index)
+                self.handle_link_to_array_input_get( frame_mantis_nodes, ui_link)
                 continue
             if isinstance(from_ui_node, SchemaArrayInput):
                 self.handle_link_from_array_input(frame_mantis_nodes, ui_link, self.index)
@@ -586,14 +617,13 @@ class SchemaSolver:
                 awaiting_prep_stage.append(ui_link)
                 continue
             if isinstance(from_ui_node, SchemaArrayInputGet):
-                e = DeprecationWarning("This node is deprecated. Use an Entire Array Input and Array Get node instead.")
-                from_name, to_name = get_link_in_out(ui_link)
-                from_nc = self.schema_nodes.get((*self.autogen_path_names, from_name+self.index_str()), self.node)
-                # always raise this because it is deprecated.
-                raise execution_error_cleanup(from_nc, e, show_error=self.error_popups)
+                array_input_get_link.append(ui_link)
+                continue
             
             # for any of the special cases, we hit a 'continue' block. So this connection is not special, and is made here.
-            connection = link_node_containers(self.autogen_path_names, ui_link, frame_mantis_nodes, from_suffix=self.index_str(), to_suffix=self.index_str())
+            connection = link_node_containers(self.autogen_path_names, ui_link,
+                                frame_mantis_nodes, from_suffix=self.index_str(),
+                                to_suffix=self.index_str())
         
         for signature, node in frame_mantis_nodes.items():
             self.solved_nodes[signature]=node
@@ -610,23 +640,37 @@ class SchemaSolver:
                 init_schema_dependencies(node, self.all_nodes)
             else:
                 init_dependencies(node) # it is hard to overstate how important this single line of code is
-        
-        self.prepare_nodes(unprepared)
-        
+    
+        unprepared=[]
+        for ui_link in array_input_get_link:
+            from_name = get_link_in_out(ui_link)[0]
+            # because this both provides and receives deps, it must be solved first.
+            from_node = self.schema_nodes.get( (*self.node.ui_signature, ui_link.from_node.bl_idname) )
+            self.handle_link_from_array_input_get(frame_mantis_nodes, ui_link )
+
         while(awaiting_prep_stage):
             ui_link = awaiting_prep_stage.pop()
             to_ui_node = ui_link.to_socket.node; from_ui_node = ui_link.from_socket.node
             # ugly workaround here in a very painful edge case...
             if isinstance(from_ui_node, (MantisNodeGroup, SchemaGroup)):
                 ui_link=self.spoof_link_for_subschema_to_output_edge_case(ui_link)
-
+            from_name = get_link_in_out(ui_link)[0]
+            signature = (*self.autogen_path_names, from_name+self.index_str())
+            #use it directly if it is a mantis node; this happens when the previous node was a Schema
+            if hasattr(ui_link, "from_node") and (from_node := self.schema_nodes.get( (*self.node.ui_signature, ui_link.from_node.bl_idname))):
+                unprepared = deque(from_node.hierarchy_dependencies)
+            elif from_node := frame_mantis_nodes.get(signature):
+                unprepared = deque(from_node.hierarchy_dependencies)
+            else:
+                raise RuntimeError(" 671 there has been an error parsing the tree. Please report this as a bug.")
+            self.prepare_nodes(unprepared) # prepare only the dependencies we need for this link
+            # and then handle the link by specific type.
+            if isinstance(from_ui_node, (MantisNodeGroup, SchemaGroup)):
+                ui_link=self.spoof_link_for_subschema_to_output_edge_case(ui_link)
             if isinstance(to_ui_node, (SchemaConstOutput, NodeGroupOutput)):
                 self.handle_link_to_constant_output(frame_mantis_nodes, self.index, ui_link,  to_ui_node)
             if isinstance(to_ui_node, SchemaArrayOutput):
                 self.handle_link_to_array_output(frame_mantis_nodes, self.index, ui_link, to_ui_node, from_ui_node)
-            if isinstance(from_ui_node, SchemaArrayInputGet):
-                self.handle_link_from_array_input_get(frame_mantis_nodes, self.index, ui_link, from_ui_node )
-            # end seciton
         return frame_mantis_nodes
     
     def solve_nested_schema(self, schema_nc):

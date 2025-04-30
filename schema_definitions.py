@@ -15,14 +15,13 @@ def TellClasses():
         # tree i/o
         SchemaIndex,
         SchemaArrayInput,
+        SchemaArrayInputGet,
         SchemaArrayInputAll,
         SchemaArrayOutput,
         SchemaConstInput,
         SchemaConstOutput,
         SchemaOutgoingConnection,
         SchemaIncomingConnection,
-        # DEPRECATED
-        SchemaArrayInputGet,
         ]
 
 
