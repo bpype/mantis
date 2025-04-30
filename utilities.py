@@ -664,8 +664,6 @@ def make_perpendicular(v1, v2):
     from .base_definitions import FLOAT_EPSILON
     if (v1.length_squared < FLOAT_EPSILON) or (v2.length_squared < FLOAT_EPSILON):
         raise RuntimeError("Cannot generate perpendicular vetor for zero-length vector")
-    if (v2.dot(v1)==0):
-        raise RuntimeError("Failed to generate perpindicular vector.")
     projected = (v2.dot(v1) / v1.dot(v1)) * v1
     perpendicular = v2 - projected
     return perpendicular
