@@ -1260,8 +1260,8 @@ class UtilityNameOfXForm(MantisNode):
     # mode for interface consistency
     def bPrepare(self, bContext = None,):
         if not (self.inputs.get('xForm') and self.inputs['xForm'].links):
-            prOrange(f"WARN: Cannot retrieve data from {self}, there is no xForm node connected.")
-            return ''
+            raise RuntimeError( f"WARN: Cannot retrieve data from {self},"
+                                 " there is no xForm node connected.")
         xf = self.inputs["xForm"].links[0].from_node
         self.parameters["Name"] = xf.evaluate_input('Name')
         self.prepared, self.executed = True, True
