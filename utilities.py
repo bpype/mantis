@@ -15,7 +15,7 @@ def prPurple(*args): print (*[wrapPurple(arg) for arg in args])
 def prWhite(*args): print (*[wrapWhite(arg) for arg in args])
 def prOrange(*args): print (*[wrapOrange(arg) for arg in args])
 
-from .base_definitions import FLOAT_EPSILON
+
 
 # add THIS to the top of a file for easy access:
 # from mantis.utilities import (prRed, prGreen, prPurple, prWhite,
@@ -661,6 +661,7 @@ def gen_nc_input_for_data(socket):
 ####################################
 
 def make_perpendicular(v1, v2):
+    from .base_definitions import FLOAT_EPSILON
     if (v1.length_squared < FLOAT_EPSILON) or (v2.length_squared < FLOAT_EPSILON):
         raise RuntimeError("Cannot generate perpendicular vetor for zero-length vector")
     if (v2.dot(v1)==0):
