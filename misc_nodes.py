@@ -154,6 +154,12 @@ def array_choose_data(node, data, output):
             node.outputs[output+"."+str(i).zfill(4)].connect(to_node, link.to_socket)
         link.die()
 
+def zero_radius_error_message(node, curve):
+    return f"ERROR: cannot get matrix from zero-radius curve point "\
+            "in curve object: {curve.name} for node: {node}. "\
+            "This is a limitation of Mantis (For now). Please inspect the curve and ensure "\
+            "that each curve point has a radius greater than 0. Sometimes, this error is " \
+            "caused by drivers. "
 
 #*#-------------------------------#++#-------------------------------#*#
 # B A S E  C L A S S E S
@@ -294,6 +300,8 @@ class UtilityMatrixFromCurve(MantisNode):
             factors = [1/num_divisions*m_index, 1/num_divisions*(m_index+1)]
             splines_factors.append(factors)
             data = data_from_ribbon_mesh(m, splines_factors, curve.matrix_world)
+            if data[spline_index][1][0] < FLOAT_EPSILON: # radius is None:
+                raise RuntimeError(zero_radius_error_message(self, curve))
             head=data[spline_index][0][0]
             tail= data[spline_index][0][1]
             axis = (tail-head).normalized()
@@ -388,6 +396,8 @@ class UtilityMatricesFromCurve(MantisNode):
             from .utilities import make_perpendicular
             matrices=[]
             for i in range(num_divisions):
+                if data[spline_index][1][i] < FLOAT_EPSILON: # radius is None:
+                    raise RuntimeError(zero_radius_error_message(self, curve))
                 m = matrix_from_head_tail (
                 data[spline_index][0][i], data[spline_index][0][i+1],
                 make_perpendicular((data[spline_index][0][i+1]-data[spline_index][0][i]).normalized(), data[spline_index][2][i]),)
@@ -485,6 +495,8 @@ class UtilityMatrixFromCurveSegment(MantisNode):
             #
             data = data_from_ribbon_mesh(m, splines_factors, curve.matrix_world)
             segment_index = self.evaluate_input("Segment Index")
+            if data[spline_index][1][segment_index] < FLOAT_EPSILON: # radius is None:
+                raise RuntimeError(zero_radius_error_message(self, curve))
             head=data[spline_index][0][segment_index]
             tail= data[spline_index][0][segment_index+1]
             axis = (tail-head).normalized()
@@ -1571,7 +1583,10 @@ class UtilityMatrixAlignRoll(MantisNode):
         # now that we have the projected vector, transform the points from
         #   the plane of the y_axis to flat space and get the signed angle
         from math import atan2
-        flattened = (input.to_3x3().inverted() @ projected)
+        try:
+            flattened = (input.to_3x3().inverted() @ projected)
+        except ValueError:
+            raise ValueError(f"Cannot align the matrix in {self} because it is degenerate.")
         rotation = Matrix.Rotation(atan2(flattened.x, flattened.z), 4, y_axis)
         matrix = rotation @ input.copy()
         matrix.translation=input.translation
