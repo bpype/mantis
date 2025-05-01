@@ -761,7 +761,10 @@ class MantisNode:
                             "Updating tree instead.")
         else:
             try:
-                setattr(self.bObject, blender_property, value)
+                b_ob = self.bObject
+                if self.node_type == 'XFORM': # HACK
+                    b_ob = self.bGetObject()
+                setattr(b_ob, blender_property, value)
                 change_handled=True
             except Exception as e:
                 print("Failed to update mantis socket because of %s" % e,
