@@ -767,15 +767,16 @@ def RibbonMeshEdgeLengths(m, ribbon):
     return lengths
 
 def EnsureCurveIsRibbon(crv, defaultRadius = 0.1):
+    from .base_definitions import FLOAT_EPSILON
     crvRadius = 0
     crv.data.offset = 0
-    if (crv.data.bevel_depth == 0):
+    if (crv.data.bevel_depth < FLOAT_EPSILON):
         crvRadius = crv.data.extrude
     else: #Set ribbon from bevel depth
         crvRadius = crv.data.bevel_depth
         crv.data.bevel_depth = 0
         crv.data.extrude = crvRadius
-    if (crvRadius == 0):
+    if (crvRadius < FLOAT_EPSILON):
         crv.data.extrude = defaultRadius
 
 def SetRibbonData(m, ribbon):
