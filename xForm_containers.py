@@ -686,10 +686,14 @@ class xFormGeometryObject(xFormNode):
             name = self.bObject.data.name
             # it has to be a curve
             data = bpy.data.curves.get(self.bObject.data.name+"_MANTIS")
-            if not data:
-                data=self.bObject.data.copy()
-                data.name = name+"_MANTIS"
-                data.animation_data_clear() # clear the drivers if there are
+            if data: # Delete it and regenerate it if it exists.
+                data.name+="_TRASH.000" # but we can't actually delete it here
+                # since previous executions of the graph may be using it.
+                # instead, we'll rename it and use a new copy. This will probably
+                # be deleted on its own by Blender's garbage collector.
+                # if it isn't, then it is still in use and I may NOT touch it.
+            data=self.bObject.data.copy(); data.animation_data_clear()
+            data.name = name+"_MANTIS"
             self.bObject.data = data
         reset_object_data(self.bObject)
         matrix= get_matrix(self)
