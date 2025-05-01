@@ -6,7 +6,7 @@ from .utilities import (prRed, prGreen, prPurple, prWhite,
                               wrapRed, wrapGreen, wrapPurple, wrapWhite,
                               wrapOrange,)
 from .base_definitions import get_signature_from_edited_tree
-
+from .xForm_socket_templates import *
 
 def TellClasses():
     return [
@@ -265,7 +265,6 @@ class xFormBoneNode(Node, xFormNode):
                 if name in ['BBone Segments']: continue
                 self.inputs[name].hide = not self.display_bb_settings
 
-
 class xFormArmatureNode(Node, xFormNode):
     '''A node representing an Armature object node'''
     bl_idname = 'xFormArmatureNode'
@@ -275,16 +274,9 @@ class xFormArmatureNode(Node, xFormNode):
     mantis_node_class_name=bl_idname[:-4]
 
     def init(self, context):
-        self.inputs.new('StringSocket', "Name")
-        self.inputs.new('RelationshipSocket', "Relationship")
-        self.inputs.new('RotationOrderSocket', "Rotation Order")
-        self.inputs.new('MatrixSocket', "Matrix")
-        self.outputs.new('xFormSocket', "xForm Out")
-
-        # color
+        self.init_sockets(xFormArmatureSockets)
         self.use_custom_color = True
         self.color = xFormColor
-
         self.initialized=True
 
     def draw_label(self): # this will prefer a user-set label, or return the evaluated name
@@ -297,7 +289,6 @@ class xFormArmatureNode(Node, xFormNode):
             if nc:
                 self.inputs['Name'].display_text = nc.evaluate_input("Name")
 
-
 class xFormGeometryObjectNode(Node, xFormNode):
     """Represents a curve or mesh object."""
     bl_idname = "xFormGeometryObject"
@@ -307,19 +298,9 @@ class xFormGeometryObjectNode(Node, xFormNode):
     mantis_node_class_name=bl_idname
     
     def init(self, context):
-        self.inputs.new('StringSocket', "Name")
-        self.inputs.new('GeometrySocket', "Geometry")
-        self.inputs.new('MatrixSocket', "Matrix")
-        self.inputs.new('RelationshipSocket', "Relationship")
-        self.inputs.new('DeformerSocket', "Deformer")
-        self.inputs.new ("HideSocket", "Hide in Viewport")
-        self.inputs.new ("BooleanSocket", "Hide in Render")
-        self.outputs.new('xFormSocket', "xForm Out")
-
-        # color
+        self.init_sockets(xFormGeometryObjectSockets)
         self.use_custom_color = True
         self.color = xFormColor
-
         self.initialized=True
 
     def draw_label(self): # this will prefer a user-set label, or return the evaluated name
@@ -341,20 +322,9 @@ class xFormObjectInstance(Node, xFormNode):
     mantis_node_class_name=bl_idname
     
     def init(self, context):
-        self.inputs.new('StringSocket', "Name")
-        self.inputs.new('xFormSocket', "Source Object")
-        self.inputs.new('BooleanSocket', "As Instance",)
-        self.inputs.new('MatrixSocket', "Matrix")
-        self.inputs.new('RelationshipSocket', "Relationship")
-        self.inputs.new('DeformerSocket', "Deformer")
-        self.inputs.new ("HideSocket", "Hide in Viewport")
-        self.inputs.new ("BooleanSocket", "Hide in Render")
-        self.outputs.new('xFormSocket', "xForm Out")
-
-        # color
+        self.init_sockets(xFormGeometryObjectInstanceSockets)
         self.use_custom_color = True
         self.color = xFormColor
-
         self.initialized=True
 
     def draw_label(self): # this will prefer a user-set label, or return the evaluated name

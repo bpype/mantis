@@ -1,5 +1,6 @@
 from .node_container_common import *
 from .base_definitions import MantisNode, NodeSocket
+from .xForm_socket_templates import *
 
 def TellClasses():
              
@@ -86,18 +87,7 @@ class xFormArmature(xFormNode):
     '''A node representing an armature object'''
     
     def __init__(self, signature, base_tree):
-        super().__init__(signature, base_tree)
-        inputs = [
-            "Name"           ,
-            "Rotation Order" ,
-            "Matrix"         ,
-            "Relationship"   ,
-        ]
-        outputs = [
-         "xForm Out",
-        ]
-        self.inputs.init_sockets(inputs)
-        self.outputs.init_sockets(outputs)
+        super().__init__(signature, base_tree, xFormArmatureSockets)
         self.init_parameters()
         self.set_traverse([("Relationship", "xForm Out")])
 
@@ -624,21 +614,7 @@ class xFormBone(xFormNode):
 class xFormGeometryObject(xFormNode):
     '''A node representing an armature object'''
     def __init__(self, signature, base_tree):
-        super().__init__(signature, base_tree)
-        inputs = [
-            "Name"             ,
-            "Geometry"         ,
-            "Matrix"           ,
-            "Relationship"     ,
-            "Deformer"         ,
-            "Hide in Viewport" ,
-            "Hide in Render"   ,
-        ]
-        outputs = [
-          "xForm Out",
-        ]
-        self.inputs.init_sockets(inputs)
-        self.outputs.init_sockets(outputs)
+        super().__init__(signature, base_tree, xFormGeometryObjectSockets)
         self.init_parameters()
         self.set_traverse([("Relationship", "xForm Out")])
         self.has_shape_keys = False
@@ -736,27 +712,24 @@ class xFormGeometryObject(xFormNode):
 class xFormObjectInstance(xFormNode):
     """Represents an instance of an existing geometry object."""
     def __init__(self, signature, base_tree):
-        super().__init__(signature, base_tree)
-        inputs = [
-            "Name"             ,
-            "Source Object"    ,
-            "As Instance"      ,
-            "Matrix"           ,
-            "Relationship"     ,
-            "Deformer"         ,
-            "Hide in Viewport" ,
-            "Hide in Render"   ,
-        ]
-        outputs = [
-          "xForm Out",
-        ]
-        self.inputs.init_sockets(inputs)
-        self.outputs.init_sockets(outputs)
+        super().__init__(signature, base_tree, xFormGeometryObjectInstanceSockets)
         self.init_parameters()
+        # TODO: I think this field is a leftover from a test or something. see if it can be removed.
         self.links = {} # leave this empty for now!
-        # now set up the traverse target...
         self.set_traverse([("Relationship", "xForm Out")])
         self.has_shape_keys = False # Shape Keys will make a dupe so this is OK
+
+    def ui_modify_socket(self, ui_socket, socket_name=None):
+        if ui_socket.name == 'As Instance':
+            change_handled = True
+            try:
+                self.bObject.modifiers[0]['Socket_1'] = ui_socket.default_value
+            except Exception as e:
+                print("Failed to update mantis socket because of %s" % e,
+                        "Updating tree instead.")
+            return change_handled
+        else:
+            return super().ui_modify_socket(ui_socket, socket_name)
 
     def bPrepare(self, bContext = None,):
         from bpy import data
@@ -818,31 +791,6 @@ class xFormObjectInstance(xFormNode):
 
     def bGetObject(self, mode = 'POSE'):
         return self.bObject
-
-from .base_definitions import MantisSocketTemplate as SockTemplate
-from .misc_nodes_socket_templates import SplineIndexTemplate
-xFormCurvePinSockets = [
-    NameTemplate := SockTemplate(
-        name="Name", is_input=True,  bl_idname='StringSocket',
-        default_value='Curve Pin', blender_property='name' ),
-    ParentCurveTemplate := SockTemplate(
-        name="Parent Curve", is_input=True,  bl_idname='xFormSocket', ),
-    SplineIndexTemplate,
-    FactorTemplate := SockTemplate(
-        name="Curve Pin Factor", is_input=True,  bl_idname='FloatFactorSocket',
-        default_value=0.0, blender_property='offset_factor' ),
-    ForwardAxisTemplate := SockTemplate(
-        name="Forward Axis", is_input=True,  bl_idname='EnumFollowPathForwardAxis',
-        default_value="FORWARD_Y", blender_property='forward_axis' ),
-    UpAxisTemplate := SockTemplate(
-        name="Up Axis", is_input=True,  bl_idname='EnumUpAxis',
-        default_value="UP_Z", blender_property='up_axis' ),
-    CurvePinDisplaySize := SockTemplate(
-        name="Display Size", is_input=True,  bl_idname='FloatPositiveSocket',
-        default_value=0.05, blender_property='empty_display_size'),
-    xFormOutTemplate := SockTemplate(
-        name="xForm Out", is_input=False,  bl_idname='xFormSocket', ),
-]
 
 class xFormCurvePin(xFormNode):
     """An xForm pinned to a specific location on a curve."""
