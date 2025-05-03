@@ -812,6 +812,28 @@ class B4_4_0_Workaround_NodeTree_Interface_Update(Operator):
         return {"FINISHED"}
 
 
+class ConvertBezierCurveToNURBS(Operator):
+    """Converts all bezier splines of curve to NURBS."""
+    bl_idname = "mantis.convert_bezcrv_to_nurbs"
+    bl_label = "Convert Bezier Curve to NURBS"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    @classmethod
+    def poll(cls, context):
+        return (context.active_object is not None) and (context.active_object.type=='CURVE')
+
+    def execute(self, context):
+        from .utilities import nurbs_copy_bez_spline
+        curve = context.active_object
+        bez=[]
+        for spl in curve.data.splines:
+            if spl.type=='BEZIER':
+                bez.append(spl)
+        for bez_spline in bez:
+            new_spline=nurbs_copy_bez_spline(curve, bez_spline)
+            
+            curve.data.splines.remove(bez_spline)
+        return {"FINISHED"}
 
 
 # this has to be down here for some reason. what a pain
@@ -840,6 +862,8 @@ classes = [
         # Armature Link Node
         LinkArmatureAddTargetInput,
         LinkArmatureRemoveTargetInput,
+        # rigging utilities
+        ConvertBezierCurveToNURBS,
         ]
 if (bpy.app.version >= (4, 4, 0)):
     classes.append(B4_4_0_Workaround_NodeTree_Interface_Update)

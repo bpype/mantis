@@ -745,6 +745,27 @@ def get_extracted_spline_object(proto_curve, spline_index, mContext):
         mContext.b_objects[curve.name] = curve
     return curve
 
+def nurbs_copy_bez_spline(curve, bez_spline, do_setup=True):
+    other_spline= curve.data.splines.new('NURBS')
+    other_spline.use_endpoint_u=True
+    other_spline.use_bezier_u=True
+    bez_pts = bez_spline.bezier_points
+    bez_data=[]
+    for i, bez_pt in enumerate(bez_pts):
+        if i > 0:
+            bez_data.append(bez_pt.handle_left.copy())
+        bez_data.append(bez_pt.co.copy())
+        if i != len(bez_pts)-1:
+            bez_data.append(bez_pt.handle_right.copy())
+    print(bez_data)
+    other_spline.points.add(len(bez_data)-1)
+    for i, pt in enumerate(bez_data):
+        other_spline.points[i].co=(*pt,1.0) # add the W value here
+    if do_setup: # do the stuff that makes it behave the same as a bez spline
+        other_spline.use_endpoint_u = True; other_spline.use_bezier_u = True
+        other_spline.order_u=4 # set to 1 for poly
+    return other_spline
+
 def RibbonMeshEdgeLengths(m, ribbon):
     tE = ribbon[0]; bE = ribbon[1]; c = ribbon[2]
     lengths = []
