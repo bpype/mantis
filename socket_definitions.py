@@ -267,9 +267,12 @@ def default_update(ui_socket, context, do_execute=True):
     elif hasattr(ui_socket, 'default_value'):
         # we may not have to regenerate the tree; try and update the socket
         from .utilities import tree_from_nc
+        from .base_definitions import array_output_types
         for mantis_node in node_tree.parsed_tree.values():
             if mantis_node.node_type in ['DUMMY', 'DUMMY_SCHEMA']:
-                continue
+                mantis_node.base_tree.hash=''; mantis_updated=False # force an update
+            elif ui_socket.node.bl_idname in array_output_types:
+                mantis_node.base_tree.hash=''; mantis_updated=False # force an update
             # check to see if the mantis node is in the same ui-tree as this ui_socket
             if mantis_node.ui_signature[-1] == ui_socket.node.name and \
                         tree_from_nc(mantis_node.ui_signature, node_tree) == ui_socket.node.id_data:
