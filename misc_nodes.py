@@ -520,7 +520,10 @@ class UtilityGetCurvePoint(MantisNode):
     
     def bPrepare(self, bContext=None):
         import bpy
-        curve = bpy.data.objects.get(self.evaluate_input("Curve"))
+        my_curve=self.evaluate_input("Curve")
+        if my_curve is None:
+            raise RuntimeError(f"Error with curve name for {self}, {my_curve}")
+        curve = bpy.data.objects.get(my_curve)
         if not curve:
             raise RuntimeError(f"No curve found for {self}.")
         elif curve.type != "CURVE":
