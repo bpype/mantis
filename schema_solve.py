@@ -3,7 +3,8 @@ from .utilities import (prRed, prGreen, prPurple, prWhite,
                               wrapRed, wrapGreen, wrapPurple, wrapWhite,
                               wrapOrange,)
 from .utilities import init_connections, init_dependencies, get_link_in_out
-from .base_definitions import SchemaUINode, custom_props_types, MantisNodeGroup, SchemaGroup, replace_types
+from .base_definitions import (SchemaUINode, custom_props_types, \
+    MantisNodeGroup, SchemaGroup, replace_types, GraphError)
 from .node_container_common import setup_custom_props_from_np
 # a class that solves Schema nodes
 from bpy.types import NodeGroupInput, NodeGroupOutput
@@ -277,6 +278,8 @@ class SchemaSolver:
 
     def handle_link_from_constant_input(self, frame_mantis_nodes, ui_link, to_ui_node):
         incoming = self.constant_in[ui_link.from_socket.name]
+        if incoming is None:
+            raise GraphError (f"{self.node} is missing a required input: {ui_link.from_socket.name}")
         from_node = incoming.from_node
         to_name = get_link_in_out(ui_link)[1]
         to_node = frame_mantis_nodes[(*self.autogen_path_names, to_name+self.index_str())]
