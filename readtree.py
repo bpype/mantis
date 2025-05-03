@@ -369,8 +369,10 @@ def parse_tree(base_tree, error_popups=False):
                     solved_nodes = solve_schema_to_tree(n, all_mantis_nodes, roots, error_popups=error_popups)
                 except Exception as e:
                     e = execution_error_cleanup(n, e, show_error=error_popups)
+                    solved_nodes = {}
                     if error_popups == False:
                         raise e
+                    return # break out of this function regardless.
                 unsolved_schema.remove(n)
                 schema_solve_done.add(n)
                 for node in solved_nodes.values():
