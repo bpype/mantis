@@ -123,6 +123,16 @@ def kd_find(node, points, ref_pt, num_points):
             raise e
         return result
 
+def array_link_init_hierarchy(new_link):
+    " Sets up hierarchy connection/dependencies for links created by Arrays."
+    if new_link.is_hierarchy:
+        connections = new_link.from_node.hierarchy_connections
+        dependencies = new_link.to_node.hierarchy_dependencies
+    else:
+        connections = new_link.from_node.connections
+        dependencies = new_link.to_node.dependencies
+    connections.append(new_link.to_node)
+    dependencies.append(new_link.from_node)
 
 def array_choose_relink(node, indices, array_input, output, ):
     """
@@ -135,7 +145,8 @@ def array_choose_relink(node, indices, array_input, output, ):
     for link in node.outputs[output].links:
         to_node = link.to_node
         for l in keep_links:
-            l.from_node.outputs[l.from_socket].connect(to_node, link.to_socket)
+            new_link = l.from_node.outputs[l.from_socket].connect(to_node, link.to_socket)
+            array_link_init_hierarchy(new_link)
         link.die()
 
 
@@ -151,7 +162,8 @@ def array_choose_data(node, data, output):
         to_node = link.to_node
         for i in range(len(data)):
             # Make a link from the new output.
-            node.outputs[output+"."+str(i).zfill(4)].connect(to_node, link.to_socket)
+            new_link = node.outputs[output+"."+str(i).zfill(4)].connect(to_node, link.to_socket)
+            array_link_init_hierarchy(new_link)
         link.die()
 
 def zero_radius_error_message(node, curve):
