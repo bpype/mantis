@@ -647,7 +647,13 @@ class SchemaSolver:
             else:
                 init_dependencies(node) # it is hard to overstate how important this single line of code is
     
-        unprepared=[]
+        unprepared=deque()
+        for node in frame_mantis_nodes.values(): # We have to prepare the nodes leading to Schema Length
+            if node.node_type == 'DUMMY_SCHEMA' and (schema_len_in := node.inputs.get("Schema Length")):
+                for l in schema_len_in.links:
+                    unprepared.append(l.from_node)
+            self.prepare_nodes(unprepared)
+
         for ui_link in array_input_get_link:
             from_name = get_link_in_out(ui_link)[0]
             # because this both provides and receives deps, it must be solved first.
