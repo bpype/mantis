@@ -67,7 +67,7 @@ def hash_tree(tree):
     trees=set(); links=[]; hash_data=""
     for node in tree.nodes:
         hash_data+=str(node.name)
-        if hasattr(node, 'node_tree'):
+        if hasattr(node, 'node_tree') and node.node_tree:
             trees.add(node.node_tree)
     for other_tree in trees:
         hash_data+=str(hash_tree(other_tree))
