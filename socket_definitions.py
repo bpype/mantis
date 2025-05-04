@@ -260,19 +260,18 @@ def default_update(ui_socket, context, do_execute=True):
     # Some nodes can update their b-objects, others will have to force-update the tree
     # because we just modified the data without modifying the topology of the graph.
     # finally, try and execute it if mantis couldn't update the b_objects itself.
+    from .base_definitions import array_output_types
     mantis_updated=True
     if (ui_socket.node.bl_idname in ["MantisNodeGroup", "MantisSchemaGroup"]):
         mantis_updated=False # this kind of socket can't be updated here (yet)
         node_tree.update_tree(context, force=True)
+    elif ui_socket.node.bl_idname in array_output_types:
+        mantis_updated=False
+        node_tree.update_tree(context, force=True)
     elif hasattr(ui_socket, 'default_value'):
         # we may not have to regenerate the tree; try and update the socket
         from .utilities import tree_from_nc
-        from .base_definitions import array_output_types
         for mantis_node in node_tree.parsed_tree.values():
-            if mantis_node.node_type in ['DUMMY', 'DUMMY_SCHEMA']:
-                mantis_node.base_tree.hash=''; mantis_updated=False # force an update
-            elif ui_socket.node.bl_idname in array_output_types:
-                mantis_node.base_tree.hash=''; mantis_updated=False # force an update
             # check to see if the mantis node is in the same ui-tree as this ui_socket
             if mantis_node.ui_signature[-1] == ui_socket.node.name and \
                         tree_from_nc(mantis_node.ui_signature, node_tree) == ui_socket.node.id_data:
