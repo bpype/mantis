@@ -752,6 +752,8 @@ class MantisNode:
     def update_socket_value(self, blender_property, value) -> bool:
         change_handled=False
         if self.node_type == 'LINK':
+            if len(self.bObject) == 0: # - there are no downstream xForms
+                return True # so there is nothing to do here 
             for b_ob in self.bObject:
                 try:
                     setattr(b_ob, blender_property, value)

@@ -275,6 +275,7 @@ def default_update(ui_socket, context, do_execute=True):
             # check to see if the mantis node is in the same ui-tree as this ui_socket
             if mantis_node.ui_signature[-1] == ui_socket.node.name and \
                         tree_from_nc(mantis_node.ui_signature, node_tree) == ui_socket.node.id_data:
+                node_updated = True
                 from .misc_nodes import SimpleInputNode
                 if isinstance(mantis_node, SimpleInputNode):
                     node_updated = socket_update(mantis_node, ui_socket)
