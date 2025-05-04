@@ -95,7 +95,7 @@ def get_mesh_from_curve(curve_name : str, execution_id : str, bContext, ribbon=T
 
 def cleanup_curve(curve_name : str, execution_id : str) -> None:
         import bpy
-        curve = bpy.data.objects.get(curve_name)
+        curve = bpy_object_get_guarded(curve_name)
         m_name = curve_name+'.'+str(hash(curve.name+'.'+ execution_id))
         if (mesh := bpy.data.meshes.get(m_name)):
             bpy.data.meshes.remove(mesh)
@@ -172,6 +172,20 @@ def zero_radius_error_message(node, curve):
             "This is a limitation of Mantis (For now). Please inspect the curve and ensure "\
             "that each curve point has a radius greater than 0. Sometimes, this error is " \
             "caused by drivers. "
+
+def bpy_object_get_guarded(get_name, node=None):
+    result=None
+    if not isinstance(get_name, str):
+        raise RuntimeError(f"Cannot get object for {node} because the """
+                   f"requested name is not a string, but {type(get_name)}. ")
+
+    try:
+        import bpy
+        result = bpy.data.objects.get(get_name)
+    except SystemError:
+        raise SystemError(f"184 {node} Cannot get object, {get_name}"
+                          " please report this as a bug.")
+    return result
 
 #*#-------------------------------#++#-------------------------------#*#
 # B A S E  C L A S S E S
@@ -284,7 +298,7 @@ class UtilityMatrixFromCurve(MantisNode):
         import bpy
         mat = Matrix.Identity(4)
         curve_name = self.evaluate_input("Curve")
-        curve = bpy.data.objects.get(curve_name)
+        curve = bpy_object_get_guarded( curve_name, self)
         if not curve:
             prRed(f"WARN: No curve found for {self}. Using an identity matrix instead.")
             mat[3][3] = 1.0
@@ -348,7 +362,8 @@ class UtilityPointFromCurve(MantisNode):
 
     def bPrepare(self, bContext = None,):
         import bpy
-        curve = bpy.data.objects.get(self.evaluate_input("Curve"))
+        curve_name = self.evaluate_input("Curve")
+        curve = bpy_object_get_guarded( curve_name, self)
         if not curve:
             raise RuntimeError(f"No curve found for {self}.")
         elif curve.type != "CURVE":
@@ -387,7 +402,7 @@ class UtilityMatricesFromCurve(MantisNode):
         import bpy
         m = Matrix.Identity(4)
         curve_name = self.evaluate_input("Curve")
-        curve = bpy.data.objects.get(curve_name)
+        curve = bpy_object_get_guarded( curve_name, self)
         if not curve:
             prRed(f"WARN: No curve found for {self}. Using an identity matrix instead.")
             m[3][3] = 1.0
@@ -434,7 +449,7 @@ class UtilityMatricesFromCurve(MantisNode):
     def bFinalize(self, bContext=None):
         import bpy
         curve_name = self.evaluate_input("Curve")
-        curve = bpy.data.objects.get(curve_name)
+        curve = bpy_object_get_guarded( curve_name, self)
         m_name = curve.name+'.'+self.base_tree.execution_id
         if (mesh := bpy.data.meshes.get(m_name)):
             prGreen(f"Freeing mesh data {m_name}...")
@@ -458,7 +473,7 @@ class UtilityNumberOfCurveSegments(MantisNode):
     def bPrepare(self, bContext = None,):
         import bpy
         curve_name = self.evaluate_input("Curve")
-        curve = bpy.data.objects.get(curve_name)
+        curve = bpy_object_get_guarded( curve_name, self)
         spline = curve.data.splines[self.evaluate_input("Spline Index")]
         if spline.type == "BEZIER":
             self.parameters["Number of Segments"] = len(spline.bezier_points)-1
@@ -475,7 +490,8 @@ class UtilityMatrixFromCurveSegment(MantisNode):
 
     def bPrepare(self, bContext = None,):
         import bpy
-        curve = bpy.data.objects.get(self.evaluate_input("Curve"))
+        curve_name = self.evaluate_input("Curve")
+        curve = bpy_object_get_guarded( curve_name, self)
         if not curve:
             raise RuntimeError(f"No curve found for {self}.")
         elif curve.type != "CURVE":
@@ -532,10 +548,8 @@ class UtilityGetCurvePoint(MantisNode):
     
     def bPrepare(self, bContext=None):
         import bpy
-        my_curve=self.evaluate_input("Curve")
-        if my_curve is None:
-            raise RuntimeError(f"Error with curve name for {self}, {my_curve}")
-        curve = bpy.data.objects.get(my_curve)
+        curve_name = self.evaluate_input("Curve")
+        curve = bpy_object_get_guarded( curve_name, self)
         if not curve:
             raise RuntimeError(f"No curve found for {self}.")
         elif curve.type != "CURVE":
@@ -559,7 +573,8 @@ class UtilityGetNearestFactorOnCurve(MantisNode):
     
     def bPrepare(self, bContext = None,):
         import bpy
-        curve = bpy.data.objects.get(self.evaluate_input("Curve"))
+        curve_name = self.evaluate_input("Curve")
+        curve = bpy_object_get_guarded( curve_name, self)
         if not curve:
             raise RuntimeError(f"No curve found for {self}.")
         elif curve.type != "CURVE":
