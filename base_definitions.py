@@ -643,6 +643,19 @@ array_output_types = [
     'UtilityArrayGet', 'UtilityKDChoosePoint', 'UtilityKDChooseXForm',
 ]
 
+def can_remove_socket_for_autogen(node, socket) -> bool:
+    """ Whether to enable socket removal optimization for the socket
+        This should be disallowed if e.g. it is a custom property.
+    """
+    if node.socket_templates:
+        for s_template in node.socket_templates:
+            if s_template.name == socket:
+                # raise NotImplementedError
+                return True
+    elif node.node_type == 'UTILITY':
+        return True # HACK because most utilities don't have socket templates yet
+    return False
+
 # TODO:
 #   - get the execution context in the execution code
 #   - from there, begin to use it for stuff I can't do without it

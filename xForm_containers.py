@@ -249,6 +249,9 @@ class xFormBone(xFormNode):
         ]
         self.inputs.init_sockets(bone_inputs)
         self.outputs.init_sockets(outputs)
+        self.socket_templates=xFormBoneSockets
+        # TODO: implement socket templates completely for Bone
+        # currently it is waiting on BBone and refactoring/cleanup.
         self.init_parameters()
         self.set_traverse([("Relationship", "xForm Out")])
     
@@ -422,11 +425,16 @@ class xFormBone(xFormNode):
 
         # detect custom inputs
         for i, inp in enumerate(self.inputs.values()):
-            if inp.name in bone_inputs:
-                continue
-            
-            
+            custom_prop=False
+            for s_template in self.socket_templates:
+                if s_template.name == inp.name:
+                    break
+            else:
+                custom_prop=True
+            if custom_prop == False: continue
+            prPurple (inp.name)
             name = inp.name
+
             try:
                 value = self.evaluate_input(inp.name)
             except KeyError as e:
@@ -533,7 +541,6 @@ class xFormBone(xFormNode):
 
             # important TODO... all of the drivers and stuff should be handled this way, right?
         # time to set up drivers!
-
 
         # just gonna add this to the end and build off it I guess
         props_sockets = {

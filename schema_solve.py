@@ -192,9 +192,12 @@ class SchemaSolver:
             mantis_node.mContext=mContext
 
     def handle_link_from_index_input(self, index, frame_mantis_nodes, ui_link):
+        from .base_definitions import can_remove_socket_for_autogen
         _from_name, to_name = get_link_in_out(ui_link)
         to_node = frame_mantis_nodes[ (*self.autogen_path_names, to_name+self.index_str()) ]
-        if to_node.node_type in ['DUMMY', 'DUMMY_SCHEMA']:
+
+        if (not can_remove_socket_for_autogen(to_node, ui_link.to_socket.name)) or \
+                                    to_node.node_type in ['DUMMY', 'DUMMY_SCHEMA']:
             from .utilities import gen_nc_input_for_data
             nc_cls = gen_nc_input_for_data(ui_link.from_socket)
             if (nc_cls): #HACK
@@ -220,6 +223,8 @@ class SchemaSolver:
                 from_node = nc_from
                 self.solved_nodes[sig]=from_node
                 _connection = from_node.outputs[ui_link.from_socket.name].connect(node=to_node, socket=ui_link.to_socket.identifier)
+            else:
+                raise RuntimeError()
             return 
         # Since the index is already determined, it is safe to remove the socket and just keep the value.
         to_node.parameters[ui_link.to_socket.name] = index

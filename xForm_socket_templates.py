@@ -113,6 +113,9 @@ xFormBoneSockets = [
             name='Custom Object Scale to Bone Length', category='Display',
             blender_property='use_custom_shape_bone_size',
             default_value=True,),
+    CustomObjectWireframeTemplate := replace(HideRenderTemplate,
+            name='Custom Object Wireframe', category='Display',
+            blender_property='show_wire', default_value=True,),
     CustomObjectScaleTemplate := SockTemplate(name="Custom Object Scale",
             is_input=True, bl_idname='VectorScaleSocket',
             category='Display', default_value=(1.0,1.0,1.0),),
@@ -135,22 +138,22 @@ xFormBoneSockets = [
             name='Envelope Multiply', bl_idname = 'BooleanSocket',
             blender_property='use_envelope_multiply', default_value=False,),
     EnvelopeWeightTemplate := replace(EnvelopeDistanceTemplate,
-        name='Head Radius', blender_property='head_radius', default_value=0.0,),
+        name='Envelope Head Radius', blender_property='head_radius', default_value=0.0,),
     EnvelopeWeightTemplate := replace(EnvelopeDistanceTemplate,
-        name='Tail Radius', blender_property='tail_radius', default_value=0.0,),
+        name='Envelope Tail Radius', blender_property='tail_radius', default_value=0.0,),
     # BBone Stuff
-    BBoneSegmentsTemplate := SockTemplate(name="Name", is_input=True,
+    BBoneSegmentsTemplate := SockTemplate(name="BBone Segments", is_input=True,
         bl_idname='UnsignedIntSocket', category = 'bbone',
         blender_property='bbone_segments', default_value=1 ),
     BBoneXSizeTemplate := replace(BBoneSegmentsTemplate, name='BBone X Size',
         bl_idname='FloatSocket', blender_property='bbone_x', default_value=0.0025, ),
-    BBoneYSizeTemplate := replace(BBoneXSizeTemplate, name='BBone Y Size',
+    BBoneYSizeTemplate := replace(BBoneXSizeTemplate, name='BBone Z Size',
         blender_property='bbone_y', ),
     BBoneHQDeformation := replace(BBoneSegmentsTemplate, name='BBone HQ Deformation',
         bl_idname='BooleanSocket', blender_property='', default_value=None ),
     BBoneXCurveInTemplate := replace( BBoneXSizeTemplate, name="BBone X Curve-In",
         bl_idname='FloatSocket', blender_property='bbone_curveinx', default_value=0.0, ),
-    BBoneZCurveInTemplate := replace(BBoneXCurveInTemplate, name="BBone X Curve-In",
+    BBoneZCurveInTemplate := replace(BBoneXCurveInTemplate, name="BBone Z Curve-In",
         blender_property='bbone_curveinz', ),
     BBoneXCurveOutTemplate := replace(BBoneXCurveInTemplate, name="BBone X Curve-Out",
         blender_property='bbone_curveoutx', ),
@@ -158,7 +161,7 @@ xFormBoneSockets = [
         blender_property='bbone_curveoutz', ),  # I'm tired of assigning variables, not gonna bother anymore lol
                                                 # it's just a conincidence that a lot of these are also unimplemented
     replace(BBoneXCurveInTemplate, name="BBone Roll-In", blender_property='bbone_rollin', ), # CURRENTLY UNIMPLEMENTED
-    replace(BBoneXCurveInTemplate, name="BBone Roll-out", blender_property='bbone_rollout', ), # CURRENTLY UNIMPLEMENTED
+    replace(BBoneXCurveInTemplate, name="BBone Roll-Out", blender_property='bbone_rollout', ), # CURRENTLY UNIMPLEMENTED
     replace(BBoneXCurveInTemplate, name="BBone Inherit End Roll",
             bl_idname='BooleanSocket',), # CURRENTLY UNIMPLEMENTED
     replace(BBoneXCurveInTemplate, name="BBone Scale-In",
