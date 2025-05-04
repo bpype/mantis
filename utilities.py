@@ -725,11 +725,15 @@ def extract_spline(curve, spline_index):
     new_ob.data = new_data
     # do not check for index error here, it is the calling function's responsibility
     do_extract_spline(new_data, new_data.splines[spline_index])
+    return new_ob
+
+def bind_extracted_spline_to_curve(new_ob, curve):
     # Set up a relationship between the new object and the old object
     # now, weirdly enough - we can't use parenting very easily because Blender
     # defines the parent on a curve relative to the evaluated path animation
     # Setting the inverse matrix is too much work. Use Copy Transforms instead.
-    new_ob.constraints.clear(); new_ob.modifiers.clear()
+    from .xForm_containers import reset_object_data
+    reset_object_data(new_ob)
     c = new_ob.constraints.new("COPY_TRANSFORMS"); c.target=curve
     new_ob.parent=curve
     return new_ob
@@ -739,11 +743,14 @@ def get_extracted_spline_object(proto_curve, spline_index, mContext):
     #   object if they extract the same spline for use by Mantis.
     # this should be transparent to the user since it is working around a
     #   a limitation in Blender.
-    if ( curve := mContext.b_objects.get(
-                proto_curve.name+extract_spline_suffix(spline_index))) is None:
+    extracted_spline_name = proto_curve.name+extract_spline_suffix(spline_index)
+    if curve := mContext.b_objects.get(extracted_spline_name):
+        return curve
+    else:
         curve = extract_spline(proto_curve, spline_index)
-        mContext.b_objects[curve.name] = curve
-    return curve
+        bind_extracted_spline_to_curve(curve, proto_curve)
+        mContext.b_objects[extracted_spline_name] = curve
+        return curve
 
 def nurbs_copy_bez_spline(curve, bez_spline, do_setup=True):
     other_spline= curve.data.splines.new('NURBS')

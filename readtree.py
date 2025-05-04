@@ -492,6 +492,7 @@ def execute_tree(nodes, base_tree, context, error_popups = False):
     for nc in nodes.values():
         if not mContext: # just grab one of these. this is a silly way to do this.
             mContext = nc.mContext
+            mContext.b_objects = {} # clear the objects and recreate them
         nc.reset_execution()
         check_and_add_root(nc, xForm_pass)
     
