@@ -260,7 +260,7 @@ class LinkTransformation(MantisLinkNode):
         elif self.evaluate_input("Map From") == 'SCALE': from_suffix='_scale'
         if self.evaluate_input("Map To") == 'ROTATION': to_suffix='_rot'
         elif self.evaluate_input("Map To") == 'SCALE': to_suffix='_scale'
-        if 'To' in ui_socket.name or 'From' in ui_socket.name and from_suffix or to_suffix:
+        if ('To' in ui_socket.name or 'From' in ui_socket.name) and (from_suffix or to_suffix):
             for s_temp in self.socket_templates:
                 if s_temp.name == ui_socket.name: break
             if 'from' in s_temp.blender_property:
@@ -268,7 +268,6 @@ class LinkTransformation(MantisLinkNode):
             else:
                 socket_name=s_temp.blender_property+to_suffix
             return self.update_socket_value(socket_name, ui_socket.default_value)
-        
         return super().ui_modify_socket(ui_socket, socket_name)
 
     def bExecute(self, context):
