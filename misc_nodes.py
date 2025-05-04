@@ -900,8 +900,6 @@ class UtilityFCurve(MantisNode):
 
     def bExecute(self, bContext = None,):
         prepare_parameters(self)
-        from .utilities import get_node_prototype
-        np = get_node_prototype(self.signature, self.base_tree)
         extrap_mode = self.evaluate_input("Extrapolation Mode")
         keys = [] # ugly but whatever
         #['amplitude', 'back', 'bl_rna', 'co', 'co_ui', 'easing', 'handle_left', 'handle_left_type', 'handle_right', 'handle_right_type',
