@@ -748,7 +748,8 @@ def get_extracted_spline_object(proto_curve, spline_index, mContext):
         return curve
     else:
         curve = extract_spline(proto_curve, spline_index)
-        bind_extracted_spline_to_curve(curve, proto_curve)
+        if curve.name != proto_curve.name: # if there is only one spline, no
+            bind_extracted_spline_to_curve(curve, proto_curve)# dupe is created.
         mContext.b_objects[extracted_spline_name] = curve
         return curve
 
