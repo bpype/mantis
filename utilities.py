@@ -23,6 +23,8 @@ def prOrange(*args): print (*[wrapOrange(arg) for arg in args])
 #                               wrapRed, wrapGreen, wrapPurple, wrapWhite,
 #                               wrapOrange,)
 
+def float_lerp(a : float, b : float, factor : float)  -> float:
+    return (a * (1.0 - factor)) + (b * factor)
 
 # A fuction for getting to the end of a Reroute.
 # TODO: this seems really inefficient!
