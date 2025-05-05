@@ -808,6 +808,8 @@ class UtilityDriverVariable(MantisNode):
 
         v_type = self.evaluate_input("Variable Type")
         i = self.evaluate_input("Property Index"); dVarChannel = ""
+        if not isinstance(i, (int, float)):
+            raise RuntimeError(f" {self} has invalid input for \"Property Index\".")
         if (i >= 0): #negative values will use the vector property.
             if self.evaluate_input("Property") == 'location':
                 if   i == 0: dVarChannel = "LOC_X"
