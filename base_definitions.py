@@ -901,7 +901,11 @@ class MantisNode:
         subtarget = ''; target = self.evaluate_input(input_name)
         if target:
             if not hasattr(target, "bGetObject"):
-                prRed(f"No {input_name} target found for {constraint_or_deformer.name} in {self} because there is no connected node, or node is wrong type")
+                if hasattr(constraint_or_deformer, 'name'):
+                    name = constraint_or_deformer.name
+                else:
+                    name = 'NAME NOT FOUND'
+                prRed(f"No {input_name} target found for {name} in {self} because there is no connected node, or node is wrong type")
                 return 
             if (isinstance(target.bGetObject(), PoseBone)):
                 subtarget = target.bGetObject().name
