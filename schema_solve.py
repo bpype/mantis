@@ -49,6 +49,9 @@ class SchemaSolver:
         self.solve_length = self.node.evaluate_input("Schema Length")
         # I'm making this a property of the solver because the solver's data is modified as it solves each iteration
         self.index = 0
+        
+        prOrange(f"\nExpanding schema {self.tree.name} in node {self.node.signature}"
+                 f" with length {self.solve_length}.")
 
         self.init_schema_links()
         self.set_index_strings()
@@ -783,5 +786,6 @@ class SchemaSolver:
         self.finalize(frame_mantis_nodes)
         self.node.solver = self
         self.node.prepared = True
+        prWhite(f"Schema declared {len(self.solved_nodes)} nodes.\n")
         return self.solved_nodes
         

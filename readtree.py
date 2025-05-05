@@ -201,10 +201,6 @@ def solve_schema_to_tree(nc, all_nc, roots=[], error_popups=False):
     from .utilities import get_node_prototype
     np = get_node_prototype(nc.signature, nc.base_tree)
     from .schema_solve import SchemaSolver
-    tree = np.node_tree
-    length = nc.evaluate_input("Schema Length")
-    prOrange(f"Expanding schema {tree.name} in node {nc} with length {length}.")
-
     solver = SchemaSolver(nc, all_nc, np, error_popups=error_popups)
     try:
         solved_nodes = solver.solve()
@@ -213,7 +209,6 @@ def solve_schema_to_tree(nc, all_nc, roots=[], error_popups=False):
         solved_nodes = {}
         nc.base_tree.hash=''
         raise execution_error_cleanup(nc, e, show_error=error_popups)
-    prWhite(f"Schema declared {len(solved_nodes)} nodes.")
 
     # maybe this should be done in schema solver. TODO invesitigate a more efficient way
     del_me = []
