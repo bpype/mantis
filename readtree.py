@@ -371,11 +371,9 @@ def parse_tree(base_tree, error_popups=False):
                 unsolved_schema.remove(n)
                 schema_solve_done.add(n)
                 for node in solved_nodes.values():
-                    #
-                    init_dependencies(node)
-                    init_connections(node)
-                    #
+                    init_dependencies(node); init_connections(node)
                     solve_layer.appendleft(node)
+                    schema_solve_done.add(node) # CRITICAL to prevent freezes.
                 for conn in n.hierarchy_connections:
                     if conn not in schema_solve_done and conn not in solve_layer:
                         solve_layer.appendleft(conn)
