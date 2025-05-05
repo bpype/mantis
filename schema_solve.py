@@ -582,7 +582,7 @@ class SchemaSolver:
         ui_links = clear_reroutes(list(self.tree.links))
 
         # Now we handle ui_links in the current frame, including those ui_links between Schema nodes and "real" nodes
-        awaiting_prep_stage = []
+        links_to_output = []
         array_input_get_link = []
         for ui_link in ui_links:
             to_ui_node = ui_link.to_socket.node; from_ui_node = ui_link.from_socket.node
@@ -628,7 +628,7 @@ class SchemaSolver:
                 if isinstance(from_ui_node, (MantisNodeGroup, SchemaGroup)):
                     self.handle_link_from_subschema_to_output(frame_mantis_nodes, ui_link, to_ui_node)
                     # both links are desirable to create, so don't continue here
-                awaiting_prep_stage.append(ui_link)
+                links_to_output.append(ui_link)
                 continue
             if isinstance(from_ui_node, SchemaArrayInputGet):
                 array_input_get_link.append(ui_link)
@@ -655,32 +655,39 @@ class SchemaSolver:
             else:
                 init_dependencies(node) # it is hard to overstate how important this single line of code is
     
+        # We have to prepare the nodes leading to Schema Length
         unprepared=deque()
-        for node in frame_mantis_nodes.values(): # We have to prepare the nodes leading to Schema Length
+        for node in frame_mantis_nodes.values(): 
             if node.node_type == 'DUMMY_SCHEMA' and (schema_len_in := node.inputs.get("Schema Length")):
                 for l in schema_len_in.links:
                     unprepared.append(l.from_node)
             self.prepare_nodes(unprepared)
-
+        
+        # We have to prepare the nodes leading to Array Input Get
         for ui_link in array_input_get_link:
             from_name = get_link_in_out(ui_link)[0]
             # because this both provides and receives deps, it must be solved first.
             from_node = self.schema_nodes.get( (*self.node.ui_signature, ui_link.from_node.bl_idname) )
             self.handle_link_from_array_input_get(frame_mantis_nodes, ui_link )
 
-        while(awaiting_prep_stage):
-            ui_link = awaiting_prep_stage.pop()
+        # Finally, we have to prepare nodes leading to outputs.
+        for i in range(len(links_to_output)):
+            unprepared=deque()
+            ui_link = links_to_output[i]
             to_ui_node = ui_link.to_socket.node; from_ui_node = ui_link.from_socket.node
             # ugly workaround here in a very painful edge case...
             if isinstance(from_ui_node, (MantisNodeGroup, SchemaGroup)):
                 ui_link=self.spoof_link_for_subschema_to_output_edge_case(ui_link)
+                links_to_output[i] = ui_link
             from_name = get_link_in_out(ui_link)[0]
             signature = (*self.autogen_path_names, from_name+self.index_str())
             #use it directly if it is a mantis node; this happens when the previous node was a Schema
             if hasattr(ui_link, "from_node") and (from_node := self.schema_nodes.get( (*self.node.ui_signature, ui_link.from_node.bl_idname))):
-                unprepared = deque(from_node.hierarchy_dependencies)
+                unprepared.append(from_node)
+                unprepared.extend(from_node.hierarchy_dependencies)
             elif from_node := frame_mantis_nodes.get(signature):
-                unprepared = deque(from_node.hierarchy_dependencies)
+                unprepared.append(from_node)
+                unprepared.extend(from_node.hierarchy_dependencies)
             else:
                 raise RuntimeError(" 671 there has been an error parsing the tree. Please report this as a bug.")
             self.prepare_nodes(unprepared) # prepare only the dependencies we need for this link
