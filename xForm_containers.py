@@ -432,7 +432,6 @@ class xFormBone(xFormNode):
             else:
                 custom_prop=True
             if custom_prop == False: continue
-            prPurple (inp.name)
             name = inp.name
 
             try:
