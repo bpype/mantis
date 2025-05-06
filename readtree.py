@@ -506,9 +506,12 @@ def execute_tree(nodes, base_tree, context, error_popups = False):
     switch_me = [] # switch the mode on these objects
     active = None # only need it for switching modes
     select_me = []
+    execution_failed=False
     try:
         while(xForm_pass):
+            if execution_failed: break
             if i >= max_iterations:
+                execution_failed = True
                 raise GraphError("There is probably a cycle somewhere in the graph.")
             i+=1    
             n = xForm_pass.pop()
@@ -517,6 +520,7 @@ def execute_tree(nodes, base_tree, context, error_popups = False):
             else:
                 visited[n.signature]=0
             if visited[n.signature] > check_max_len:
+                execution_failed = True
                 raise GraphError("There is a probably a cycle in the graph somewhere. Fix it!")
                 # we're trying to solve the halting problem at this point.. don't do that.
                 # TODO find a better way! there are algo's for this but they will require using a different solving algo, too
@@ -555,6 +559,7 @@ def execute_tree(nodes, base_tree, context, error_popups = False):
                         e = execution_error_cleanup(n, e, show_error=error_popups)
                         if error_popups == False:
                             raise e
+                        execution_failed = True; break
                     n.execution_prepared=True
                     executed.append(n)
                     for conn in n.hierarchy_connections:
@@ -577,6 +582,7 @@ def execute_tree(nodes, base_tree, context, error_popups = False):
                 e = execution_error_cleanup(n, e, show_error=error_popups)
                 if error_popups == False:
                     raise e
+                execution_failed = True; break
 
 
         switch_mode(mode='OBJECT', objects=switch_me)
@@ -592,9 +598,12 @@ def execute_tree(nodes, base_tree, context, error_popups = False):
                 e = execution_error_cleanup(n, e, show_error=error_popups)
                 if error_popups == False:
                     raise e
+                execution_failed = True; break
+                
         
         tot_time = (time() - start_execution_time)
-        prGreen(f"Executed tree of {len(executed)} nodes in {tot_time} seconds")
+        if not execution_failed:
+            prGreen(f"Executed tree of {len(executed)} nodes in {tot_time} seconds")
         if (original_active):
             context.view_layer.objects.active = original_active
             original_active.select_set(True)
@@ -602,6 +611,7 @@ def execute_tree(nodes, base_tree, context, error_popups = False):
         e = execution_error_cleanup(None, e, switch_me, show_error=error_popups)
         if error_popups == False:
             raise e
+        prRed(f"Failed to execute tree.")
     finally:
         context.view_layer.objects.active = active
         # clear the selection first.
