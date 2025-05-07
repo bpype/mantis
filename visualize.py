@@ -1,6 +1,7 @@
 """ Optional file providing a tool to visualize Mantis Graphs, for debugging and development"""
 
 from bpy.types import Node, NodeTree, Operator
+from bpy.props import StringProperty
 
 from .utilities import (prRed, prGreen, prPurple, prWhite,
                               prOrange,
@@ -16,16 +17,27 @@ class MantisVisualizeTree(NodeTree):
 class MantisVisualizeNode(Node):
     bl_idname = "MantisVisualizeNode"
     bl_label = "Node"
+    signature : StringProperty(default = '')
     @classmethod
     def poll(cls, ntree):
         return (ntree.bl_idname in ['MantisVisualizeTree'])
     
     def init(self, context):
         pass
+
+    def draw_label(self):
+        label=''
+        exploded = self.signature.separate('|')
+        for elem in exploded:
+            label+=elem+', '
+        label = label[:-2] # cut the last comma
+        return label
     
     def gen_data(self, mantis_node, mode='DEBUG_CONNECTIONS'):
         from .utilities import get_node_prototype
         if mantis_node.node_type in ['SCHEMA', 'DUMMY']:
+            np=None
+        elif mantis_node.ui_signature is None:
             np=None
         else:
             np=get_node_prototype(mantis_node.ui_signature, mantis_node.base_tree)
@@ -37,7 +49,16 @@ class MantisVisualizeNode(Node):
             case 'DRIVER':       self.color = (0.7, 0.05, 0.8)
             case 'DUMMY_SCHEMA': self.color = (0.85 ,0.95, 0.9)
             case 'DUMMY':        self.color = (0.05 ,0.05, 0.15)
-        self.name = '.'.join(mantis_node.signature[1:])
+        
+        if mantis_node.execution_prepared:
+            self.color = (0.02, 0.98, 0.02) # GREEN!
+                
+        # if mantis_node.execution_debug_tag:
+        #     self.color = (0.02 ,0.02, 0.02)
+
+        self.name = '.'.join(mantis_node.signature[1:]) # this gets trunc'd
+        self.signature = '|'.join(mantis_node.signature[1:])
+
 
         if np:
             if np.label:
@@ -92,8 +113,10 @@ def gen_vis_node( mantis_node,
                   links,
                   omit_simple=True,
                  ):
-    if mantis_node.node_type == 'UTILITY':
-        return
+    from .base_definitions import array_output_types
+    if mantis_node.node_type == 'UTILITY' and \
+         mantis_node.execution_prepared == True:
+            return
     base_tree= mantis_node.base_tree
     vis = vis_tree.nodes.new('MantisVisualizeNode')
     vis.gen_data(mantis_node)
@@ -119,11 +142,11 @@ def visualize_tree(m_nodes, base_tree, context):
     from pstats import SortKey
     with cProfile.Profile() as pr:
         try:
-            trace_all_nodes = True
+            trace_from_roots = True
             all_links = set()
             mantis_nodes=set()
             nodes={}
-            if trace_all_nodes:
+            if trace_from_roots:
                 roots=[]
                 for n in m_nodes.values():
                     check_and_add_root(n, roots)
@@ -139,6 +162,8 @@ def visualize_tree(m_nodes, base_tree, context):
 
             for m in mantis_nodes:
                 nodes[m.signature]=gen_vis_node(m, vis_tree,all_links)
+                # useful for debugging: check the connections for nodes that are
+                # not in the parsed tree or available from trace_all_nodes_from_root.
 
             for l in all_links:
                 if l.to_node.node_type in ['DUMMY_SCHEMA', 'DUMMY'] or \
@@ -227,7 +252,6 @@ class MantisVisualizeOutput(Operator):
         
         tree=context.space_data.path[0].node_tree
         tree.update_tree(context)
-        # tree.execute_tree(context)
         prGreen(f"Visualize Tree: {tree.name}")
         nodes = tree.parsed_tree
         visualize_tree(nodes, tree, context)
