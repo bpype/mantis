@@ -10,6 +10,7 @@ class DummyNode(MantisNode):
         self.node_type = 'DUMMY'
         self.prepared = True
         self.uuid = uuid4()
+        self.solver = None
         if prototype:
             if prototype.bl_idname in ["MantisSchemaGroup"]:
                 self.node_type = 'DUMMY_SCHEMA'
