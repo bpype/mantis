@@ -104,6 +104,7 @@ def autogen_node(base_tree, ui_socket, signature, mContext):
         mantis_node.mContext = mContext
         mantis_node.execution_prepared=True
         mantis_node.outputs.init_sockets([ui_socket.name])
+        mantis_node.ui_signature = None # does not exist in the UI
     return mantis_node
 
 # TODO: investigate whether I can set the properties in the downstream nodes directly.
