@@ -95,3 +95,9 @@ CompareSockets = [
     CompareOutputTemplate := SockTemplate(
         name="Result", is_input=False, bl_idname="BooleanSocket",),
 ]
+
+NumberOfSplinesSockets=[
+    CurveTemplate,
+    NumberOfSplinesOut := SockTemplate(name="Number of Splines",
+        bl_idname='UnsignedIntSocket', is_input=False),
+]

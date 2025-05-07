@@ -146,6 +146,7 @@ matrix_category = [
         NodeItem("UtilityMatrixFromCurveSegment"),
         NodeItem("UtilityPointFromCurve"),
         NodeItem("UtilityGetCurvePoint"),
+        NodeItem("UtilityNumberOfSplines"),
         NodeItem("UtilityPointFromBoneMatrix"),
         NodeItem("UtilitySetBoneLength"),
         NodeItem("UtilityGetBoneLength"),

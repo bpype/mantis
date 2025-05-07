@@ -29,6 +29,7 @@ def TellClasses():
              UtilityMatrixFromCurve,
              UtilityMatricesFromCurve,
              UtilityNumberOfCurveSegments,
+             UtilityNumberOfSplines,
              UtilityMatrixFromCurveSegment,
              UtilityGetCurvePoint,
              UtilityGetNearestFactorOnCurve,
@@ -289,6 +290,19 @@ class UtilityNumberOfCurveSegments(Node, MantisUINode):
         self.outputs.new("UnsignedIntSocket", "Number of Segments")
         self.initialized = True
     
+class UtilityNumberOfSplines(Node, MantisUINode):
+    """Tells the number of splines in a curve."""
+    bl_idname = "UtilityNumberOfSplines"
+    bl_label = "Number of Splines"
+    bl_icon = "NODE"
+    
+    initialized : bpy.props.BoolProperty(default = False)
+    mantis_node_class_name=bl_idname
+    
+    def init(self, context):
+        self.init_sockets(NumberOfSplinesSockets)
+        self.initialized = True
+
 class UtilityMatrixFromCurveSegment(Node, MantisUINode):
     """Gets a matrix from a curve segment."""
     bl_idname = "UtilityMatrixFromCurveSegment"

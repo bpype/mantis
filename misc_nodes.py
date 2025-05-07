@@ -24,6 +24,7 @@ def TellClasses():
              UtilityMatrixFromCurve,
              UtilityMatricesFromCurve,
              UtilityNumberOfCurveSegments,
+             UtilityNumberOfSplines,
              UtilityMatrixFromCurveSegment,
              UtilityGetCurvePoint,
              UtilityGetNearestFactorOnCurve,
@@ -471,7 +472,6 @@ class UtilityNumberOfCurveSegments(MantisNode):
         self.node_type = "UTILITY"
     
     def bPrepare(self, bContext = None,):
-        import bpy
         curve_name = self.evaluate_input("Curve")
         curve = bpy_object_get_guarded( curve_name, self)
         spline = curve.data.splines[self.evaluate_input("Spline Index")]
@@ -481,6 +481,18 @@ class UtilityNumberOfCurveSegments(MantisNode):
             self.parameters["Number of Segments"] = len(spline.points)-1
         self.prepared = True
         self.executed = True
+
+class UtilityNumberOfSplines(MantisNode):
+    def __init__(self, signature, base_tree):
+        super().__init__(signature, base_tree, NumberOfSplinesSockets)
+        self.init_parameters()
+        self.node_type = "UTILITY"
+    
+    def bPrepare(self, bContext = None,):
+        curve_name = self.evaluate_input("Curve")
+        curve = bpy_object_get_guarded( curve_name, self)
+        self.parameters["Number of Splines"] = len(curve.data.splines)
+        self.prepared, self.executed = True, True
 
 class UtilityMatrixFromCurveSegment(MantisNode):
     def __init__(self, signature, base_tree):
