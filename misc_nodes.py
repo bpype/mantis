@@ -148,6 +148,7 @@ def array_choose_relink(node, indices, array_input, output, ):
         for l in keep_links:
             new_link = l.from_node.outputs[l.from_socket].connect(to_node, link.to_socket)
             array_link_init_hierarchy(new_link)
+            node.rerouted.append(new_link) # so I can access this in Schema Solve
         link.die()
 
 
@@ -623,6 +624,7 @@ class UtilityKDChoosePoint(MantisNode):
         self.outputs.init_sockets(outputs)
         self.init_parameters()
         self.node_type = "UTILITY"
+        self.rerouted=[]
 
     def bPrepare(self, bContext = None,):
         from mathutils import Vector
@@ -661,6 +663,7 @@ class UtilityKDChooseXForm(MantisNode):
         self.outputs.init_sockets(outputs)
         self.init_parameters()
         self.node_type = "UTILITY"
+        self.rerouted=[]
 
     def bPrepare(self, bContext = None,):
         if len(self.hierarchy_dependencies)==0 and len(self.hierarchy_connections)==0 and \
@@ -1710,6 +1713,7 @@ class UtilityArrayGet(MantisNode):
         self.outputs.init_sockets(outputs)
         self.init_parameters()
         self.node_type = "UTILITY"
+        self.rerouted=[]
 
     def bPrepare(self, bContext = None,):
         if len(self.hierarchy_dependencies)==0 and len(self.hierarchy_connections)==0 and \

@@ -137,8 +137,9 @@ def gen_node_containers(base_tree, current_tree, tree_path_names, all_nc, local_
         if ui_node.bl_idname in ["NodeGroupInput", "NodeGroupOutput"]:
             # we only want ONE dummy in/out per tree_path, so use the bl_idname to make a Dummy node
             sig = (None, *tree_path_names, ui_node.bl_idname)
+            ui_sig = (None, *tree_path_names, ui_node.name)
             if not local_nc.get(sig):
-                nc = DummyNode( signature=sig , base_tree=base_tree, prototype=ui_node )
+                nc = DummyNode( signature=sig , base_tree=base_tree, prototype=ui_node, ui_signature=ui_sig )
                 local_nc[sig] = nc; all_nc[sig] = nc; dummy_nodes[sig] = nc
                 if ui_node.bl_idname in ["NodeGroupOutput"]:
                     nc.reroute_links = reroute_links_grpout
@@ -161,6 +162,7 @@ def gen_node_containers(base_tree, current_tree, tree_path_names, all_nc, local_
                     continue # already made
             nc = nc_cls( sig , base_tree)
             local_nc[sig] = nc; all_nc[sig] = nc
+            nc.ui_signature = (*nc.ui_signature[:-1], ui_node.name) # just to ensure it points to a real node.
         else:
             nc = None
             prRed(f"Can't make nc for.. {ui_node.bl_idname}")

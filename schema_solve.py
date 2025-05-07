@@ -415,6 +415,13 @@ class SchemaSolver:
         from_node = frame_mantis_nodes[ (*self.autogen_path_names, from_name+self.index_str()) ]
         connection = from_node.outputs[ui_link.from_socket.identifier].connect(node=to_node, socket=ui_link.to_socket.name)
 
+    def handle_link_from_array_type_to_array_out(self, original_ui_link, dummy_link):
+        # this is so annoyingly specific lol
+        from_node = dummy_link.nc_from; from_socket_name=dummy_link.from_socket.name
+        for outgoing in self.array_output_connections[original_ui_link.to_socket.identifier]:
+            to_node = outgoing.to_node
+            connection = from_node.outputs[from_socket_name].connect(node=to_node, socket=outgoing.to_socket)
+
     # WTF is even happening here?? TODO BUG HACK
     def handle_link_to_array_output(self, frame_mantis_nodes, index, ui_link, to_ui_node, from_ui_node):# if this duplicated code works, dedupe!
         to_node = self.schema_nodes[(*self.tree_path_names, to_ui_node.bl_idname)] # get it by [], we want a KeyError if this fails
@@ -533,7 +540,6 @@ class SchemaSolver:
                             can_add_me=False
                             forbidden.add(nc) # forbid the parent, too
                             continue
-                        prOrange(f"Adding dependency... {dep}")
                         unprepared.appendleft(dep)
                 if can_add_me:
                     unprepared.appendleft(nc) # just rotate them until they are ready.
@@ -560,7 +566,7 @@ class SchemaSolver:
                                         SchemaOutgoingConnection,
                                         SchemaIncomingConnection,)
         from .utilities import clear_reroutes, link_node_containers
-
+        from .base_definitions import array_output_types
         self.set_index_strings()
         frame_mantis_nodes = {}
 
@@ -627,6 +633,12 @@ class SchemaSolver:
                 if isinstance(from_ui_node, (MantisNodeGroup, SchemaGroup)):
                     self.handle_link_from_subschema_to_output(frame_mantis_nodes, ui_link, to_ui_node)
                     # both links are desirable to create, so don't continue here
+                if from_ui_node.bl_idname in array_output_types:
+                    self.handle_link_from_subschema_to_output(frame_mantis_nodes, ui_link, to_ui_node)
+                    # this one wires links around - we need to finish connecting it to the output
+                    # before we can prepare it. Otherwise, it will send a link from *itself* instead of
+                    # rewiring one of its *inputs* to the next node.
+                    # We have to prep it, and then deal with the links between it and the array. pain.
                 links_to_output.append(ui_link)
                 continue
             if isinstance(from_ui_node, SchemaArrayInputGet):
@@ -675,7 +687,8 @@ class SchemaSolver:
             ui_link = links_to_output[i]
             to_ui_node = ui_link.to_socket.node; from_ui_node = ui_link.from_socket.node
             # ugly workaround here in a very painful edge case...
-            if isinstance(from_ui_node, (MantisNodeGroup, SchemaGroup)):
+            if isinstance(from_ui_node, (MantisNodeGroup, SchemaGroup)) or\
+                                from_ui_node.bl_idname in array_output_types:
                 ui_link=self.spoof_link_for_subschema_to_output_edge_case(ui_link)
                 links_to_output[i] = ui_link
             from_name = get_link_in_out(ui_link)[0]
@@ -690,13 +703,22 @@ class SchemaSolver:
             else:
                 raise RuntimeError(" 671 there has been an error parsing the tree. Please report this as a bug.")
             self.prepare_nodes(unprepared) # prepare only the dependencies we need for this link
-            # and then handle the link by specific type.
-            if isinstance(from_ui_node, (MantisNodeGroup, SchemaGroup)):
-                ui_link=self.spoof_link_for_subschema_to_output_edge_case(ui_link)
+            # and handle the output by the specific type
             if isinstance(to_ui_node, (SchemaConstOutput, NodeGroupOutput)):
                 self.handle_link_to_constant_output(frame_mantis_nodes, self.index, ui_link,  to_ui_node)
             if isinstance(to_ui_node, SchemaArrayOutput):
-                self.handle_link_to_array_output(frame_mantis_nodes, self.index, ui_link, to_ui_node, from_ui_node)
+                if from_node.bl_idname in array_output_types:
+                    from .base_definitions import DummyLink
+                    for l in from_node.rerouted:
+                        new_link = DummyLink(
+                            from_socket=l.from_node.outputs[l.from_socket],
+                            to_socket=l.to_node.inputs[l.to_socket],
+                            nc_from=l.from_node, nc_to=l.to_node,
+                            multi_input_sort_id=l.multi_input_sort_id
+                        )
+                        self.handle_link_from_array_type_to_array_out(ui_link, new_link)
+                else:
+                    self.handle_link_to_array_output(frame_mantis_nodes, self.index, ui_link, to_ui_node, from_ui_node)
         return frame_mantis_nodes
     
     def solve_nested_schema(self, schema_nc):
