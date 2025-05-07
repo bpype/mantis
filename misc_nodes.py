@@ -1853,7 +1853,7 @@ class UtilityChoose(MantisNode):
 
     def bPrepare(self, bContext = None,):
         if self.outputs['Result'].links: # otherwise this doesn't matter as it is not connected.
-            # prGreen(f"Executing Choose Node {self}")
+            prGreen(f"Executing Choose Node {self}")
             condition = self.evaluate_input("Condition")
             if self.evaluate_input('A') is not None and self.evaluate_input('B') is not None:
                 self.parameters['Result'] = self.evaluate_input('B') if condition else self.evaluate_input('A')
