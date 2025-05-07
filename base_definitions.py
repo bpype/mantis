@@ -1045,11 +1045,9 @@ class NodeSocket:
             from_socket = self.name; to_socket = socket
         from_node.outputs[from_socket].is_linked = True
         to_node.inputs[to_socket].is_linked = True
-        for l in from_node.outputs[from_socket].links:
-            if l.to_node==to_node and l.to_socket==to_socket:
-                prPurple( "Mantis has attempted to create a duplicate link. "
-                         f"{from_node.signature[-1]}::{from_socket} ==> {to_node.signature[-1]}::{to_socket}"
-                         "\nThis is not a bug.")
+        # NOTE: I have removed a check for duplicate links here.
+        # Schemas sometimes have valid duplicate links.
+        # It is conceivable that this will lead to bugs, but I judge it unlikely.
         new_link = NodeLink(
                 from_node,
                 from_socket,
