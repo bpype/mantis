@@ -469,80 +469,63 @@ def SugiyamaGraph(tree, iterations):
             w,h = 1,1
             xz = (0,0)
         
+        graph = Graph()
         no_links = set()
         verts = {}
         for n in tree.nodes:
-            has_links=False
-            for inp in n.inputs:
-                if inp.is_linked:
-                    has_links=True
-                    break
-            else:
+            if n.select == True:
+                v = Vertex(n.name)
+                v.view = defaultview()
+                v.view.xy = n.location
+                v.view.h = n.height*2.5
+                v.view.w = n.width*2.2
+                verts[n.name] = v
                 no_links.add(n.name)
-            for out in n.outputs:
-                if out.is_linked:
-                    has_links=True
-                    break
-            else:
-                try:
-                    no_links.remove(n.name)
-                except KeyError:
-                    pass
-            if not has_links:
-                continue
-                
-            v = Vertex(n.name)
-            v.view = defaultview()
-            v.view.xy = n.location
-            v.view.h = n.height*2.5
-            v.view.w = n.width*2.2
-            verts[n.name] = v
+                graph.add_vertex(v)
+            n.select=False
             
         edges = []
+        inverted_edges=[]
+        not_a_root = set()
         for link in tree.links:
+            if (link.from_node.name not in verts.keys()) or (link.to_node.name not in verts.keys()):
+                continue # problem??
             weight = 1 # maybe this is useful
-            edges.append(Edge(verts[link.from_node.name], verts[link.to_node.name], weight) )
-        graph = Graph(verts.values(), edges)
+            not_a_root.add(link.to_node.name) # if it has a edge-input it is not a root.
+            e = Edge(verts[link.from_node.name], verts[link.to_node.name], weight)
+            graph.add_edge(e)
+            edges.append(e )
+            if link.is_valid == False:
+                inverted_edges.append(e)
+            if link.from_node.name in no_links:
+                no_links.remove(link.from_node.name)
+            if link.to_node.name in no_links:
+                no_links.remove(link.to_node.name)
+        try:
+            from grandalf.layouts import SugiyamaLayout
+            # .C[0] is the first "graph core" that contains a connected graph.
+            sug = SugiyamaLayout(graph.C[0]) 
+            sug.init_all()
+            sug.draw(iterations)
+            # Digco is good for small graphs.
+            # from grandalf.layouts import DigcoLayout
+            # dco = DigcoLayout(graph.C[0])
+            # dco.init_all()
+            # dco.draw(iterations)
+        except KeyboardInterrupt:
+            pass # just use what it has calculated so far, I guess
 
-        from grandalf.layouts import SugiyamaLayout
-        sug = SugiyamaLayout(graph.C[0]) # no idea what .C[0] is
-        roots=[]
-        for node in tree.nodes:
-            
-            has_links=False
-            for inp in node.inputs:
-                if inp.is_linked:
-                    has_links=True
-                    break
-            for out in node.outputs:
-                if out.is_linked:
-                    has_links=True
-                    break
-            if not has_links:
-                continue
-                
-            if len(node.inputs)==0:
-                roots.append(verts[node.name])
-            else:
-                for inp in node.inputs:
-                    if inp.is_linked==True:
-                        break
-                else:
-                    roots.append(verts[node.name])
-        
-        sug.init_all(roots=roots,)
-        sug.draw(iterations)
         for v in graph.C[0].sV:
             for n in tree.nodes:
                 if n.name == v.data:
                     n.location.x = v.view.xy[1]
                     n.location.y = v.view.xy[0]
+                    n.select = True
         
         # now we can take all the input nodes and try to put them in a sensible place
-
+        # not sure why but this absolutely does not do anything
         for n_name in no_links:
             n = tree.nodes.get(n_name)
-            next_n = None
             next_node = None
             for output in n.outputs:
                 if output.is_linked == True:
