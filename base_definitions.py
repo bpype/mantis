@@ -1045,10 +1045,11 @@ class NodeSocket:
             from_socket = self.name; to_socket = socket
         from_node.outputs[from_socket].is_linked = True
         to_node.inputs[to_socket].is_linked = True
-        if sort_id == 0: # otherwise it is an array and dupe links are valid.
-            for l in from_node.outputs[from_socket].links:
-                if l.to_node==to_node and l.to_socket==to_socket:
-                    return None
+        for l in from_node.outputs[from_socket].links:
+            if l.to_node==to_node and l.to_socket==to_socket:
+                prPurple( "Mantis has attempted to create a duplicate link. "
+                         f"{from_node.signature[-1]}::{from_socket} ==> {to_node.signature[-1]}::{to_socket}"
+                         "\nThis is not a bug.")
         new_link = NodeLink(
                 from_node,
                 from_socket,
