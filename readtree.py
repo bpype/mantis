@@ -515,7 +515,8 @@ def execute_tree(nodes, base_tree, context, error_popups = False):
             if execution_failed: break
             if i >= max_iterations:
                 execution_failed = True
-                raise GraphError("There is probably a cycle somewhere in the graph.")
+                raise GraphError("There is probably a cycle somewhere in the graph. "
+                                 "Or a connection missing in a Group/Schema Input")
             i+=1    
             n = xForm_pass.pop()
             if visited.get(n.signature) is not None:
@@ -524,7 +525,8 @@ def execute_tree(nodes, base_tree, context, error_popups = False):
                 visited[n.signature]=0
             if visited[n.signature] > check_max_len:
                 execution_failed = True
-                raise GraphError("There is a probably a cycle in the graph somewhere. Fix it!")
+                raise GraphError("There is a probably a cycle in the graph somewhere. "
+                                 "Or a connection missing in a Group/Schema Input")
                 # we're trying to solve the halting problem at this point.. don't do that.
                 # TODO find a better way! there are algo's for this but they will require using a different solving algo, too
             if n.execution_prepared:
