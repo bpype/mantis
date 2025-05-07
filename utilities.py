@@ -767,7 +767,6 @@ def nurbs_copy_bez_spline(curve, bez_spline, do_setup=True):
         bez_data.append(bez_pt.co.copy())
         if i != len(bez_pts)-1:
             bez_data.append(bez_pt.handle_right.copy())
-    print(bez_data)
     other_spline.points.add(len(bez_data)-1)
     for i, pt in enumerate(bez_data):
         other_spline.points[i].co=(*pt,1.0) # add the W value here

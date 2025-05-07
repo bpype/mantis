@@ -1616,7 +1616,6 @@ class UtilityMatrixAlignRoll(MantisNode):
         align_axis = Vector(self.evaluate_input('Alignment Vector'))
         # why do I have to construct a vector here?
         # why is the socket returning a bpy_prop_array ?
-        print(align_axis)
         if align_axis.length_squared==0:
             raise RuntimeError(f"WARN: cannot align matrix in {self}"
                                 " because the alignment vector is zero.")
