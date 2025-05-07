@@ -25,7 +25,10 @@ class MantisVisualizeNode(Node):
     
     def gen_data(self, mantis_node, mode='DEBUG_CONNECTIONS'):
         from .utilities import get_node_prototype
-        np=get_node_prototype(mantis_node.ui_signature, mantis_node.base_tree)
+        if mantis_node.node_type in ['SCHEMA', 'DUMMY']:
+            np=None
+        else:
+            np=get_node_prototype(mantis_node.ui_signature, mantis_node.base_tree)
         self.use_custom_color = True
         match mantis_node.node_type:
             case 'XFORM':        self.color = (1.0 ,0.5, 0.0)
@@ -96,10 +99,12 @@ def gen_vis_node( mantis_node,
     vis.gen_data(mantis_node)
     for inp in mantis_node.inputs.values():
         for l in inp.links:
-            links.add(l)
+            if l.from_node in mantis_node.hierarchy_dependencies:
+                links.add(l)
     for out in mantis_node.outputs.values():
         for l in out.links:
-            links.add(l)
+            if l.to_node in mantis_node.hierarchy_connections:
+                links.add(l)
     return vis
                 
 def visualize_tree(m_nodes, base_tree, context):
