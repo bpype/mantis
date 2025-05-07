@@ -1045,9 +1045,10 @@ class NodeSocket:
             from_socket = self.name; to_socket = socket
         from_node.outputs[from_socket].is_linked = True
         to_node.inputs[to_socket].is_linked = True
-        for l in from_node.outputs[from_socket].links:
-            if l.to_node==to_node and l.to_socket==to_socket:
-                return None
+        if sort_id == 0: # otherwise it is an array and dupe links are valid.
+            for l in from_node.outputs[from_socket].links:
+                if l.to_node==to_node and l.to_socket==to_socket:
+                    return None
         new_link = NodeLink(
                 from_node,
                 from_socket,
