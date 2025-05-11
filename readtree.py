@@ -461,6 +461,11 @@ def execution_error_cleanup(node, exception, switch_objects = [], show_error=Fal
     ui_sig = None
     if show_error: # show a popup and select the relevant nodes
         if node:
+            if node.mContext:
+                if node.mContext.execution_failed==True:
+                    # already have an error, pass it to avoid printing
+                    return # a second error (it's confusing to users.)
+                node.mContext.execution_failed=True
             ui_sig = node.ui_signature
             # TODO: see about zooming-to-node.
             base_tree = node.base_tree
@@ -504,7 +509,7 @@ def execute_tree(nodes, base_tree, context, error_popups = False):
             mContext.b_objects = {} # clear the objects and recreate them
         nc.reset_execution()
         check_and_add_root(nc, xForm_pass)
-    
+    mContext.execution_failed = False
     executed = []
 
     # check for cycles here by keeping track of the number of times a node has been visited.

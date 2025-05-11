@@ -682,6 +682,7 @@ class MantisExecutionContext():
     ):
         self.base_tree = base_tree
         self.execution_id = base_tree.execution_id
+        self.execution_failed=False
         self.b_objects={} # objects created by Mantis during execution
 
 class MantisNode:
