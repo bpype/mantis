@@ -719,7 +719,11 @@ class UtilityMetaRig(MantisNode):
         m = Matrix.Identity(4)
         
         meta_rig  = self.evaluate_input("Meta-Armature")
+        if meta_rig is None:
+            raise RuntimeError("Invalid input for Meta-Armature.")
         meta_bone = self.evaluate_input("Meta-Bone")
+        if meta_rig is None or meta_bone is None:
+            raise RuntimeError("Invalid input for Meta-Bone.")
         
         if meta_rig:
             if ( armOb := bpy.data.objects.get(meta_rig) ):
