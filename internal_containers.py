@@ -43,5 +43,14 @@ class NoOpNode(MantisNode):
         self.node_type = 'UTILITY'
         self.prepared = True
         self.executed = True
-    
     # this node is useful for me to insert in the tree and use for debugging especially connections.
+
+class AutoGenNode(MantisNode):
+    def __init__(self, signature, base_tree):
+        super().__init__(signature, base_tree)
+        self.node_type = 'UTILITY'
+        self.prepared, self.executed = True, True
+    
+    def reset_execution(self):
+        super().reset_execution()
+        self.prepared, self.executed = True, True

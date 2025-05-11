@@ -113,7 +113,7 @@ class MantisTree(NodeTree):
         if self.is_exporting:
             return
         my_hash = str( hash_tree(self) )
-        if my_hash != self.hash or force:
+        if (my_hash != self.hash) or force:
             self.hash = my_hash
             self.is_executing = True
             from . import readtree
@@ -647,6 +647,9 @@ def can_remove_socket_for_autogen(node, socket) -> bool:
     """ Whether to enable socket removal optimization for the socket
         This should be disallowed if e.g. it is a custom property.
     """
+    return False # for now! This doesn't seem to be working...
+    # the problem is that Schema does this, and so does Readtree
+    # and they can try and both do it. That's bad.
     if node.socket_templates:
         for s_template in node.socket_templates:
             if s_template.name == socket:
