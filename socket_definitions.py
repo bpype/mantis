@@ -262,9 +262,6 @@ def default_update(ui_socket, context, do_execute=True):
     # finally, try and execute it if mantis couldn't update the b_objects itself.
     from .base_definitions import array_output_types
     mantis_updated=True
-    inside_schema=False
-    if ui_socket.node.id_data.bl_idname == 'SchemaTree':
-        inside_schema=True # We're inside a schema and we have to force-update
     if (ui_socket.node.bl_idname in ["MantisNodeGroup", "MantisSchemaGroup"]):
         mantis_updated=False # this kind of socket can't be updated here (yet)
         node_tree.update_tree(context, force=True)
@@ -290,7 +287,7 @@ def default_update(ui_socket, context, do_execute=True):
                 # execute the tree if even one node didn't update
                 mantis_updated = node_updated and mantis_updated
         # we want to force it if we have made an unhandled change inside of a schema.
-        node_tree.update_tree(context, force = (mantis_updated == False and inside_schema))
+        node_tree.update_tree(context, force = (mantis_updated == False))
     node_tree.display_update(context)
     if mantis_updated==False:
         try:
