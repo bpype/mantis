@@ -372,6 +372,10 @@ class SchemaSolver:
     def handle_link_to_constant_output(self, frame_mantis_nodes, index, ui_link,  to_ui_node):
         to_node = self.schema_nodes[(*self.tree_path_names, to_ui_node.bl_idname)]
         expose_when = to_node.evaluate_input('Expose when N==')
+        if expose_when > self.solve_length-1:
+            raise GraphError(f"The Schema has a constant output at index {expose_when}"
+                             f" but it terminates at index {self.solve_length-1}. "
+                             f"The Schema must have a length of at least {expose_when+1}.")
         from_name = get_link_in_out(ui_link)[0]
         from bpy.types import NodeSocket
         #use it directly if it is a mantis node; this happens when the previous node was a Schema
