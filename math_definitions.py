@@ -68,7 +68,7 @@ class MathStaticFloatNode(Node, MantisUINode):
             node_tree = context.space_data.path[0].node_tree
             nc = parsed_tree.get(get_signature_from_edited_tree(self, context))
             op = nc.evaluate_input("Operation")
-            if op in ['ABSOLUTE']:
+            if op in ['ABSOLUTE', 'FLOOR', 'CEIL', 'ROUND']:
                 self.inputs["Float B"].hide = True
             else:
                 self.inputs["Float B"].hide = False

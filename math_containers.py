@@ -34,9 +34,17 @@ def math_operation(operation, a, b):
             return float(a > b)
         case "LESS THAN":
             return float(a < b)
-        case" ARCTAN2":
+        case "ARCTAN2":
             from math import atan2
             return atan2(a,b)
+        case "FLOOR":
+            from math import floor
+            return floor(a)
+        case "CEIL":
+            from math import ceil
+            return ceil(a)
+        case "ROUND":
+            return round(a)
 
 #*#-------------------------------#++#-------------------------------#*#
 # M A T H  N O D E S

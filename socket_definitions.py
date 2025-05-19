@@ -2277,7 +2277,10 @@ enumFloatOperations = (('ADD', 'Add', 'Add'),
                       ('MINIMUM', "Minimum", "Minimum"),
                       ('GREATER THAN', "Greater Than", "Greater Than"),
                       ('LESS THAN', "Less Than", "Less Than"),
-                      ('ARCTAN2', "atan2", "2-argument arctan function"),)
+                      ('ARCTAN2', "atan2", "2-argument arctan function"),
+                      ('FLOOR', "Floor", "the nearest integer lower than input A"),
+                      ('CEIL', "Ceiling", "the next integer higher than input A"),
+                      ('ROUND', "Round", "Round to the nearest integer"),)
 
 class MathFloatOperation(MantisSocket):
     """Float Math Operation"""
