@@ -494,6 +494,7 @@ def execution_error_cleanup(node, exception, switch_objects = [], show_error=Fal
     return exception
 
 def execute_tree(nodes, base_tree, context, error_popups = False):
+    assert nodes is not None, "Failed to parse tree."
     import bpy
     from time import time
     from .node_container_common import GraphError
