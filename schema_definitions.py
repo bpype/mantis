@@ -205,7 +205,7 @@ class SchemaConstOutput(Node, SchemaUINode):
             return
         input_map = socket_maps[0]
         self.inputs.clear()
-        s = self.inputs.new('IntSocket', "Expose when N==")
+        s = self.inputs.new('UnsignedIntSocket', "Expose at Index")
         for item in self.id_data.interface.items_tree:
             if item.item_type == 'PANEL': continue
             if item.parent and item.in_out == 'OUTPUT' and item.parent.name == 'Constant':

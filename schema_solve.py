@@ -302,9 +302,9 @@ class SchemaSolver:
         assert(get_index is not None), f"Cannot get index in {from_node}"
         oob = from_node.evaluate_input("OoB Behaviour")
         if oob == 'WRAP':
-            get_index = wrap(get_index, len(self.array_input_connections[ui_link.from_socket.identifier]), 0)
+            get_index = wrap(get_index, len(self.array_input_connections[ui_link.from_socket.identifier])-1, 0)
         if oob == 'HOLD':
-            get_index = cap(get_index, len(self.array_input_connections[ui_link.from_socket.identifier]))
+            get_index = cap(get_index, len(self.array_input_connections[ui_link.from_socket.identifier])-1)
         try:
             incoming = self.array_input_connections[ui_link.from_socket.identifier][get_index]
         except IndexError:
@@ -371,7 +371,7 @@ class SchemaSolver:
 
     def handle_link_to_constant_output(self, frame_mantis_nodes, index, ui_link,  to_ui_node):
         to_node = self.schema_nodes[(*self.tree_path_names, to_ui_node.bl_idname)]
-        expose_when = to_node.evaluate_input('Expose when N==')
+        expose_when = to_node.evaluate_input('Expose at Index')
         if expose_when > self.solve_length-1:
             raise GraphError(f"The Schema has a constant output at index {expose_when}"
                              f" but it terminates at index {self.solve_length-1}. "

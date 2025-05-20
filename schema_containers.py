@@ -103,7 +103,7 @@ class SchemaConstOutput(SchemaNode):
     def __init__(self, signature, base_tree, parent_schema_node=None):
         super().__init__(signature, base_tree)
         inputs = [
-            "Expose when N==",
+            "Expose at Index",
         ]
         self.inputs.init_sockets(inputs)
         if parent_schema_node:
@@ -114,9 +114,9 @@ class SchemaConstOutput(SchemaNode):
             for item in parent_tree.interface.items_tree:
                 if item.item_type == 'PANEL': continue
                 if item.in_out == 'OUTPUT':
-                    sockets.init_sockets([item.name, "Expose when N==",])
+                    sockets.init_sockets([item.name, "Expose at Index",])
             self.init_parameters()
-            self.parameters['Expose when N=="']=1
+            self.parameters['Expose at Index"']=1
 
         else:
             schema_init_sockets(self, is_input=True, in_out='OUTPUT', category='Constant')
