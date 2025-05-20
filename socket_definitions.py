@@ -250,6 +250,13 @@ def default_update(ui_socket, context, do_execute=True):
         return
     if node_tree.is_executing or node_tree.is_exporting or not node_tree.do_live_update:
         return
+    # if it is a Schema Node, it will fail the checks below -- but we need it to update the tree.
+    from .base_definitions import SchemaUINode
+    if isinstance(ui_socket.node, SchemaUINode):
+        node_tree.update_tree(context, force = True)
+        prPurple(f"Executing tree after socket change: {ui_socket.node.name}:{ui_socket.name}")
+        node_tree.execute_tree(context)
+        return
     if hasattr(ui_socket.node, "initialized"):
         if not ui_socket.node.initialized: return
     elif hasattr(ui_socket.node, 'is_updating'):
