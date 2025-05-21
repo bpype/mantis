@@ -1733,7 +1733,7 @@ class UtilityArrayGet(MantisNode):
             from .utilities import cap, wrap
             # we must assume that the array has sent the correct number of links
             if oob == 'WRAP':
-                index = index % len(self.inputs['Array'].links)-1
+                index = wrap(0, len(self.inputs['Array'].links), index)
             if oob == 'HOLD':
                 index = cap(index, len(self.inputs['Array'].links)-1)
             array_choose_relink(self, [index], "Array", "Output")

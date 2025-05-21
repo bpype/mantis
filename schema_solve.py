@@ -301,10 +301,11 @@ class SchemaSolver:
         # that are left because this node is reused in each iteration of the schema
         assert(get_index is not None), f"Cannot get index in {from_node}"
         oob = from_node.evaluate_input("OoB Behaviour")
+        array_length = len(self.array_input_connections[ui_link.from_socket.identifier])-1
         if oob == 'WRAP':
-            get_index = wrap(get_index, len(self.array_input_connections[ui_link.from_socket.identifier])-1, 0)
+            get_index = wrap(0, array_length+1, get_index)
         if oob == 'HOLD':
-            get_index = cap(get_index, len(self.array_input_connections[ui_link.from_socket.identifier])-1)
+            get_index = cap(get_index, array_length)
         try:
             incoming = self.array_input_connections[ui_link.from_socket.identifier][get_index]
         except IndexError:
