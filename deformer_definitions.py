@@ -176,8 +176,9 @@ class DeformerMorphTargetDeform(Node, DeformerNode):
         self.initialized = True
 
     def update(self):
-        if self.id_data.is_executing:
+        if self.id_data.is_exporting:
             return # so that we don't update it while saving/loading the tree
+        self.update_morph_deformer(force=False)
     
     def display_update(self, parsed_tree, context):
         if self.inputs["Deformer"].is_linked:
