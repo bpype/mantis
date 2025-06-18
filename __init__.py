@@ -16,7 +16,7 @@ from .utilities import prRed
 
 MANTIS_VERSION_MAJOR=0
 MANTIS_VERSION_MINOR=11
-MANTIS_VERSION_SUB=12
+MANTIS_VERSION_SUB=13
 
 classLists = [module.TellClasses() for module in [
  link_definitions,
@@ -84,6 +84,7 @@ link_transform_category = [
         NodeItem("LinkLimitRotation"),
         NodeItem("LinkLimitDistance"),
         NodeItem("LinkTransformation"),
+        NodeItem("LinkFloor"),
     ]
 link_tracking_category = [
         NodeItem("LinkInverseKinematics"),

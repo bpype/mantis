@@ -28,6 +28,7 @@ def TellClasses():
              LinkDrivenParameterNode,
              LinkArmatureNode,
              LinkSplineIKNode,
+             LinkFloorNode,
              LinkTransformationNode,
            ]
 
@@ -374,8 +375,21 @@ class LinkSplineIKNode(Node, LinkNode):
         self.color = ikColor
         self.initialized = True
         
-# DRIVERS!!
+class LinkFloorNode(Node, LinkNode):
+    """A node representing Blender's Floor Constraint"""
+    bl_idname = "LinkFloor"
+    bl_label = "Floor"
+    bl_icon = "CON_FLOOR"
+    initialized : bpy.props.BoolProperty(default = False)
+    mantis_node_class_name=bl_idname
+    
+    def init(self, context):
+        self.init_sockets(LinkFloorSockets)
+        self.use_custom_color = True
+        self.color = linkColor
+        self.initialized = True
 
+# DRIVERS!!
 class LinkDrivenParameterNode(Node, LinkNode):
     """Represents a driven parameter in the downstream xForm node."""
     bl_idname = "LinkDrivenParameter"

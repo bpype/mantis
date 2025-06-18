@@ -29,6 +29,7 @@ def TellClasses():
              # IK
              LinkInverseKinematics,
              LinkSplineIK,
+             LinkFloor,
              # Drivers
              LinkDrivenParameter,
             ]
@@ -833,6 +834,31 @@ class LinkSplineIK(MantisLinkNode):
             if (curve.name not in bContext.view_layer.active_layer_collection.collection.objects):
                 bContext.view_layer.active_layer_collection.collection.objects.link(curve)
             c.target=curve
+            if constraint_name := self.evaluate_input("Name"):
+                c.name = constraint_name
+            self.bObject.append(c)
+            props_sockets = self.gen_property_socket_map()
+            evaluate_sockets(self, c, props_sockets)
+        self.executed = True
+    
+
+class LinkFloor(MantisLinkNode):
+    '''A node representing an armature object'''
+
+    def __init__(self, signature, base_tree,):
+        super().__init__(signature, base_tree, LinkFloorSockets)
+        self.init_parameters(additional_parameters={"Name":None })
+        self.set_traverse([("Input Relationship", "Output Relationship")])
+        setup_custom_props(self) # <-- this takes care of the runtime-added sockets
+
+    def bExecute(self, bContext = None,):
+        prepare_parameters(self)
+        for xf in self.GetxForm():
+            print(wrapGreen("Creating ")+wrapOrange("Floor")+
+                wrapGreen(" Constraint for bone: ") +
+                wrapOrange(xf.bGetObject().name))
+            c = xf.bGetObject().constraints.new('FLOOR')
+            self.get_target_and_subtarget(c)
             if constraint_name := self.evaluate_input("Name"):
                 c.name = constraint_name
             self.bObject.append(c)

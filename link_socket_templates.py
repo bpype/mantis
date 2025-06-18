@@ -407,6 +407,21 @@ LinkSplineIKSockets = [
     OutputRelationshipTemplate,
 ]
 
+LinkFloorSockets = [
+    InputRelationshipTemplate,
+    TargetTemplate,
+    FloorOffsetTemplate := SockTemplate(name="Offset", bl_idname="BooleanSocket",
+            is_input=True, default_value=False, blender_property='offset'),
+    FloorAxisTemplate := SockTemplate(name='Min/Max', bl_idname='EnumFloorAxis',
+            is_input = True, default_value="FLOOR_X", blender_property="floor_location"),
+    FloorUseRotation := SockTemplate(name="Rotation", bl_idname='BooleanSocket',
+            is_input=True, default_value=False, blender_property='use_rotation',),
+    TargetSpaceTemplate,
+    OwnerSpaceTemplate,
+    EnableTemplate,
+    OutputRelationshipTemplate,
+]
+
 # Remove this socket because of Blender changes.
 if (app.version >= (4, 5, 0)):
     LinkSplineIKSockets.pop(9)
