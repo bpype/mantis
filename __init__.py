@@ -84,6 +84,7 @@ link_transform_category = [
         NodeItem("LinkLimitRotation"),
         NodeItem("LinkLimitDistance"),
         NodeItem("LinkTransformation"),
+        NodeItem("LinkFloor"),
     ]
 link_tracking_category = [
         NodeItem("LinkInverseKinematics"),

@@ -155,6 +155,7 @@ def TellClasses() -> List[MantisSocket]:
              EnumTrackAxis,
              EnumUpAxis,
              EnumFollowPathForwardAxis,
+             EnumFloorAxis,
              EnumLockAxis,
              EnumLimitMode,
              EnumYScaleMode,
@@ -1431,6 +1432,35 @@ class EnumFollowPathForwardAxis(MantisSocket):
     def draw_color_simple(self):
         return self.color_simple
 
+# Follow Track Forward axis
+eFloorAxis =   (('FLOOR_X',        "X",  "X",  0),
+                ('FLOOR_Y',        "Y",  "Y",  1),
+                ('FLOOR_Z',        "Z",  "Z",  2),
+                ('FLOOR_NEGATIVE_X', "-X", "-X", 3),
+                ('FLOOR_NEGATIVE_Y', "-Y", "-Y", 4),
+                ('FLOOR_NEGATIVE_Z', "-Z", "-Z", 5),)
+
+class EnumFloorAxis(MantisSocket):
+    '''Floor Constraint Axis'''
+    bl_idname = 'EnumFloorAxis'
+    bl_label = "Floor Axis"
+    
+    default_value: bpy.props.EnumProperty(
+        items=eFloorAxis,
+        name="Floor Axis",
+        description="Floor Axis",
+        default = 'FLOOR_X',
+        update = update_socket,)
+    color_simple = cString
+    color : bpy.props.FloatVectorProperty(default=cString, size=4)
+    input : bpy.props.BoolProperty(default =False,)
+    def draw(self, context, layout, node, text):
+        ChooseDraw(self, context, layout, node, text)
+    def draw_color(self, context, node):
+        return self.color
+    @classmethod
+    def draw_color_simple(self):
+        return self.color_simple
 # Locked Track
 
 eLockAxis = (('LOCK_X', "X", "X", 1),
