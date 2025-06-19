@@ -418,6 +418,7 @@ LinkFloorSockets = [
             is_input=True, default_value=False, blender_property='use_rotation',),
     TargetSpaceTemplate,
     OwnerSpaceTemplate,
+    InfluenceTemplate,
     EnableTemplate,
     OutputRelationshipTemplate,
 ]

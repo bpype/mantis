@@ -849,7 +849,6 @@ class LinkFloor(MantisLinkNode):
         super().__init__(signature, base_tree, LinkFloorSockets)
         self.init_parameters(additional_parameters={"Name":None })
         self.set_traverse([("Input Relationship", "Output Relationship")])
-        setup_custom_props(self) # <-- this takes care of the runtime-added sockets
 
     def bExecute(self, bContext = None,):
         prepare_parameters(self)
