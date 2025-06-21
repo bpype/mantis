@@ -75,6 +75,15 @@ xFormCurvePinSockets = [
     xFormOutTemplate,
 ]
 
+xFormGetBoneSockets = [
+    ParentArmatureTemplate := SockTemplate(
+        name="Parent Armature", is_input=True,  bl_idname='EnumArmature', ),
+    ExistingBoneNameTemplate := replace(NameTemplate, name='Bone',
+        default_value='', bl_idname="EnumExistingBoneSocket"),
+    xFormOutTemplate,
+]
+
+
 # and bones! this one is a bit much...
 from math import pi
 xFormBoneSockets = [

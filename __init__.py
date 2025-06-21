@@ -80,6 +80,7 @@ input_category=[
             NodeItem("InputMatrixNode"),
             NodeItem("InputWidget"),
             NodeItem("InputExistingGeometryObject"),
+            NodeItem("xFormGetBone"),
             NodeItem("InputExistingGeometryData"),
             NodeItem("UtilityDeclareCollections"),
             NodeItem("InputThemeBoneColorSets"),

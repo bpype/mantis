@@ -215,6 +215,8 @@ def TellClasses() -> List[MantisSocket]:
 
              EnumMetaRigSocket,
              EnumMetaBoneSocket,
+             EnumArmature,
+             EnumExistingBoneSocket,
              EnumCurveSocket,
              EnumWidgetLibrarySocket,
              BoolUpdateParentNode,
@@ -547,7 +549,7 @@ def update_parent_node(self, context):
 def update_metarig_armature(self, context,):
     if self.search_prop:
         self.node.armature = self.search_prop.name
-        self.node.inputs["Meta-Bone"].search_prop = self.search_prop
+        self.node.inputs[1].armature = self.search_prop
     default_update(self,context)
 
 def update_metarig_posebone(self, context,):
@@ -1524,6 +1526,10 @@ class EnumMetaRigSocket(MantisSocket):
     def draw_color_simple(self):
         return self.color_simple
 
+class EnumArmature(EnumMetaRigSocket):
+    bl_idname = "EnumArmature"
+    bl_label = "Armature"
+
 def poll_is_curve(self, obj):
     return obj.type == "CURVE"
 
@@ -1567,35 +1573,26 @@ class EnumCurveSocket(MantisSocket):
         return self.color_simple
 
 def SearchPBDraw(self, context, layout, node, text, icon = "NONE", use_enum=True, nice_bool=True, icon_only=False):
-    layout.prop_search(data=self, property="default_value", search_data=self.search_prop.data, search_property="bones", text=text, icon=icon, results_are_suggestions=True)
+    layout.prop_search(data=self, property="default_value", search_data=self.armature.data, search_property="bones", text=text, icon=icon, results_are_suggestions=True)
 
 class EnumMetaBoneSocket(MantisSocket):
-    '''Custom node socket type'''
+    '''Socket to Get a Bone from an object'''
     bl_idname = 'EnumMetaBoneSocket'
-    bl_label = "Meta Bone"
+    bl_label = "Bone"
 
-
-    search_prop:PointerProperty(type=bpy.types.Object)
+    # this armature property is set by the parent node.
+    armature:PointerProperty(type=bpy.types.Object)
     bone:StringProperty()
 
     def populate_bones_list(self, context):
         # just gonna hardcode the value
-        if (meta_rig := self.search_prop):
-            retList = []
-            armatures = []
-            i = -1
+        if (meta_rig := self.armature):
+            retList = []; i = -1
             retList.append( ('NONE', '', '', 'NONE', i:=i+1 ) )
             for b in meta_rig.data.bones:
                 retList.append( (b.name, b.name, "Bone to copy matrix from", "BONE_DATA", i:=i+1 ) )
             return(retList)
         return None
-
-    # default_value : bpy.props.EnumProperty(
-                 # items = populate_bones_list,
-                 # name = "Meta Rig")
-
-    # def get_default_value(self):
-    #     return self.search_prop.name
 
     default_value  : StringProperty(name = "", update=update_metarig_posebone)
 
@@ -1603,7 +1600,7 @@ class EnumMetaBoneSocket(MantisSocket):
     color : bpy.props.FloatVectorProperty(default=cString, size=4)
     def draw(self, context, layout, node, text):
         if not (self.is_linked):
-            if self.search_prop is None:
+            if self.armature is None:
                 layout.prop(self, "default_value", text="", icon="BONE_DATA",)
             else:
                 SearchPBDraw(self, context, layout, node, text="")
@@ -1615,6 +1612,11 @@ class EnumMetaBoneSocket(MantisSocket):
     @classmethod
     def draw_color_simple(self):
         return self.color_simple
+
+class EnumExistingBoneSocket(EnumMetaBoneSocket):
+    '''Socket to Get a Bone from an object'''
+    bl_idname = 'EnumExistingBoneSocket'
+    bl_label = "Bone"
 
 # TODO: make it so that this makes an item for "missing" widgets
 # for when a widget is moved or deleted

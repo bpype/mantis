@@ -12,6 +12,7 @@ def TellClasses():
              xFormGeometryObject,
              xFormObjectInstance,
              xFormCurvePin,
+             xFormGetBone,
            ]
 
 #*#-------------------------------#++#-------------------------------#*#
@@ -996,3 +997,40 @@ class xFormCurvePin(xFormNode):
 
     def bGetObject(self, mode = 'POSE'):
         return self.bObject
+
+
+# special thank-you to Natalie Cuthbert, who submitted a patch for this
+# it turned out, I already had this patch laying around
+# because I was too busy with grad school I didn't succeed in collaborating
+# so while I apologize for failing to get your name in the commit history
+# now you get a special thank-you in Mantis instead!
+class xFormGetBone(xFormNode):
+    """Represents an instance of an existing geometry object."""
+    def __init__(self, signature, base_tree):
+        super().__init__(signature, base_tree, xFormGetBoneSockets)
+        self.init_parameters()
+        # this is just a getter
+        self.prepared=True; self.executed=True; self.execution_prepared=True
+    
+    def bGetParentArmature(self):
+        from bpy import data
+        return data.objects.get(self.evaluate_input("Parent Armature"))
+
+    def bGetObject(self, mode = 'POSE'):
+        bone = None
+        self.bObject = self.evaluate_input("Bone")
+        armature = self.bGetParentArmature()
+        from bpy.types import Object
+        assert armature is not None, f"{self} requires a parent armature input to operate."
+        assert isinstance(armature, Object), f"{self}: The parent armature must be an armature object."
+        if armature:
+            assert armature.type == 'ARMATURE', f"{self}: The parent armature must be an armature object."
+            match mode:
+                case 'EDIT':
+                    bone = armature.data.edit_bones.get(self.evaluate_input("Bone"))
+                case 'OBJECT':
+                    bone = armature.bones.get(self.evaluate_input("Bone"))
+                case 'POSE':
+                    bone = armature.pose.bones.get(self.evaluate_input("Bone"))
+        assert self.bObject is not None, f"{self} failed to get the desired bone. Check if the bone name exists."
+        return bone

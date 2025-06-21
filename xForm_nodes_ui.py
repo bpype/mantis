@@ -16,6 +16,7 @@ def TellClasses():
         xFormGeometryObjectNode,
         xFormObjectInstance,
         xFormCurvePin,
+        xFormGetBone,
         ]
 
 def default_traverse(self, socket):
@@ -416,6 +417,28 @@ class xFormCurvePin(Node, xFormNode):
         self.use_custom_color = True
         self.color = xFormColor
         self.initialized = True
+
+class xFormGetBone(Node, xFormNode):
+    """"A node representing an existing bone"""
+    bl_idname = "xFormGetBone"
+    bl_label = "Existing Bone"
+    bl_icon = "BONE_DATA"
+    initialized : bpy.props.BoolProperty(default = False)
+    armature : bpy.props.StringProperty(default="")
+    mantis_node_class_name=bl_idname
+    
+    def init(self, context):
+        self.init_sockets(xFormGetBoneSockets)
+        self.use_custom_color = True
+        self.color = xFormColor
+        self.initialized = True
+
+    def display_update(self, parsed_tree, context):
+        if context.space_data:
+            mantis_node = parsed_tree.get(get_signature_from_edited_tree(self, context))
+            if mantis_node:
+                # need this parent armature to use the bone picker.
+                self.inputs["Bone"].armature = mantis_node.bGetParentArmature()
 
 for cls in TellClasses():
     cls.set_mantis_class()
