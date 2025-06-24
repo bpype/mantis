@@ -8,6 +8,7 @@ Target = SockTemplate(name="Target", bl_idname='xFormSocket',
         is_input=True,
     )
 
+
 HookSockets= [
     DeformerInput := SockTemplate(name="Deformer", bl_idname='DeformerSocket',
         is_input=True,),
@@ -25,11 +26,10 @@ HookSockets= [
         is_input=False,), 
 ]
 
+
 SurfaceDeformSockets= [
-    DeformerInput := SockTemplate(name="Deformer", bl_idname='DeformerSocket',
-        is_input=True,),
+    DeformerInput,
     SurfaceDeformTarget := replace(Target, name="Target",),
-    replace(SplineIndexTemplate,),
     Falloff := SockTemplate(name="Falloff", bl_idname='FloatSocket',
         is_input=True, default_value=4.0, blender_property="falloff", ),
     Strength := replace(Influence, name="Strength", bl_idname='FloatSocket',
@@ -40,6 +40,19 @@ SurfaceDeformSockets= [
         is_input=True, default_value=False, blender_property="invert_vertex_group"),
     SparseBind := SockTemplate(name="Sparse Bind", bl_idname='BooleanSocket',
         is_input=True, default_value=False, blender_property="use_sparse_bind"),
+    DeformerOutput,
+]
+
+MeshDeformSockets= [
+    DeformerInput := SockTemplate(name="Deformer", bl_idname='DeformerSocket',
+        is_input=True,),
+    MeshDeformTarget := replace(Target, name="Object",),
+    VertexGroup,
+    InvertVertexGroup,
+    MeshDeformPrecision := SockTemplate(name="Precision", bl_idname='UnsignedIntSocket',
+        is_input=True, default_value=4, blender_property="precision"),
+    DynamicBind := SockTemplate(name="Dynamic Bind", bl_idname='BooleanSocket',
+        is_input=True, default_value=False, blender_property="use_dynamic_bind"),
     DeformerOutput := SockTemplate(name="Deformer", bl_idname='DeformerSocket',
         is_input=False,), 
 ]

@@ -15,6 +15,7 @@ def TellClasses():
              DeformerMorphTargetDeform,
              DeformerMorphTarget,
              DeformerSurfaceDeform,
+             DeformerMeshDeform,
            ]
 
 
@@ -213,7 +214,6 @@ class DeformerMorphTarget(Node, DeformerNode):
         self.initialized = True
 
 
-# TODO: there is no reason for this to be a separate node!
 class DeformerSurfaceDeform(Node, DeformerNode):
     '''A node representing a Surface Deform modifier'''
     bl_idname = 'DeformerSurfaceDeform'
@@ -226,6 +226,20 @@ class DeformerSurfaceDeform(Node, DeformerNode):
     def init(self, context):
         self.init_sockets(SurfaceDeformSockets)
         self.initialized = True
+
+class DeformerMeshDeform(Node, DeformerNode):
+    '''A node representing a Mesh Deform modifier'''
+    bl_idname = 'DeformerMeshDeform'
+    bl_label = "Mesh Deform"
+    bl_icon = 'MOD_SOFT'
+    initialized : bpy.props.BoolProperty(default = False)
+    num_targets : bpy.props.IntProperty(default = 0)
+    mantis_node_class_name=bl_idname
+
+    def init(self, context):
+        self.init_sockets(MeshDeformSockets)
+        self.initialized = True
+
 
 # Set up the class property that ties the UI classes to the Mantis classes.
 for cls in TellClasses():

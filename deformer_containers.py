@@ -18,6 +18,7 @@ def TellClasses():
              DeformerMorphTarget,
              DeformerMorphTargetDeform,
              DeformerSurfaceDeform,
+             DeformerMeshDeform,
            ]
 
 # object instance probably can't use the deformer but it doesn't hurt to try.
@@ -41,7 +42,7 @@ class MantisDeformerNode(MantisNode):
         self.bObject=[]
     # we need evaluate_input to have the same behaviour as links.
     def evaluate_input(self, input_name, index=0):
-        if ('Target' in input_name):
+        if (input_name in ['Target', 'Object']):
             socket = self.inputs.get(input_name)
             if socket.is_linked:
                 return socket.links[0].from_node
@@ -597,3 +598,45 @@ class DeformerSurfaceDeform(MantisDeformerNode):
             target = d.target
             with bpy.context.temp_override(**{'active_object':ob, 'selected_objects':[ob, target]}):
                 bpy.ops.object.surfacedeform_bind(modifier=d.name)
+
+
+class DeformerMeshDeform(MantisDeformerNode):
+    '''A node representing a mesh deform modifier'''
+
+    def __init__(self, signature, base_tree):
+        super().__init__(signature, base_tree, MeshDeformSockets)
+        # now set up the traverse target...
+        self.init_parameters(additional_parameters={"Name":None})
+        self.set_traverse([("Deformer", "Deformer")])
+        self.prepared = True
+
+    def GetxForm(self, socket="Deformer"):
+        if socket == "Deformer":
+            return super().GetxForm()
+        else:
+            trace_xForm_back(self, socket)
+    
+    def bExecute(self, bContext = None,):
+        self.executed = True
+         
+    def bFinalize(self, bContext=None):
+        prGreen("Executing Mesh Deform Node")
+        mod_name = self.evaluate_input("Name")
+        for xf in self.GetxForm():
+            ob = xf.bGetObject()
+            d = ob.modifiers.new(mod_name, type='MESH_DEFORM')
+            if d is None:
+                raise RuntimeError(f"Modifier was not created in node {self} -- the object is invalid.")
+            self.bObject.append(d)
+            self.get_target_and_subtarget(d, input_name="Object")
+            props_sockets = self.gen_property_socket_map()
+            evaluate_sockets(self, d, props_sockets)
+            # now we have to bind it
+            import bpy
+            target = d.object
+            with bpy.context.temp_override(**{'active_object':ob, 'selected_objects':[ob, target]}):
+                bpy.ops.object.meshdeform_bind(modifier=d.name)
+            
+            # todo: add influence parameter and set it up with vertex group and geometry nodes
+            # todo: make cage object display as wireframe if it is not being used for something else
+            #          or add the option in the Geometry Object node
