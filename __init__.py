@@ -120,6 +120,7 @@ driver_category = [
     ]
 geometry_category = [
         NodeItem("GeometryCirclePrimitive"),
+        NodeItem("GeometryLattice"),
     ]
 utility_category = [
         NodeItem("MathStaticInt"),

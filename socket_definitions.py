@@ -189,6 +189,7 @@ def TellClasses() -> List[MantisSocket]:
              KeyframeSocket,
              EnumKeyframeInterpolationTypeSocket,
              EnumKeyframeBezierHandleTypeSocket,
+             EnumLatticeInterpolationTypeSocket,
              eFCrvExtrapolationMode,
              
              # Math
@@ -2300,6 +2301,37 @@ class eFCrvExtrapolationMode(MantisSocket):
     @classmethod
     def draw_color_simple(self):
         return self.color_simple
+
+
+EnumLatticeInterpolationType = (('KEY_LINEAR',   'Linear', 'Linear Interpolation.'),
+                                ('KEY_CARDINAL', "Cardinal", "Cardinal Interpolation."),
+                                ('KEY_CATMULL_ROM', "Catmull Rom", "Catmull Rom Interpolation."),
+                                ('KEY_BSPLINE', "B-Spline", "B Spline Interpolation."),)
+
+
+class EnumLatticeInterpolationTypeSocket(MantisSocket):
+    '''Lattice Interpolation Type'''
+    bl_idname = 'EnumLatticeInterpolationTypeSocket'
+    bl_label = "Lattice Interpolation Type"
+    
+    default_value :bpy.props.EnumProperty(
+        name="",
+        description="Interpolation Type",
+        items=EnumLatticeInterpolationType,
+        default='KEY_BSPLINE',
+        update = update_socket,)
+    
+    color_simple = cString
+    color : bpy.props.FloatVectorProperty(default=cString, size=4)
+    input : bpy.props.BoolProperty(default =False, update = update_socket)
+    def draw(self, context, layout, node, text):
+        ChooseDraw(self, context, layout, node, text)
+    def draw_color(self, context, node):
+        return self.color
+    @classmethod
+    def draw_color_simple(self):
+        return self.color_simple
+
 
 
 enumFloatOperations = (('ADD', 'Add', 'Add'),

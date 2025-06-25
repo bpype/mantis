@@ -5,6 +5,7 @@ def TellClasses():
     return [
              # Primitives
              CirclePrimitive,
+             GeometryLattice,
             ]
 
 #*#-------------------------------#++#-------------------------------#*#
@@ -21,7 +22,6 @@ class PrimitiveNode(MantisNode):
     def reset_execution(self):
         super().reset_execution()
         self.prepared=True
-
 
 class CirclePrimitive(PrimitiveNode):
     '''A node representing a Circle Primitive mesh'''
@@ -71,3 +71,32 @@ class CirclePrimitive(PrimitiveNode):
         # done with this, push it to the data and free the bmesh.
         bm.to_mesh(data); bm.free()
         self.executed = True
+
+from .primitives_sockets import LatticeSockets
+class GeometryLattice(PrimitiveNode):
+    '''A node representing a Circle Primitive mesh'''
+
+    def __init__(self, signature, base_tree):
+        super().__init__(signature, base_tree, LatticeSockets)
+        self.init_parameters(additional_parameters= {})
+        self.prepared = False
+
+    def reset_execution(self):
+        super().reset_execution()
+        self.prepared=False
+        self.executed=False
+
+    def bGetObject(self):
+        from bpy import data
+        bObject = data.lattices.get(self.evaluate_input("Name"))
+        return bObject
+        
+    def bPrepare(self, bContext = None,):
+        # Get the datablock
+        data = self.bGetObject()
+        import bpy
+        if not data:
+            data = bpy.data.lattices.new( self.evaluate_input("Name") )
+        props_sockets = self.gen_property_socket_map()
+        evaluate_sockets(self, data, props_sockets)
+        self.prepared = True; self.executed = True

@@ -1,10 +1,11 @@
 import bpy
-from bpy.types import NodeTree, Node, NodeSocket
+from bpy.types import Node
 from .base_definitions import MantisUINode
 
 def TellClasses():
     return [
              GeometryCirclePrimitive,
+             GeometryLattice,
            ]
 
 def default_traverse(self,socket):
@@ -25,6 +26,20 @@ class GeometryCirclePrimitive(Node, MantisUINode):
         self.inputs.new('IntSocket', "Number of Points")
         self.outputs.new('GeometrySocket', "Circle")
         self.initialized = True
+
+from .primitives_sockets import LatticeSockets
+class GeometryLattice(Node, MantisUINode):
+    '''A node representing a lattice geometry'''
+    bl_idname = "GeometryLattice"
+    bl_label = "Lattice"
+    bl_icon = "NODE"
+    initialized : bpy.props.BoolProperty(default = False)
+    mantis_node_class_name=bl_idname
+    
+    def init(self, context):
+        self.init_sockets(LatticeSockets)
+        self.initialized = True
+
 
 for cls in TellClasses():
     cls.mantis_node_library='.primitives_containers'
