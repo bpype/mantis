@@ -19,6 +19,7 @@ def TellClasses():
              DeformerMorphTargetDeform,
              DeformerSurfaceDeform,
              DeformerMeshDeform,
+             DeformerLatticeDeform,
            ]
 
 # object instance probably can't use the deformer but it doesn't hurt to try.
@@ -640,3 +641,36 @@ class DeformerMeshDeform(MantisDeformerNode):
             # todo: add influence parameter and set it up with vertex group and geometry nodes
             # todo: make cage object display as wireframe if it is not being used for something else
             #          or add the option in the Geometry Object node
+
+
+class DeformerLatticeDeform(MantisDeformerNode):
+    '''A node representing a lattice deform modifier'''
+
+    def __init__(self, signature, base_tree):
+        super().__init__(signature, base_tree, LatticeDeformSockets)
+        # now set up the traverse target...
+        self.init_parameters(additional_parameters={"Name":None})
+        self.set_traverse([("Deformer", "Deformer")])
+        self.prepared = True
+
+    def GetxForm(self, socket="Deformer"):
+        if socket == "Deformer":
+            return super().GetxForm()
+        else:
+            trace_xForm_back(self, socket)
+    
+    def bExecute(self, bContext = None,):
+        self.executed = True
+         
+    def bFinalize(self, bContext=None):
+        prGreen("Executing Mesh Deform Node")
+        mod_name = self.evaluate_input("Name")
+        for xf in self.GetxForm():
+            ob = xf.bGetObject()
+            d = ob.modifiers.new(mod_name, type='LATTICE')
+            if d is None:
+                raise RuntimeError(f"Modifier was not created in node {self} -- the object is invalid.")
+            self.bObject.append(d)
+            self.get_target_and_subtarget(d, input_name="Object")
+            props_sockets = self.gen_property_socket_map()
+            evaluate_sockets(self, d, props_sockets)

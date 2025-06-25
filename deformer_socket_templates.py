@@ -53,6 +53,16 @@ MeshDeformSockets= [
         is_input=True, default_value=4, blender_property="precision"),
     DynamicBind := SockTemplate(name="Dynamic Bind", bl_idname='BooleanSocket',
         is_input=True, default_value=False, blender_property="use_dynamic_bind"),
-    DeformerOutput := SockTemplate(name="Deformer", bl_idname='DeformerSocket',
-        is_input=False,), 
+    DeformerOutput, 
+]
+
+LatticeDeformSockets = [
+    DeformerInput := SockTemplate(name="Deformer", bl_idname='DeformerSocket',
+        is_input=True,),
+    LatticeDeformTarget := replace(Target, name="Object",),
+    VertexGroup,
+    InvertVertexGroup,
+    Strength := replace(Strength, bl_idname='FloatFactorSocket',),
+    DeformerOutput,
+
 ]
