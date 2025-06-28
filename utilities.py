@@ -241,6 +241,51 @@ def unique_socket_name(node, other_socket, tree):
     name = name_stem + '.' + str(num).zfill(3)
     return name
 
+##############################
+# Dealing with Objects
+##############################
+
+# use this to ensure the active object is set back when changing it
+def preserve_active_object(func):
+    def wrapper(*args, **kwargs):
+        import bpy
+        original_active = bpy.context.active_object
+        func(*args, **kwargs)
+        bpy.context.view_layer.objects.active = original_active
+    return wrapper
+
+def switch_mode(mode='OBJECT', objects = []):
+    active = None
+    if objects:
+        from bpy import context, ops
+        active = objects[-1]
+        context.view_layer.objects.active = active
+        if (active):
+            with context.temp_override(**{'active_object':active, 'selected_objects':objects}):
+                ops.object.mode_set(mode=mode)
+    return active
+
+# run this in Object mode, during bFinalize
+@preserve_active_object
+def bind_modifier_operator(modifier, operator):
+        # now we have to bind it
+        ob = modifier.id_data; print (ob.name)
+        ob.modifiers.active = modifier
+        import bpy
+        bpy.context.view_layer.objects.active = ob
+        # Context override does not do anything here... it isn't handled in the C code
+        # I have verified this by building Blender with print statements to debug.
+
+        # let's just make sure the target object has its modifiers disabled and update the dg
+        targ_attr = "target"
+        if hasattr(modifier, "object"): targ_attr = "object"
+        target = getattr(modifier, targ_attr)
+        for m in target.modifiers:
+            m.show_viewport = False
+        bpy.context.view_layer.depsgraph.update()
+        for m in target.modifiers:
+            m.show_viewport = True
+        operator(modifier=modifier.name)
 
 ##############################
 #  READ TREE and also Schema Solve!

@@ -32,7 +32,6 @@ def trace_xForm_back(nc, socket):
                 return trace[ i ].bGetObject()
         raise GraphError(wrapRed(f"No other object found for {nc}."))
 
-
 class MantisDeformerNode(MantisNode):
     def __init__(self, signature : tuple,
                  base_tree : NodeTree,
@@ -63,6 +62,8 @@ class MantisDeformerNode(MantisNode):
                 continue
             return_me.append(xf)
         return return_me
+    
+
     
     def reset_execution(self):
         super().reset_execution()
@@ -593,12 +594,12 @@ class DeformerSurfaceDeform(MantisDeformerNode):
             self.get_target_and_subtarget(d, input_name="Target")
             props_sockets = self.gen_property_socket_map()
             evaluate_sockets(self, d, props_sockets)
-            # now we have to bind it
 
-            import bpy
-            target = d.target
-            with bpy.context.temp_override(**{'active_object':ob, 'selected_objects':[ob, target]}):
-                bpy.ops.object.surfacedeform_bind(modifier=d.name)
+    def bModifierApply(self, bContext=None):
+        for d in self.bObject:
+            from bpy import ops
+            from .utilities import bind_modifier_operator
+            bind_modifier_operator(d, ops.object.surfacedeform_bind)
 
 
 class DeformerMeshDeform(MantisDeformerNode):
@@ -632,15 +633,16 @@ class DeformerMeshDeform(MantisDeformerNode):
             self.get_target_and_subtarget(d, input_name="Object")
             props_sockets = self.gen_property_socket_map()
             evaluate_sockets(self, d, props_sockets)
-            # now we have to bind it
-            import bpy
-            target = d.object
-            with bpy.context.temp_override(**{'active_object':ob, 'selected_objects':[ob, target]}):
-                bpy.ops.object.meshdeform_bind(modifier=d.name)
-            
-            # todo: add influence parameter and set it up with vertex group and geometry nodes
-            # todo: make cage object display as wireframe if it is not being used for something else
-            #          or add the option in the Geometry Object node
+
+    def bModifierApply(self, bContext=None):
+        for d in self.bObject:
+            from bpy import ops
+            from .utilities import bind_modifier_operator
+            bind_modifier_operator(d, ops.object.meshdeform_bind)
+
+    # todo: add influence parameter and set it up with vertex group and geometry nodes
+    # todo: make cage object display as wireframe if it is not being used for something else
+    #          or add the option in the Geometry Object node
 
 
 class DeformerLatticeDeform(MantisDeformerNode):

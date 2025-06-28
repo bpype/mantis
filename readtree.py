@@ -445,16 +445,7 @@ def parse_tree(base_tree, error_popups=False):
     prWhite("Number of Nodes: %s" % (len(kept_nc)))
     return kept_nc
 
-def switch_mode(mode='OBJECT', objects = []):
-    active = None
-    if objects:
-        from bpy import context, ops
-        active = objects[-1]
-        context.view_layer.objects.active = active
-        if (active):
-            with context.temp_override(**{'active_object':active, 'selected_objects':objects}):
-                ops.object.mode_set(mode=mode)
-    return active
+from .utilities import switch_mode
 
 def execution_error_cleanup(node, exception, switch_objects = [], show_error=False ):
     from bpy import  context
@@ -613,6 +604,16 @@ def execute_tree(nodes, base_tree, context, error_popups = False):
         for n in executed:
             try:
                 n.bFinalize(context)
+            except Exception as e:
+                e = execution_error_cleanup(n, e, show_error=error_popups)
+                if error_popups == False:
+                    raise e
+                execution_failed = True; break
+            
+        # finally, apply modifiers and bind stuff
+        for n in executed:
+            try:
+                n.bModifierApply(context)
             except Exception as e:
                 e = execution_error_cleanup(n, e, show_error=error_popups)
                 if error_popups == False:

@@ -941,6 +941,8 @@ class MantisNode:
         return
     def bFinalize(self, bContext=None):
         return
+    def bModifierApply(self, bContext=None):
+        return
     
     if environ.get("DOERROR"):
         def __repr__(self): 
