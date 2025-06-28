@@ -495,6 +495,8 @@ def execution_error_cleanup(node, exception, switch_objects = [], show_error=Fal
 
 def execute_tree(nodes, base_tree, context, error_popups = False):
     assert nodes is not None, "Failed to parse tree."
+    assert len(nodes) > 0, "No parsed nodes for execution."\
+                           " Mantis probably failed to parse the tree."
     import bpy
     from time import time
     from .node_container_common import GraphError
