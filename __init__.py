@@ -9,6 +9,7 @@ from . import ( ops_nodegroup,
                 math_definitions,
                 i_o,
                 schema_definitions,
+                menu_classes,
               )
 from .ops_generate_tree import GenerateMantisTree
 
@@ -30,6 +31,7 @@ classLists = [module.TellClasses() for module in [
  i_o,
  schema_definitions,
  base_definitions,
+ menu_classes,
 ]]
 classLists.append( [GenerateMantisTree] )
 #
