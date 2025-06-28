@@ -64,5 +64,22 @@ LatticeDeformSockets = [
     InvertVertexGroup,
     Strength := replace(Strength, bl_idname='FloatFactorSocket',),
     DeformerOutput,
+]
 
+SmoothDeformSockets = [
+    DeformerInput,
+    Factor := replace(Influence, name="Factor", bl_idname='FloatSocket',
+                        default_value=1.0, blender_property='factor'),
+    iterations := SockTemplate(name='Iterations', bl_idname="UnsignedIntSocket",
+            is_input=True, default_value=5, blender_property='iterations'),
+    # SmoothType :=SockTemplate(name="Length Weighted Smoothing", bl_idname="BooleanSocket",
+    #         is_input=True, default_value=False, ),
+            # TODO: should be possible to drive this property by an int...
+    OnlySmooth := SockTemplate(name="Only Smooth", bl_idname="BooleanSocket",
+            is_input=True, default_value=True, blender_property="use_only_smooth"),
+    PinBoundary := SockTemplate(name="Pin Boundary", bl_idname="BooleanSocket",
+            is_input=True, default_value=False, blender_property="use_pin_boundary"),
+    VertexGroup,
+    InvertVertexGroup,
+    DeformerOutput,
 ]

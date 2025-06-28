@@ -17,6 +17,7 @@ def TellClasses():
              DeformerSurfaceDeform,
              DeformerMeshDeform,
              DeformerLatticeDeform,
+             DeformerSmoothCorrectiveDeform,
            ]
 
 
@@ -252,6 +253,19 @@ class DeformerLatticeDeform(Node, DeformerNode):
 
     def init(self, context):
         self.init_sockets(LatticeDeformSockets)
+        self.initialized = True
+
+class DeformerSmoothCorrectiveDeform(Node, DeformerNode):
+    '''A node representing a Corrective Smooth Deformer'''
+    bl_idname = 'DeformerSmoothCorrectiveDeform'
+    bl_label = "Smooth Deform"
+    bl_icon = 'MOD_SMOOTH'
+    initialized : bpy.props.BoolProperty(default = False)
+    num_targets : bpy.props.IntProperty(default = 0)
+    mantis_node_class_name=bl_idname
+
+    def init(self, context):
+        self.init_sockets(SmoothDeformSockets)
         self.initialized = True
 
 # Set up the class property that ties the UI classes to the Mantis classes.
