@@ -538,19 +538,15 @@ class DeformerMorphTargetDeform(MantisDeformerNode):
         evaluate_sockets(self, m, props_sockets)
         finish_drivers(self)
 
-    def gen_shape_key(self, xf, context): # TODO: make this a feature of the node definition that appears only when there are no prior deformers - and shows a warning!
-        # TODO: the below works well, but it is quite slow. It does not seem to have better performence. Its only advantage is export to FBX.
-        # there are a number of things I need to fix here
-        #   - reuse shape keys if possible
-        #   - figure out how to make this a lot faster
-        #   - edit the xForm stuff to delete drivers from shape key ID's, since they belong to the Key, not the Object.
-        # first check if we need to do anythign
+    def gen_shape_key_lattice(self, xf, context):
+        # first check if we need to do anything
         targets = []
         for k,v in self.inputs.items():
             if "Target" in k:
                 targets.append(v)
         if not targets:
             return # nothing to do here
+        # TODO: deduplicate the code above here
         from time import time
         start_time = time()
         from bpy import data
@@ -558,25 +554,17 @@ class DeformerMorphTargetDeform(MantisDeformerNode):
         dg = context.view_layer.depsgraph
         dg.update()
         if xf.has_shape_keys == False:
-            m = data.meshes.new_from_object(ob, preserve_all_data_layers=True, depsgraph=dg)
-            ob.data = m
+            lat = ob.data.copy()
+            ob.data = lat
             ob.add_rest_position_attribute = True
             ob.shape_key_clear()
             ob.shape_key_add(name='Basis', from_mix=False)
         else:
-            m = ob.data
+            lat = ob.data
         xf.has_shape_keys = True
         
-        # using the built-in shapekey feature is actually a lot harder in terms of programming because I need...
-            # min/max, as it is just not a feature of the GN version
-            # to carry info from the morph target node regarding relative shapes and vertex groups and all that
-            # the drivers may be more difficult to apply, too.
-            # hafta make new geometry for the object and add shape keys and all that
-            # the benefit to all this being exporting to game engines via .fbx
-
         # first make a basis shape key
-        keys={}
-        props_sockets={}
+        keys, props_sockets, ={}, {}
         for i, t in enumerate(targets):
             mt_node = t.links[0].from_node; sk_ob = mt_node.GetxForm().bGetObject()
             if sk_ob is None:
@@ -615,7 +603,97 @@ class DeformerMorphTargetDeform(MantisDeformerNode):
         evaluate_sockets(self, sk.id_data, props_sockets)
         finish_drivers(self)
         prWhite(f"Initializing morph target took {time() -start_time} seconds")
+
+
         
+
+    def gen_shape_key(self, xf, context):
+        # TODO: make this a feature of the node definition that appears only when there are no prior deformers - and shows a warning!
+        # TODO: the below works well, but it is quite slow. It does not seem to have better performence. Its only advantage is export to FBX.
+        # there are a number of things I need to fix here
+        #   - reuse shape keys if possible
+        #   - figure out how to make this a lot faster
+        #   - edit the xForm stuff to delete drivers from shape key ID's, since they belong to the Key, not the Object.
+        # first check if we need to do anythign
+        targets = []
+        for k,v in self.inputs.items():
+            if "Target" in k:
+                targets.append(v)
+        if not targets:
+            return # nothing to do here
+        from time import time
+        start_time = time()
+        from bpy import data
+        ob = xf.bGetObject()
+        dg = context.view_layer.depsgraph
+        dg.update()
+        if xf.has_shape_keys == False:
+            match ob.type:
+                case 'MESH':
+                    ob_data = data.meshes.new_from_object(ob, preserve_all_data_layers=True, depsgraph=dg)
+                case 'LATTICE':
+                    ob_data = ob.data.copy()
+            ob.data = ob_data
+            ob.add_rest_position_attribute = True
+            ob.shape_key_clear()
+            ob.shape_key_add(name='Basis', from_mix=False)
+        else:
+            ob_data = ob.data
+        xf.has_shape_keys = True
+        
+        # using the built-in shapekey feature is actually a lot harder in terms of programming because I need...
+            # min/max, as it is just not a feature of the GN version
+            # to carry info from the morph target node regarding relative shapes and vertex groups and all that
+            # the drivers may be more difficult to apply, too.
+            # hafta make new geometry for the object and add shape keys and all that
+            # the benefit to all this being exporting to game engines via .fbx
+
+        # first make a basis shape key
+        keys={}
+        props_sockets={}
+        for i, t in enumerate(targets):
+            mt_node = t.links[0].from_node; sk_ob = mt_node.GetxForm().bGetObject()
+            if sk_ob is None:
+                sk_ob = data.objects.new(mt_node.evaluate_input("Name"), data.meshes.new_from_object(ob))
+                context.collection.objects.link(sk_ob)
+                prOrange(f"WARN: no object found for f{mt_node}; creating duplicate of current object ")
+            sk_ob = dg.id_eval_get(sk_ob)
+            mt_name = sk_ob.name
+            vg = mt_node.parameters["Morph Target"]["vertex_group"]
+            if vg: mt_name = mt_name+"."+vg
+            
+            sk = ob.shape_key_add(name=mt_name, from_mix=False)
+            # the shapekey data is absolute point data for each vertex, in order, very simple
+
+            # SERIOUSLY IMPORTANT:
+               # use the current position of the vertex AFTER SHAPE KEYS AND DEFORMERS
+               # easiest way to do it is to eval the depsgraph
+               # TODO: try and get it without depsgraph update, since that may be (very) slow
+            sk_m = sk_ob.data#data.meshes.new_from_object(sk_ob, preserve_all_data_layers=True, depsgraph=dg)
+            match ob.type:
+                case 'MESH':
+                    for j in range(len(ob_data.vertices)):
+                        sk.data[j].co = sk_m.vertices[j].co # assume they match
+                case 'LATTICE':
+                    for j in range(len(ob.data.points)):
+                        sk.data[j].co = sk_m.points[j].co_deform
+            # data.meshes.remove(sk_m)
+            sk.vertex_group = vg
+            sk.slider_min = -10
+            sk.slider_max = 10
+            keys[mt_name]=sk
+            props_sockets[mt_name]= ("Value."+str(i).zfill(3), 1.0)
+        for i, t in enumerate(targets):
+            mt_node = t.links[0].from_node; sk_ob = mt_node.GetxForm().bGetObject()
+            if sk_ob is None: continue
+            if rel := mt_node.parameters["Morph Target"]["relative_shape"]:
+                sk = keys.get(mt_name)
+                sk.relative_key = keys.get(rel)
+        
+        self.bObject.append(sk.id_data)
+        evaluate_sockets(self, sk.id_data, props_sockets)
+        finish_drivers(self)
+        prWhite(f"Initializing morph target took {time() -start_time} seconds")
 
     def bFinalize(self, bContext=None):
         prGreen(f"Executing Morph Deform node {self}")
@@ -631,7 +709,14 @@ class DeformerMorphTargetDeform(MantisDeformerNode):
                         use_shape_keys = False
         self.parameters["Use Shape Key"] = use_shape_keys
         for xf in self.GetxForm():
-            if use_shape_keys:
+            # Lattice objects do not support geometry nodes at this time.
+            ob = xf.bGetObject()
+            if ob and ob.type == 'LATTICE':
+                if not use_shape_keys:
+                    raise NotImplementedError("Blender does not support Geometry Nodes for Lattices. "
+                                              "Enable 'Shape Key' and execute again.")
+                self.gen_shape_key(xf, bContext)
+            elif use_shape_keys:
                 self.gen_shape_key(xf, bContext)
             else:
                 self.gen_morph_target_modifier(xf, bContext)
