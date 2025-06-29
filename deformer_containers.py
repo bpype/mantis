@@ -135,7 +135,10 @@ class DeformerArmature(MantisDeformerNode):
             vg = ob.vertex_groups.get(b.name)
             if not vg:
                 vg = ob.vertex_groups.new(name=b.name)
-                num_verts = len(ob.data.vertices)
+                if ob.type == 'MESH':
+                    num_verts = len(ob.data.vertices)
+                elif ob.type == 'LATTICE':
+                    num_verts = len(ob.data.points)
                 vg.add(range(num_verts), 0, 'REPLACE')
     
     def copy_weights(self, xf):
@@ -172,6 +175,98 @@ class DeformerArmature(MantisDeformerNode):
                 bpy.ops.object.data_transfer(data_type='VGROUP_WEIGHTS')
             bpy.ops.object.mode_set(mode=original_mode)
          
+    def do_automatic_skinning_mesh(self, ob, xf, bContext):
+        # This is bad and leads to somewhat unpredictable
+        #  behaviour, e.g. what object will be selected? What mode?
+        # also bpy.ops is ugly and prone to error when used in
+        #  scripts. I don't intend to use bpy.ops when I can avoid it.
+        import bpy
+        self.initialize_vgroups(xf)
+        armOb = self.bGetParentArmature()
+        armOb.data.pose_position = 'REST'
+        bContext.view_layer.depsgraph.update()
+        deform_bones = []
+        for pb in armOb.pose.bones:
+            if pb.bone.use_deform == True:
+                deform_bones.append(pb)
+        if not deform_bones:
+            prPurple("Warning: No deform bones in armature. Cancelling.")
+            return
+        context_override = {
+                            'active_object':ob,
+                            'selected_objects':[ob, armOb],
+                            'active_pose_bone':deform_bones[0],
+                            'selected_pose_bones':deform_bones,}
+        for b in armOb.data.bones:
+            b.select = True
+        with bContext.temp_override(**context_override):
+            bpy.ops.paint.weight_paint_toggle()
+            bpy.ops.paint.weight_from_bones(type='AUTOMATIC')
+            bpy.ops.paint.weight_paint_toggle()
+        for b in armOb.data.bones:
+            b.select = False
+        armOb.data.pose_position = 'POSE'
+        # TODO: modify Blender to make this available as a Python API function.
+
+    def do_automatic_skinning_lattice(self, ob, xf, bContext):
+        # Temporarily, I am making a very simple and ugly automatic skinning algo for lattice points
+        import bpy
+        from mathutils.geometry import intersect_point_line
+        self.initialize_vgroups(xf)
+        armOb = self.bGetParentArmature()
+        armOb.data.pose_position = 'REST'
+        bContext.view_layer.depsgraph.update()
+        deform_bones = []
+        for pb in armOb.pose.bones:
+            if pb.bone.use_deform == True: deform_bones.append(pb)
+        # How this works:
+        #   - Calculates the weights based on proximity and angle
+        #   - we'll make a vector of the point and the nearest point on the bone
+        #   - dot (point_displacement, bone_y_axis) to get the angle
+        #   - weight the bone's value by this dot product and distance
+        #   - distance should prevail when both bones are within the angle
+        mat = ob.matrix_world; mat_arm = armOb.matrix_world
+        for p_index, p in enumerate(ob.data.points):
+            loc = mat @ p.co_deform # co_deform is the position in edit mode
+            pt_distance, pt_dot = {}, {}
+            for b in deform_bones:
+                bone_vec = ((mat_arm @ b.tail) - (mat_arm @ b.head)).normalized()
+                nearest_point_on_bone, factor = intersect_point_line(
+                    loc, mat_arm @ b.head, mat_arm @ b.tail) # 0 is point, 1 is factor
+                if factor > 1.0: nearest_point_on_bone = mat_arm @ b.tail
+                if factor < 0.0: nearest_point_on_bone = mat_arm @ b.head
+                point_vec = nearest_point_on_bone - loc
+                distance = point_vec.length_squared # no need to sqrt, this is faster and
+                # the quadratic falloff is better than linear falloff.
+                dot = 1-abs(point_vec.normalized().dot(bone_vec))
+                # we want to weight zero at 1.0 so that it favors points in its "envelope"
+                pt_distance[b.name]=distance; pt_dot[b.name] = dot
+            # now we can assign weights
+            distance_pairs = [(k,v) for k,v in pt_distance.items()]
+            distance_pairs.sort(key = lambda a : a[1])
+            i=0; max_distance = 0.0; near_enough_bones = []
+            while (i < 4): # TODO: limit-total should be exposed to the user.
+                if i+1 > len(distance_pairs): break # in case there are fewer than 4 deform bones
+                near_enough_bones.append(distance_pairs[i][0])
+                if distance_pairs[i][1] > max_distance: max_distance = distance_pairs[i][1]
+                i+=1
+            max_pre_normalized_weight = 0.0
+            weights = {}
+            if max_distance == 0.0:  max_distance = 1.0
+            for b_name in near_enough_bones:
+                w = 1.0
+                if pt_distance[b_name] > 0:
+                    w*= 1/(pt_distance[b_name]/max_distance) # weight by inverse-distance
+                w*= pt_dot[b_name]**4 # NOTE: **4 is arbitrary but feels good to me.
+                if w > max_pre_normalized_weight: max_pre_normalized_weight = w
+                weights[b_name] = w
+            if max_pre_normalized_weight == 0.0: max_pre_normalized_weight = 1.0
+            for b_name in near_enough_bones:
+                vg = ob.vertex_groups.get(b_name)
+                vg.add([p_index], weights[b_name]/max_pre_normalized_weight, 'REPLACE')
+        armOb.data.pose_position = 'POSE'
+    
+
     def bFinalize(self, bContext=None):
         prGreen("Executing Armature Deform Node")
         mod_name = self.evaluate_input("Name")
@@ -193,32 +288,11 @@ class DeformerArmature(MantisDeformerNode):
             evaluate_sockets(self, d, props_sockets)
             #
             if (skin_method := self.evaluate_input("Skinning Method")) == "AUTOMATIC_HEAT":
-                # This is bad and leads to somewhat unpredictable
-                #  behaviour, e.g. what object will be selected? What mode?
-                # also bpy.ops is ugly and prone to error when used in
-                #  scripts. I don't intend to use bpy.ops when I can avoid it.
-                import bpy
-                self.initialize_vgroups(xf)
-                bContext.view_layer.depsgraph.update()
-                armOb = self.bGetParentArmature()
-                deform_bones = []
-                for pb in armOb.pose.bones:
-                    if pb.bone.use_deform == True:
-                        deform_bones.append(pb)
-                context_override = {
-                                    'active_object':ob,
-                                    'selected_objects':[ob, armOb],
-                                    'active_pose_bone':deform_bones[0],
-                                    'selected_pose_bones':deform_bones,}
-                for b in armOb.data.bones:
-                    b.select = True
-                with bContext.temp_override(**context_override):
-                    bpy.ops.paint.weight_paint_toggle()
-                    bpy.ops.paint.weight_from_bones(type='AUTOMATIC')
-                    bpy.ops.paint.weight_paint_toggle()
-                for b in armOb.data.bones:
-                    b.select = False
-                # TODO: modify Blender to make this available as a Python API function.
+                match ob.type:
+                    case "MESH":
+                        self.do_automatic_skinning_mesh(ob, xf, bContext)
+                    case "LATTICE":
+                        self.do_automatic_skinning_lattice(ob, xf, bContext)
             elif skin_method == "COPY_FROM_OBJECT":
                 self.initialize_vgroups(xf)
                 self.copy_weights(xf)
