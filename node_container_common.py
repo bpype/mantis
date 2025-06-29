@@ -67,7 +67,7 @@ def trace_line_up_branching(node : MantisNode, output_name : str,
     if hasattr(node, "outputs"):
         # Trace a single line
         if (socket := node.outputs.get(output_name) ):
-            check_sockets=[socket]
+            check_sockets={socket}
             while (check_sockets):
                 # This is bad, but it's efficient for nodes that only expect
                 #  one path along the given line
@@ -78,8 +78,8 @@ def trace_line_up_branching(node : MantisNode, output_name : str,
                         socket = other
                         if break_condition(socket.node):
                             leaf_nodes.append(socket.node)
-                        elif socket.can_traverse:
-                            check_sockets.append(socket.traverse_target)
+                        elif socket.is_input and socket.can_traverse:
+                            check_sockets.add(socket.traverse_target)
                         else: # this is an input.
                             leaf_nodes.append(socket.node)
     return leaf_nodes
