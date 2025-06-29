@@ -43,7 +43,7 @@ class MantisDeformerNode(MantisNode):
         self.bObject=[]
     # we need evaluate_input to have the same behaviour as links.
     def evaluate_input(self, input_name, index=0):
-        if (input_name in ['Target', 'Object']):
+        if (input_name in ['Target', 'Object', 'Hook Target']):
             socket = self.inputs.get(input_name)
             if socket.is_linked:
                 return socket.links[0].from_node
