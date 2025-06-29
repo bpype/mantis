@@ -191,6 +191,7 @@ def TellClasses() -> List[MantisSocket]:
              EnumKeyframeInterpolationTypeSocket,
              EnumKeyframeBezierHandleTypeSocket,
              EnumLatticeInterpolationTypeSocket,
+             EnumCorrectiveSmoothTypeSocket,
              eFCrvExtrapolationMode,
              
              # Math
@@ -2354,7 +2355,31 @@ class EnumLatticeInterpolationTypeSocket(MantisSocket):
     def draw_color_simple(self):
         return self.color_simple
 
-
+EnumCorrectiveSmoothType = (('SIMPLE',   'Simple', 'Use the average of adjacent edge-vertices.'),
+                            ('LENGTH_WEIGHTED', "Length Weight", "Use the average of adjacent"
+                                                      "edge-vertices weighted by their length."),)
+class EnumCorrectiveSmoothTypeSocket(MantisSocket):
+    '''Lattice Interpolation Type'''
+    bl_idname = 'EnumCorrectiveSmoothTypeSocket'
+    bl_label = "Lattice Interpolation Type"
+    
+    default_value :bpy.props.EnumProperty(
+        name="",
+        description="Interpolation Type",
+        items=EnumCorrectiveSmoothType,
+        default='SIMPLE',
+        update = update_socket,)
+    
+    color_simple = cString
+    color : bpy.props.FloatVectorProperty(default=cString, size=4)
+    input : bpy.props.BoolProperty(default =False, update = update_socket)
+    def draw(self, context, layout, node, text):
+        ChooseDraw(self, context, layout, node, text)
+    def draw_color(self, context, node):
+        return self.color
+    @classmethod
+    def draw_color_simple(self):
+        return self.color_simple
 
 enumFloatOperations = (('ADD', 'Add', 'Add'),
                       ('SUBTRACT', "Subtract", "Subtract"),
