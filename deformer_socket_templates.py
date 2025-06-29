@@ -40,6 +40,12 @@ SurfaceDeformSockets= [
         is_input=True, default_value=False, blender_property="invert_vertex_group"),
     SparseBind := SockTemplate(name="Sparse Bind", bl_idname='BooleanSocket',
         is_input=True, default_value=False, blender_property="use_sparse_bind"),
+    EnableViewportTemplate := SockTemplate(
+        name="Enable in Viewport", is_input=True,  bl_idname='EnableSocket',
+        default_value=True, blender_property='show_viewport'),
+    EnableRenderTemplate := SockTemplate(
+        name="Enable in Render", is_input=True,  bl_idname='BooleanSocket',
+        default_value=True, blender_property='show_render'),
     DeformerOutput,
 ]
 
@@ -53,6 +59,8 @@ MeshDeformSockets= [
         is_input=True, default_value=4, blender_property="precision"),
     DynamicBind := SockTemplate(name="Dynamic Bind", bl_idname='BooleanSocket',
         is_input=True, default_value=False, blender_property="use_dynamic_bind"),
+    EnableViewportTemplate,
+    EnableRenderTemplate,
     DeformerOutput, 
 ]
 
@@ -63,6 +71,8 @@ LatticeDeformSockets = [
     VertexGroup,
     InvertVertexGroup,
     Strength := replace(Strength, bl_idname='FloatFactorSocket',),
+    EnableViewportTemplate,
+    EnableRenderTemplate,
     DeformerOutput,
 ]
 
@@ -73,13 +83,16 @@ SmoothDeformSockets = [
     iterations := SockTemplate(name='Iterations', bl_idname="UnsignedIntSocket",
             is_input=True, default_value=5, blender_property='iterations'),
     # SmoothType :=SockTemplate(name="Length Weighted Smoothing", bl_idname="BooleanSocket",
-    #         is_input=True, default_value=False, ),
-            # TODO: should be possible to drive this property by an int...
-    OnlySmooth := SockTemplate(name="Only Smooth", bl_idname="BooleanSocket",
+    #         is_input=True, default_value=False, blender_property="smooth_type" ),
+    OnlySmooth := SockTemplate(name="Use Corrective Smooth", bl_idname="InvertedBooleanSocket",
             is_input=True, default_value=True, blender_property="use_only_smooth"),
+    DeltaMushScale := SockTemplate(name="Corrective Smooth Scale", bl_idname="FloatSocket",
+            is_input=True, default_value=1.0, blender_property="scale" ),
     PinBoundary := SockTemplate(name="Pin Boundary", bl_idname="BooleanSocket",
             is_input=True, default_value=False, blender_property="use_pin_boundary"),
     VertexGroup,
     InvertVertexGroup,
+    EnableViewportTemplate,
+    EnableRenderTemplate,
     DeformerOutput,
 ]

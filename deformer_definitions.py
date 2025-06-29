@@ -268,6 +268,15 @@ class DeformerSmoothCorrectiveDeform(Node, DeformerNode):
         self.init_sockets(SmoothDeformSockets)
         self.initialized = True
 
+    def display_update(self, parsed_tree, context):
+        use_corrective_smooth = self.inputs["Use Corrective Smooth"]
+        if ( use_corrective_smooth.is_linked or 
+             use_corrective_smooth.default_value == False): # this is inverted
+                    self.inputs['Corrective Smooth Scale'].hide = False
+        else:
+                    self.inputs['Corrective Smooth Scale'].hide = True
+
+
 # Set up the class property that ties the UI classes to the Mantis classes.
 for cls in TellClasses():
     cls.set_mantis_class()

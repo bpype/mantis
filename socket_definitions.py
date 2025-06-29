@@ -133,6 +133,7 @@ def TellClasses() -> List[MantisSocket]:
              
              TransformSpaceSocket,
              BooleanSocket,
+             InvertedBooleanSocket,
              BooleanThreeTupleSocket,
              RotationOrderSocket,
              QuaternionSocket,
@@ -350,7 +351,9 @@ def update_metarig_posebone(self, context,):
 
 
 def ChooseDraw(self, context, layout, node, text, icon = "NONE", use_enum=True, nice_bool=True, icon_only=False):
-    # return
+    invert_checkbox = False
+    if hasattr(self, "invert") and self.invert == True:
+        invert_checkbox=True
     # TEXT ONLY
     if self.node.bl_idname in ["NodeGroupInput", "NodeGroupOutput"]:
         layout.label(text=text)
@@ -373,7 +376,8 @@ def ChooseDraw(self, context, layout, node, text, icon = "NONE", use_enum=True, 
             #   and set them for each socket.
             if icon == 'NONE': icon_only = False
             elif icon_only == True : text = "" # "real" icon-only looks bad for strings, need to check other props types.
-            layout.prop(self, "default_value", text=text, toggle=nice_bool, slider=True, icon=icon,)
+            layout.prop(self, "default_value", text=text, toggle=nice_bool, slider=True, icon=icon,
+                        invert_checkbox=invert_checkbox)
         # CONNECTED sockets and outputs without input fields
         else:
             layout.label(text=text)
@@ -651,6 +655,24 @@ class BooleanSocket(MantisSocket):
     color : bpy.props.FloatVectorProperty(default=cBool, size=4)
     input : bpy.props.BoolProperty(default =False,)
     is_valid_interface_type=True
+    def draw(self, context, layout, node, text):
+        ChooseDraw(self, context, layout, node, text)
+    def draw_color(self, context, node):
+        return self.color
+    @classmethod
+    def draw_color_simple(self):
+        return self.color_simple
+    
+class InvertedBooleanSocket(MantisSocket):
+    '''Custom node socket type'''
+    bl_idname = 'InvertedBooleanSocket'
+    bl_label = "Inverted Boolean"
+    default_value: bpy.props.BoolProperty(update = update_socket,)
+    color_simple = cBool
+    color : bpy.props.FloatVectorProperty(default=cBool, size=4)
+    input : bpy.props.BoolProperty(default =False,)
+    invert : bpy.props.BoolProperty(default=True,)
+    is_valid_interface_type=False
     def draw(self, context, layout, node, text):
         ChooseDraw(self, context, layout, node, text)
     def draw_color(self, context, node):

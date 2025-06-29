@@ -706,6 +706,6 @@ class DeformerSmoothCorrectiveDeform(MantisDeformerNode):
             if d is None:
                 raise RuntimeError(f"Modifier was not created in node {self} -- the object is invalid.")
             self.bObject.append(d)
-            self.get_target_and_subtarget(d, input_name="Object")
+            # self.get_target_and_subtarget(d, input_name="Object")
             props_sockets = self.gen_property_socket_map()
             evaluate_sockets(self, d, props_sockets)
