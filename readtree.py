@@ -578,9 +578,6 @@ def execute_tree(nodes, base_tree, context, error_popups = False):
         
 
         switch_mode(mode='POSE', objects=switch_me)
-        if (active):
-            with context.temp_override(**{'active_object':active, 'selected_objects':switch_me}):
-                bpy.ops.object.mode_set(mode='POSE')
 
         for n in executed:
             try:
@@ -596,11 +593,13 @@ def execute_tree(nodes, base_tree, context, error_popups = False):
 
 
         switch_mode(mode='OBJECT', objects=switch_me)
-        for ob in switch_me:
-            ob.data.pose_position = 'POSE'
         # switch to pose mode here so that the nodes can use the final pose data
         # this will require them to update the depsgraph.
         
+
+        for ob in switch_me:
+            ob.data.pose_position = 'POSE'
+
         for n in executed:
             try:
                 n.bFinalize(context)
@@ -609,7 +608,12 @@ def execute_tree(nodes, base_tree, context, error_popups = False):
                 if error_popups == False:
                     raise e
                 execution_failed = True; break
-            
+        
+        
+        # REST pose for deformer bind, so everything is in the rest position
+        for ob in switch_me:
+            ob.data.pose_position = 'REST'
+
         # finally, apply modifiers and bind stuff
         for n in executed:
             try:
@@ -620,6 +624,8 @@ def execute_tree(nodes, base_tree, context, error_popups = False):
                     raise e
                 execution_failed = True; break
                 
+        for ob in switch_me:
+            ob.data.pose_position = 'POSE'
         
         tot_time = (time() - start_execution_time)
         if not execution_failed:

@@ -8,7 +8,6 @@ Target = SockTemplate(name="Target", bl_idname='xFormSocket',
         is_input=True,
     )
 
-
 HookSockets= [
     DeformerInput := SockTemplate(name="Deformer", bl_idname='DeformerSocket',
         is_input=True,),
@@ -25,7 +24,6 @@ HookSockets= [
     DeformerOutput := SockTemplate(name="Deformer", bl_idname='DeformerSocket',
         is_input=False,), 
 ]
-
 
 SurfaceDeformSockets= [
     DeformerInput,
