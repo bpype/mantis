@@ -232,6 +232,22 @@ class MantisNewNodeTree(Operator):
         else:
             return {"CANCELLED"}
 
+class InvalidateNodeTree(Operator):
+    """Invalidates this node tree, forcing it to read all data again."""
+    bl_idname = "mantis.invalidate_node_tree"
+    bl_label = "Clear Node Tree Cache"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    @classmethod
+    def poll(cls, context):
+        return (mantis_tree_poll_op(context))
+
+    def execute(self, context):
+        print("Clearing Active Node Tree cache")
+        tree=context.space_data.path[0].node_tree
+        tree.execution_id=''; tree.hash=''
+        return {"FINISHED"}
+
 class ExecuteNodeTree(Operator):
     """Execute this node tree"""
     bl_idname = "mantis.execute_node_tree"
@@ -452,7 +468,13 @@ class MantisMuteNode(Operator):
         if (enable := node.inputs.get("Enable")):
                 # annoyingly, 'mute' and 'enable' are opposites
                 enable.default_value = not node.mute
-        if (hide := node.inputs.get("Hide")):
+        # this one is for Deformers
+        elif (enable := node.inputs.get("Enable in Viewport")):
+                # annoyingly, 'mute' and 'enable' are opposites
+                enable.default_value = not node.mute
+        elif (hide := node.inputs.get("Hide")):
+                hide.default_value = node.mute
+        elif (hide := node.inputs.get("Hide in Viewport")):
                 hide.default_value = node.mute
         return {"FINISHED"}
 
@@ -841,6 +863,7 @@ classes = [
         MantisGroupNodes,
         MantisEditGroup,
         MantisNewNodeTree,
+        InvalidateNodeTree,
         ExecuteNodeTree,
         # CreateMetaGroup,
         QueryNodeSockets,

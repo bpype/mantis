@@ -31,5 +31,7 @@ class MantisActiveTreePanel(Panel):
         spc = area.spaces[0]
         nt = spc.node_tree
         layout = self.layout
+        layout.label(text=f"Tree Hash: {nt.hash}")
         layout.prop(nt, "do_live_update", text='Live Updates',)
+        layout.operator("mantis.invalidate_node_tree")
         layout.operator("mantis.execute_node_tree")
