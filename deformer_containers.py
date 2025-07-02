@@ -64,11 +64,17 @@ class MantisDeformerNode(MantisNode):
             return_me.append(xf)
         return return_me
     
-
-    
     def reset_execution(self):
         super().reset_execution()
         self.bObject=[]; self.prepared=True
+
+def standard_modifier_bind(self, bContext=None, operator=None):
+    for d in self.bObject:
+        # we'll only bind it if it is un-muted.
+        if self.evaluate_input("Enable in Viewport") == False:
+            continue
+        from .utilities import bind_modifier_operator
+        bind_modifier_operator(d, operator)
 
 class DeformerArmature(MantisDeformerNode):
     '''A node representing an armature deformer'''
@@ -756,10 +762,8 @@ class DeformerSurfaceDeform(MantisDeformerNode):
             evaluate_sockets(self, d, props_sockets)
 
     def bModifierApply(self, bContext=None):
-        for d in self.bObject:
-            from bpy import ops
-            from .utilities import bind_modifier_operator
-            bind_modifier_operator(d, ops.object.surfacedeform_bind)
+        from bpy import ops
+        standard_modifier_bind(self, bContext, ops.object.surfacedeform_bind)
 
 
 class DeformerMeshDeform(MantisDeformerNode):
@@ -795,15 +799,8 @@ class DeformerMeshDeform(MantisDeformerNode):
             evaluate_sockets(self, d, props_sockets)
 
     def bModifierApply(self, bContext=None):
-        for d in self.bObject:
-            from bpy import ops
-            from .utilities import bind_modifier_operator
-            bind_modifier_operator(d, ops.object.meshdeform_bind)
-
-    # todo: add influence parameter and set it up with vertex group and geometry nodes
-    # todo: make cage object display as wireframe if it is not being used for something else
-    #          or add the option in the Geometry Object node
-
+        from bpy import ops
+        standard_modifier_bind(self, bContext, ops.object.meshdeform_bind)
 
 class DeformerLatticeDeform(MantisDeformerNode):
     '''A node representing a lattice deform modifier'''

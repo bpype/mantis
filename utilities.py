@@ -269,7 +269,7 @@ def switch_mode(mode='OBJECT', objects = []):
 @preserve_active_object
 def bind_modifier_operator(modifier, operator):
         # now we have to bind it
-        ob = modifier.id_data; print (ob.name)
+        ob = modifier.id_data
         ob.modifiers.active = modifier
         import bpy
         bpy.context.view_layer.objects.active = ob
@@ -280,12 +280,9 @@ def bind_modifier_operator(modifier, operator):
         targ_attr = "target"
         if hasattr(modifier, "object"): targ_attr = "object"
         target = getattr(modifier, targ_attr)
-        for m in target.modifiers:
-            m.show_viewport = False
-        bpy.context.view_layer.depsgraph.update()
-        for m in target.modifiers:
-            m.show_viewport = True
-        operator(modifier=modifier.name)
+        if target:
+            prWhite(f"Binding Deformer {modifier.name} to target {target.name}")
+            operator(modifier=modifier.name)
 
 ##############################
 #  READ TREE and also Schema Solve!
