@@ -17,7 +17,7 @@ from .utilities import prRed
 
 MANTIS_VERSION_MAJOR=0
 MANTIS_VERSION_MINOR=11
-MANTIS_VERSION_SUB=16
+MANTIS_VERSION_SUB=17
 
 classLists = [module.TellClasses() for module in [
  link_definitions,
