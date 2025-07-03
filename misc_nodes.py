@@ -1116,7 +1116,7 @@ class UtilityCombineThreeBool(MantisNode):
     def reset_execution(self): # need to make sure any references are deleted
         super().reset_execution() # so we prepare the node again to reset them
         if self.parameters["Three-Bool"] is not None:
-            for param in self.parameters["Three-Bool"].values():
+            for param in self.parameters["Three-Bool"]:
                 if isinstance(param, dict):
                     self.prepared=False; break
 
