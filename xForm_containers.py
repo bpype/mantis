@@ -319,7 +319,7 @@ class xFormBone(xFormNode):
             hierarchy = collection_list.split(">")
             col_parent = None
             for sCol in hierarchy:
-                if ( col := d.collections.get(sCol) ) is None:
+                if ( col := d.collections_all.get(sCol) ) is None:
                     col = d.collections.new(sCol)
                 col.parent = col_parent
                 col_parent = col
