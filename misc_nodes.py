@@ -18,6 +18,7 @@ def TellClasses():
              InputMatrix,
              InputExistingGeometryObject,
              InputExistingGeometryData,
+             UtilityDeclareCollections,
              UtilityGeometryOfXForm,
              UtilityNameOfXForm,
              UtilityPointFromCurve,
@@ -1274,6 +1275,37 @@ class InputExistingGeometryData(MantisNode):
         if bObject is None:
             raise RuntimeError(f"Could not find a mesh or curve datablock named \"{self.evaluate_input('Name')}\" for node {self}")
         return bObject
+
+class UtilityDeclareCollections(MantisNode):
+    '''A node to help manage bone collections'''
+    def __init__(self, signature, base_tree):
+        super().__init__(signature, base_tree)
+        from .utilities import get_node_prototype
+        ui_node = get_node_prototype(self.ui_signature, self.base_tree)
+        self.gen_outputs(ui_node)
+        print(self.outputs)
+        self.init_parameters()
+        self.fill_parameters(ui_node)
+        self.node_type = "UTILITY"
+        self.prepared, self.executed = True, True
+
+    def reset_execution(self):
+        super().reset_execution()
+        self.prepared, self.executed = True, True
+    
+    def gen_outputs(self, ui_node=None):
+        from .base_definitions import MantisSocketTemplate as SockTemplate
+        templates=[]
+        for out in ui_node.outputs:
+            if not (out.name in self.outputs.keys()) :
+                templates.append(SockTemplate(name=out.name,
+                        identifier=out.identifier, is_input=False,))
+        self.outputs.init_sockets(templates)
+    
+    def fill_parameters(self, ui_node=None):
+        if ui_node is None: return
+        for out in ui_node.outputs:
+            self.parameters[out.name] = out.default_value
 
 class UtilityGeometryOfXForm(MantisNode):
     '''A node representing existing object data'''

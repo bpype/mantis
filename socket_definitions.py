@@ -141,6 +141,7 @@ def TellClasses() -> List[MantisSocket]:
              UnsignedIntSocket,
              IntSocket,
              StringSocket,
+             CollectionDeclarationSocket,
 
              EnumMetaRigSocket,
              EnumMetaBoneSocket,
@@ -382,6 +383,40 @@ def ChooseDraw(self, context, layout, node, text, icon = "NONE", use_enum=True, 
         # CONNECTED sockets and outputs without input fields
         else:
             layout.label(text=text)
+
+def CollectionSocketDraw(socket, context, layout, node, text):
+    # create the UI objects
+    indent_length = len(socket.collection_path.split('>'))
+    layout.alignment = 'EXPAND'
+    # label_col = layout.row()
+    label_col = layout.split(factor=0.20)
+    label_col.alignment = 'LEFT' # seems backwards?
+    label_col.scale_x = 9.0
+    x_split = label_col.split(factor=0.35)
+    x_split.scale_x=2.0
+    x_split.alignment = 'RIGHT'
+    operator_col = layout.row()
+    # operator_col = layout
+    operator_col.alignment = 'RIGHT'  # seems backwards?
+    operator_col.scale_x = 1.0
+    # x_split = operator_col.split(factor=0.5)
+    # x_split.scale_x = 0.5
+    # x_split.alignment = 'RIGHT'
+
+    # Now fill in the text and operators and such
+    label_text = socket.collection_path.split('>')[-1]
+    if indent_length > 1:
+        label_text = '└'+label_text #┈ use this character to extend
+        for indent in range(indent_length):
+            if indent <= 1: continue
+            indent_text = ' ⬞ '
+            label_text=indent_text+label_text
+    op_props = x_split.operator('mantis.collection_remove')
+    op_props.socket_invoked = socket.identifier
+    label_col.label(text=label_text)
+    op_props = operator_col.operator('mantis.collection_add_new')
+    op_props.socket_invoked = socket.identifier
+    # this works well enough!
 
 class RelationshipSocket(MantisSocket):
     # Description string
@@ -822,6 +857,29 @@ class StringSocket(bpy.types.NodeSocketString, MantisSocket):
     @classmethod
     def draw_color_simple(self):
         return self.color_simple
+    
+def collection_declaration_get_default_value(self):
+    return self.collection_path
+
+class CollectionDeclarationSocket(MantisSocket):
+    """Socket for declaring a collection"""
+    bl_idname = 'CollectionDeclarationSocket'
+    bl_label = "Collection"
+    default_value : bpy.props.StringProperty(get=collection_declaration_get_default_value)
+    collection_path : bpy.props.StringProperty(default="")
+    color_simple = cBoneCollection
+    color : bpy.props.FloatVectorProperty(default=cBoneCollection, size=4)
+    icon : bpy.props.StringProperty(default = "NONE",)
+    input : bpy.props.BoolProperty(default =True,)
+    display_text : bpy.props.StringProperty(default="")
+    is_valid_interface_type=False
+    def draw(self, context, layout, node, text):
+        CollectionSocketDraw(self, context, layout, node, text)
+    def draw_color(self, context, node):
+        return self.color
+    @classmethod
+    def draw_color_simple(self):
+        return self.color_simple
 
 class BoneCollectionSocket(MantisSocket):
     """Bone Collection socket"""
@@ -839,8 +897,6 @@ class BoneCollectionSocket(MantisSocket):
     @classmethod
     def draw_color_simple(self):
         return self.color_simple
-
-
 
 eArrayGetOptions =(
         ('CAP', "Cap", "Fail if the index is out of bounds."),

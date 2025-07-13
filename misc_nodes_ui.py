@@ -21,6 +21,7 @@ def TellClasses():
              # InputGeometryNode,
              InputExistingGeometryObjectNode,
              InputExistingGeometryDataNode,
+             UtilityDeclareCollections,
              UtilityGeometryOfXForm,
              UtilityNameOfXForm,
             #  ComposeMatrixNode,
@@ -746,6 +747,64 @@ class InputExistingGeometryDataNode(Node, MantisUINode):
         self.outputs.new("GeometrySocket", "Geometry")
         self.initialized = True
 
+
+def socket_data_from_collection_paths(root_data, root_name, path, socket_data):
+    # so we need to 'push' the socket names and their paths in order
+    # socket_data is a list of tuples of ( name, path, )
+    for key, value in root_data.items():
+        path.append(key)
+        socket_data.append( (key, path))
+        if hasattr(value , 'items'):
+            socket_data = socket_data_from_collection_paths(value, key, path.copy(), socket_data)
+        path.pop()
+    return socket_data
+
+class UtilityDeclareCollections(Node, MantisUINode):
+    """A utility used to declare bone collections."""
+    bl_idname = "UtilityDeclareCollections"
+    bl_label  = "Collections"
+    bl_icon   = "NODE"
+    bl_width_min = 320
+    initialized : bpy.props.BoolProperty(default = False)
+    mantis_node_class_name=bl_idname
+    # Here is the layout of the data:
+    # nested dicts of key:dict ( key = name, dict = children)
+    # the 'leaf nodes' are empty dicts
+    # we'll store it as a JSON string in order to make it a bpy.props 
+    # and still have the ability to use it as a dict and save it
+    # TODO: check and see if these strings have a character limit
+    collection_declarations : bpy.props.StringProperty(default="")
+
+    def update_interface(self):
+        # we need to do dynamic stuff here like with interfaces
+        self.outputs.clear()
+        current_data = self.read_declarations_from_json()
+        socket_data = socket_data_from_collection_paths(current_data, self.name, [], [])
+        for item in socket_data:
+            full_path_name = '>'.join(item[1]+[item[0]])
+            s = self.outputs.new('CollectionDeclarationSocket', name=item[0],identifier=full_path_name )
+            s.collection_path = full_path_name
+        
+    def init(self, context):
+        self.initialized = True
+        if self.collection_declarations == "":
+            self.push_declarations_to_json({})
+    
+    def push_declarations_to_json(self, dict):
+        import json
+        j_str = json.dumps(dict)
+        self.collection_declarations = j_str
+
+    def read_declarations_from_json(self):
+        import json
+        j_data = json.loads(self.collection_declarations)
+        return j_data
+    
+    def draw_buttons(self, context, layout):
+        op_props = layout.operator('mantis.collection_add_new')
+        op_props.socket_invoked = '' # this isn't reset between invocations
+        # so we have to make sure to unset it when running it from the node
+
 class UtilityGeometryOfXForm(Node, MantisUINode):
     """Retrieves a mesh or curve datablock from an xForm."""
     bl_idname = "UtilityGeometryOfXForm"
@@ -1196,7 +1255,6 @@ class UtilityPrint(Node, MantisUINode):
     def init(self, context):
         self.inputs.new("WildcardSocket", "Input")
         self.initialized = True
-    
 
 # Set up the class property that ties the UI classes to the Mantis classes.
 for cls in TellClasses():

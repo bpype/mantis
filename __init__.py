@@ -75,6 +75,7 @@ input_category=[
             NodeItem("InputMatrixNode"),
             NodeItem("InputExistingGeometryObject"),
             NodeItem("InputExistingGeometryData"),
+            NodeItem("UtilityDeclareCollections"),
     ]
 link_transform_category = [
         NodeItem("LinkCopyLocation"),

@@ -788,6 +788,101 @@ class LinkArmatureRemoveTargetInput(bpy.types.Operator):
         return {'FINISHED'}
 
 
+class CollectionAddNewOutput(bpy.types.Operator):
+    """Add a new Collection output to the Driver node"""
+    bl_idname = "mantis.collection_add_new"
+    bl_label = "+ Child"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    collection_name : bpy.props.StringProperty(default='Collection')
+    tree_invoked : bpy.props.StringProperty(options ={'HIDDEN'})
+    node_invoked : bpy.props.StringProperty(options ={'HIDDEN'})
+    socket_invoked : bpy.props.StringProperty(options ={'HIDDEN'}) # set by caller
+
+    @classmethod
+    def poll(cls, context):
+        return True #(hasattr(context, 'active_node') )
+    # DUPLICATED CODE HERE, DUMMY
+    def invoke(self, context, event):
+        self.tree_invoked = context.node.id_data.name
+        self.node_invoked = context.node.name
+        t = context.node.id_data
+        t.nodes.active = context.node
+        context.node.select = True
+        wm = context.window_manager
+        return wm.invoke_props_dialog(self)
+    
+    def execute(self, context):
+        if not self.collection_name:
+            return {'CANCELLED'}
+        n = bpy.data.node_groups[self.tree_invoked].nodes[self.node_invoked]
+        # we need to know which socket it is called from...
+        s = None
+        for socket in n.outputs:
+            if socket.identifier == self.socket_invoked:
+                s=socket; break
+        parent_path = ''
+        if s is not None and s.collection_path:
+                parent_path = s.collection_path + '>'
+        outer_dict = n.read_declarations_from_json()
+        current_data = outer_dict
+        if parent_path:
+            for name_elem in parent_path.split('>'):
+                if name_elem == '': continue # HACK around being a bad programmer
+                current_data = current_data[name_elem]
+        current_data[self.collection_name] = {}
+        n.push_declarations_to_json(outer_dict)
+        n.update_interface()
+        return {'FINISHED'}
+
+
+# TODO: should this prune the children, too?
+class CollectionRemoveOutput(bpy.types.Operator):
+    """Remove a Collection output to the Driver node"""
+    bl_idname = "mantis.collection_remove"
+    bl_label = "X"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    tree_invoked : bpy.props.StringProperty(options ={'HIDDEN'})
+    node_invoked : bpy.props.StringProperty(options ={'HIDDEN'})
+    socket_invoked : bpy.props.StringProperty(options ={'HIDDEN'}) # set by caller
+
+    @classmethod
+    def poll(cls, context):
+        return True #(hasattr(context, 'active_node') )
+    # DUPLICATED CODE HERE, DUMMY
+    def invoke(self, context, event):
+        self.tree_invoked = context.node.id_data.name
+        self.node_invoked = context.node.name
+        t = context.node.id_data
+        t.nodes.active = context.node
+        context.node.select = True
+        return self.execute(context)
+    
+    def execute(self, context):
+        n = bpy.data.node_groups[self.tree_invoked].nodes[self.node_invoked]
+        s = None
+        for socket in n.outputs:
+            if socket.identifier == self.socket_invoked:
+                s=socket; break
+        if not s:
+            return {'CANCELLED'}
+        parent_path = ''
+        if s is not None and s.collection_path:
+                parent_path = s.collection_path + '>'
+        outer_dict = n.read_declarations_from_json()
+        current_data = outer_dict
+        print(parent_path)
+        if parent_path:
+            for name_elem in parent_path.split('>')[:-2]: # just skip the last one
+                print(name_elem)
+                if name_elem == '': continue # HACK around being a bad programmer
+                current_data = current_data[name_elem]
+        del current_data[s.name]
+        n.push_declarations_to_json(outer_dict)
+        n.update_interface()
+        return {'FINISHED'}
+
 def get_socket_enum(operator, context):
     valid_types = []; i = -1
     from .socket_definitions import TellClasses, MantisSocket
@@ -885,6 +980,9 @@ classes = [
         # Armature Link Node
         LinkArmatureAddTargetInput,
         LinkArmatureRemoveTargetInput,
+        # managing collections
+        CollectionAddNewOutput,
+        CollectionRemoveOutput,
         # rigging utilities
         ConvertBezierCurveToNURBS,
         ]
