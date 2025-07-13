@@ -112,7 +112,16 @@ def get_socket_maps(node, force=False):
                         other_sockets.append(l.to_node)
                     else:
                         other_sockets.append(getattr(l, linked_socket))
-                map[sock.identifier]= other_sockets
+                from bpy.types import NodeSocket
+                keep_sockets=[]
+                for other_socket in other_sockets.copy():
+                    if isinstance(other_socket, NodeSocket) and \
+                        other_socket.bl_idname == 'NodeSocketUndefined':
+                            continue # this one is bad
+                    keep_sockets.append(other_socket)
+                # if len(keep_sockets) == 0:
+                #     keep_sockets = None
+                map[sock.identifier]= keep_sockets
             elif hasattr(sock, "default_value"):
                 if sock.get("default_value") is not None:
                     val = sock['default_value']
