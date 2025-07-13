@@ -411,7 +411,7 @@ def CollectionSocketDraw(socket, context, layout, node, text):
         label_text = '└'+label_text #┈ use this character to extend
         for indent in range(indent_length):
             if indent <= 1: continue
-            indent_text = ' ⬞ '
+            indent_text = ' ▹ '
             label_text=indent_text+label_text
     op_props = x_split.operator('mantis.collection_remove')
     op_props.socket_invoked = socket.identifier
