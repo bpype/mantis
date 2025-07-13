@@ -139,6 +139,7 @@ class MantisEditGroup(Operator):
         path = space.path
         node = path[len(path)-1].node_tree.nodes.active
         base_tree = path[0].node_tree
+        live_update_start_state=base_tree.do_live_update
         base_tree.do_live_update = False
         base_tree.is_executing = True
         try:
@@ -173,7 +174,7 @@ class MantisEditGroup(Operator):
                 base_tree.is_executing = True
                 # base_tree.is_executing = True # because it seems display_update unsets this.
         finally:
-            base_tree.do_live_update = True
+            base_tree.do_live_update = live_update_start_state
             base_tree.is_executing = False
             # HACK
             base_tree.handler_flip = True # HACK
