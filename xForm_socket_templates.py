@@ -104,7 +104,7 @@ xFormBoneSockets = [
     IKZMax := replace(IKXMax, name="Z Max", blender_property='ik_max_z'),
     # Visual Stuff
     BoneCollectionTemplate := SockTemplate(name="Bone Collection", is_input=True,
-            bl_idname='BoneCollectionSocket', category='Display'),
+            bl_idname='BoneCollectionSocket', category='Display', use_multi_input=True),
     CustomObjectTemplate := replace(SourcexFormTemplate, name='Custom Object',
                                     category='Display'),
     OverrideXFormTemplate := replace(SourcexFormTemplate,
@@ -204,5 +204,7 @@ xFormBoneSockets = [
         blender_property='lock_scale',),
     # hide
     replace(HideTemplate, name='Hide', category='always_show',
-            blender_property='hide', default_value=False,)
+            blender_property='hide', default_value=False,),
+    # Output
+    xFormOutTemplate,
 ]
