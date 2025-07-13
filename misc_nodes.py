@@ -19,6 +19,8 @@ def TellClasses():
              InputExistingGeometryObject,
              InputExistingGeometryData,
              UtilityDeclareCollections,
+             UtilityCollectionJoin,
+             UtilityCollectionHierarchy,
              UtilityGeometryOfXForm,
              UtilityNameOfXForm,
              UtilityPointFromCurve,
@@ -1283,7 +1285,6 @@ class UtilityDeclareCollections(MantisNode):
         from .utilities import get_node_prototype
         ui_node = get_node_prototype(self.ui_signature, self.base_tree)
         self.gen_outputs(ui_node)
-        print(self.outputs)
         self.init_parameters()
         self.fill_parameters(ui_node)
         self.node_type = "UTILITY"
@@ -1306,6 +1307,61 @@ class UtilityDeclareCollections(MantisNode):
         if ui_node is None: return
         for out in ui_node.outputs:
             self.parameters[out.name] = out.default_value
+
+class UtilityCollectionJoin(MantisNode):
+    '''A node to help manage bone collections'''
+    def __init__(self, signature, base_tree):
+        super().__init__(signature, base_tree, CollectionJoinSockets)
+        self.init_parameters()
+        self.node_type = "UTILITY"
+        self.prepared, self.executed = False, False
+
+    def reset_execution(self):
+        super().reset_execution()
+        self.prepared, self.executed = False, False
+    
+    def bPrepare(self, bContext = None,):
+        if self.inputs['Collections'].links:
+            bCol_groups = []
+            for i, l in enumerate(self.inputs['Collections'].links):
+                bCol_group = self.evaluate_input("Collections", index=i)
+                if not isinstance(bCol_group, str):
+                    bCol_group = str(bCol_group)
+                    prOrange(f"Warning: coercing invalid input ({i}) to String in node: {self}")
+                bCol_groups.append(bCol_group)
+            bCols = '|'.join(bCol_groups)
+        else:
+            bCols = self.evaluate_input("Collections")
+            if not isinstance(bCols, str):
+                bCols = str(bCols)
+                prOrange(f"Warning: coercing invalid input to String in node: {self}")
+        self.parameters['Collection']=bCols
+        self.prepared, self.executed = True, True
+
+class UtilityCollectionHierarchy(MantisNode):
+    '''A node to help manage bone collections'''
+    def __init__(self, signature, base_tree):
+        super().__init__(signature, base_tree, CollectionHierarchySockets)
+        self.init_parameters()
+        self.node_type = "UTILITY"
+        self.prepared, self.executed = False, False
+
+    def reset_execution(self):
+        super().reset_execution()
+        self.prepared, self.executed = False, False
+
+    def bPrepare(self, bContext = None,):
+        parent_col = self.evaluate_input('Parent Collection')
+        if not isinstance(parent_col, str):
+            parent_col = str(parent_col)
+            prOrange(f"Warning: coercing invalid Parent Collection to String in node: {self}")
+        child_col = self.evaluate_input('Child Collection')
+        if not isinstance(child_col, str):
+            child_col = str(child_col)
+            prOrange(f"Warning: coercing invalid Child Collection to String in node: {self}")
+        result = parent_col +">"+child_col
+        self.parameters['Collection']=result
+        self.prepared, self.executed = True, True
 
 class UtilityGeometryOfXForm(MantisNode):
     '''A node representing existing object data'''

@@ -22,6 +22,8 @@ def TellClasses():
              InputExistingGeometryObjectNode,
              InputExistingGeometryDataNode,
              UtilityDeclareCollections,
+             UtilityCollectionJoin,
+             UtilityCollectionHierarchy,
              UtilityGeometryOfXForm,
              UtilityNameOfXForm,
             #  ComposeMatrixNode,
@@ -805,6 +807,28 @@ class UtilityDeclareCollections(Node, MantisUINode):
         op_props.socket_invoked = '' # this isn't reset between invocations
         # so we have to make sure to unset it when running it from the node
 
+class UtilityCollectionJoin(Node, MantisUINode):
+    """A utility used to join bone collection declarations."""
+    bl_idname = "UtilityCollectionJoin"
+    bl_label  = "Join Collection Declarations"
+    bl_icon   = "NODE"
+    initialized : bpy.props.BoolProperty(default = False)
+    mantis_node_class_name=bl_idname
+    def init(self, context):
+        self.init_sockets(CollectionJoinSockets)
+        self.initialized = True
+
+class UtilityCollectionHierarchy(Node, MantisUINode):
+    """A utility used to declare bone collection hierarchies."""
+    bl_idname = "UtilityCollectionHierarchy"
+    bl_label  = "Collection Child Declaration"
+    bl_icon   = "NODE"
+    initialized : bpy.props.BoolProperty(default = False)
+    mantis_node_class_name=bl_idname
+    def init(self, context):
+        self.init_sockets(CollectionHierarchySockets)
+        self.initialized = True
+        
 class UtilityGeometryOfXForm(Node, MantisUINode):
     """Retrieves a mesh or curve datablock from an xForm."""
     bl_idname = "UtilityGeometryOfXForm"

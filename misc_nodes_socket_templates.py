@@ -101,3 +101,19 @@ NumberOfSplinesSockets=[
     NumberOfSplinesOut := SockTemplate(name="Number of Splines",
         bl_idname='UnsignedIntSocket', is_input=False),
 ]
+
+CollectionJoinSockets = [
+    JoinCollections := SockTemplate(name='Collections', is_input=True,
+        bl_idname="BoneCollectionSocket", display_shape='SQUARE_DOT',
+        use_multi_input=True,),
+    CollectionDeclarationOutput := SockTemplate(name='Collection',
+        bl_idname="BoneCollectionSocket", is_input=False,)
+]
+
+CollectionHierarchySockets = [
+    ParentCollection := SockTemplate(name='Parent Collection', is_input=True,
+        bl_idname="BoneCollectionSocket",),
+    ChildCollection := SockTemplate(name='Child Collection', is_input=True,
+        bl_idname="BoneCollectionSocket",),
+    CollectionDeclarationOutput,
+]

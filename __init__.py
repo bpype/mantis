@@ -128,6 +128,8 @@ utility_category = [
         NodeItem("MathStaticFloat"),
         NodeItem("MathStaticVector"),
         NodeItem("UtilityCatStrings"),
+        NodeItem("UtilityCollectionJoin"),
+        NodeItem("UtilityCollectionHierarchy"),
         NodeItem("UtilityGeometryOfXForm"),
         NodeItem("UtilityNameOfXForm"),
         NodeItem("UtilityCombineThreeBool"),
