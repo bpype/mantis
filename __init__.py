@@ -314,9 +314,8 @@ def do_version_update(node_tree):
                 s = n.inputs.new(new_bl_idname, new_name, identifier=new_name, use_multi_input=multi)
                 n.inputs.move(len(n.inputs)-1, socket_index)
                 socket_map = socket_maps[0]
-
-            socket_map[new_name] = socket_map[old_id]; del socket_map[old_id]
-
+            socket_map[new_name] = socket_map[old_id]
+            if new_name != old_id: del socket_map[old_id] # sometimes rename just changes the socket type or multi
             do_relink(n, s, socket_map)
         for bl_idname, task in versioning_node_tasks:
             if n.bl_idname in bl_idname: task(n)
