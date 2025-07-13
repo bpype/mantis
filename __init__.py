@@ -17,7 +17,7 @@ from .utilities import prRed
 
 MANTIS_VERSION_MAJOR=0
 MANTIS_VERSION_MINOR=11
-MANTIS_VERSION_SUB=18
+MANTIS_VERSION_SUB=19
 
 classLists = [module.TellClasses() for module in [
  link_definitions,
@@ -76,6 +76,7 @@ input_category=[
             NodeItem("InputExistingGeometryObject"),
             NodeItem("InputExistingGeometryData"),
             NodeItem("UtilityDeclareCollections"),
+            NodeItem("InputThemeBoneColorSets"),
     ]
 link_transform_category = [
         NodeItem("LinkCopyLocation"),
@@ -293,7 +294,10 @@ def do_version_update(node_tree):
             if in_out == 'INPUT' and n.inputs.get(socket_name) is None:
                 print(f"INFO: adding socket \"{socket_name}\" of type {socket_type} to node {n.name} of type {n.bl_idname}.")
                 s = n.inputs.new(socket_type, socket_name, use_multi_input=use_multi_input)
-                s.default_value = default_val
+                try:
+                    s.default_value = default_val
+                except AttributeError:
+                    pass # the socket is read-only
                 n.inputs.move(len(n.inputs)-1, index)
         socket_map = None
         if rename_jobs:

@@ -620,6 +620,7 @@ SOCKETS_ADDED=[("DeformerMorphTargetDeform", 'INPUT', 'BooleanSocket', "Use Shap
                ("UtilityMatricesFromCurve",  'INPUT',  "UnsignedIntSocket", "Spline Index",  1, False,    0),
                ("UtilityPointFromCurve",     'INPUT',  "UnsignedIntSocket", "Spline Index",  1, False,    0),
                ("LinkCopyScale",             'INPUT',  "FloatFactorSocket", "Power",    5,      False,    1.0),
+               ("xFormBoneNode",             'INPUT',  "ColorSetSocket",    "Color",    22,     False,    None,),
                ]
 
 # replace names with bl_idnames for reading the tree and solving schemas.

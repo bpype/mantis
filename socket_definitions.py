@@ -142,6 +142,8 @@ def TellClasses() -> List[MantisSocket]:
              IntSocket,
              StringSocket,
              CollectionDeclarationSocket,
+             ColorSetDisplaySocket,
+             ColorSetSocket,
 
              EnumMetaRigSocket,
              EnumMetaBoneSocket,
@@ -880,7 +882,6 @@ class CollectionDeclarationSocket(MantisSocket):
     @classmethod
     def draw_color_simple(self):
         return self.color_simple
-
 class BoneCollectionSocket(MantisSocket):
     """Bone Collection socket"""
     bl_idname = 'BoneCollectionSocket'
@@ -897,6 +898,109 @@ class BoneCollectionSocket(MantisSocket):
     @classmethod
     def draw_color_simple(self):
         return self.color_simple
+
+def get_bone_theme_color(socket, prop,):
+    from bpy import context
+    color_index=socket.color_index
+    color_set = context.preferences.themes[0].bone_color_sets[color_index]
+    return getattr(color_set, prop )
+def get_active_color(socket):
+    if socket is None:
+        from bpy import context
+        return context.preferences.themes[0].view_3d.bone_pose_active
+    return get_bone_theme_color(socket, 'active')
+def get_normal_color(socket):
+    if socket is None:
+        from bpy import context
+        return context.preferences.themes[0].view_3d.bone_solid
+    return get_bone_theme_color(socket, 'normal')
+def get_select_color(socket):
+    if socket is None:
+        from bpy import context
+        return context.preferences.themes[0].view_3d.bone_pose
+    return get_bone_theme_color(socket, 'select')
+
+def get_color_set_value(socket,):
+    return   [ socket.active_color[0],
+               socket.active_color[1],
+               socket.active_color[2],
+               socket.normal_color[0],
+               socket.normal_color[1],
+               socket.normal_color[2],
+               socket.selected_color[0],
+               socket.selected_color[1],
+               socket.selected_color[2],]
+
+class ColorSetDisplaySocket(MantisSocket):
+    """Socket for displaying a bone color theme"""
+    bl_idname = 'ColorSetDisplaySocket'
+    bl_label = "Color Set"
+    default_value : bpy.props.FloatVectorProperty(get=get_color_set_value, size=9)
+    color_simple = cColor
+    color : bpy.props.FloatVectorProperty(default=cColor, size=4)
+    icon : bpy.props.StringProperty(default = "NONE",)
+    input : bpy.props.BoolProperty(default =False,)
+    display_text : bpy.props.StringProperty(default="")
+    color_index : bpy.props.IntProperty(default=0)
+    active_color : bpy.props.FloatVectorProperty(
+        name='Active Color', size=3, subtype='COLOR_GAMMA',
+        get=get_active_color )
+    normal_color : bpy.props.FloatVectorProperty(
+        name='Normal Color', size=3, subtype='COLOR_GAMMA',
+        get=get_normal_color )
+    selected_color : bpy.props.FloatVectorProperty(
+        name='Selected Color', size=3, subtype='COLOR_GAMMA',
+        get=get_select_color )
+    is_valid_interface_type=False
+    def draw(self, context, layout, node, text):
+        layout.prop( text='', data=self,
+                    property='active_color', )
+        layout.prop( text='', data=self,
+            property='normal_color',)
+        layout.prop( text='', data=self,
+                    property='selected_color',)
+    def draw_color(self, context, node):
+        return self.color
+    @classmethod
+    def draw_color_simple(self):
+        return self.color_simple
+
+class ColorSetSocket(MantisSocket):
+    """Socket for setting a bone color"""
+    bl_idname = 'ColorSetSocket'
+    bl_label = "Custom Color Set"
+    default_value : bpy.props.FloatVectorProperty(get=get_color_set_value, size=9)
+    color_simple = cColor
+    color : bpy.props.FloatVectorProperty(default=cColor, size=4)
+    icon : bpy.props.StringProperty(default = "NONE",)
+    input : bpy.props.BoolProperty(default = True,)
+    display_text : bpy.props.StringProperty(default="")
+    active_color : bpy.props.FloatVectorProperty(
+        name='Active Color', size=3, subtype='COLOR_GAMMA',
+        default=get_active_color(None),)
+    normal_color : bpy.props.FloatVectorProperty(
+        name='Normal Color', size=3, subtype='COLOR_GAMMA',
+        default=get_normal_color(None),)
+    selected_color : bpy.props.FloatVectorProperty(
+        name='Selected Color', size=3, subtype='COLOR_GAMMA',
+        default=get_select_color(None),)
+    is_valid_interface_type=False
+    def draw(self, context, layout, node, text):
+        if self.is_linked:
+            layout.label(text='Custom Color Set')
+        else:
+            layout.prop( text='Color Set', data=self,
+                        property='active_color', )
+            layout.prop( text='', data=self,
+                property='normal_color',)
+            layout.prop( text='', data=self,
+                        property='selected_color',)
+    def draw_color(self, context, node):
+        return self.color
+    @classmethod
+    def draw_color_simple(self):
+        return self.color_simple
+
 
 eArrayGetOptions =(
         ('CAP', "Cap", "Fail if the index is out of bounds."),

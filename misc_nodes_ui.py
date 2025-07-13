@@ -21,6 +21,7 @@ def TellClasses():
              # InputGeometryNode,
              InputExistingGeometryObjectNode,
              InputExistingGeometryDataNode,
+             InputThemeBoneColorSets,
              UtilityDeclareCollections,
              UtilityCollectionJoin,
              UtilityCollectionHierarchy,
@@ -749,6 +750,20 @@ class InputExistingGeometryDataNode(Node, MantisUINode):
         self.outputs.new("GeometrySocket", "Geometry")
         self.initialized = True
 
+class InputThemeBoneColorSets(Node, MantisUINode):
+    """Displays the theme's colors."""
+    bl_idname = "InputThemeBoneColorSets"
+    bl_label = "Theme Colors"
+    bl_icon = "NODE"
+    bl_width_min=280
+    initialized : bpy.props.BoolProperty(default = False)
+    mantis_node_class_name=bl_idname
+    
+    def init(self, context):
+        for i in range(20):
+            s = self.outputs.new("ColorSetDisplaySocket", f"Color {str(i).zfill(2)}")
+            s.color_index=i
+        self.initialized = True
 
 def socket_data_from_collection_paths(root_data, root_name, path, socket_data):
     # so we need to 'push' the socket names and their paths in order

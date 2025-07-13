@@ -125,6 +125,9 @@ xFormBoneSockets = [
     CustomObjectScaleTemplate := SockTemplate(name="Custom Object Rotation",
             is_input=True, bl_idname='VectorEulerSocket',
             category='Display', default_value=(0.0,0.0,0.0),),
+    CustomColor := SockTemplate(name="Color",
+            is_input=True, bl_idname='ColorSetSocket',
+            category='Display',),
     # Deform Stuff
     BoneDeformTemplate := replace(HideRenderTemplate, name='Deform',
         category='Deform', blender_property='use_deform', default_value=False,),

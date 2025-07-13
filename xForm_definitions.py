@@ -98,6 +98,7 @@ display_names = {
 "Custom Object Scale":'VectorScaleSocket',
 "Custom Object Translation":'VectorSocket',
 "Custom Object Rotation":'VectorEulerSocket',
+"Color":'ColorSetSocket',
 }
 
 # deform_names
