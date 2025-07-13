@@ -604,7 +604,8 @@ SOCKETS_REMOVED=[("UtilityDriverVariable", "Transform Channel"),
                   # Node Class           #Prior bl_idname  # prior name # new bl_idname #       new name,          # Multi
 SOCKETS_RENAMED=[ ("LinkDrivenParameter", "DriverSocket",   "Driver",     "FloatSocket",        "Value",              False),
                   ("DeformerHook",        "IntSocket",      "Index",      "UnsignedIntSocket",  "Point Index",        False),
-                  ("SchemaConstOutput",   "IntSocket",      "Expose when N==",      "UnsignedIntSocket",  "Expose at Index", False)]
+                  ("SchemaConstOutput",   "IntSocket",      "Expose when N==",      "UnsignedIntSocket",  "Expose at Index", False),
+                  ("xFormBoneNode",   "BoneCollectionSocket",      "Bone Collection",      "BoneCollectionSocket",  "Bone Collection", True),]
 
                 # NODE CLASS NAME             IN_OUT    SOCKET TYPE     SOCKET NAME     INDEX   MULTI     DEFAULT
 SOCKETS_ADDED=[("DeformerMorphTargetDeform", 'INPUT', 'BooleanSocket', "Use Shape Key", 1,      False,    False),

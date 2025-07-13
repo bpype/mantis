@@ -313,17 +313,24 @@ class xFormBone(xFormNode):
         #    Bone Collections are fully qualified by their hierarchy.
         #    Separate Strings with "|" and indicate hierarchy with ">". These are special characters.
         # NOTE: if the user names the collections differently at different times, this will take the FIRST definition and go with it
-        sCols = self.evaluate_input("Bone Collection")
-        bone_collections = sCols.split("|")
+        if self.inputs['Bone Collection'].links:
+            bCol_groups = []
+            for i, l in enumerate(self.inputs['Bone Collection'].links):
+                bCol_group = self.evaluate_input("Bone Collection", index=i)
+                bCol_groups.append(bCol_group)
+            bCols = '|'.join(bCol_groups)
+        else:
+            bCols = self.evaluate_input("Bone Collection")
+        bone_collections = bCols.split("|")
         for collection_list in bone_collections:
             hierarchy = collection_list.split(">")
             col_parent = None
-            for sCol in hierarchy:
-                if ( col := d.collections_all.get(sCol) ) is None:
-                    col = d.collections.new(sCol)
+            for bCol in hierarchy:
+                if ( col := d.collections_all.get(bCol) ) is None:
+                    col = d.collections.new(bCol)
                 col.parent = col_parent
                 col_parent = col
-            col.assign(eb)
+            d.collections_all.get(hierarchy[-1]).assign(eb)
         
         if (eb.name != name):
             prRed(f"Expected bone of name: {name}, got {eb.name} instead.")

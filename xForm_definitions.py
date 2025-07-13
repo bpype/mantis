@@ -175,7 +175,10 @@ class xFormBoneNode(Node, xFormNode):
             s.hide = True
 
         for name, sock_type in display_names.items():
-            s = self.inputs.new(sock_type, name)
+            if name == 'Bone Collection': # HACK because I am not using Socket Templates yet
+                s = self.inputs.new(sock_type, name, use_multi_input=True)
+            else:
+                s = self.inputs.new(sock_type, name)
             if s.name in ['Custom Object', 'Bone Collection']:
                 continue
             s.hide = True
