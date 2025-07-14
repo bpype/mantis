@@ -353,13 +353,16 @@ def update_metarig_posebone(self, context,):
 #  Sockets
 ########################################################################
 
+text_only_output_types = ["NodeGroupInput", "NodeGroupOutput", "SchemaArrayInput",
+                          "SchemaArrayInputGet", "SchemaArrayInputAll", "SchemaConstInput",
+                          "SchemaIncomingConnection"]
 
 def ChooseDraw(self, context, layout, node, text, icon = "NONE", use_enum=True, nice_bool=True, icon_only=False):
     invert_checkbox = False
     if hasattr(self, "invert") and self.invert == True:
         invert_checkbox=True
     # TEXT ONLY
-    if self.node.bl_idname in ["NodeGroupInput", "NodeGroupOutput"]:
+    if self.node.bl_idname in text_only_output_types:
         layout.label(text=text)
     elif hasattr(self, "display_text") and self.display_text and self.is_linked:
             layout.label(text=self.display_text)
@@ -986,8 +989,10 @@ class ColorSetSocket(MantisSocket):
         default=get_select_color(None),)
     is_valid_interface_type=False
     def draw(self, context, layout, node, text):
-        if self.is_linked:
-            layout.label(text='Custom Color Set')
+        if (self.is_output == False) and (self.is_linked == True):
+            layout.label(text=self.name)
+        elif self.node.bl_idname in text_only_output_types:
+            layout.label(text=self.name)
         else:
             layout.prop( text='Color Set', data=self,
                         property='active_color', )
@@ -995,6 +1000,12 @@ class ColorSetSocket(MantisSocket):
                 property='normal_color',)
             layout.prop( text='', data=self,
                         property='selected_color',)
+        if self.node.bl_idname == 'InputColorSetPallete':
+            ops_props = layout.operator('mantis.color_pallete_socket_remove')
+            ops_props.tree_invoked = self.node.id_data.name
+            ops_props.node_invoked = self.node.name
+            ops_props.socket_invoked = self.identifier
+                
     def draw_color(self, context, node):
         return self.color
     @classmethod

@@ -1,4 +1,5 @@
 from . import ( ops_nodegroup,
+                ops_ui, 
                 base_definitions,
                 socket_definitions,
                 link_definitions,
@@ -25,6 +26,7 @@ classLists = [module.TellClasses() for module in [
  misc_nodes_ui,
  socket_definitions,
  ops_nodegroup,
+ ops_ui,
  primitives_definitions,
  deformer_definitions,
  math_definitions,
@@ -77,6 +79,7 @@ input_category=[
             NodeItem("InputExistingGeometryData"),
             NodeItem("UtilityDeclareCollections"),
             NodeItem("InputThemeBoneColorSets"),
+            NodeItem("InputColorSetPallete"),
     ]
 link_transform_category = [
         NodeItem("LinkCopyLocation"),

@@ -19,6 +19,7 @@ def TellClasses():
              InputExistingGeometryObject,
              InputExistingGeometryData,
              InputThemeBoneColorSets,
+             InputColorSetPallete,
              UtilityDeclareCollections,
              UtilityCollectionJoin,
              UtilityCollectionHierarchy,
@@ -315,7 +316,26 @@ class InputThemeBoneColorSets(SimpleInputNode):
         ui_node = get_node_prototype(self.ui_signature, self.base_tree)
         for i in range(20):
             self.parameters[f"Color {str(i).zfill(2)}"] = ui_node.outputs[i].default_value
-            
+
+class InputColorSetPallete(SimpleInputNode):
+    '''A node representing the theme's colors'''
+    def __init__(self, signature, base_tree):
+        super().__init__(signature, base_tree, MatrixFromCurveSockets)
+        self.init_parameters()
+        self.node_type = "UTILITY"
+        # we'll go ahead and fill them here
+        from .utilities import get_node_prototype
+        ui_node = get_node_prototype(self.ui_signature, self.base_tree)
+        from .base_definitions import MantisSocketTemplate
+        outputs = []
+        for o in ui_node.outputs:
+            outputs.append (MantisSocketTemplate( name = o.name,))
+        self.outputs.init_sockets(outputs)
+        self.init_parameters()
+        for o in ui_node.outputs:
+            self.parameters[o.name] = o.default_value
+            prRed(o.name)
+            prPurple(o.default_value)
 
 class UtilityMatrixFromCurve(MantisNode):
     '''Get a matrix from a curve'''
