@@ -142,8 +142,6 @@ def get_socket_maps(node, force=False):
                     map[sock.identifier]=None
                 else:
                     raise RuntimeError(f"ERROR: Could not get socket data for socket of type: {sock.bl_idname}")
-    if node.name == 'Morph Target XZ 4-shape':
-        raise NotImplementedError
     return maps
 
 # this function is completely overloaded with different purposes and code paths
