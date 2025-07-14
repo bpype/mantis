@@ -793,7 +793,9 @@ class UtilityDeclareCollections(Node, MantisUINode):
     collection_declarations : bpy.props.StringProperty(default="")
 
     def update_interface(self):
+        from .utilities import get_socket_maps, do_relink
         # we need to do dynamic stuff here like with interfaces
+        socket_map_out = get_socket_maps(self)[1]
         self.outputs.clear()
         current_data = self.read_declarations_from_json()
         socket_data = socket_data_from_collection_paths(current_data, self.name, [], [])
@@ -801,6 +803,9 @@ class UtilityDeclareCollections(Node, MantisUINode):
             full_path_name = '>'.join(item[1]+[item[0]])
             s = self.outputs.new('CollectionDeclarationSocket', name=item[0],identifier=full_path_name )
             s.collection_path = full_path_name
+        for s in self.outputs:
+            if s.identifier in socket_map_out.keys():
+                do_relink(self, s, socket_map_out, 'OUTPUT')
         
     def init(self, context):
         self.initialized = True
