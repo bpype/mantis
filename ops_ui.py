@@ -29,8 +29,14 @@ class ColorPalleteAddSocket(Operator):
     
     def execute(self, context):
         n = bpy.data.node_groups[self.tree_invoked].nodes[self.node_invoked]
-        # the name doesn't matter, will probably be Color Set.001 or something instead
-        n.outputs.new("ColorSetSocket", "Color Set")
+        #name them uniquely
+        number=0
+        for o in n.outputs:
+            if int(o.name[-3:]) == number:
+                number = int(o.name[-3:]) + 1
+            else: # my intention is to use the first number that isn't used
+                break # so break here because we have reached the end or a 'gap'
+        n.outputs.new("ColorSetSocket", "Color Set."+str(number).zfill(3))
         return {'FINISHED'}
 
 class ColorPalleteRemoveSocket(Operator):
