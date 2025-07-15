@@ -366,29 +366,32 @@ class xFormBone(xFormNode):
         b = self.bGetParentArmature().data.bones[self.bObject]
         # let's do bone colors first
         color_values = self.evaluate_input('Color')
-        from mathutils import Color
-        color_active = Color(color_values[:3])
-        color_normal = Color(color_values[3:6])
-        color_select = Color(color_values[6:])
-        is_theme_colors = False
-        theme = bContext.preferences.themes[0]
-        for i, color_set in enumerate(theme.bone_color_sets):
-            if  ((color_active == color_set.active) and
-                 (color_normal == color_set.normal) and
-                 (color_select == color_set.select) ):
-                            is_theme_colors=True; break
-        if is_theme_colors:          # add 1, not 0-indexed
-            b.color.palette = 'THEME'+str(i+1).zfill(2)
-        elif    ((color_active == theme.view_3d.bone_pose_active) and
-                 (color_normal == theme.view_3d.bone_solid) and
-                 (color_select == theme.view_3d.bone_pose) ):
-                        b.color.palette = 'DEFAULT'
-        else:
-            b.color.palette = 'CUSTOM'
-            b.color.custom.active=color_active
-            b.color.custom.normal=color_normal
-            b.color.custom.select=color_select
-
+        try: # just in case, this shouldn't cause a failure
+            from mathutils import Color
+            color_active = Color(color_values[:3])
+            color_normal = Color(color_values[3:6])
+            color_select = Color(color_values[6:])
+            is_theme_colors = False
+            theme = bContext.preferences.themes[0]
+            for i, color_set in enumerate(theme.bone_color_sets):
+                if  ((color_active == color_set.active) and
+                    (color_normal == color_set.normal) and
+                    (color_select == color_set.select) ):
+                                is_theme_colors=True; break
+            if is_theme_colors:          # add 1, not 0-indexed
+                b.color.palette = 'THEME'+str(i+1).zfill(2)
+            elif    ((color_active == theme.view_3d.bone_pose_active) and
+                    (color_normal == theme.view_3d.bone_solid) and
+                    (color_select == theme.view_3d.bone_pose) ):
+                            b.color.palette = 'DEFAULT'
+            else:
+                b.color.palette = 'CUSTOM'
+                b.color.custom.active=color_active
+                b.color.custom.normal=color_normal
+                b.color.custom.select=color_select
+        except Exception as e:
+            prRed("WARNING: failed to set color because of error, see report below:")
+            prOrange(e)
         #
         do_bb=False
         b.bbone_x = self.evaluate_input("BBone X Size"); b.bbone_x = max(b.bbone_x, 0.0002)
