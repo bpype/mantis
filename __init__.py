@@ -18,7 +18,7 @@ from .utilities import prRed
 
 MANTIS_VERSION_MAJOR=0
 MANTIS_VERSION_MINOR=12
-MANTIS_VERSION_SUB=1
+MANTIS_VERSION_SUB=2
 
 classLists = [module.TellClasses() for module in [
  link_definitions,
@@ -268,7 +268,9 @@ def node_version_update(node):
         arg_map = {}
         if 'node' in required_kwargs:
             arg_map['node']=node
-        if node.bl_idname in bl_idname:
+        if 'node_tree' in required_kwargs:
+            arg_map['node_tree']=node.id_data
+        if bl_idname == 'ALL' or node.bl_idname in bl_idname:
             if do_once:
                 print (f"Updating tree {node.id_data.name} to "
                        f"{MANTIS_VERSION_MAJOR}.{MANTIS_VERSION_MINOR}.{MANTIS_VERSION_SUB}")
