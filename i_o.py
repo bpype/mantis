@@ -7,7 +7,14 @@ from .utilities import (prRed, prGreen, prPurple, prWhite,
 
 from mathutils import  Vector
 
-from .base_definitions import NODES_REMOVED, SOCKETS_REMOVED
+NODES_REMOVED=["xFormRootNode"]
+                 # Node bl_idname, # Socket Name
+SOCKETS_REMOVED=[("UtilityDriverVariable", "Transform Channel"),
+                 ("xFormRootNode","World Out"),
+                 ("UtilitySwitch","xForm"),
+                 ("LinkDrivenParameter", "Enable")]
+                  # Node Class           #Prior bl_idname  # prior name # new bl_idname #       new name,          # Multi
+
 from bpy.app import version
 
 add_inputs_bl_idnames = [

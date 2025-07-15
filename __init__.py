@@ -17,8 +17,8 @@ from .ops_generate_tree import GenerateMantisTree
 from .utilities import prRed
 
 MANTIS_VERSION_MAJOR=0
-MANTIS_VERSION_MINOR=11
-MANTIS_VERSION_SUB=22
+MANTIS_VERSION_MINOR=12
+MANTIS_VERSION_SUB=0
 
 classLists = [module.TellClasses() for module in [
  link_definitions,
@@ -261,88 +261,38 @@ def execute_handler(scene):
                 node_tree.execute_tree(context)
                 node_tree.tree_valid=False
 
-versioning_node_tasks = [
-    #relevant bl_idnames      # task
-    #(['LinkTransformation'], transformation_constraint_radians_to_degrees)
-]
-
-
-def node_version_update(node_tree, node):
-    from .base_definitions import NODES_REMOVED, SOCKETS_REMOVED, SOCKETS_RENAMED, SOCKETS_ADDED
-    rename_jobs = []
-    if node.bl_idname in NODES_REMOVED:
-        print(f"INFO: removing node {node.name} of type {node.bl_idname} because it has been deprecated.")
-        node.inputs.remove(socket)
-        return
-    for i, socket in enumerate(node.inputs.values()):
-        if (node.bl_idname, socket.identifier) in SOCKETS_REMOVED:
-            print(f"INFO: removing socket {socket.identifier} of node {node.name} of type {node.bl_idname} because it has been deprecated.")
-            node.inputs.remove(socket)
-        for old_class, old_bl_idname, old_name, new_bl_idname, new_name, multi in SOCKETS_RENAMED:
-            if (node.bl_idname == old_class and socket.bl_idname == old_bl_idname and socket.name == old_name):
-                rename_jobs.append((socket, i, new_bl_idname, new_name, multi))
-    for i, socket in enumerate(node.outputs.values()):
-        if (node.bl_idname, socket.identifier) in SOCKETS_REMOVED:
-            print(f"INFO: removing socket {socket.identifier} of node {node.name} of type {node.bl_idname} because it has been deprecated.")
-            node.outputs.remove(socket)
-        for old_class, old_bl_idname, old_name, new_bl_idname, new_name, multi in SOCKETS_RENAMED:
-            if (node.bl_idname == old_class and socket.bl_idname == old_bl_idname and socket.name == old_name):
-                rename_jobs.append((socket, i, new_bl_idname, new_name, multi))
-
-    for bl_idname, in_out, socket_type, socket_name, index, use_multi_input, default_val in SOCKETS_ADDED:
-        if node.bl_idname != bl_idname:
-            continue
-        if in_out == 'INPUT' and node.inputs.get(socket_name) is None:
-            print(f"INFO: adding socket \"{socket_name}\" of type {socket_type} to node {node.name} of type {node.bl_idname}.")
-            s = node.inputs.new(socket_type, socket_name, use_multi_input=use_multi_input)
-            try:
-                s.default_value = default_val
-            except AttributeError:
-                pass # the socket is read-only
-            node.inputs.move(len(node.inputs)-1, index)
-    socket_map = None
-    if rename_jobs:
-        from .utilities import get_socket_maps
-        socket_maps = get_socket_maps(node)
-    for socket, socket_index, new_bl_idname, new_name, multi in rename_jobs:
-        old_id = socket.identifier
-        print (f"Renaming socket {socket.identifier} to {new_name} in node {node.name}")
-        from .utilities import do_relink
-        if socket.is_output:
-            index = 1
-            in_out = "OUTPUT"
-            node.outputs.remove(socket)
-            s = node.outputs.new(new_bl_idname, new_name, identifier=new_name, use_multi_input=multi)
-            node.outputs.move(len(node.outputs)-1, socket_index)
-            socket_map = socket_maps[1]
-        else:
-            index = 0
-            in_out = "INPUT"
-            node.inputs.remove(socket)
-            s = node.inputs.new(new_bl_idname, new_name, identifier=new_name, use_multi_input=multi)
-            node.inputs.move(len(node.inputs)-1, socket_index)
-            socket_map = socket_maps[0]
-        socket_map[new_name] = socket_map[old_id]
-        if new_name != old_id: del socket_map[old_id] # sometimes rename just changes the socket type or multi
-        do_relink(node, s, socket_map)
-    for bl_idname, task in versioning_node_tasks:
-        if node.bl_idname in bl_idname: task(node)
-
+from .versioning import versioning_tasks
+def node_version_update(node):
+    do_once = True
+    do_tasks = []
+    for bl_idname, task, required_kwargs in versioning_tasks:
+        arg_map = {}
+        if 'node' in required_kwargs:
+            arg_map['node']=node
+        if node.bl_idname in bl_idname:
+            task(**arg_map)
+            if do_once:
+                print (f"Updating tree {node.id_data.name} to "
+                       f"{MANTIS_VERSION_MAJOR}.{MANTIS_VERSION_MINOR}.{MANTIS_VERSION_SUB}")
+                do_once=False
 
 def do_version_update(node_tree):
+    # set updating status for dynamic nodes to prevent bugs in socket remapping
     for node in node_tree.nodes:
-        try:
-            node_version_update(node_tree, node)
-        except Exception as e:
-            prRed(f"Error updating version in node: {node_tree.name}::{node.name}; see error:")
-            print(e)
-            pass
+        if hasattr(node, 'is_updating'):
+            node.is_updating = True
+    # run the updates that have no prerequisites
+    for node in node_tree.nodes:
+        node_version_update(node)
+    # NOTE: if future versoning tasks have prerequisites, resolve them here and update again
+    # reset the updating status for dynamic nodes
+    for node in node_tree.nodes:
+        if hasattr(node, 'is_updating'):
+            node.is_updating = False
     # increment the version at the end
     node_tree.mantis_version[0] = MANTIS_VERSION_MAJOR
     node_tree.mantis_version[1] = MANTIS_VERSION_MINOR
     node_tree.mantis_version[2] = MANTIS_VERSION_SUB
-
-
 
 @persistent
 def version_update_handler(filename):
@@ -355,7 +305,6 @@ def version_update_handler(filename):
             if (node_tree.mantis_version[0] < MANTIS_VERSION_MAJOR) or \
                (node_tree.mantis_version[1] < MANTIS_VERSION_MINOR) or \
                (node_tree.mantis_version[2] < MANTIS_VERSION_SUB):
-                print (f"Updating tree {node_tree.name} to {MANTIS_VERSION_MAJOR}.{MANTIS_VERSION_MINOR}.{MANTIS_VERSION_SUB}")
                 do_version_update(node_tree)
                 
 

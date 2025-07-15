@@ -594,36 +594,6 @@ class SchemaGroup(Node, MantisUINode):
             self.is_updating = False
             self.id_data.do_live_update = live_update # ensure this remains the same
 
-
-
-NODES_REMOVED=["xFormRootNode"]
-                 # Node bl_idname, # Socket Name
-SOCKETS_REMOVED=[("UtilityDriverVariable", "Transform Channel"),
-                 ("xFormRootNode","World Out"),
-                 ("UtilitySwitch","xForm"),
-                 ("LinkDrivenParameter", "Enable")]
-                  # Node Class           #Prior bl_idname  # prior name # new bl_idname #       new name,          # Multi
-SOCKETS_RENAMED=[ ("LinkDrivenParameter", "DriverSocket",   "Driver",     "FloatSocket",        "Value",              False),
-                  ("DeformerHook",        "IntSocket",      "Index",      "UnsignedIntSocket",  "Point Index",        False),
-                  ("SchemaConstOutput",   "IntSocket",      "Expose when N==",      "UnsignedIntSocket",  "Expose at Index", False),
-                  ("xFormBoneNode",   "BoneCollectionSocket",      "Bone Collection",      "BoneCollectionSocket",  "Bone Collection", True),]
-
-                # NODE CLASS NAME             IN_OUT    SOCKET TYPE     SOCKET NAME     INDEX   MULTI     DEFAULT
-SOCKETS_ADDED=[("DeformerMorphTargetDeform", 'INPUT', 'BooleanSocket', "Use Shape Key", 1,      False,    False),
-               ("DeformerMorphTargetDeform", 'INPUT', 'BooleanSocket', "Use Offset",    2,      False,    True),
-               ("UtilityFCurve",             'INPUT',  "eFCrvExtrapolationMode", "Extrapolation Mode", 0, False, 'CONSTANT'),
-               ("LinkCopyScale",             'INPUT',  "BooleanSocket", "Additive",     3,      False,    False),
-               ("DeformerHook",              'INPUT',  "FloatFactorSocket", "Influence",3,      False,    1.0),
-               ("DeformerHook",              'INPUT',  "UnsignedIntSocket", "Spline Index", 2,  False,    0),
-               ("DeformerHook",              'INPUT',  "BooleanSocket", "Auto-Bezier",  5,      False,    True),
-               ("UtilityCompare",            'INPUT',  "EnumCompareOperation", "Comparison", 0, False,    'EQUAL'),
-               ("UtilityMatrixFromCurve",    'INPUT',  "UnsignedIntSocket", "Spline Index",  1, False,    0),
-               ("UtilityMatricesFromCurve",  'INPUT',  "UnsignedIntSocket", "Spline Index",  1, False,    0),
-               ("UtilityPointFromCurve",     'INPUT',  "UnsignedIntSocket", "Spline Index",  1, False,    0),
-               ("LinkCopyScale",             'INPUT',  "FloatFactorSocket", "Power",    5,      False,    1.0),
-               ("xFormBoneNode",             'INPUT',  "ColorSetSocket",    "Color",    22,     False,    None,),
-               ]
-
 # replace names with bl_idnames for reading the tree and solving schemas.
 replace_types = ["NodeGroupInput", "NodeGroupOutput", "SchemaIncomingConnection",
                  "SchemaArrayInput", "SchemaArrayInputAll", "SchemaConstInput", "SchemaConstOutput",
