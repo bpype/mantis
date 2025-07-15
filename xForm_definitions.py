@@ -99,6 +99,7 @@ display_names = {
 "Custom Object Translation":'VectorSocket',
 "Custom Object Rotation":'VectorEulerSocket',
 "Color":'ColorSetSocket',
+"Inherit Color":'BoolSocket',
 }
 
 # deform_names
@@ -216,7 +217,8 @@ class xFormBoneNode(Node, xFormNode):
         self.inputs['Lock Scale'].default_value[0] = True
         self.inputs['Lock Scale'].default_value[1] = True
         self.inputs['Lock Scale'].default_value[2] = True
-
+        self.inputs['Inherit Color'].default_value[2] = True
+        
         # color
         self.use_custom_color = True
         self.color = xFormColor

@@ -128,6 +128,9 @@ xFormBoneSockets = [
     CustomColor := SockTemplate(name="Color",
             is_input=True, bl_idname='ColorSetSocket',
             category='Display',),
+    InheritColor := SockTemplate(name="Inherit Color",
+            is_input=True, bl_idname='BooleanSocket',
+            category='Display', default_value=True),
     # Deform Stuff
     BoneDeformTemplate := replace(HideRenderTemplate, name='Deform',
         category='Deform', blender_property='use_deform', default_value=False,),

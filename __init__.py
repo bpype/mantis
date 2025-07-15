@@ -18,7 +18,7 @@ from .utilities import prRed
 
 MANTIS_VERSION_MAJOR=0
 MANTIS_VERSION_MINOR=12
-MANTIS_VERSION_SUB=0
+MANTIS_VERSION_SUB=1
 
 classLists = [module.TellClasses() for module in [
  link_definitions,
@@ -264,17 +264,16 @@ def execute_handler(scene):
 from .versioning import versioning_tasks
 def node_version_update(node):
     do_once = True
-    do_tasks = []
     for bl_idname, task, required_kwargs in versioning_tasks:
         arg_map = {}
         if 'node' in required_kwargs:
             arg_map['node']=node
         if node.bl_idname in bl_idname:
-            task(**arg_map)
             if do_once:
                 print (f"Updating tree {node.id_data.name} to "
                        f"{MANTIS_VERSION_MAJOR}.{MANTIS_VERSION_MINOR}.{MANTIS_VERSION_SUB}")
                 do_once=False
+            task(**arg_map)
 
 def do_version_update(node_tree):
     # set updating status for dynamic nodes to prevent bugs in socket remapping

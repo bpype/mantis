@@ -989,10 +989,13 @@ class ColorSetSocket(MantisSocket):
         default=get_select_color(None),)
     is_valid_interface_type=False
     def draw(self, context, layout, node, text):
+        inherit_color_socket = self.node.inputs.get("Inherit Color")
         if (self.is_output == False) and (self.is_linked == True):
             layout.label(text=self.name)
         elif self.node.bl_idname in text_only_output_types:
             layout.label(text=self.name)
+        elif inherit_color_socket and inherit_color_socket.default_value == True:
+            layout.label(text='Using Inherit Color.')
         else:
             layout.prop( text='Color Set', data=self,
                         property='active_color', )

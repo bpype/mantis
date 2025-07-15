@@ -2,7 +2,7 @@
 # this will be the new versioning system, and will deprecate the old SOCKETS_ADDED and such
 
 from bpy.types import Node, NodeSocket
-from .utilities import prRed, prGreen
+from .utilities import prRed, prGreen, prPurple
 
 
 def version_upgrade_bone_0_12_0_from_older(*args, **kwargs):
@@ -19,6 +19,7 @@ def version_upgrade_bone_0_12_0_from_older(*args, **kwargs):
     try:
         collection_input_is_array = node.inputs['Bone Collection'].is_multi_input
         if not collection_input_is_array: # it must be made into an array!
+            prPurple(f"Updating \"Bone Collection\" Socket in {node.name}")
             from .utilities import get_socket_maps
             socket_maps = get_socket_maps(node)
             socket_map = socket_maps[0]
@@ -42,6 +43,7 @@ def version_upgrade_bone_0_12_0_from_older(*args, **kwargs):
             else:
                 s.default_value = socket_map_from_old_socket
         if node.inputs.get('Color') is None:
+            prPurple(f"Adding \"Color\" Socket to {node.name}")
             s = node.inputs.new('ColorSetSocket', 'Color',)
             node.inputs.move(len(node.inputs)-1, 22)
     except Exception as e:
@@ -49,7 +51,30 @@ def version_upgrade_bone_0_12_0_from_older(*args, **kwargs):
         print(e)
 
 
+def up_0_12_1_add_inherit_color(*args, **kwargs):
+    # add an inherit color input.
+    node = kwargs['node']
+    current_major_version = node.id_data.mantis_version[0]
+    current_minor_version = node.id_data.mantis_version[1]
+    current_sub_version = node.id_data.mantis_version[2]
+    if  current_major_version > 0: return# major version must be 0
+    if current_minor_version > 12: return# minor version must be 12 or less
+    if current_minor_version == 12 and current_sub_version < 1: return # sub version must be 0
+    # sub version doesn't matter since any subversion of 11 should trigger this task
+    prPurple(f"Adding \"Inherit Color\" socket to {node.name}")
+    try:
+        if node.inputs.get('Inherit Color') is None:
+            s = node.inputs.new('BooleanSocket', 'Inherit Color',)
+            node.inputs.move(len(node.inputs)-1, 23)
+            s.default_value=True
+    except Exception as e:
+        prRed(f"Error updating version in node: {node.id_data.name}::{node.name}; see error:")
+        print(e)
+
+
+
 versioning_tasks = [
     # node bl_idname    task                required keyword arguments 
     (['xFormBoneNode'], version_upgrade_bone_0_12_0_from_older, ['node'],),
+    (['xFormBoneNode'], up_0_12_1_add_inherit_color, ['node'],),
 ]

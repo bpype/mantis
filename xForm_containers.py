@@ -203,6 +203,7 @@ bone_inputs= [
          "Custom Object Translation",
          "Custom Object Rotation",
          "Color",
+         "Inherit Color",
          # Deform Stuff
          "Deform",
          "Envelope Distance",
@@ -362,36 +363,53 @@ class xFormBone(xFormNode):
         print( wrapGreen("Created Bone: ") + wrapOrange(eb.name) + wrapGreen(" in ") + wrapWhite(self.bGetParentArmature().name))
         self.executed = True
 
+    def set_bone_color(self, b, inherit_color, bContext):
+        color_values = self.evaluate_input('Color')
+        if color_values is None:
+            return
+        if inherit_color and b.parent:
+            b.color.palette=b.parent.color.palette
+            if b.color.palette == 'CUSTOM':
+                b.color.custom.active=b.parent.color.custom.active
+                b.color.custom.normal=b.parent.color.custom.normal
+                b.color.custom.select=b.parent.color.custom.select
+            return
+
+        from mathutils import Color
+        color_active = Color(color_values[:3])
+        color_normal = Color(color_values[3:6])
+        color_select = Color(color_values[6:])
+        is_theme_colors = False
+        theme = bContext.preferences.themes[0]
+        for i, color_set in enumerate(theme.bone_color_sets):
+            if  ((color_active == color_set.active) and
+                (color_normal == color_set.normal) and
+                (color_select == color_set.select) ):
+                            is_theme_colors=True; break
+        if is_theme_colors:          # add 1, not 0-indexed
+            b.color.palette = 'THEME'+str(i+1).zfill(2)
+        elif    ((color_active == theme.view_3d.bone_pose_active) and
+                (color_normal == theme.view_3d.bone_solid) and
+                (color_select == theme.view_3d.bone_pose) ):
+                        b.color.palette = 'DEFAULT'
+        else:
+            b.color.palette = 'CUSTOM'
+            b.color.custom.active=color_active
+            b.color.custom.normal=color_normal
+            b.color.custom.select=color_select
+
+
     def bFinalize(self, bContext = None):
         b = self.bGetParentArmature().data.bones[self.bObject]
         # let's do bone colors first
-        color_values = self.evaluate_input('Color')
-        try: # just in case, this shouldn't cause a failure
-            from mathutils import Color
-            color_active = Color(color_values[:3])
-            color_normal = Color(color_values[3:6])
-            color_select = Color(color_values[6:])
-            is_theme_colors = False
-            theme = bContext.preferences.themes[0]
-            for i, color_set in enumerate(theme.bone_color_sets):
-                if  ((color_active == color_set.active) and
-                    (color_normal == color_set.normal) and
-                    (color_select == color_set.select) ):
-                                is_theme_colors=True; break
-            if is_theme_colors:          # add 1, not 0-indexed
-                b.color.palette = 'THEME'+str(i+1).zfill(2)
-            elif    ((color_active == theme.view_3d.bone_pose_active) and
-                    (color_normal == theme.view_3d.bone_solid) and
-                    (color_select == theme.view_3d.bone_pose) ):
-                            b.color.palette = 'DEFAULT'
-            else:
-                b.color.palette = 'CUSTOM'
-                b.color.custom.active=color_active
-                b.color.custom.normal=color_normal
-                b.color.custom.select=color_select
-        except Exception as e:
-            prRed("WARNING: failed to set color because of error, see report below:")
-            prOrange(e)
+        inherit_color = self.evaluate_input("Inherit Color")
+        if len(self.inputs['Color'].links) > 0:
+            inherit_color = False # use the link instead
+        # try: # just in case, this shouldn't cause a failure
+        self.set_bone_color(b, inherit_color, bContext)
+        # except Exception as e:
+        #     prRed("WARNING: failed to set color because of error, see report below:")
+        #     prOrange(e)
         #
         do_bb=False
         b.bbone_x = self.evaluate_input("BBone X Size"); b.bbone_x = max(b.bbone_x, 0.0002)
