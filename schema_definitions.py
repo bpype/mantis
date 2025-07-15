@@ -29,6 +29,7 @@ def TellClasses():
 # - check what happens when these get plugged into each other
 # - probably disallow all or most of these connections in insert_link or update
 
+
 class SchemaIndex(Node, SchemaUINode):
     '''The current index of the schema execution'''
     bl_idname = 'SchemaIndex'
@@ -54,6 +55,9 @@ class SchemaArrayInput(Node, SchemaUINode):
         self.update()
 
     def update(self):
+        if self.is_updating:
+            return
+        self.is_updating = True
         # self.initialized = False
         socket_maps = get_socket_maps(self)
         if socket_maps is None:
@@ -69,6 +73,7 @@ class SchemaArrayInput(Node, SchemaUINode):
         if len(self.inputs)<1 or self.inputs[-1].bl_idname not in ["WildcardSocket"]:
             self.outputs.new('WildcardSocket', '', identifier='__extend__')
         # self.initialized = True
+        self.is_updating = False
 
 class SchemaArrayInputAll(Node, SchemaUINode):
     '''Array Inputs'''
@@ -82,7 +87,10 @@ class SchemaArrayInputAll(Node, SchemaUINode):
         self.update()
 
     def update(self):
-        # self.initialized = False
+        if self.is_updating:
+            return
+        self.is_updating = True
+        self.initialized = False
         socket_maps = get_socket_maps(self)
         if socket_maps is None:
             return
@@ -96,6 +104,8 @@ class SchemaArrayInputAll(Node, SchemaUINode):
             do_relink(self, None, output_map, in_out='OUTPUT', parent_name='Array' )
         if len(self.inputs)<1 or self.inputs[-1].bl_idname not in ["WildcardSocket"]:
             self.outputs.new('WildcardSocket', '', identifier='__extend__')
+        self.initialized = True
+        self.is_updating = False
 
 class SchemaArrayInputGet(Node, SchemaUINode):
     '''Array Inputs'''
@@ -111,7 +121,10 @@ class SchemaArrayInputGet(Node, SchemaUINode):
         self.update()
 
     def update(self):
-        # self.initialized = False
+        if self.is_updating:
+            return
+        self.is_updating = True
+        self.initialized = False
         socket_maps = get_socket_maps(self)
         if socket_maps is None:
             return
@@ -125,7 +138,8 @@ class SchemaArrayInputGet(Node, SchemaUINode):
             do_relink(self, None, output_map, in_out='OUTPUT', parent_name='Array' )
         if len(self.inputs)<1 or self.inputs[-1].bl_idname not in ["WildcardSocket"]:
             self.outputs.new('WildcardSocket', '', identifier='__extend__')
-        # self.initialized = True
+        self.initialized = True
+        self.is_updating = False
 
 class SchemaArrayOutput(Node, SchemaUINode):
     '''Array Inputs'''
@@ -139,6 +153,9 @@ class SchemaArrayOutput(Node, SchemaUINode):
         self.update()
 
     def update(self):
+        if self.is_updating:
+            return
+        self.is_updating = True
         self.initialized = False
         socket_maps = get_socket_maps(self)
         if socket_maps is None:
@@ -156,6 +173,7 @@ class SchemaArrayOutput(Node, SchemaUINode):
         for s in self.outputs:
             s.input= True
         self.initialized = True
+        self.is_updating = False
 
 class SchemaConstInput(Node, SchemaUINode):
     '''Constant Inputs'''
@@ -169,6 +187,9 @@ class SchemaConstInput(Node, SchemaUINode):
         self.update()
 
     def update(self):
+        if self.is_updating:
+            return
+        self.is_updating = True
         self.initialized = False
         socket_maps = get_socket_maps(self)
         if socket_maps is None:
@@ -184,6 +205,7 @@ class SchemaConstInput(Node, SchemaUINode):
         if len(self.inputs)<1 or self.inputs[-1].bl_idname not in ["WildcardSocket"]:
             self.outputs.new('WildcardSocket', '', identifier='__extend__')
         self.initialized = True
+        self.is_updating = False
 
 
 
@@ -199,6 +221,9 @@ class SchemaConstOutput(Node, SchemaUINode):
         self.update()
 
     def update(self):
+        if self.is_updating:
+            return
+        self.is_updating = True
         self.initialized = False
         socket_maps = get_socket_maps(self)
         if socket_maps is None:
@@ -219,6 +244,7 @@ class SchemaConstOutput(Node, SchemaUINode):
             s.input= True
         
         self.initialized = True
+        self.is_updating = False
 
 
 
@@ -234,6 +260,9 @@ class SchemaOutgoingConnection(Node, SchemaUINode):
         self.update()
 
     def update(self):
+        if self.is_updating:
+            return
+        self.is_updating = True
         self.initialized = False
         socket_maps = get_socket_maps(self)
         if socket_maps is None:
@@ -251,6 +280,7 @@ class SchemaOutgoingConnection(Node, SchemaUINode):
         for s in self.outputs:
             s.input= True
         self.initialized = True
+        self.is_updating = False
 
 
 
@@ -266,6 +296,9 @@ class SchemaIncomingConnection(Node, SchemaUINode):
         self.update()
 
     def update(self):
+        if self.is_updating:
+            return
+        self.is_updating = True
         self.initialized = False
         socket_maps = get_socket_maps(self)
         if socket_maps is None:
@@ -281,6 +314,7 @@ class SchemaIncomingConnection(Node, SchemaUINode):
         if len(self.inputs)<1 or self.inputs[-1].bl_idname not in ["WildcardSocket"]:
             self.outputs.new('WildcardSocket', '', identifier='__extend__')
         self.initialized = True
+        self.is_updating = False
 
 
 for cls in TellClasses():

@@ -280,6 +280,7 @@ class MantisUINode:
             
 class SchemaUINode(MantisUINode):
     mantis_node_library='.schema_containers'
+    is_updating:BoolProperty(default=False)
     @classmethod
     def poll(cls, ntree):
         return (ntree.bl_idname in ['SchemaTree'])
