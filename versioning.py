@@ -161,7 +161,11 @@ def up_0_12_1_add_inherit_color(*args, **kwargs):
     # sub version doesn't matter since any subversion of 11 should trigger this task
     prPurple(f"Adding \"Inherit Color\" socket to {node.name}")
     try:
-        if node.inputs.get('Inherit Color') is None:
+        inh_color = node.inputs.get('Inherit Color')
+        if inh_color.bl_idname != 'BooleanSocket':
+            node.inputs.remove(inh_color)
+            inh_color = None
+        if inh_color is None:
             s = node.inputs.new('BooleanSocket', 'Inherit Color',)
             node.inputs.move(len(node.inputs)-1, 23)
             s.default_value=True
