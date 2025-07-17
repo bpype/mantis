@@ -99,7 +99,7 @@ display_names = {
 "Custom Object Translation":'VectorSocket',
 "Custom Object Rotation":'VectorEulerSocket',
 "Color":'ColorSetSocket',
-"Inherit Color":'BoolSocket',
+"Inherit Color":'BooleanSocket',
 }
 
 # deform_names
