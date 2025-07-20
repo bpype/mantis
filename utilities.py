@@ -609,10 +609,10 @@ def project_point_to_plane(point, origin, normal):
 # This is really, really stupid way to do this
 def gen_nc_input_for_data(socket):
     # Class List #TODO deduplicate
-    from . import xForm_containers, link_containers, misc_nodes, primitives_containers, deformer_containers, math_containers, schema_containers
+    from . import xForm_nodes, link_nodes, misc_nodes, primitives_nodes, deformer_nodes, math_nodes, schema_nodes
     from .internal_containers import NoOpNode
     classes = {}
-    for module in [xForm_containers, link_containers, misc_nodes, primitives_containers, deformer_containers, math_containers, schema_containers]:
+    for module in [xForm_nodes, link_nodes, misc_nodes, primitives_nodes, deformer_nodes, math_nodes, schema_nodes]:
         for cls in module.TellClasses():
             classes[cls.__name__] = cls
     #
@@ -766,7 +766,7 @@ def bind_extracted_spline_to_curve(new_ob, curve):
     # now, weirdly enough - we can't use parenting very easily because Blender
     # defines the parent on a curve relative to the evaluated path animation
     # Setting the inverse matrix is too much work. Use Copy Transforms instead.
-    from .xForm_containers import reset_object_data
+    from .xForm_nodes import reset_object_data
     reset_object_data(new_ob)
     c = new_ob.constraints.new("COPY_TRANSFORMS"); c.target=curve
     new_ob.parent=curve

@@ -2,14 +2,14 @@ from . import ( ops_nodegroup,
                 ops_ui, 
                 base_definitions,
                 socket_definitions,
-                link_definitions,
-                xForm_definitions,
+                link_nodes_ui,
+                xForm_nodes_ui,
                 misc_nodes_ui,
-                primitives_definitions,
-                deformer_definitions,
-                math_definitions,
+                primitives_nodes_ui,
+                deformer_nodes_ui,
+                math_nodes_ui,
                 i_o,
-                schema_definitions,
+                schema_nodes_ui,
                 menu_classes,
               )
 from .ops_generate_tree import GenerateMantisTree
@@ -21,17 +21,17 @@ MANTIS_VERSION_MINOR=12
 MANTIS_VERSION_SUB=5
 
 classLists = [module.TellClasses() for module in [
- link_definitions,
- xForm_definitions,
+ link_nodes_ui,
+ xForm_nodes_ui,
  misc_nodes_ui,
  socket_definitions,
  ops_nodegroup,
  ops_ui,
- primitives_definitions,
- deformer_definitions,
- math_definitions,
+ primitives_nodes_ui,
+ deformer_nodes_ui,
+ math_nodes_ui,
  i_o,
- schema_definitions,
+ schema_nodes_ui,
  base_definitions,
  menu_classes,
 ]]
@@ -106,7 +106,7 @@ link_relationship_category = [
         NodeItem("LinkInheritConstraint"),
         NodeItem("LinkArmature"),
     ]
-deformer_category=[NodeItem(cls.bl_idname) for cls in deformer_definitions.TellClasses()]
+deformer_category=[NodeItem(cls.bl_idname) for cls in deformer_nodes_ui.TellClasses()]
 xForm_category = [
         NodeItem("xFormGeometryObject"),
         NodeItem("xFormBoneNode"),
@@ -197,7 +197,7 @@ node_categories = [
     MantisGroupCategory('GROUP_INTERFACE', "Group In/Out", items=group_interface_category),
 ]
 
-schema_category=[NodeItem(cls.bl_idname) for cls in schema_definitions.TellClasses()]
+schema_category=[NodeItem(cls.bl_idname) for cls in schema_nodes_ui.TellClasses()]
 schema_categories = [
     SchemaNodeCategory('SCHEMA_SCHEMA', "Schema", items=schema_category),
 ]

@@ -119,5 +119,5 @@ class MathStaticVectorNode(Node, MantisUINode):
 
 # Set up the class property that ties the UI classes to the Mantis classes.
 for cls in TellClasses():
-    cls.mantis_node_library='.math_containers'
+    cls.mantis_node_library='.math_nodes'
     cls.set_mantis_class()

@@ -1,5 +1,5 @@
 from .node_container_common import *
-from .xForm_containers import xFormGeometryObject, xFormObjectInstance
+from .xForm_nodes import xFormGeometryObject, xFormObjectInstance
 from .misc_nodes import InputExistingGeometryObject
 from .base_definitions import MantisNode, MantisSocketTemplate
 from .utilities import (prRed, prGreen, prPurple, prWhite, prOrange,
@@ -111,10 +111,10 @@ class DeformerArmature(MantisDeformerNode):
         else:
             trace_xForm_back(self, socket)
     
-    # DUPLICATED FROM xForm_containers::xFormBone 
+    # DUPLICATED FROM xForm_nodes::xFormBone 
     # DEDUP HACK HACK HACK HACK HACK
     def bGetParentArmature(self):
-        from .xForm_containers import xFormArmature
+        from .xForm_nodes import xFormArmature
         from .misc_nodes import InputExistingGeometryObject
         from bpy.types import Object
         if (trace := trace_single_line(self, "Armature Object")[0] ) :

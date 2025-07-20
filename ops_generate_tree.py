@@ -231,7 +231,7 @@ def fill_parameters(node, c, context):
         node.inputs["XZ Scale Mode"].default_value = c.xz_scale_mode
     elif (c.type == 'TRANSFORM'):
         # I can't be arsed to do all this work..
-        from .link_containers import transformation_props_sockets as props
+        from .link_nodes import transformation_props_sockets as props
         for prop, (sock_name, _unused) in props.items():
             if "from" in prop:
                 if prop in ["map_from"] or "to" in prop:

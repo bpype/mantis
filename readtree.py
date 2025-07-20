@@ -49,7 +49,7 @@ def reroute_links_grpout(nc, all_nc):
 
 # FIXME I don't think these signatures are unique.
 def insert_lazy_parents(nc):
-    from .link_containers import LinkInherit
+    from .link_nodes import LinkInherit
     from .base_definitions import NodeLink
     inherit_nc = None
     if nc.inputs["Relationship"].is_connected:

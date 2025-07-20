@@ -343,7 +343,7 @@ class xFormObjectInstance(Node, xFormNode):
             if nc:
                 self.inputs['Name'].display_text = nc.evaluate_input("Name")
 
-from .xForm_containers import xFormCurvePinSockets
+from .xForm_nodes import xFormCurvePinSockets
 class xFormCurvePin(Node, xFormNode):
     """"A node representing a curve pin"""
     bl_idname = "xFormCurvePin"

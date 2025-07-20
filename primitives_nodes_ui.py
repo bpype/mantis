@@ -42,5 +42,5 @@ class GeometryLattice(Node, MantisUINode):
 
 
 for cls in TellClasses():
-    cls.mantis_node_library='.primitives_containers'
+    cls.mantis_node_library='.primitives_nodes'
     cls.set_mantis_class()

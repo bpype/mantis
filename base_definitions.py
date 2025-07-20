@@ -279,26 +279,26 @@ class MantisUINode:
                 socket.display_shape = 'SQUARE_DOT'
             
 class SchemaUINode(MantisUINode):
-    mantis_node_library='.schema_containers'
+    mantis_node_library='.schema_nodes'
     is_updating:BoolProperty(default=False)
     @classmethod
     def poll(cls, ntree):
         return (ntree.bl_idname in ['SchemaTree'])
 
 class LinkNode(MantisUINode):
-    mantis_node_library='.link_containers'
+    mantis_node_library='.link_nodes'
     @classmethod
     def poll(cls, ntree):
         return (ntree.bl_idname in ['MantisTree', 'SchemaTree'])
     
 class xFormNode(MantisUINode):
-    mantis_node_library='.xForm_containers'
+    mantis_node_library='.xForm_nodes'
     @classmethod
     def poll(cls, ntree):
         return (ntree.bl_idname in ['MantisTree', 'SchemaTree'])
 
 class DeformerNode(MantisUINode):
-    mantis_node_library='.deformer_containers'
+    mantis_node_library='.deformer_nodes'
     @classmethod
     def poll(cls, ntree):
         return (ntree.bl_idname in ['MantisTree', 'SchemaTree'])

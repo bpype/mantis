@@ -712,7 +712,7 @@ class xFormGeometryObject(xFormNode):
         # NOW: find out if we need to duplicate the object data.
         dupe_data=False
         node_line = trace_single_line(self, "Deformer")[0]
-        from .deformer_containers import DeformerHook
+        from .deformer_nodes import DeformerHook
         for deformer in node_line:
             if isinstance(deformer, DeformerHook) and  \
                deformer.evaluate_input("Affect Curve Radius") == True and \
