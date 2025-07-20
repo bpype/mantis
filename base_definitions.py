@@ -325,7 +325,6 @@ def should_remove_socket(node, socket):
             id_found = True; break
     return not id_found
 
-
 # TODO: try to check identifiers instead of name.
 def node_group_update(node, force = False):
     if not node.is_updating:
@@ -360,14 +359,14 @@ def node_group_update(node, force = False):
                 found_out.append(item.identifier)
                 if (indices_out[s.identifier]!=item.index): update_output=True; continue
                 if update_output: continue
-                if s.bl_idname != item.socket_type: update_output = True; continue
+                if s.bl_idname != item.bl_socket_idname: update_output = True; continue
             else: update_output = True; continue
         else:
             if s:= identifiers_in.get(item.identifier): # if the requested input doesn't exist, update
                 found_in.append(item.identifier)
                 if (indices_in[s.identifier]!=item.index): update_input=True; continue
                 if update_input: continue # done here
-                if s.bl_idname != item.socket_type: update_input = True; continue
+                if s.bl_idname != item.bl_socket_idname: update_input = True; continue
             else: update_input = True; continue
     
     # Schema has an extra input for Length and for Extend.
@@ -449,7 +448,7 @@ def node_group_update(node, force = False):
                     do_relink(node, socket, socket_map, item.in_out)
                 else:
                     for has_socket in socket_collection:
-                        if has_socket.bl_idname == item.socket_type and \
+                        if has_socket.bl_idname == item.bl_socket_idname and \
                             has_socket.name == item.name:
                             reorder_collection.append((has_socket, counter))
                             break
@@ -459,12 +458,33 @@ def node_group_update(node, force = False):
                 socket = relink_socket_map_add_socket(node, socket_collection, item)
             counter += 1
 
+        # TODO: de-duplicate this hideous stuff
         for item in node.node_tree.interface.items_tree:
             if item.item_type != "SOCKET": continue
             if (item.in_out == 'INPUT' and update_input):
-                update_group_sockets(item, True)
+                # check and see if it exists... should only happen in curves on startup
+                if item.bl_socket_idname in ['EnumCurveSocket']:
+                    for exists in node.inputs: # NOTE: check if the socket was not deleted
+                        if exists.identifier == item.identifier:
+                            # this happens for curve inputs because of some shennanigans with how
+                            # blender loads IDs - I can't set the ID until the file has loaded
+                            # so I have to avoid touching the socket until then...
+                            break
+                    else:
+                        update_group_sockets(item, True)
+                else:
+                    update_group_sockets(item, True)
+                input_index += 1
             if (item.in_out == 'OUTPUT' and update_output):
-                update_group_sockets(item, False)
+                if item.bl_socket_idname in ['EnumCurveSocket']: # LOOK up there at the comment!
+                    for exists in node.outputs:
+                        if exists.identifier == item.identifier:
+                            break
+                    else:
+                        update_group_sockets(item, True)
+                else:
+                    update_group_sockets(item, False)
+                output_index += 1
 
         both_reorders = zip([reorder_me_input, reorder_me_output], [node.inputs, node.outputs])
         for reorder_task, collection in both_reorders:
