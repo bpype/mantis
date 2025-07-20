@@ -133,7 +133,7 @@ class LinkCopyLocation(MantisLinkNode):
         self.init_parameters(additional_parameters=additional_parameters)
         self.set_traverse([("Input Relationship", "Output Relationship")])
 
-    def bExecute(self, context):
+    def bRelationshipPass(self, context):
         prepare_parameters(self)
         for xf in self.GetxForm():
             c = xf.bGetObject().constraints.new('COPY_LOCATION')
@@ -158,7 +158,7 @@ class LinkCopyRotation(MantisLinkNode):
         self.init_parameters(additional_parameters=additional_parameters)
         self.set_traverse([("Input Relationship", "Output Relationship")])
 
-    def bExecute(self, context):
+    def bRelationshipPass(self, context):
         prepare_parameters(self)
         for xf in self.GetxForm():
             c = xf.bGetObject().constraints.new('COPY_ROTATION')
@@ -192,7 +192,7 @@ class LinkCopyScale(MantisLinkNode):
         self.init_parameters(additional_parameters=additional_parameters)
         self.set_traverse([("Input Relationship", "Output Relationship")])
 
-    def bExecute(self, context):
+    def bRelationshipPass(self, context):
         prepare_parameters(self)
         for xf in self.GetxForm():
             c = xf.bGetObject().constraints.new('COPY_SCALE')
@@ -231,7 +231,7 @@ class LinkCopyTransforms(MantisLinkNode):
         self.init_parameters(additional_parameters=additional_parameters)
         self.set_traverse([("Input Relationship", "Output Relationship")])
 
-    def bExecute(self, context):
+    def bRelationshipPass(self, context):
         prepare_parameters(self)
         for xf in self.GetxForm():
             c = xf.bGetObject().constraints.new('COPY_TRANSFORMS')
@@ -271,7 +271,7 @@ class LinkTransformation(MantisLinkNode):
             return self.update_socket_value(socket_name, ui_socket.default_value)
         return super().ui_modify_socket(ui_socket, socket_name)
 
-    def bExecute(self, context):
+    def bRelationshipPass(self, context):
         prepare_parameters(self)
         for xf in self.GetxForm():
             c = xf.bGetObject().constraints.new('TRANSFORM')
@@ -321,7 +321,7 @@ class LinkLimitLocation(MantisLinkNode):
         self.init_parameters(additional_parameters={ "Name":None })
         self.set_traverse([("Input Relationship", "Output Relationship")])
 
-    def bExecute(self, context):
+    def bRelationshipPass(self, context):
         prepare_parameters(self)
         for xf in self.GetxForm():
             c = xf.bGetObject().constraints.new('LIMIT_LOCATION')
@@ -342,7 +342,7 @@ class LinkLimitRotation(MantisLinkNode):
         self.init_parameters(additional_parameters={ "Name":None })
         self.set_traverse([("Input Relationship", "Output Relationship")])
 
-    def bExecute(self, context):
+    def bRelationshipPass(self, context):
         prepare_parameters(self)
         for xf in self.GetxForm():
             c = xf.bGetObject().constraints.new('LIMIT_ROTATION')
@@ -364,7 +364,7 @@ class LinkLimitScale(MantisLinkNode):
         self.init_parameters(additional_parameters={ "Name":None })
         self.set_traverse([("Input Relationship", "Output Relationship")])
 
-    def bExecute(self, context):
+    def bRelationshipPass(self, context):
         prepare_parameters(self)
         for xf in self.GetxForm():
             c = xf.bGetObject().constraints.new('LIMIT_SCALE')
@@ -386,7 +386,7 @@ class LinkLimitDistance(MantisLinkNode):
         self.init_parameters(additional_parameters={ "Name":None })
         self.set_traverse([("Input Relationship", "Output Relationship")])
 
-    def bExecute(self, context):
+    def bRelationshipPass(self, context):
         prepare_parameters(self)
         for xf in self.GetxForm():
             print(wrapGreen("Creating ")+wrapWhite("Limit Distance")+
@@ -410,7 +410,7 @@ class LinkStretchTo(MantisLinkNode):
         self.init_parameters(additional_parameters={ "Name":None })
         self.set_traverse([("Input Relationship", "Output Relationship")])
 
-    def bExecute(self, context):
+    def bRelationshipPass(self, context):
         prepare_parameters(self)
         for xf in self.GetxForm():
             print(wrapGreen("Creating ")+wrapWhite("Stretch-To")+
@@ -435,7 +435,7 @@ class LinkDampedTrack(MantisLinkNode):
         self.init_parameters(additional_parameters={ "Name":None })
         self.set_traverse([("Input Relationship", "Output Relationship")])
 
-    def bExecute(self, context):
+    def bRelationshipPass(self, context):
         prepare_parameters(self)
         for xf in self.GetxForm():
             print(wrapGreen("Creating ")+wrapWhite("Damped Track")+
@@ -456,7 +456,7 @@ class LinkLockedTrack(MantisLinkNode):
         self.init_parameters(additional_parameters={"Name":None })
         self.set_traverse([("Input Relationship", "Output Relationship")])
 
-    def bExecute(self, context):
+    def bRelationshipPass(self, context):
         prepare_parameters(self)
         for xf in self.GetxForm():
             print(wrapGreen("Creating ")+wrapWhite("Locked Track")+
@@ -477,7 +477,7 @@ class LinkTrackTo(MantisLinkNode):
         self.init_parameters(additional_parameters={"Name":None })
         self.set_traverse([("Input Relationship", "Output Relationship")])
 
-    def bExecute(self, context):
+    def bRelationshipPass(self, context):
         prepare_parameters(self)
         for xf in self.GetxForm():
             print(wrapGreen("Creating ")+wrapWhite("Track-To")+
@@ -498,7 +498,7 @@ class LinkInheritConstraint(MantisLinkNode):
         self.init_parameters(additional_parameters={"Name":None })
         self.set_traverse([("Input Relationship", "Output Relationship")])
 
-    def bExecute(self, context):
+    def bRelationshipPass(self, context):
         prepare_parameters(self)
         for xf in self.GetxForm():
             print(wrapGreen("Creating ")+wrapWhite("Child-Of")+
@@ -657,7 +657,7 @@ class LinkInverseKinematics(MantisLinkNode):
             if error<0: lower_bounds=try_angle
             i+=1
 
-    def bExecute(self, context):
+    def bRelationshipPass(self, context):
         prepare_parameters(self)
         for xf in self.GetxForm():
             print(wrapGreen("Creating ")+wrapOrange("Inverse Kinematics")+
@@ -722,7 +722,7 @@ class LinkDrivenParameter(MantisLinkNode):
         self.init_parameters(additional_parameters={ "Name":None })
         self.set_traverse([("Input Relationship", "Output Relationship")])
 
-    def bExecute(self, bContext = None,):
+    def bRelationshipPass(self, bContext = None,):
         prepare_parameters(self)
         prGreen("Executing Driven Parameter node")
         prop = self.evaluate_input("Parameter")
@@ -777,7 +777,7 @@ class LinkArmature(MantisLinkNode):
         self.set_traverse([("Input Relationship", "Output Relationship")])
         setup_custom_props(self) # <-- this takes care of the runtime-added sockets
 
-    def bExecute(self, bContext = None,):
+    def bRelationshipPass(self, bContext = None,):
         prepare_parameters(self)
         for xf in self.GetxForm():
             print(wrapGreen("Creating ")+wrapOrange("Armature")+
@@ -816,7 +816,7 @@ class LinkSplineIK(MantisLinkNode):
         self.init_parameters(additional_parameters={"Name":None })
         self.set_traverse([("Input Relationship", "Output Relationship")])
 
-    def bExecute(self, bContext = None,):
+    def bRelationshipPass(self, bContext = None,):
         prepare_parameters(self)
         if not self.inputs['Target'].is_linked:
             raise GraphError(f"ERROR: {self} is not connected to a target curve.")
@@ -850,7 +850,7 @@ class LinkFloor(MantisLinkNode):
         self.init_parameters(additional_parameters={"Name":None })
         self.set_traverse([("Input Relationship", "Output Relationship")])
 
-    def bExecute(self, bContext = None,):
+    def bRelationshipPass(self, bContext = None,):
         prepare_parameters(self)
         for xf in self.GetxForm():
             print(wrapGreen("Creating ")+wrapOrange("Floor")+

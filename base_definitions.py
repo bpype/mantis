@@ -928,10 +928,13 @@ class MantisNode:
             if hasattr(constraint_or_deformer, "subtarget"):
                 constraint_or_deformer.subtarget = subtarget
 
+# PASSES DEFINED HERE!
     def bPrepare(self, bContext=None):
-        return
-    def bExecute(self, bContext=None):
-        return
+        return # This one runs BEFORE anything else
+    def bTransformPass(self, bContext=None):
+        return # This one runs in EDIT MODE
+    def bRelationshipPass(self, bContext=None):
+        return # This one runs in POSE MODE
     def bFinalize(self, bContext=None):
         return
     def bModifierApply(self, bContext=None):

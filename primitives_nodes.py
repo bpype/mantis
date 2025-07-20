@@ -49,7 +49,7 @@ class CirclePrimitive(PrimitiveNode):
             bObject = data.meshes.get(self.evaluate_input("Name"))
         return bObject
         
-    def bExecute(self, bContext = None,):
+    def bTransformPass(self, bContext = None,):
         # Get the datablock
         data = self.bGetObject()
         import bpy

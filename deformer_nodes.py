@@ -129,7 +129,7 @@ class DeformerArmature(MantisDeformerNode):
         return None
         #should do the trick...
 
-    def bExecute(self, bContext = None,):
+    def bRelationshipPass(self, bContext = None,):
         self.executed = True
     
     def initialize_vgroups(self, xf):
@@ -363,7 +363,7 @@ class DeformerHook(MantisDeformerNode):
                 driver['vars'].append(var1)
         CreateDrivers([driver])
             
-    def bExecute(self, bContext = None,):
+    def bRelationshipPass(self, bContext = None,):
         self.executed = True
 
     def bFinalize(self, bContext=None):
@@ -468,7 +468,7 @@ class DeformerMorphTarget(MantisDeformerNode):
         raise GraphError("%s is not connected to an upstream xForm" % self)
 
 
-    def bExecute(self, bContext = None,):
+    def bRelationshipPass(self, bContext = None,):
         prGreen("Executing Morph Target Node")
 
         ob = None; relative = None
@@ -745,7 +745,7 @@ class DeformerSurfaceDeform(MantisDeformerNode):
         else:
             trace_xForm_back(self, socket)
     
-    def bExecute(self, bContext = None,):
+    def bRelationshipPass(self, bContext = None,):
         self.executed = True
          
     def bFinalize(self, bContext=None):
@@ -782,7 +782,7 @@ class DeformerMeshDeform(MantisDeformerNode):
         else:
             trace_xForm_back(self, socket)
     
-    def bExecute(self, bContext = None,):
+    def bRelationshipPass(self, bContext = None,):
         self.executed = True
          
     def bFinalize(self, bContext=None):
@@ -818,7 +818,7 @@ class DeformerLatticeDeform(MantisDeformerNode):
         else:
             trace_xForm_back(self, socket)
     
-    def bExecute(self, bContext = None,):
+    def bRelationshipPass(self, bContext = None,):
         self.executed = True
          
     def bFinalize(self, bContext=None):
@@ -850,7 +850,7 @@ class DeformerSmoothCorrectiveDeform(MantisDeformerNode):
         else:
             trace_xForm_back(self, socket)
     
-    def bExecute(self, bContext = None,):
+    def bRelationshipPass(self, bContext = None,):
         self.executed = True
          
     def bFinalize(self, bContext=None):

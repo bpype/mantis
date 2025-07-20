@@ -862,7 +862,7 @@ class UtilityDriverVariable(MantisNode):
                 return node #this will fetch the first one, that's good!
         return None
 
-    def bExecute(self, bContext = None,):
+    def bRelationshipPass(self, bContext = None,):
         prepare_parameters(self)
         #prPurple ("Executing Driver Variable Node")
         xF1 = self.GetxForm()
@@ -966,7 +966,7 @@ class UtilityFCurve(MantisNode):
     def evaluate_input(self, input_name):
         return super().evaluate_input(input_name)
 
-    def bExecute(self, bContext = None,):
+    def bTransformPass(self, bContext = None,):
         prepare_parameters(self)
         extrap_mode = self.evaluate_input("Extrapolation Mode")
         keys = [] # ugly but whatever
@@ -1016,7 +1016,7 @@ class UtilityDriver(MantisNode):
         self.parameters["Driver"]=MantisDriver()
         self.prepared=True
     
-    def bExecute(self, bContext = None,):
+    def bRelationshipPass(self, bContext = None,):
         prepare_parameters(self)
         from .drivers import MantisDriver
         #prPurple("Executing Driver Node")
@@ -1094,7 +1094,7 @@ class UtilitySwitch(MantisNode):
         self.parameters["Driver"]=MantisDriver()
         self.prepared=True
 
-    def bExecute(self, bContext = None,):
+    def bRelationshipPass(self, bContext = None,):
         #prepare_parameters(self)
         #prPurple ("Executing Switch Node")
         xForm = self.GetxForm()
@@ -1926,7 +1926,7 @@ class UtilityPrint(MantisNode):
             print("Preparation phase: ", wrapWhite(self), wrapGreen(my_input))
         self.prepared = True
 
-    def bExecute(self, bContext = None,):
+    def bTransformPass(self, bContext = None,):
         if my_input := self.evaluate_input("Input"):
             print("Execution phase: ", wrapWhite(self), wrapGreen(my_input))
         self.executed = True

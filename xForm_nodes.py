@@ -95,7 +95,7 @@ class xFormArmature(xFormNode):
         self.parameters['Matrix'] = get_matrix(self)
         self.prepared = True
 
-    def bExecute(self, bContext = None,):
+    def bTransformPass(self, bContext = None,):
         # from .utilities import get_node_prototype
         
         import bpy
@@ -289,7 +289,7 @@ class xFormBone(xFormNode):
         self.parameters['Matrix'] = get_matrix(self)
         self.prepared = True
     
-    def bExecute(self, bContext = None,): #possibly will need to pass context?
+    def bTransformPass(self, bContext = None,): #possibly will need to pass context?
         import bpy
         from mathutils import Vector
         if not (name := self.evaluate_input("Name")):
@@ -609,7 +609,7 @@ class xFormBone(xFormNode):
 
         evaluate_sockets(self, pb, props_sockets)
 
-        # this could probably be moved to bExecute
+        # this could probably be moved to bTransformPass
         props_sockets = {
             'hide'      : ("Hide", False),
             'show_wire' : ("Custom Object Wireframe", False),
@@ -742,13 +742,13 @@ class xFormGeometryObject(xFormNode):
         self.bObject.matrix_world = matrix
         self.prepared = True
 
-    def bExecute(self, bContext = None,):
+    def bTransformPass(self, bContext = None,):
         try:
             bContext.collection.objects.link(self.bObject)
         except RuntimeError: #already in; but a dangerous thing to pass.
             pass
         self.has_shape_keys = False
-        # putting this in bExecute simply prevents it from being run more than once.
+        # putting this in bTransformPass simply prevents it from being run more than once.
         # maybe I should do that with the rest of bPrepare, too.
         props_sockets = {
             'hide_viewport'    : ("Hide in Viewport", False),
@@ -814,13 +814,13 @@ class xFormObjectInstance(xFormNode):
         self.bObject.matrix_world = matrix
         self.prepared = True
 
-    def bExecute(self, bContext = None,):
+    def bTransformPass(self, bContext = None,):
         try:
             bContext.collection.objects.link(self.bObject)
         except RuntimeError: #already in; but a dangerous thing to pass.
             pass
         self.has_shape_keys = False
-        # putting this in bExecute simply prevents it from being run more than once.
+        # putting this in bTransformPass simply prevents it from being run more than once.
         # maybe I should do that with the rest of bPrepare, too.
         props_sockets = {
             'hide_viewport'    : ("Hide in Viewport", False),

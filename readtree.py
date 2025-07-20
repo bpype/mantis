@@ -556,7 +556,7 @@ def execute_tree(nodes, base_tree, context, error_popups = False):
                         if not n.prepared:
                             n.bPrepare(context)
                         if not n.executed:
-                            n.bExecute(context)
+                            n.bTransformPass(context)
                         if (n.__class__.__name__ == "xFormArmature" ):
                             ob = n.bGetObject()
                             switch_me.append(ob)
@@ -584,7 +584,7 @@ def execute_tree(nodes, base_tree, context, error_popups = False):
                 if not n.prepared:
                     n.bPrepare(context)
                 if not n.executed:
-                    n.bExecute(context)
+                    n.bRelationshipPass(context)
             except Exception as e:
                 e = execution_error_cleanup(n, e, show_error=error_popups)
                 if error_popups == False:
