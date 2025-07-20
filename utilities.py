@@ -220,9 +220,9 @@ def relink_socket_map_add_socket(node, socket_collection, item, in_out=None,):
     if not in_out: in_out=item.in_out
     if node.bl_idname in ['MantisSchemaGroup'] and item.parent and item.parent.name == 'Array':
         multi = True if in_out == 'INPUT' else False
-        s = socket_collection.new(type=item.socket_type, name=item.name, identifier=item.identifier,  use_multi_input=multi)
+        s = socket_collection.new(type=item.bl_socket_idname, name=item.name, identifier=item.identifier,  use_multi_input=multi)
     else:
-        s = socket_collection.new(type=item.socket_type, name=item.name, identifier=item.identifier)
+        s = socket_collection.new(type=item.bl_socket_idname, name=item.name, identifier=item.identifier)
     if item.parent.name == 'Array': s.display_shape = 'SQUARE_DOT'
     elif item.parent.name == 'Constant': s.display_shape='CIRCLE_DOT'
     return s

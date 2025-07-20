@@ -217,7 +217,7 @@ class xFormBoneNode(Node, xFormNode):
         self.inputs['Lock Scale'].default_value[0] = True
         self.inputs['Lock Scale'].default_value[1] = True
         self.inputs['Lock Scale'].default_value[2] = True
-        self.inputs['Inherit Color'].default_value[2] = True
+        self.inputs['Inherit Color'].default_value = True
         
         # color
         self.use_custom_color = True
