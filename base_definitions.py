@@ -95,8 +95,11 @@ class MantisTree(NodeTree):
     # prev_execution_id:StringProperty(default='')
     mantis_version:IntVectorProperty(default=[0,9,2])
     # this prevents the node group from executing on the next depsgraph update
-    # because I don't always have control over when the dg update happens.
+    # because I don't always have control over when the dg upadte happens.
     prevent_next_exec:BoolProperty(default=False)
+
+    #added to work around a bug in 4.5.0 LTS
+    interface_helper : StringProperty(default='')
     
     parsed_tree={}
 
@@ -183,8 +186,10 @@ class SchemaTree(NodeTree):
     is_exporting:BoolProperty(default=False)
 
     mantis_version:IntVectorProperty(default=[0,9,2])
+    # see the note in MantisTree
+    interface_helper : StringProperty(default='')
 
-    if (bpy.app.version < (4, 4, 0)):  # in 4.4 this leads to a crash
+    if (bpy.app.version != (4, 4, 0)):  # in 4.4 this leads to a crash
         @classmethod
         def valid_socket_type(cls : NodeTree, socket_idname: str):
             return valid_interface_types(cls, socket_idname)

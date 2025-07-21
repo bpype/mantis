@@ -477,7 +477,32 @@ def do_import(data, context):
                     continue
                 if (socket_type := s_props["socket_type"]) == "NodeSocketColor":
                     socket_type = "VectorSocket"
-                sock = tree.interface.new_socket(s_props["name"], in_out=s_props["in_out"], socket_type=socket_type)
+                if bpy.app.version != (4,5,0):
+                    sock = tree.interface.new_socket(s_props["name"], in_out=s_props["in_out"], socket_type=socket_type)
+                else: # blender 4.5.0 LTS, have to workaround a bug!
+                    prRed("There is a bug in Blender 4.5.0 regarding node-group interface sockets. Working around it.")
+                    sock = tree.interface.new_socket(s_props["name"], in_out=s_props["in_out"], socket_type='NodeSocketGeometry')
+                    import json
+                    interface_helper = {} # initialize it if it is empty
+                    if tree.interface_helper: # may be empty, check here
+                        interface_helper = json.loads(tree.interface_helper)
+                    category =  s_props.get("parent", '')
+                    if category: # annoying
+                        category = category.name
+                    error_message= 'There is a bug in Blender 4.5.0 LTS, that is why these sockets are blue.'\
+                                   ' This will be fixed in future Blender versions.'
+                    interface_helper[sock.identifier] = {
+                            'name'             : sock.name,
+                            'identifier'       : sock.identifier,
+                            'in_out'           : sock.in_out,
+                            'socket_type'      : socket_type,
+                            'bl_socket_idname' : socket_type,
+                            'mantis_socket_category' : category,
+                            'description' : error_message,
+                        }
+                    sock.description = error_message # this tells the user why the socket looks weird.
+                    tree.interface_helper = json.dumps(interface_helper)
+
                 tree_sock_id_map[s_name] = sock.identifier
                 if not (socket_position := s_props.get('position')):
                     socket_position=default_position; default_position+=1
@@ -562,7 +587,7 @@ def do_import(data, context):
                         continue
                 try:
                     if s_val["is_output"]: # for some reason it thinks the index is a string?
-                        if n.bl_idname == "MantisSchemaGroup":
+                        if n.bl_idname in "MantisSchemaGroup":
                             n.is_updating = True
                             try:
                                 socket = n.outputs.new(s_val["bl_idname"], s_val["name"], identifier=s_id)
