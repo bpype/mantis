@@ -204,10 +204,16 @@ def do_relink(node, s, map, in_out='INPUT', parent_name = ''):
                 pass
 
 def update_interface(interface, name, in_out, sock_type, parent_name):
+    from bpy.app import version as bpy_version
     if parent_name:
         if not (interface_parent := interface.items_tree.get(parent_name)):
             interface_parent = interface.new_panel(name=parent_name)
-        socket = interface.new_socket(name=name,in_out=in_out, socket_type=sock_type, parent=interface_parent)
+        if bpy_version != (4,5,0):
+            socket = interface.new_socket(name=name,in_out=in_out, socket_type=sock_type, parent=interface_parent)
+        else: # blender 4.5.0 LTS, have to workaround a bug!
+            from .versioning import workaround_4_5_0_interface_update
+            socket = workaround_4_5_0_interface_update(tree=interface.id_data, name=name, in_out=in_out,
+                                                       sock_type=sock_type, parent_name=parent_name, do_parent=True)
         if parent_name == 'Connection':
             in_out = 'OUTPUT' if in_out == 'INPUT' else 'INPUT' # flip this make sure connections always do both
             interface.new_socket(name=name,in_out=in_out, socket_type=sock_type, parent=interface_parent)
@@ -215,19 +221,6 @@ def update_interface(interface, name, in_out, sock_type, parent_name):
     else:
         raise RuntimeError(wrapRed("Cannot add interface item to tree without specifying type."))
 
-
-def socket_add_workaround_for_4_5_0_LTS(item, socket_collection, multi):
-    import json
-    tree = item.id_data
-    interface_helper = json.loads(tree.interface_helper)
-    socket_info = interface_helper.get(item.identifier)
-    if not socket_info: raise RuntimeError(f"There has been an error adding the socket {item.name}")
-    s = socket_collection.new(
-        type=socket_info['bl_socket_idname'],
-        name=socket_info['name'],
-        identifier=item.identifier,
-        use_multi_input=multi, )
-    return s
 
 # D.node_groups['Rigging Nodes'].interface.new_socket('beans', description='the b word', socket_type='NodeSocketGeometry')
 #UGLY BAD REFACTOR
@@ -239,11 +232,13 @@ def relink_socket_map_add_socket(node, socket_collection, item, in_out=None,):
         # have to work around a bug in 4.5.0 that prevents me from declaring custom socket types
         # I have arbitrarily chosen to use the NodeSocketGeometry type to signal that this one is affected.
         if bpy_version == (4, 5, 0) and item.bl_socket_idname == 'NodeSocketGeometry':
+            from .versioning import socket_add_workaround_for_4_5_0_LTS
             s = socket_add_workaround_for_4_5_0_LTS(item, socket_collection, multi)
         else:
             s = socket_collection.new(type=item.bl_socket_idname, name=item.name, identifier=item.identifier,  use_multi_input=multi)
     else:
         if bpy_version == (4, 5, 0) and item.bl_socket_idname == 'NodeSocketGeometry':
+            from .versioning import socket_add_workaround_for_4_5_0_LTS
             s = socket_add_workaround_for_4_5_0_LTS(item, socket_collection, multi=False,)
         else:
             s = socket_collection.new(type=item.bl_socket_idname, name=item.name, identifier=item.identifier)

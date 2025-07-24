@@ -20,9 +20,14 @@ no_default_value= [
 ]
 # the sockets that do not have this field do not transfer data.
 # instead, it is the link itself which is meaningful.
-
-class MantisSocket(NodeSocket):
-    is_valid_interface_type=False
+from bpy.app import version as bpy_version
+if bpy_version == (4,5,0): # THere is a bug that requires the socket type to inherit from a Blender class
+    from bpy.types import NodeSocketGeometry # so we will just inherit from NodeSocketGeometry
+    class MantisSocket(NodeSocketGeometry, NodeSocket): # even though that is kinda silly
+        is_valid_interface_type=False
+else:
+    class MantisSocket(NodeSocket):
+        is_valid_interface_type=False
     
 
 from .utilities import (prRed, prGreen, prPurple, prWhite,
@@ -841,7 +846,7 @@ class UnsignedIntSocket(MantisSocket):
     def draw_color_simple(self):
         return self.color_simple
 
-class StringSocket(bpy.types.NodeSocketString, MantisSocket):
+class StringSocket(MantisSocket):
     """Float Input socket"""
     bl_idname = 'StringSocket'
     bl_label = "String"
@@ -2227,7 +2232,7 @@ class EnumDriverType(MantisSocket):
 # eventually gonna make it to the fancy stuff
 
 
-class FloatSocket(bpy.types.NodeSocketFloat, MantisSocket):
+class FloatSocket(MantisSocket):
     """Float Input socket"""
     bl_idname = 'FloatSocket'
     bl_label = "Float"
@@ -2244,7 +2249,7 @@ class FloatSocket(bpy.types.NodeSocketFloat, MantisSocket):
     def draw_color_simple(self):
         return self.color_simple
         
-class FloatPositiveSocket(bpy.types.NodeSocketFloat, MantisSocket):
+class FloatPositiveSocket(MantisSocket):
     """Float Input socket"""
     bl_idname = 'FloatPositiveSocket'
     bl_label = "Float (Positive)"
@@ -2261,7 +2266,7 @@ class FloatPositiveSocket(bpy.types.NodeSocketFloat, MantisSocket):
     def draw_color_simple(self):
         return self.color_simple
 
-class FloatFactorSocket(bpy.types.NodeSocketFloatFactor, MantisSocket):
+class FloatFactorSocket(MantisSocket):
     '''xFrom Input Output'''
     bl_idname = 'FloatFactorSocket'
     bl_label = "Float (Factor)"
@@ -2283,7 +2288,7 @@ class FloatFactorSocket(bpy.types.NodeSocketFloatFactor, MantisSocket):
     def draw_color_simple(self):
         return self.color_simple
 
-class FloatAngleSocket(bpy.types.NodeSocketFloatAngle, MantisSocket):
+class FloatAngleSocket(MantisSocket):
     '''xFrom Input Output'''
     bl_idname = 'FloatAngleSocket'
     bl_label = "Float (Angle)"
@@ -2305,7 +2310,7 @@ class FloatAngleSocket(bpy.types.NodeSocketFloatAngle, MantisSocket):
     def draw_color_simple(self):
         return self.color_simple
 
-class VectorSocket(bpy.types.NodeSocketVectorEuler, MantisSocket):
+class VectorSocket(MantisSocket):
     """Vector Input socket"""
     bl_idname = 'VectorSocket'
     bl_label = "Vector"
@@ -2324,7 +2329,7 @@ class VectorSocket(bpy.types.NodeSocketVectorEuler, MantisSocket):
     def draw_color_simple(self):
         return self.color_simple
 
-class VectorEulerSocket(bpy.types.NodeSocketVectorEuler, MantisSocket):
+class VectorEulerSocket(MantisSocket):
     """Vector Input socket"""
     bl_idname = 'VectorEulerSocket'
     bl_label = "Euler"
@@ -2344,7 +2349,7 @@ class VectorEulerSocket(bpy.types.NodeSocketVectorEuler, MantisSocket):
     def draw_color_simple(self):
         return self.color_simple
 
-class VectorTranslationSocket(bpy.types.NodeSocketVectorTranslation, MantisSocket):
+class VectorTranslationSocket(MantisSocket):
     """Vector Input socket"""
     bl_idname = 'VectorTranslationSocket'
     bl_label = "Vector (Translation)"
@@ -2364,7 +2369,7 @@ class VectorTranslationSocket(bpy.types.NodeSocketVectorTranslation, MantisSocke
     def draw_color_simple(self):
         return self.color_simple
 
-class VectorScaleSocket(bpy.types.NodeSocketVectorXYZ, MantisSocket):
+class VectorScaleSocket(MantisSocket):
     """Vector Input socket"""
     bl_idname = 'VectorScaleSocket'
     bl_label = "Vector (Scale)"

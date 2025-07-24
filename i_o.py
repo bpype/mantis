@@ -480,28 +480,9 @@ def do_import(data, context):
                 if bpy.app.version != (4,5,0):
                     sock = tree.interface.new_socket(s_props["name"], in_out=s_props["in_out"], socket_type=socket_type)
                 else: # blender 4.5.0 LTS, have to workaround a bug!
-                    prRed("There is a bug in Blender 4.5.0 regarding node-group interface sockets. Working around it.")
-                    sock = tree.interface.new_socket(s_props["name"], in_out=s_props["in_out"], socket_type='NodeSocketGeometry')
-                    import json
-                    interface_helper = {} # initialize it if it is empty
-                    if tree.interface_helper: # may be empty, check here
-                        interface_helper = json.loads(tree.interface_helper)
-                    category =  s_props.get("parent", '')
-                    if category: # annoying
-                        category = category.name
-                    error_message= 'There is a bug in Blender 4.5.0 LTS, that is why these sockets are blue.'\
-                                   ' This will be fixed in future Blender versions.'
-                    interface_helper[sock.identifier] = {
-                            'name'             : sock.name,
-                            'identifier'       : sock.identifier,
-                            'in_out'           : sock.in_out,
-                            'socket_type'      : socket_type,
-                            'bl_socket_idname' : socket_type,
-                            'mantis_socket_category' : category,
-                            'description' : error_message,
-                        }
-                    sock.description = error_message # this tells the user why the socket looks weird.
-                    tree.interface_helper = json.dumps(interface_helper)
+                    from .versioning import workaround_4_5_0_interface_update
+                    sock = workaround_4_5_0_interface_update(tree=tree, name=name, in_out=s_props["in_out"],
+                                                            sock_type=socket_type, parent_name=s_props.get("parent", ''))
 
                 tree_sock_id_map[s_name] = sock.identifier
                 if not (socket_position := s_props.get('position')):

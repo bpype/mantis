@@ -181,3 +181,52 @@ versioning_tasks = [
     (['xFormBoneNode'], version_upgrade_bone_0_12_0_from_older, ['node'],),
     (['xFormBoneNode'], up_0_12_1_add_inherit_color, ['node'],),
 ]
+
+
+
+
+# WORKAROUNDS for bugs should go here:
+# 4.5.0 LTS valid socket types bug:
+def workaround_4_5_0_interface_update(tree, name, in_out, sock_type, parent_name, do_parent=False):
+    # TODO: dedupe this code from i_o.py
+    prRed("There is a bug in Blender 4.5.0 regarding node-group interface sockets. Working around it.")
+    sock = tree.interface.new_socket(name=name, in_out=in_out, socket_type="NodeSocketGeometry")
+    import json
+    interface_helper = {} # initialize it if it is empty
+    if tree.interface_helper: # may be empty, check here
+        interface_helper = json.loads(tree.interface_helper)
+    error_message= 'There is a bug in Blender 4.5.0 LTS, that is why these sockets are blue.'\
+                    ' This will be fixed in future Blender versions.'
+    interface_helper[sock.identifier] = {
+            'name'             : sock.name,
+            'identifier'       : sock.identifier,
+            'in_out'           : sock.in_out,
+            'socket_type'      : sock_type,
+            'bl_socket_idname' : sock_type,
+            'mantis_socket_category' : parent_name,
+            'description' : error_message,
+        }
+    sock.description = error_message # this tells the user why the socket looks weird.
+    tree.interface_helper = json.dumps(interface_helper)
+    if do_parent and (parent := tree.interface.items_tree.get(parent_name)):
+        prRed(parent.name)
+
+        tree.interface.move_to_parent(
+                                sock,
+                                parent,
+                                0, # what to do here?
+                                )
+    return sock
+
+def socket_add_workaround_for_4_5_0_LTS(item, socket_collection, multi):
+    import json
+    tree = item.id_data
+    interface_helper = json.loads(tree.interface_helper)
+    socket_info = interface_helper.get(item.identifier)
+    if not socket_info: raise RuntimeError(f"There has been an error adding the socket {item.name}")
+    s = socket_collection.new(
+        type=socket_info['bl_socket_idname'],
+        name=item.name, # in case the user has changed it
+        identifier=item.identifier,
+        use_multi_input=multi, )
+    return s

@@ -35,6 +35,8 @@ def valid_interface_types(cls : NodeTree, socket_idname : str):
     #TODO: do the versioning code to handle this so it can be in all versions
     if bpy.app.version <= (4,4,0): # should work in 4.4.1
         return socket_idname in [cls.bl_idname for cls in TellClasses()]
+    elif bpy.app.version == (4,5,0): # workaround for a BUG
+        return ['NodeSocketGeometry']
     else: # once versioning is finished this will be unnecesary.
         return socket_idname in tell_valid_bl_idnames()
 
