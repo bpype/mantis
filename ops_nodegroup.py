@@ -161,7 +161,8 @@ class MantisEditGroup(Operator):
                 # call update to force the node group to check if its tree has changed
                 # now we need to loop through the tree and update all node groups of this type.
                 from .utilities import get_all_nodes_of_type
-                for g in get_all_nodes_of_type(base_tree, "MantisNodeGroup"):
+                for g in get_all_nodes_of_type(base_tree, "MantisNodeGroup") + \
+                         get_all_nodes_of_type(base_tree, "MantisSchemaGroup"):
                     if g.node_tree == active.node_tree:
                         g.is_updating = True
                         active.is_updating = True
