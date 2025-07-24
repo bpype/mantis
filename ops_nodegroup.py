@@ -349,21 +349,41 @@ class ConnectNodeToInput(Operator):
         name="Node Input Socket",
         description="Select which of this node's sockets to recieve the connection",)
     tree_invoked : bpy.props.StringProperty(options ={'HIDDEN'})
+    world_invoked : bpy.props.StringProperty(options ={'HIDDEN'})
+    material_invoked : bpy.props.StringProperty(options ={'HIDDEN'})
     node_invoked : bpy.props.StringProperty(options ={'HIDDEN'})
 
     @classmethod
     def poll(cls, context):
-        return (any_tree_poll(context))
+        is_tree = (any_tree_poll(context))
+        is_material = False
+        if hasattr(context, 'space_data') and context.space_data.type == 'NODE_EDITOR':
+            is_material = context.space_data.node_tree.bl_idname == 'ShaderNodeTree'
+        return is_tree and not is_material # doesn't work for Material right now TODO
 
     def invoke(self, context, event):
+        self.material_invoked=''; self.world_invoked=''
         self.tree_invoked = context.active_node.id_data.name
+        if context.space_data.node_tree.bl_idname == 'ShaderNodeTree':
+            if context.space_data.shader_type == 'WORLD':
+                self.world_invoked = context.space_data.id.name
+            elif context.space_data.shader_type == 'OBJECT':
+                self.material_invoked = context.space_data.id.name
+            else:
+                return {'CANCELLED'} # what is the LINESTYLE menu? TODO
         self.node_invoked = context.active_node.name
         # we use active_node here ^ because we are comparing the active node to the selection.
         wm = context.window_manager
         return wm.invoke_props_dialog(self)
     
     def execute(self, context):
-        t = bpy.data.node_groups[self.tree_invoked]
+        if context.space_data.node_tree.bl_idname == 'ShaderNodeTree':
+            if context.space_data.shader_type == 'WORLD':
+                t = bpy.data.worlds[self.material_invoked].node_tree
+            elif context.space_data.shader_type == 'OBJECT':
+                t = bpy.data.materials[self.material_invoked].node_tree
+        else:
+            t = bpy.data.node_groups.get(self.tree_invoked)
         if hasattr(t, "is_executing"): # for Mantis trees, but this function should just work anywhere.
             t.is_executing = True
         n = t.nodes[self.node_invoked]
@@ -384,6 +404,9 @@ class ConnectNodeToInput(Operator):
                         else: connect_me = s
                         inp.location = node.location
                         inp.location.x-=200
+                    if connect_me is None:
+                        continue # I don't know how this happens.
+                    # TODO: this bit doesn't work in shader trees for some reason, fix it
                     t.links.new(input=connect_me, output=connect_to_me)
 
         if hasattr(t, "is_executing"):

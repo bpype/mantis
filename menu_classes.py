@@ -1,4 +1,4 @@
-from bpy.types import Panel
+from bpy.types import Panel, Menu
 
 def TellClasses():
     return [
@@ -35,3 +35,4 @@ class MantisActiveTreePanel(Panel):
         layout.prop(nt, "do_live_update", text='Live Updates',)
         layout.operator("mantis.invalidate_node_tree")
         layout.operator("mantis.execute_node_tree")
+        layout.operator("mantis.force_display_update", text='Force Display Update')

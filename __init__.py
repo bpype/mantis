@@ -331,6 +331,16 @@ def on_undo_post_handler(scene): # the undo will trigger a depsgraph update
             # set the tree to invalid to trigger a tree update
             # since the context data is wiped by an undo.
 
+# Function to append submenu to context menu
+def node_context_menu_draw(self, context):
+    layout = self.layout
+    layout.separator()  # Optional: Adds a separator before your submenu
+    layout.operator_context = "INVOKE_DEFAULT"
+    layout.operator("mantis.nodes_cleanup", text='Sort Selected Nodes')
+    layout.operator("mantis.connect_nodes_to_input")
+    layout.operator("mantis.select_nodes_of_type")
+    # layout.menu('NODE_MT_context_menu_mantis')
+
 def register():
     from bpy.utils import register_class
     
@@ -342,6 +352,7 @@ def register():
             raise e
     nodeitems_utils.register_node_categories('MantisNodeCategories', node_categories)
     nodeitems_utils.register_node_categories('SchemaNodeCategories', schema_categories)
+    bpy.types.NODE_MT_context_menu.append(node_context_menu_draw)
 
 
     km, kmi = init_keymaps()
@@ -361,6 +372,7 @@ def register():
 
 
 def unregister():
+    bpy.types.NODE_MT_context_menu.remove(node_context_menu_draw)
     for tree in bpy.data.node_groups: # ensure it doesn't try to update while quitting.
         if tree.bl_idname in ['MantisTree, SchemaTree']:
             tree.is_exporting=True; tree.is_executing=True
