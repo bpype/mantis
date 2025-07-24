@@ -105,7 +105,7 @@ class MantisTree(NodeTree):
     
     parsed_tree={}
 
-    if (bpy.app.version < (4, 4, 0)):  # in 4.4 this leads to a crash
+    if (bpy.app.version < (4, 4, 0) or bpy.app.version >= (4,5,0)):  # in 4.4 this leads to a crash
         @classmethod
         def valid_socket_type(cls : NodeTree, socket_idname: str):
             return valid_interface_types(cls, socket_idname)
@@ -191,7 +191,7 @@ class SchemaTree(NodeTree):
     # see the note in MantisTree
     interface_helper : StringProperty(default='')
 
-    if (bpy.app.version != (4, 4, 0)):  # in 4.4 this leads to a crash
+    if (bpy.app.version < (4, 4, 0) or bpy.app.version >= (4,5,0)):  # in 4.4 this leads to a crash
         @classmethod
         def valid_socket_type(cls : NodeTree, socket_idname: str):
             return valid_interface_types(cls, socket_idname)
