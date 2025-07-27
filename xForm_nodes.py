@@ -366,6 +366,7 @@ class xFormBone(xFormNode):
     def set_bone_color(self, b, inherit_color, bContext):
         color_values = self.evaluate_input('Color')
         if color_values is None:
+            prOrange(f"Warning: No color information found for {b.name}. This should not happen.")
             return
         if inherit_color and b.parent:
             b.color.palette=b.parent.color.palette

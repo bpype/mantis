@@ -96,8 +96,6 @@ def version_upgrade_very_old(*args, **kwargs):
             socket_map[new_name] = socket_map[old_id]
             if new_name != old_id: del socket_map[old_id] # sometimes rename just changes the socket type or multi
             do_relink(node, s, socket_map)
-        for bl_idname, task in versioning_node_tasks:
-            if node.bl_idname in bl_idname: task(node)
     except Exception as e:
         prRed(f"Error updating version in node: {node.id_data.name}::{node.name}; see error:")
         print(e)
@@ -162,7 +160,7 @@ def up_0_12_1_add_inherit_color(*args, **kwargs):
     prPurple(f"Adding \"Inherit Color\" socket to {node.name}")
     try:
         inh_color = node.inputs.get('Inherit Color')
-        if inh_color.bl_idname != 'BooleanSocket':
+        if inh_color and inh_color.bl_idname != 'BooleanSocket':
             node.inputs.remove(inh_color)
             inh_color = None
         if inh_color is None:
