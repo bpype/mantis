@@ -312,19 +312,24 @@ class InputThemeBoneColorSets(SimpleInputNode):
         self.outputs.init_sockets(outputs)
         self.init_parameters()
         # we'll go ahead and fill them here
-        from .utilities import get_node_prototype
-        ui_node = get_node_prototype(self.ui_signature, self.base_tree)
+
+    def fill_parameters(self, ui_node=None):
+        if not ui_node:
+            from .utilities import get_node_prototype
+            ui_node = get_node_prototype(self.ui_signature, self.base_tree)
         for i in range(20):
             self.parameters[f"Color {str(i).zfill(2)}"] = ui_node.outputs[i].default_value
+        return super().fill_parameters(ui_node)
 
 class InputColorSetPallete(SimpleInputNode):
     '''A node representing the theme's colors'''
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree)
-        self.node_type = "UTILITY"
-        # we'll go ahead and fill them here
-        from .utilities import get_node_prototype
-        ui_node = get_node_prototype(self.ui_signature, self.base_tree)
+    
+    def fill_parameters(self, ui_node=None):
+        if not ui_node:
+            from .utilities import get_node_prototype
+            ui_node = get_node_prototype(self.ui_signature, self.base_tree)
         from .base_definitions import MantisSocketTemplate
         outputs = []
         for o in ui_node.outputs:
@@ -333,6 +338,7 @@ class InputColorSetPallete(SimpleInputNode):
         self.init_parameters()
         for o in ui_node.outputs:
             self.parameters[o.name] = o.default_value
+        return super().fill_parameters(ui_node)
 
 class UtilityMatrixFromCurve(MantisNode):
     '''Get a matrix from a curve'''
@@ -1320,11 +1326,6 @@ class UtilityDeclareCollections(MantisNode):
     '''A node to help manage bone collections'''
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree)
-        from .utilities import get_node_prototype
-        ui_node = get_node_prototype(self.ui_signature, self.base_tree)
-        self.gen_outputs(ui_node)
-        self.init_parameters()
-        self.fill_parameters(ui_node)
         self.node_type = "UTILITY"
         self.prepared, self.executed = True, True
 
@@ -1332,17 +1333,18 @@ class UtilityDeclareCollections(MantisNode):
         super().reset_execution()
         self.prepared, self.executed = True, True
     
-    def gen_outputs(self, ui_node=None):
+    def fill_parameters(self, ui_node=None):
+        if ui_node is None:
+            from .utilities import get_node_prototype
+            ui_node = get_node_prototype(self.ui_signature, self.base_tree)
         from .base_definitions import MantisSocketTemplate as SockTemplate
         templates=[]
         for out in ui_node.outputs:
             if not (out.name in self.outputs.keys()) :
                 templates.append(SockTemplate(name=out.name,
-                        identifier=out.identifier, is_input=False,))
+                        identifier=out.identifier, is_input=False,))    
         self.outputs.init_sockets(templates)
-    
-    def fill_parameters(self, ui_node=None):
-        if ui_node is None: return
+        # now we have our parameters, fill them. This is a little inefficient I guess.
         for out in ui_node.outputs:
             self.parameters[out.name] = out.default_value
 
