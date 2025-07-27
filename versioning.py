@@ -155,7 +155,8 @@ def up_0_12_1_add_inherit_color(*args, **kwargs):
     current_sub_version = node.id_data.mantis_version[2]
     if  current_major_version > 0: return# major version must be 0
     if current_minor_version > 12: return# minor version must be 12 or less
-    if current_minor_version == 12 and current_sub_version < 1: return # sub version must be 0
+    if current_minor_version == 12 and current_sub_version < 9: return # sub version must be 8 or less
+    # I am having it do 8 or less because there was a bug in this function prior to 9
     # sub version doesn't matter since any subversion of 11 should trigger this task
     prPurple(f"Adding \"Inherit Color\" socket to {node.name}")
     try:

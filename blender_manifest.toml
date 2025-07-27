@@ -3,7 +3,7 @@ schema_version = "1.0.0"
 # Example of manifest file for a Blender extension
 # Change the values according to your extension
 id = "mantis"
-version = "0.12.8"
+version = "0.12.9"
 name = "Mantis"
 tagline = "Mantis is a rigging nodes toolkit"
 maintainer = "Nodespaghetti <josephbburg@protonmail.com>"
