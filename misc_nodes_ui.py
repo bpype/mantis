@@ -19,6 +19,7 @@ def TellClasses():
              InputStringNode,
              InputMatrixNode,
              # InputGeometryNode,
+             InputWidget,
              InputExistingGeometryObjectNode,
              InputExistingGeometryDataNode,
              InputThemeBoneColorSets,
@@ -716,6 +717,18 @@ class InputLayerMaskNode(Node, MantisUINode):
         self.outputs.new("LayerMaskInputSocket", "Layer Mask")
         self.initialized = True
 
+class InputWidget(Node, MantisUINode):
+    """Fetches a Widget from the Widget Library."""
+    bl_idname = "InputWidget"
+    bl_label = "Widget"
+    bl_icon = "NODE"
+    initialized : bpy.props.BoolProperty(default = False)
+    mantis_node_class_name=bl_idname
+    
+    def init(self, context):
+        self.init_sockets(InputWidgetSockets)
+        self.initialized = True
+    
 class InputExistingGeometryObjectNode(Node, MantisUINode):
     """Represents an existing geometry object from within the scene."""
     bl_idname = "InputExistingGeometryObject"

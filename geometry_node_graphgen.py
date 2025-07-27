@@ -126,3 +126,72 @@ def gen_object_instance_node_group():
     inp.location = (-200, 0)
     out.location = ( 200, 0)
     return ng
+
+def gen_import_obj_node_group():
+    import bpy
+    from bpy import data, types
+    from math import pi as PI
+    tree=bpy.data.node_groups.new("Import OBJ","GeometryNodeTree")
+    tree.is_modifier=True
+    tree.interface.new_socket(name="Path",description="Path to a OBJ file",in_out="INPUT",socket_type="NodeSocketString")
+    tree.interface.new_socket(name="Geometry",description="",in_out="OUTPUT",socket_type="NodeSocketGeometry")
+    Group_Input = tree.nodes.new("NodeGroupInput")
+    Group_Output = tree.nodes.new("NodeGroupOutput")
+    Import_OBJ = tree.nodes.new("GeometryNodeImportOBJ")
+    Realize_Instances = tree.nodes.new("GeometryNodeRealizeInstances")
+    Rotate_Instances = tree.nodes.new("GeometryNodeRotateInstances")
+    Rotate_Instances.inputs[2].default_value=[PI/2,0.0, 0.0] # assume standard axes
+    tree.links.new(Group_Input.outputs[0],Import_OBJ.inputs[0])
+    tree.links.new(Rotate_Instances.outputs[0],Realize_Instances.inputs[0])
+    tree.links.new(Realize_Instances.outputs[0],Group_Output.inputs[0])
+    tree.links.new(Import_OBJ.outputs[0],Rotate_Instances.inputs[0])
+    try:
+        from .utilities import SugiyamaGraph
+        SugiyamaGraph(tree, 4)
+    except: # there should not ever be a user error if this fails
+        pass
+    return tree
+
+def gen_simple_flip_modifier():
+    import bpy
+    from bpy import data, types
+    tree=bpy.data.node_groups.new("Simple Flip","GeometryNodeTree")
+    tree.is_modifier=True
+    tree.interface.new_socket(name="Geometry",description="",in_out="OUTPUT",socket_type="NodeSocketGeometry")
+    tree.interface.new_socket(name="Geometry",description="",in_out="INPUT",socket_type="NodeSocketGeometry")
+    tree.interface.new_socket(name="Flip X",description="",in_out="INPUT",socket_type="NodeSocketBool")
+    tree.interface.new_socket(name="Flip Y",description="",in_out="INPUT",socket_type="NodeSocketBool")
+    tree.interface.new_socket(name="Flip Z",description="",in_out="INPUT",socket_type="NodeSocketBool")
+    Group_Input = tree.nodes.new("NodeGroupInput")
+    Group_Output = tree.nodes.new("NodeGroupOutput")
+    Set_Position = tree.nodes.new("GeometryNodeSetPosition")
+    Position = tree.nodes.new("GeometryNodeInputPosition")
+    Combine_XYZ = tree.nodes.new("ShaderNodeCombineXYZ")
+    Map_Range = tree.nodes.new("ShaderNodeMapRange")
+    Map_Range_001 = tree.nodes.new("ShaderNodeMapRange")
+    Map_Range_002 = tree.nodes.new("ShaderNodeMapRange")
+    Map_Range.inputs[3].default_value     =  1.0
+    Map_Range_001.inputs[3].default_value =  1.0
+    Map_Range_002.inputs[3].default_value =  1.0
+    Map_Range.inputs[4].default_value     = -1.0
+    Map_Range_001.inputs[4].default_value = -1.0
+    Map_Range_002.inputs[4].default_value = -1.0
+    Vector_Math = tree.nodes.new("ShaderNodeVectorMath")
+    Vector_Math.operation = "MULTIPLY"
+    tree.links.new(Set_Position.outputs[0],Group_Output.inputs[0])
+    tree.links.new(Group_Input.outputs[0],Set_Position.inputs[0])
+    tree.links.new(Group_Input.outputs[1],Map_Range.inputs[0])
+    tree.links.new(Map_Range.outputs[0],Combine_XYZ.inputs[0])
+    tree.links.new(Map_Range_001.outputs[0],Combine_XYZ.inputs[1])
+    tree.links.new(Map_Range_002.outputs[0],Combine_XYZ.inputs[2])
+    tree.links.new(Group_Input.outputs[2],Map_Range_001.inputs[0])
+    tree.links.new(Group_Input.outputs[3],Map_Range_002.inputs[0])
+    tree.links.new(Combine_XYZ.outputs[0],Vector_Math.inputs[1])
+    tree.links.new(Position.outputs[0],Vector_Math.inputs[0])
+    tree.links.new(Vector_Math.outputs[0],Set_Position.inputs[2])
+    try:
+        from .utilities import SugiyamaGraph
+        SugiyamaGraph(tree, 4)
+    except: # there should not ever be a user error if this fails
+        pass
+    return tree

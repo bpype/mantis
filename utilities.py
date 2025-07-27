@@ -310,6 +310,63 @@ def bind_modifier_operator(modifier, operator):
             prWhite(f"Binding Deformer {modifier.name} to target {target.name}")
             operator(modifier=modifier.name)
 
+def import_widget_obj(path,):
+    from bpy.app import version as bpy_version
+    from bpy import context, data
+    from os import path as os_path
+    file_name = os_path.split(path)[-1]
+    obj_name = os_path.splitext(file_name)[0]
+    if bpy_version < (4,5,0):
+        original_active = context.active_object
+        # for blender versions prior to 4.5.0, we have to import with an operator
+        from bpy.ops import wm as wm_ops
+        ob_names_before = data.objects.keys()
+        wm_ops.obj_import(
+            filepath=path,
+            check_existing=False,
+            forward_axis='NEGATIVE_Z',
+            up_axis='Y',
+            validate_meshes=True,)
+        # just make sure the active object doesn't change
+        context.view_layer.objects.active = original_active
+        # the below is a HACK... I can find the objects in the .obj file
+        # by scanning the file for the "o" prefix and checking the name.
+        # but that may be slow if the obj is big. which would make a bad widget!
+        ob = None
+        for ob in data.objects:
+            if ob.name in ob_names_before: continue
+            return ob # return the first one, that should be the one
+        else: # no new object was found - fail.
+            # I don't expect this to happen unless there is an error in the operator.
+            raise RuntimeError(f"Failed to import {file_name}. This is probably"
+                                "a bug or a corrupted file.")
+    else:
+        prWhite(f"INFO: using Geometry Nodes to import {file_name}")
+        mesh = data.meshes.new(obj_name)
+        ob = data.objects.new(name=obj_name, object_data=mesh)
+        # we'll do a geometry nodes import
+        context.collection.objects.link(ob)
+        import_modifier = ob.modifiers.new("Import OBJ", type="NODES")
+        ng = data.node_groups.get("Import OBJ")
+        if ng is None:
+            from .geometry_node_graphgen import gen_import_obj_node_group
+            ng = gen_import_obj_node_group()
+        import_modifier.node_group = ng
+        import_modifier["Socket_0"]=path
+        return ob
+
+def import_object_from_file(path):
+    # first let's check to see if we need it.
+    from os import path as os_path
+    file_name = os_path.split(path)[-1]
+    obj_name = os_path.splitext(file_name)[0]
+    extension = os_path.splitext(file_name)[1]
+    if extension == '.obj':
+        return import_widget_obj(path,)
+    else:
+        raise RuntimeError(f"Failed to parse filename {path}")
+        
+
 ##############################
 #  READ TREE and also Schema Solve!
 ##############################

@@ -43,6 +43,8 @@ while (classLists):
 
 interface_classes = []
 
+from .preferences import MantisPreferences
+classes.append(MantisPreferences)
 
 from os import environ
 if environ.get("ENABLEVIS"):
@@ -75,6 +77,7 @@ input_category=[
             NodeItem("InputStringNode"),
             NodeItem("InputIntNode"),
             NodeItem("InputMatrixNode"),
+            NodeItem("InputWidget"),
             NodeItem("InputExistingGeometryObject"),
             NodeItem("InputExistingGeometryData"),
             NodeItem("UtilityDeclareCollections"),

@@ -153,6 +153,7 @@ def TellClasses() -> List[MantisSocket]:
              EnumMetaRigSocket,
              EnumMetaBoneSocket,
              EnumCurveSocket,
+             EnumWidgetLibrarySocket,
              BoolUpdateParentNode,
             #  LabelSocket,
              IKChainLengthSocket,
@@ -1350,13 +1351,58 @@ class EnumMetaBoneSocket(MantisSocket):
     @classmethod
     def draw_color_simple(self):
         return self.color_simple
-    
-    
-    
-    
-    
 
 
+def get_widget_library_items(self, context):
+    from bpy import context
+    try_these_first = ['bl_ext.repos.mantis', 'bl_ext.blender_modules_enabled.mantis']
+    for mantis_key in try_these_first:
+        bl_mantis_addon = context.preferences.addons.get(mantis_key)
+        if bl_mantis_addon: break
+    return_value = [('NONE', 'None', 'None', 'ERROR', 0)]
+    widget_names={}
+    if bl_mantis_addon:
+        widgets_path = bl_mantis_addon.preferences.WidgetsLibraryFolder
+        import os
+        for path_root, dirs, files, in os.walk(widgets_path):
+            # TODO handle .blend files
+            # for file in files: # check .blend files first, objs should take precedence
+            #     if file.endswith('.blend'):
+            #         widget_names[file[:-6]] = os.path.join(path_root, file)
+            for file in files:
+                if file.endswith('.obj'):
+                    widget_names[file[:-4]] = os.path.join(path_root, file)
+    else:
+        prRed("Mantis Preferences not found. This is a bug. Please report it on gitlab.")
+        prRed("I will need to know your OS and info about how you installed Mantis.")
+    if widget_names.keys():
+        return_value=[]
+        for i, (name, path) in enumerate(widget_names.items()):
+            return_value.append( (path, name, path, 'GIZMO', i) )
+    return return_value
+
+# THIS is a special socket type that finds the widgets in your widgets library (set in preferences)
+class EnumWidgetLibrarySocket(MantisSocket):
+    '''Choose a Wdiget'''
+    bl_idname = 'EnumWidgetLibrarySocket'
+    bl_label = "Widget"
+    is_valid_interface_type=False
+    default_value  : bpy.props.EnumProperty(
+        items=get_widget_library_items,
+        name="Widget",
+        description="Which widget to use",
+        default = 0,
+        update = update_socket,)
+    color_simple = cString
+    color : bpy.props.FloatVectorProperty(default=cString, size=4)
+    def draw(self, context, layout, node, text):
+        ChooseDraw(self, context, layout, node, text, use_enum=False)
+    def draw_color(self, context, node):
+        return self.color
+    @classmethod
+    def draw_color_simple(self):
+        return self.color_simple 
+    
 class BoolUpdateParentNode(MantisSocket):
     '''Custom node socket type'''
     bl_idname = 'BoolUpdateParentNode'

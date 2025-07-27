@@ -4,6 +4,15 @@ from dataclasses import replace
 SplineIndexTemplate = SockTemplate(name="Spline Index",
         bl_idname='UnsignedIntSocket', is_input=True, default_value=0,)
 
+InputWidgetSockets = [
+    WidgetName := SockTemplate(name='Name', is_input=True,
+        bl_idname="EnumWidgetLibrarySocket",),
+    FlipAxes := SockTemplate(name='Flip Axes', is_input=True,
+        bl_idname="BooleanThreeTupleSocket",),
+    xFormOutput := SockTemplate(name='Widget',
+        bl_idname='xFormSocket',is_input=False),
+]
+
 MatrixFromCurveSockets=[
     CurveTemplate := SockTemplate(name="Curve", bl_idname='EnumCurveSocket', 
         is_input=True,),
@@ -117,3 +126,4 @@ CollectionHierarchySockets = [
         bl_idname="BoneCollectionSocket",),
     CollectionDeclarationOutput,
 ]
+

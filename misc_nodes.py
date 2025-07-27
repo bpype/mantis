@@ -16,6 +16,7 @@ def TellClasses():
              InputTransformSpace,
              InputString,
              InputMatrix,
+             InputWidget,
              InputExistingGeometryObject,
              InputExistingGeometryData,
              InputThemeBoneColorSets,
@@ -1256,6 +1257,68 @@ class UtilityCatStrings(MantisNode):
         self.parameters["OutputString"] = self.evaluate_input("String_1")+self.evaluate_input("String_2")
         self.prepared, self.executed = True, True
 
+# TODO move this to the Xform file
+class InputWidget(MantisNode):
+    '''A node representing an existing object'''
+    def __init__(self, signature, base_tree):
+        super().__init__(signature, base_tree, InputWidgetSockets)
+        self.init_parameters()
+        self.node_type = "XFORM"
+    
+    def reset_execution(self):
+        super().reset_execution()
+        self.prepared=False
+
+    def bPrepare(self, bContext=None):
+        print(wrapGreen("Executing ")+wrapOrange("InputWidget Node ")+wrapWhite(f"{self}"))
+        path = self.evaluate_input('Name')
+        axes_flipped = self.evaluate_input('Flip Axes')
+        do_mirror = True
+        from os import path as os_path
+        file_name = os_path.split(path)[-1]
+        obj_name = os_path.splitext(file_name)[0]
+        obj_name_full = obj_name
+        if any(axes_flipped):
+            obj_name_full+="_flipped_"
+        for i, axis in enumerate("XYZ"):
+            if axes_flipped[i]: obj_name_full+=axis
+        from bpy import data
+        if  obj_name in data.objects.keys() and not \
+            obj_name_full in data.objects.keys():
+                self.bObject = data.objects.get(obj_name).copy()
+                self.bObject.name = obj_name_full
+                if bContext: bContext.collection.objects.link(self.bObject)
+        # now check to see if it exists
+        elif obj_name_full in data.objects.keys():
+            prWhite(f"INFO: {obj_name_full} is already in this .blend file; skipping import.")
+            self.bObject = data.objects.get(obj_name_full)
+            if any(axes_flipped): # check if we need to add a Flip modifier
+                if len(self.bObject.modifiers) > 1 and self.bObject.modifiers[-1].name == "Simple Flip":
+                    do_mirror=False
+        else:
+            from .utilities import import_object_from_file
+            self.bObject = import_object_from_file(path)
+            if any(axes_flipped):
+                self.bObject = self.bObject.copy()
+                self.bObject.name = obj_name_full
+                if bContext: bContext.collection.objects.link(self.bObject)
+        # now we'll check for the mirrors.
+        axes_flipped = self.evaluate_input('Flip Axes')
+        if any(axes_flipped) and do_mirror:
+            import_modifier = self.bObject.modifiers.new("Simple Flip", type="NODES")
+            ng = data.node_groups.get("Simple Flip")
+            if ng is None:
+                from .geometry_node_graphgen import gen_simple_flip_modifier
+                ng = gen_simple_flip_modifier()
+            import_modifier.node_group = ng
+            import_modifier["Socket_2"]=axes_flipped[0]
+            import_modifier["Socket_3"]=axes_flipped[1]
+            import_modifier["Socket_4"]=axes_flipped[2]
+        self.prepared, self.executed = True, True
+    
+    def bGetObject(self, mode=''):
+        return self.bObject
+    
 # TODO move this to the Xform file
 class InputExistingGeometryObject(MantisNode):
     '''A node representing an existing object'''
