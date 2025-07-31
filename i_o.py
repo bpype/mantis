@@ -17,6 +17,9 @@ SOCKETS_REMOVED=[("UtilityDriverVariable", "Transform Channel"),
 
 from bpy.app import version
 
+if version >= (4,5,0):
+    SOCKETS_REMOVED.append( ("LinkSplineIK", "Use Original Scale"))
+
 add_inputs_bl_idnames = [
     "UtilityDriver", "UtilityFCurve", "DeformerMorphTargetDeform",
     "LinkArmature",
