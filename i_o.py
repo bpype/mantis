@@ -476,15 +476,15 @@ def do_import(data, context):
 
         for s_name, s_props in tree_in_out.items():
             if s_props["item_type"] == 'SOCKET':
-                if s_props["socket_type"] == "LayerMaskSocket":
+                if s_props["bl_socket_idname"] == "LayerMaskSocket":
                     continue
-                if (socket_type := s_props["socket_type"]) == "NodeSocketColor":
+                if (socket_type := s_props["bl_socket_idname"]) == "NodeSocketColor":
                     socket_type = "VectorSocket"
                 if bpy.app.version != (4,5,0):
                     sock = tree.interface.new_socket(s_props["name"], in_out=s_props["in_out"], socket_type=socket_type)
                 else: # blender 4.5.0 LTS, have to workaround a bug!
                     from .versioning import workaround_4_5_0_interface_update
-                    sock = workaround_4_5_0_interface_update(tree=tree, name=name, in_out=s_props["in_out"],
+                    sock = workaround_4_5_0_interface_update(tree=tree, name=s_props["name"], in_out=s_props["in_out"],
                                                             sock_type=socket_type, parent_name=s_props.get("parent", ''))
 
                 tree_sock_id_map[s_name] = sock.identifier
