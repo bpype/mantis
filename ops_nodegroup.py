@@ -977,6 +977,48 @@ class ConvertBezierCurveToNURBS(Operator):
             curve.data.splines.remove(bez_spline)
         return {"FINISHED"}
 
+def get_component_library_items(self, context):
+    import json
+    from .preferences import get_bl_addon_object
+    bl_mantis_addon = get_bl_addon_object()
+    return_value = [('NONE', 'None', 'None', 'ERROR', 0)]
+    component_name_and_path={}
+    if bl_mantis_addon:
+        widgets_path = bl_mantis_addon.preferences.ComponentsLibraryFolder
+        import os
+        for path_root, dirs, files, in os.walk(widgets_path):
+            for file in files:
+                if file.endswith('.rig'):
+                    filepath = os.path.join(path_root, file)
+                    with open(filepath, 'r', encoding='utf-8') as f:
+                        json_data = json.load(f)
+                        for tree_name in json_data.keys():
+                            component_name_and_path[tree_name] = os.path.join(path_root, file)
+    if component_name_and_path.keys():
+        return_value=[]
+        for i, (name, path) in enumerate(component_name_and_path.items()):
+            return_value.append( ((path+"|"+name).upper(), name, path + ': ' + name, 'NODE_TREE', i) )
+    return return_value
+
+class ImportFromComponentLibrary(Operator):
+    """Import a Mantis Component from your Component Library."""
+    bl_idname = "mantis.import_from_component_library"
+    bl_label = "Import From Component Library"
+    bl_options = {'REGISTER', 'UNDO'}
+    default_value  : bpy.props.EnumProperty(
+            items=get_component_library_items,
+            name="Component",
+            description="Which Component to Import",
+            default = 0,
+        )
+
+    @classmethod
+    def poll(cls, context):
+        return True # probably not best to do a True for this LOL
+
+    def execute(self, context):
+        return {"FINISHED"}
+    
 
 # this has to be down here for some reason. what a pain
 classes = [
@@ -1010,6 +1052,8 @@ classes = [
         CollectionRemoveOutput,
         # rigging utilities
         ConvertBezierCurveToNURBS,
+        # component library
+        ImportFromComponentLibrary,
         ]
 if (bpy.app.version >= (4, 4, 0)):
     classes.append(B4_4_0_Workaround_NodeTree_Interface_Update)

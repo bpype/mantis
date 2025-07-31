@@ -69,8 +69,15 @@ class MantisPreferences(bpy.types.AddonPreferences):
         set=widget_library_idiot_test,
         subtype = 'FILE_PATH',
         default = os.path.join(dir_path, 'widgets'),)
+    ComponentsLibraryFolder:bpy.props.StringProperty(
+        name = "Widget Library Folder",
+        subtype = 'FILE_PATH',
+        default = os.path.join(dir_path, 'widgets'),)
+    ImportComponents:bpy.props.BoolProperty(default=False)
     
     def draw(self, context):
         layout = self.layout
         layout.label(text="Mantis Preferences")
         layout.prop(self, "WidgetsLibraryFolder", icon='FILE_FOLDER')
+        layout.prop(self, "ComponentsLibraryFolder", icon='FILE_FOLDER')
+        layout.prop(self, "ImportComponents")

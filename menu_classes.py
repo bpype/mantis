@@ -14,6 +14,7 @@ def node_context_menu_draw(self, context):
     layout.operator("mantis.nodes_cleanup", text='Sort Selected Nodes')
     layout.operator("mantis.connect_nodes_to_input")
     layout.operator("mantis.select_nodes_of_type")
+    layout.operator("mantis.import_from_component_library")
     # layout.menu('NODE_MT_context_menu_mantis')
 
 class MantisActiveTreePanel(Panel):
@@ -49,3 +50,4 @@ class MantisActiveTreePanel(Panel):
         layout.operator("mantis.invalidate_node_tree")
         layout.operator("mantis.execute_node_tree")
         layout.operator("mantis.force_display_update", text='Force Display Update')
+        layout.operator("mantis.import_from_component_library")
