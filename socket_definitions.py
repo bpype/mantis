@@ -1352,13 +1352,13 @@ class EnumMetaBoneSocket(MantisSocket):
     def draw_color_simple(self):
         return self.color_simple
 
-
+# TODO: make it so that this makes an item for "missing" widgets
+# for when a widget is moved or deleted
+# Make it read .blend
+# make it read the current directory, too?
 def get_widget_library_items(self, context):
-    from bpy import context
-    try_these_first = ['bl_ext.repos.mantis', 'bl_ext.blender_modules_enabled.mantis']
-    for mantis_key in try_these_first:
-        bl_mantis_addon = context.preferences.addons.get(mantis_key)
-        if bl_mantis_addon: break
+    from .preferences import get_bl_addon_object
+    bl_mantis_addon = get_bl_addon_object()
     return_value = [('NONE', 'None', 'None', 'ERROR', 0)]
     widget_names={}
     if bl_mantis_addon:
@@ -1372,9 +1372,6 @@ def get_widget_library_items(self, context):
             for file in files:
                 if file.endswith('.obj'):
                     widget_names[file[:-4]] = os.path.join(path_root, file)
-    else:
-        prRed("Mantis Preferences not found. This is a bug. Please report it on gitlab.")
-        prRed("I will need to know your OS and info about how you installed Mantis.")
     if widget_names.keys():
         return_value=[]
         for i, (name, path) in enumerate(widget_names.items()):
