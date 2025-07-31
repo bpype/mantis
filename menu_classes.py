@@ -33,6 +33,8 @@ class MantisActiveTreePanel(Panel):
         spc = area.spaces[0]
         if spc.type != "NODE_EDITOR":
             return False
+        if not spc.node_tree:
+            return False
         if spc.node_tree.bl_idname != "MantisTree":
             return False
         return True
