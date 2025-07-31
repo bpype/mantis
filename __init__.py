@@ -273,7 +273,7 @@ def node_version_update(node):
             arg_map['node']=node
         if 'node_tree' in required_kwargs:
             arg_map['node_tree']=node.id_data
-        if bl_idname == 'ALL' or node.bl_idname in bl_idname:
+        if ('ALL' in bl_idname) or node.bl_idname in bl_idname:
             if do_once:
                 print (f"Updating tree {node.id_data.name} to "
                        f"{MANTIS_VERSION_MAJOR}.{MANTIS_VERSION_MINOR}.{MANTIS_VERSION_SUB}")
