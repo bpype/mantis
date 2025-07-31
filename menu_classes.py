@@ -5,6 +5,17 @@ def TellClasses():
         MantisActiveTreePanel,
     ]
 
+
+# Function to append submenu to context menu
+def node_context_menu_draw(self, context):
+    layout = self.layout
+    layout.separator()  # Optional: Adds a separator before your submenu
+    layout.operator_context = "INVOKE_DEFAULT"
+    layout.operator("mantis.nodes_cleanup", text='Sort Selected Nodes')
+    layout.operator("mantis.connect_nodes_to_input")
+    layout.operator("mantis.select_nodes_of_type")
+    # layout.menu('NODE_MT_context_menu_mantis')
+
 class MantisActiveTreePanel(Panel):
     """N-Panel menu for Mantis"""
     bl_label = "Active Tree"
