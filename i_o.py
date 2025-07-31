@@ -15,6 +15,53 @@ SOCKETS_REMOVED=[("UtilityDriverVariable", "Transform Channel"),
                  ("LinkDrivenParameter", "Enable")]
                   # Node Class           #Prior bl_idname  # prior name # new bl_idname #       new name,          # Multi
 
+
+
+
+# ignore these because they are either unrelated python stuff or useless or borked
+prop_ignore = [ "__dict__", "__doc__", "__module__", "__weakref__",# "name",
+                "bl_height_default", "bl_height_max", "bl_height_min",
+                "bl_icon", "bl_rna", "bl_static_type", "bl_description",
+                "bl_width_default", "bl_width_max", "bl_width_min",
+                "__annotations__", "original", "rna_type", "view_center",
+                "links", "nodes", "internal_links", "inputs", "outputs",
+                "__slots__", "dimensions", "type", "interface",
+                "library_weak_reference", "parsed_tree", "node_tree_updater",
+                "asset_data", "preview",  # blender asset stuff
+                "object_reference", # this one is here to hold on to widgets when appending
+                "color_tag" , # added in blender 4.4, not used by Mantis, readonly.
+                # more blender properties...
+                "bl_use_group_interface", "default_group_node_width", "id_type",
+                # blender runtime stuff
+                "animation_data", "description", "grease_pencil", "is_editable",
+                "is_embedded_data", "is_evaluated", "is_library_indirect", "is_missing",
+                "is_runtime_data", "library", "name_full", "override_library",
+                "session_uid", "tag", "use_extra_user", "use_fake_user", "users",
+                # some Mantis stuff I don't need to save
+                "do_live_update", "is_executing", "is_exporting", "hash", "filepath",
+                "prevent_next_exec", "execution_id", "num_links", "tree_valid",
+                "interface_helper",
+                # node stuff
+                "mantis_node_class_name", "color", "height", "initialized", "select",
+                "show_options", "show_preview", "show_texture", "use_custom_color",
+                "warning_propagation",
+                # these are in Bone
+                "socket_count", "display_bb_settings", "display_def_settings",
+                "display_ik_settings", "display_vp_settings",
+                ] 
+# don't ignore: "bl_idname", "bl_label",
+# ignore the name, it's the dict - key for the node props
+    # no that's stupid don't ignore the name good grief
+
+# I am doing this because these are interactions with other addons that cause problems and probably don't exist for any given user
+prop_ignore.extend(['keymesh'])
+
+# trees
+prop_ignore_tree = prop_ignore.copy()
+prop_ignore_tree.extend(["bl_label", "name"])
+
+
+
 from bpy.app import version
 
 if version >= (4,5,0):
@@ -74,18 +121,15 @@ def fix_custom_parameter(n, property_definition, ):
         return input
 
     return None
-    
-    
 
-def get_socket_data(socket):
+def get_socket_data(socket, ignore_if_default=False):
+    # TODO: don't get stuff in the socket templates
+    # PROBLEM: I don't have easy access to this from the ui class (or mantis class)
     socket_data = {}
     socket_data["name"] = socket.name
     socket_data["bl_idname"] = socket.bl_idname
     socket_data["is_output"] = socket.is_output
     socket_data["is_multi_input"] = socket.is_multi_input
-
-    # if socket.bl_idname == 'TransformSpaceSocket':
-    #     prGreen(socket.default_value)
     
     # here is where we'll handle a socket_data'socket special data
     if socket.bl_idname == "EnumMetaBoneSocket":
@@ -94,216 +138,193 @@ def get_socket_data(socket):
         if sp := socket.get("search_prop"): # may be None
             socket_data["search_prop"] = sp.name # this is an object.
     #
-
-    # v = socket.get("default_value") # this doesn't seem to work, see below
     if hasattr(socket, "default_value"):
-        v = socket.default_value
+        value = socket.default_value
     else:
-        v = None
-    v_type = type(v)
-    if v is None:
-        return socket_data # we don't need to store this.
-    if not is_jsonable(v):
-        v = tuple(v)
-    if not is_jsonable(v):
-        raise RuntimeError(f"Error serializing data in {socket.node.name}::{socket.name} for value of type {v_type}")
-    socket_data["default_value"] = v
+        value = None
+        return socket_data # we don't need to store any more.
+    if not is_jsonable(value): # FIRST try and make a tuple out of it because JSON doesn't like mutables
+        value = tuple(value)
+    if not is_jsonable(value): # now see if it worked and crash out if it didn't
+        raise RuntimeError(f"Error serializing data in {socket.node.name}::{socket.name} for value of type {type(value)}")
+    socket_data["default_value"] = value
+    # TODO TODO implement "ignore if default" feature here
     # at this point we can get the custom parameter ui hints if we want
     if not socket.is_output:
         # try and get this data
-        if v := getattr(socket,'min', None):
-            socket_data["min"] = v
-        if v := getattr(socket,'max', None):
-            socket_data["max"] = v
-        if v := getattr(socket,'soft_min', None):
-            socket_data["soft_min"] = v
-        if v := getattr(socket,'soft_max', None):
-            socket_data["soft_max"] = v
-        if v := getattr(socket,'description', None):
-            socket_data["description"] = v
+        if value := getattr(socket,'min', None):
+            socket_data["min"] = value
+        if value := getattr(socket,'max', None):
+            socket_data["max"] = value
+        if value := getattr(socket,'soft_min', None):
+            socket_data["soft_min"] = value
+        if value := getattr(socket,'soft_max', None):
+            socket_data["soft_max"] = value
+        if value := getattr(socket,'description', None):
+            socket_data["description"] = value
     return socket_data
     #
+def get_node_data(ui_node):
+    # if this is a node-group, force it to update its interface, because it may be messed up.
+    # can remove this HACK when I have stronger guarentees about node-group's keeping the interface
+    from .base_definitions import node_group_update
+    if hasattr(ui_node, "node_tree"):
+        ui_node.is_updating = True
+        try: # HERE BE DANGER
+            node_group_update(ui_node, force=True)
+        finally: # ensure this line is run even if there is an error
+            ui_node.is_updating = False
+    node_props, sockets = {}, {}
+    for propname  in dir(ui_node):
+        value = getattr(ui_node, propname)
+        if propname in ['fake_fcurve_ob']:
+            value=value.name
+        if (propname in prop_ignore) or ( callable(value) ):
+            continue
+        if value.__class__.__name__ in ["Vector", "Color"]:
+            value = tuple(value)
+        if isinstance(value, bpy.types.NodeTree):
+            value = value.name
+        if isinstance(value, bpy.types.bpy_prop_array):
+            value = tuple(value)
+        if propname == "parent" and value:
+            value = value.name
+        if not is_jsonable(value):
+            raise RuntimeError(f"Could not export...  {ui_node.name}, {propname}, {type(value)}")
+        if value is None:
+            continue
+        node_props[propname] = value
+        # so we have to accumulate the parent location because the location is not absolute
+        if propname == "location" and ui_node.parent is not None:
+            location_acc = Vector((0,0))
+            parent = ui_node.parent
+            while (parent):
+                location_acc += parent.location
+                parent = parent.parent
+            location_acc += getattr(ui_node, propname)
+            node_props[propname] = tuple(location_acc)
+            # this works!
+    for i, ui_socket in enumerate(ui_node.inputs):
+        if ui_socket.is_linked: continue # not necessary to save it since it doesn't affect the tree
+        socket = get_socket_data(ui_socket)
+        socket["index"]=i
+        sockets[ui_socket.identifier] = socket
+    for i, ui_socket in enumerate(ui_node.outputs):
+        if ui_socket.is_linked: continue # see above
+        socket = get_socket_data(ui_socket)
+        socket["index"]=i
+        sockets[ui_socket.identifier] = socket
+    node_props["sockets"] = sockets
+    return node_props
+
+def get_tree_data(tree):
+    tree_info = {}
+    for propname  in dir(tree):
+        # if getattr(tree, propname):
+        #     pass
+        if (propname in prop_ignore_tree) or ( callable(getattr(tree, propname)) ):
+            continue
+        v = getattr(tree, propname)
+        if isinstance(getattr(tree, propname), bpy.types.bpy_prop_array):
+            v = tuple(getattr(tree, propname))
+        if not is_jsonable( v  ):
+            raise RuntimeError(f"Not JSON-able: {propname}, type: {type(v)}")
+        tree_info[propname] = v
+    tree_info["name"]=tree.name
+    return tree_info
+
+def get_interface_data(tree, tree_in_out):
+    for sock in tree.interface.items_tree:
+        sock_data={}
+
+        if sock.item_type == 'PANEL':
+            sock_data["name"] = sock.name
+            sock_data["item_type"] = sock.item_type
+            sock_data["description"] = sock.description
+            sock_data["default_closed"] = sock.default_closed
+            tree_in_out[sock.name] = sock_data
+
+        # if it is a socket....
+        else:
+            sock_parent = None
+            if sock.parent:
+                sock_parent = sock.parent.name
+            for propname  in dir(sock):
+                v = getattr(sock, propname)
+                if (propname in prop_ignore) or ( callable(v) ):
+                    continue
+                if (propname == "parent"):
+                    sock_data[propname] = sock_parent
+                    continue
+                if isinstance(getattr(sock, propname), bpy.types.bpy_prop_array):
+                    v = tuple(getattr(sock, propname))
+                if not is_jsonable( v ):
+                    raise RuntimeError(f"{propname}, {type(v)}")
+                sock_data[propname] = v
+            tree_in_out[sock.identifier] = sock_data
+                
 
 def export_to_json(trees, path="", write_file=True, only_selected=False):
-    # ignore these because they are either unrelated python stuff or useless or borked
-    prop_ignore = [ "__dict__", "__doc__", "__module__", "__weakref__",# "name",
-                    "bl_height_default", "bl_height_max", "bl_height_min",
-                    "bl_icon", "bl_rna", "bl_static_type", "bl_description",
-                    "bl_width_default", "bl_width_max", "bl_width_min",
-                    "__annotations__", "original", "rna_type", "view_center",
-                    "links", "nodes", "internal_links", "inputs", "outputs",
-                    "__slots__", "dimensions", "type", "interface",
-                    "library_weak_reference", "parsed_tree", "node_tree_updater",
-                    "asset_data", "preview",  # blender asset stuff
-                    "object_reference", # this one is here to hold on to widgets when appending
-                    "color_tag" , # added in blender 4.4, not used by Mantis, readonly.
-                    ] 
-    # don't ignore: "bl_idname", "bl_label",
-    # ignore the name, it's the dict - key for the node props
-     # no that's stupid don't ignore the name good grief
-
-    # I am doing this because these are interactions with other addons that cause problems and probably don't exist for any given user
-    prop_ignore.extend(['keymesh'])
-
     export_data = {}
     for tree in trees:
-        base_tree = False
+        current_tree_is_base_tree = False
         if tree is trees[-1]:
-            base_tree = True
-
+            current_tree_is_base_tree = True
+        
         tree_info, tree_in_out = {}, {}
-        for propname  in dir(tree):
-            # if getattr(tree, propname):
-            #     pass
-            if (propname in prop_ignore) or ( callable(getattr(tree, propname)) ):
-                continue
-            v = getattr(tree, propname)
-            if isinstance(getattr(tree, propname), bpy.types.bpy_prop_array):
-                v = tuple(getattr(tree, propname))
-            if not is_jsonable( v  ):
-                raise RuntimeError(f"Not JSON-able: {propname}, type: {type(v)}")
-            tree_info[propname] = v
-        tree_info["name"] = tree.name
+        tree_info = get_tree_data(tree)
 
         # if only_selected:
         #     # all in/out links, relative to the selection, should be marked and used to initialize tree properties
-        #     pass
-            
-        
+
         if not only_selected: # we'll handle this later with the links
             for sock in tree.interface.items_tree:
-                sock_data={}
-
-                if sock.item_type == 'PANEL':
-                    sock_data["name"] = sock.name
-                    sock_data["item_type"] = sock.item_type
-                    sock_data["description"] = sock.description
-                    sock_data["default_closed"] = sock.default_closed
-                    tree_in_out[sock.name] = sock_data
-
-                # if it is a socket....
-                else:
-                    sock_parent = None
-                    if sock.parent:
-                        sock_parent = sock.parent.name
-                    for propname  in dir(sock):
-                        if (propname in prop_ignore) or ( callable(v) ):
-                            continue
-                        if (propname == "parent"):
-                            sock_data[propname] = sock_parent
-                            continue
-                        v = getattr(sock, propname)
-                        if isinstance(getattr(sock, propname), bpy.types.bpy_prop_array):
-                            v = tuple(getattr(sock, propname))
-                        if not is_jsonable( v ):
-                            raise RuntimeError(f"{propname}, {type(v)}")
-                        sock_data[propname] = v
-                
-                    tree_in_out[sock.identifier] = sock_data
+                get_interface_data(tree, tree_in_out) # it concerns me that this one modifies
+                #  the collection instead of getting the data and returning it. TODO refactor this
 
         nodes = {}
-        for n in tree.nodes:
-            # if this is a node-group, force it to update its interface, because it may be messed up.
-            # can remove this HACK when I have stronger guarentees about node-group's keeping the interface
-            from .base_definitions import node_group_update
-            if hasattr(n, "node_tree"):
-                n.is_updating = True
-                try: # HERE BE DANGER
-                    node_group_update(n, force=True)
-                finally: # ensure this line is run even if there is an error
-                    n.is_updating = False
-            if only_selected and n.select == False:
+        for node in tree.nodes:
+            if only_selected and node.select == False:
                 continue
-            node_props, sockets = {}, {}
-            for propname  in dir(n):
-                v = getattr(n, propname)
-                if propname in ['fake_fcurve_ob']:
-                    v=v.name
-                if (propname in prop_ignore) or ( callable(v) ):
-                    continue
-                if v.__class__.__name__ in ["Vector", "Color"]:
-                    v = tuple(v)
-                if isinstance(v, bpy.types.NodeTree):
-                    v = v.name
-                if isinstance(v, bpy.types.bpy_prop_array):
-                    v = tuple(v)
-                if propname == "parent" and v:
-                    v = v.name
-                if not is_jsonable(v):
-                    raise RuntimeError(f"Could not export...  {n.name}, {propname}, {type(v)}")
-                if v is None:
-                    continue
-
-                node_props[propname] = v
-
-                # so we have to accumulate the parent location because the location is not absolute
-                if propname == "location" and n.parent is not None:
-                    location_acc = Vector((0,0))
-                    parent = n.parent
-                    while (parent):
-                        location_acc += parent.location
-                        parent = parent.parent
-                    location_acc += getattr(n, propname)
-                    node_props[propname] = tuple(location_acc)
-                    # this works!
-
-            for i, s in enumerate(n.inputs):
-                socket = get_socket_data(s)
-                socket["index"]=i
-                sockets[s.identifier] = socket
-            for i, s in enumerate(n.outputs):
-                socket = get_socket_data(s)
-                socket["index"]=i
-                sockets[s.identifier] = socket
+            nodes[node.name] = get_node_data(node)
             
-            node_props["sockets"] = sockets
-            nodes[n.name] = node_props
-            
-        
         links = []
-
-        in_sockets = {}
-        out_sockets = {}
+        in_sockets, out_sockets = {}, {}
+        unique_sockets_from, unique_sockets_to = {}, {}
 
         in_node = {"name":"MANTIS_AUTOGEN_GROUP_INPUT", "bl_idname":"NodeGroupInput", "sockets":in_sockets}
         out_node = {"name":"MANTIS_AUTOGEN_GROUP_OUTPUT", "bl_idname":"NodeGroupOutput", "sockets":out_sockets}
-
-
         add_input_node, add_output_node = False, False
 
-        unique_sockets_from={}
-        unique_sockets_to={}
-
-
-        for l in tree.links:
-            a, b = l.from_node.name, l.from_socket.identifier
-            c, d = l.to_node.name, l.to_socket.identifier
+        for link in tree.links:
+            from_node_name, from_socket_id = link.from_node.name, link.from_socket.identifier
+            to_node_name, to_socket_id = link.to_node.name, link.to_socket.identifier
+            from_socket_name, to_socket_name = link.from_socket.name, link.to_socket.name
 
             # get the indices of the sockets to be absolutely sure
-            for e, outp in enumerate(l.from_node.outputs):
+            for from_outoput_index, outp in enumerate(link.from_node.outputs):
                 # for some reason, 'is' does not return True no matter what...
                 # so we are gonn compare the memory address directly, this is stupid
-                if (outp.as_pointer() == l.from_socket.as_pointer()): break
+                if (outp.as_pointer() == link.from_socket.as_pointer()): break
             else:
-                problem=l.from_node.name + "::" + l.from_socket.name
+                problem=link.from_node.name + "::" + link.from_socket.name
                 raise RuntimeError(wrapRed(f"Error saving index of socket: {problem}"))
-            for f, inp in enumerate(l.to_node.inputs):
-                if (inp.as_pointer() == l.to_socket.as_pointer()): break
+            for to_input_index, inp in enumerate(link.to_node.inputs):
+                if (inp.as_pointer() == link.to_socket.as_pointer()): break
             else:
-                problem = l.to_node.name + "::" + l.to_socket.name
+                problem = link.to_node.name + "::" + link.to_socket.name
                 raise RuntimeError(wrapRed(f"Error saving index of socket: {problem}"))
-            g, h = l.from_socket.name, l.to_socket.name
 
-            if base_tree:
-                if (only_selected and l.from_node.select) and (not l.to_node.select):
+            if current_tree_is_base_tree:
+                if (only_selected and link.from_node.select) and (not link.to_node.select):
                     # handle an output in the tree
                     add_output_node=True
-                    if not (sock_name := unique_sockets_to.get(l.from_socket.node.name+l.from_socket.identifier)):
-                        sock_name = l.to_socket.name; name_stub = sock_name
+                    if not (sock_name := unique_sockets_to.get(link.from_socket.node.name+link.from_socket.identifier)):
+                        sock_name = link.to_socket.name; name_stub = sock_name
                         used_names = list(tree_in_out.keys()); i=0
                         while sock_name in used_names:
                             sock_name=name_stub+'.'+str(i).zfill(3); i+=1
-                        unique_sockets_to[l.from_socket.node.name+l.from_socket.identifier]=sock_name
+                        unique_sockets_to[link.from_socket.node.name+link.from_socket.identifier]=sock_name
 
                     out_sock = out_sockets.get(sock_name)
                     if not out_sock:
@@ -311,35 +332,35 @@ def export_to_json(trees, path="", write_file=True, only_selected=False):
                         out_sock["index"]=len(out_sockets) # zero indexed, so zero length makes zero the first index and so on, this works
                     out_sock["name"] = sock_name
                     out_sock["identifier"] = sock_name
-                    out_sock["bl_idname"] = l.to_socket.bl_idname
+                    out_sock["bl_idname"] = link.to_socket.bl_idname
                     out_sock["is_output"] = False
-                    out_sock["source"]=[l.to_socket.node.name,l.to_socket.identifier]
+                    out_sock["source"]=[link.to_socket.node.name,link.to_socket.identifier]
                     out_sock["is_multi_input"] = False # this is not something I can even set on tree interface items, and this code is not intended for making Schema
                     sock_data={}
                     sock_data["name"] = sock_name
                     sock_data["item_type"] = "SOCKET"
                     sock_data["default_closed"] = False
-                    sock_data["socket_type"] = l.from_socket.bl_idname
+                    sock_data["socket_type"] = link.from_socket.bl_idname
                     sock_data["identifier"] = sock_name
                     sock_data["in_out"]="OUTPUT"
                     sock_data["index"]=out_sock["index"]
                     tree_in_out[sock_name] = sock_data
 
-                    c=out_node["name"]
-                    d=out_sock["identifier"]
-                    f=out_sock["index"]
-                    h=out_sock["name"]
+                    to_node_name=out_node["name"]
+                    to_socket_id=out_sock["identifier"]
+                    to_input_index=out_sock["index"]
+                    to_socket_name=out_sock["name"]
 
-                elif (only_selected and (not l.from_node.select)) and l.to_node.select:
+                elif (only_selected and (not link.from_node.select)) and link.to_node.select:
                     add_input_node=True
                     # we need to get a unique name for this
                     # use the Tree IN/Out because we are dealing with Group in/out
-                    if not (sock_name := unique_sockets_from.get(l.from_socket.node.name+l.from_socket.identifier)):
-                        sock_name = l.from_socket.name; name_stub = sock_name
+                    if not (sock_name := unique_sockets_from.get(link.from_socket.node.name+link.from_socket.identifier)):
+                        sock_name = link.from_socket.name; name_stub = sock_name
                         used_names = list(tree_in_out.keys()); i=0
                         while sock_name in used_names:
                             sock_name=name_stub+'.'+str(i).zfill(3); i+=1
-                        unique_sockets_from[l.from_socket.node.name+l.from_socket.identifier]=sock_name
+                        unique_sockets_from[link.from_socket.node.name+link.from_socket.identifier]=sock_name
 
                     in_sock = in_sockets.get(sock_name)
                     if not in_sock:
@@ -348,15 +369,15 @@ def export_to_json(trees, path="", write_file=True, only_selected=False):
                         #
                         in_sock["name"] = sock_name
                         in_sock["identifier"] = sock_name
-                        in_sock["bl_idname"] = l.from_socket.bl_idname
+                        in_sock["bl_idname"] = link.from_socket.bl_idname
                         in_sock["is_output"] = True
                         in_sock["is_multi_input"] = False # this is not something I can even set on tree interface items, and this code is not intended for making Schema
-                        in_sock["source"] = [l.from_socket.node.name,l.from_socket.identifier]
+                        in_sock["source"] = [link.from_socket.node.name,link.from_socket.identifier]
                         sock_data={}
                         sock_data["name"] = sock_name
                         sock_data["item_type"] = "SOCKET"
                         sock_data["default_closed"] = False
-                        sock_data["socket_type"] = l.from_socket.bl_idname
+                        sock_data["socket_type"] = link.from_socket.bl_idname
                         sock_data["identifier"] = sock_name
                         sock_data["in_out"]="INPUT"
                         sock_data["index"]=in_sock["index"]
@@ -364,16 +385,23 @@ def export_to_json(trees, path="", write_file=True, only_selected=False):
                         
                         tree_in_out[sock_name] = sock_data
 
-                    a=in_node.get("name")
-                    b=in_sock["identifier"]
-                    e=in_sock["index"]
-                    g=in_node.get("name")
+                    from_node_name=in_node.get("name")
+                    from_socket_id=in_sock["identifier"]
+                    from_outoput_index=in_sock["index"]
+                    from_socket_name=in_node.get("name")
                 # parentheses matter here...
-                elif (only_selected and not (l.from_node.select and l.to_node.select)):
+                elif (only_selected and not (link.from_node.select and link.to_node.select)):
                     continue
-            elif only_selected and not (l.from_node.select and l.to_node.select):
+            elif only_selected and not (link.from_node.select and link.to_node.select):
                 continue # pass if both links are not selected
-            links.append( (a,b,c,d,e,f,g,h) ) # it's a tuple
+            links.append( (from_node_name,
+                           from_socket_id,
+                           to_node_name,
+                           to_socket_id,
+                           from_outoput_index,
+                           to_input_index,
+                           from_socket_name,
+                           to_socket_name) ) # it's a tuple
         
         
         if add_input_node or add_output_node:
