@@ -5,7 +5,7 @@ from .utilities import (prRed, prGreen, prPurple, prWhite,
                               wrapRed, wrapGreen, wrapPurple, wrapWhite,
                               wrapOrange,)
 
-from mathutils import  Vector
+from mathutils import Vector, Matrix
 
 NODES_REMOVED=["xFormRootNode"]
                  # Node bl_idname, # Socket Name
@@ -114,11 +114,9 @@ def is_jsonable(x):
     except (TypeError, OverflowError):
         return False
 
-
 # https://stackoverflow.com/questions/295135/turn-a-stritree-into-a-valid-filename - thank you user "Sophie Gage"
 def remove_special_characters(name):
     import re; return re.sub('[^\w_.)( -]', '', name)# re = regular expressions
-
 
 def fix_custom_parameter(n, property_definition, ):
     if n.bl_idname in ['xFormNullNode', 'xFormBoneNode', 'xFormArmatureNode', 'xFormGeometryObjectNode',]:
@@ -140,6 +138,188 @@ def fix_custom_parameter(n, property_definition, ):
         return input
 
     return None
+
+# def scan_tree_for_objects(base_tree, current_tree):
+#     # goal: find all referenced armature and curve objects
+#     # return [set(armatures), set(curves)]
+#     armatures = set()
+#     curves    = set()
+#     for node in base_tree.parsed_tree.values():
+#         from .utilities import get_node_prototype
+#         if node.ui_signature is None:
+#             continue
+#         ui_node = get_node_prototype(node.ui_signature, node.base_tree)
+#         if ui_node is None or ui_node.id_data != current_tree:
+#             continue
+#         if hasattr(node, "bGetObject"):
+#             ob = node.bGetObject()
+#             print(node, ob)
+#             if ob is None:
+#                 continue
+#             if not hasattr(node, "type"):
+#                 continue
+#             if ob.type == 'ARMATURE':
+#                 armatures.add(ob)
+#             if ob.type == 'CURVE':
+#                 curves.add(ob)
+#     return (armatures, curves)
+
+# Currently this isn't very robust and doesn't seek backwards
+# to see if a dependency is created by node connections.
+# TODO it remains to be seen if that is even a desirable behaviour.
+def scan_tree_for_objects(base_tree, current_tree):
+    from bpy import data
+    armatures, curves    = set(), set()
+    for node in current_tree.nodes:
+        match node.bl_idname:
+            case "UtilityMetaRig":
+                if node.inputs[0].is_linked:
+                    continue
+                if (armature := node.inputs[0].search_prop) is not None:
+                    armatures.add(armature)
+            case "InputExistingGeometryObjectNode":
+                if node.inputs["Name"].is_linked:
+                    continue
+                ob_name = node.inputs["Name"].default_value
+                if ob := data.objects.get(ob_name):
+                    if ob.type == "ARMATURE":
+                        armatures.add(ob)
+                    elif ob.type == "CURVE":
+                        curves.add(ob)
+            case "xFormArmatureNode":
+                if node.inputs["Name"].is_linked:
+                    continue
+                armature_name = node.inputs["Name"].default_value
+                armature = data.objects.get(armature_name)
+                if armature:
+                    armatures.add(armature)
+            case "xFormGeometryObjectNode":
+                if node.inputs["Name"].is_linked:
+                    continue
+                ob_name = node.inputs["Name"].default_value
+                if ob := data.objects.get(ob_name):
+                    if ob.type == "ARMATURE":
+                        armatures.add(ob)
+                    elif ob.type == "CURVE":
+                        curves.add(ob)
+        for input in node.inputs:
+            if input.bl_idname in ["EnumCurveSocket"]:
+                if input.search_prop is not None:
+                    curves.add(input.search_prop)
+    # NOW check the parsed_tree and see if it is possible to find any other
+    # objects referred to/provided by the tree
+    return (curves, armatures )
+
+from dataclasses import dataclass, field, asdict
+# some basic classes to define curve point types
+@dataclass
+class crv_pnt_data():
+     co                 : tuple[float, float, float] = field(default=(0,0,0,))
+     handle_left        : tuple[float, float, float] = field(default=(0,0,0,))
+     handle_right       : tuple[float, float, float] = field(default=(0,0,0,))
+     handle_left_type   : str = field(default="ALIGNED")
+     handle_right_type  : str = field(default="ALIGNED")
+     radius             : float = field(default=0.0)
+     tilt               : float = field(default=0.0)
+     w                  : float = field(default=0.0)
+
+@dataclass
+class spline_data():
+    type                  : str = field(default='POLY')
+    points                : list[dict] = field(default_factory=[])
+    order_u               : int = field(default=4)
+    radius_interpolation  : str = field(default="LINEAR")
+    tilt_interpolation    : str = field(default="LINEAR")
+    resolution_u          : int = field(default=12)
+    use_bezier_u          : bool = field(default=False)
+    use_cyclic_u          : bool = field(default=False)
+    use_endpoint_u        : bool = field(default=False)
+    index                 : int = field(default=0)
+    object_name           : str = field(default='Curve')
+
+def get_curve_for_pack(object):
+    splines = []
+    for i, spline in enumerate(object.data.splines):
+        points = []
+        if spline.type == 'BEZIER':
+            for point in spline.bezier_points:
+                export_pnt = crv_pnt_data(
+                        co                = tuple(point.co),
+                        radius            = point.radius,
+                        tilt              = point.tilt,
+                        handle_left       = tuple(point.handle_left),
+                        handle_right      = tuple(point.handle_right),
+                        handle_left_type  = point.handle_left_type,
+                        handle_right_type = point.handle_right_type,
+                )
+                points.append(asdict(export_pnt))
+        else:
+            for point in spline.points:
+                export_pnt = crv_pnt_data(
+                        co     = point.co[:3], # exclude the w value
+                        radius = point.radius,
+                        tilt   = point.tilt,
+                        w      = point.co[3],
+                )
+                points.append(export_pnt)
+        export_spl = spline_data(
+                type                  = spline.type,
+                points                = points,
+                order_u               = spline.order_u,
+                radius_interpolation  = spline.radius_interpolation,
+                tilt_interpolation    = spline.tilt_interpolation,
+                resolution_u          = spline.resolution_u,
+                use_bezier_u          = spline.use_bezier_u,
+                use_cyclic_u          = spline.use_cyclic_u,
+                use_endpoint_u        = spline.use_endpoint_u,
+                index                 = i,
+                object_name           = object.name,)
+        splines.append(asdict(export_spl))
+    return splines
+
+def matrix_as_tuple(matrix):
+    return ( matrix[0][0], matrix[0][1], matrix[0][2], matrix[0][3],
+             matrix[1][0], matrix[1][1], matrix[1][2], matrix[1][3], 
+             matrix[2][0], matrix[2][1], matrix[2][2], matrix[2][3],
+             matrix[3][0], matrix[3][1], matrix[3][2], matrix[3][3], )
+
+@dataclass
+class metabone_data:
+    object_name           : str = field(default='')
+    name                  : str = field(default=''),
+    type                  : str = field(default='BONE'),
+    matrix                : tuple[float] = field(default=()),
+    parent                : str = field(default=''),
+    length                : float = field(default=-1.0),
+    children              : list[str] = field(default_factory=[]), 
+# keep it really simple for now. I'll add BBone and envelope later on
+# when I make them accessible from the meta-rig
+
+def get_armature_for_pack(object):
+    metarig_data = {}
+    armature_data = metabone_data( object_name = object.name,
+        name=object.name, type='ARMATURE',
+        matrix=matrix_as_tuple(object.matrix_world),
+        parent="", # NOTE that this is not always a fair assumption!
+        length = -1.0, children =[],)
+    metarig_data[object.name] = asdict(armature_data)
+    metarig_data["MANTIS_RESERVED"] = asdict(armature_data) # just in case a bone is named the same as the armature
+    for bone in object.data.bones:
+        parent_name = ''
+        if bone.parent is None:
+            armature_data.children.append(bone.name)
+        else:
+            parent_name=bone.parent.name
+        children=[]
+        for c in bone.children:
+            children.append(c.name)
+        bone_data = metabone_data( object_name = object.name,
+            name=bone.name, type='BONE',
+            matrix=matrix_as_tuple(bone.matrix_local),
+            parent=parent_name, length = bone.length, children = children,
+        )
+        metarig_data[bone.name]=asdict(bone_data)
+    return metarig_data
 
 def get_socket_data(socket, ignore_if_default=False):
     # TODO: don't get stuff in the socket templates
@@ -292,7 +472,7 @@ def get_interface_data(tree, tree_in_out):
             tree_in_out[sock.identifier] = sock_data
             
 
-def export_to_json(trees, path="", write_file=True, only_selected=False):
+def export_to_json(trees, base_tree=None, path="", write_file=True, only_selected=False, ):
     export_data = {}
     for tree in trees:
         current_tree_is_base_tree = False
@@ -301,6 +481,15 @@ def export_to_json(trees, path="", write_file=True, only_selected=False):
         
         tree_info, tree_in_out = {}, {}
         tree_info = get_tree_data(tree)
+        curves, metarig_data = {}, {}
+
+        embed_metarigs=True
+        if base_tree and embed_metarigs:
+            curves_in_tree, metarigs_in_tree = scan_tree_for_objects(base_tree, tree)
+            for crv in curves_in_tree:
+                curves[crv.name] = get_curve_for_pack(crv)
+            for mr in metarigs_in_tree:
+                metarig_data[mr.name] = get_armature_for_pack(mr)
 
         # if only_selected:
         #     # all in/out links, relative to the selection, should be marked and used to initialize tree properties
@@ -462,19 +651,15 @@ def export_to_json(trees, path="", write_file=True, only_selected=False):
             out_node["location"] = Vector((all_nodes_bounding_box[1].x+400, all_nodes_bounding_box[0].lerp(all_nodes_bounding_box[1], 0.5).y))
             nodes["MANTIS_AUTOGEN_GROUP_OUTPUT"]=out_node
 
-        export_data[tree.name] = (tree_info, tree_in_out, nodes, links,) # f_curves)
+        export_data[tree.name] = (tree_info, tree_in_out, nodes, links, curves, metarig_data,) # f_curves)
     
+    return export_data
+
+def write_json_data(data, path):
     import json
-
-    if not write_file:
-        return export_data # gross to have a different type of return value... but I don't care
-
     with open(path, "w") as file:
         print(wrapWhite("Writing mantis tree data to: "), wrapGreen(file.name))
-        file.write( json.dumps(export_data, indent = 4) )
-    # I'm gonna do this in a totally naive way, because this should already be sorted properly
-    #   for the sake of dependency satisfaction. So the current "tree" should be the "main" tree
-    tree.filepath = path
+        file.write( json.dumps(data, indent = 4) )
         
 def get_link_sockets(link, tree, tree_socket_id_map):
     from_node_name = link[0]
@@ -649,6 +834,7 @@ def setup_sockets(node, propslist, in_out="inputs"):
                         prWhite("Tried to write a read-only property, ignoring...")
                         prWhite(f"{socket.node.name}[{socket.name}].{s_p} is read only, cannot set value to {s_v}")
 
+
 def do_import_from_file(filepath, context):
     import json
 
@@ -800,15 +986,8 @@ def do_import(data, context):
                 finally:
                     n.is_updating=False
             # set up sockets
-            try:
-                setup_sockets(n, propslist, in_out="inputs")
-            except IndexError:
-                prRed("asdasdasda")
-            try:
-                setup_sockets(n, propslist, in_out="outputs")
-            except IndexError:
-                prRed("dfdfdfddfd")
-
+            setup_sockets(n, propslist, in_out="inputs")
+            setup_sockets(n, propslist, in_out="outputs")
             for p, v in propslist.items():
                 if p in ["node_tree",
                          "sockets",
@@ -861,12 +1040,21 @@ def do_import(data, context):
                 n.parent = p
             # otherwise the frame node is missing because it was not included in the data e.g. when grouping nodes.
         
+        # TODO: IMPORT THIS DATA HERE!!!
+        # try:
+        #     curves = tree_data[4]
+        #     armatures = tree_data[5]
+        # except KeyError: # shouldn't happen but maybe someone has an old file
+        #     curves = {}
+        #     armatures = {}
+        
+        # for curve_name, curve_data in curves.items():
+        #     from .utilities import import_curve_data_to_object
+        #     import_curve_data_to_object(curve_name, curve_data)
+        
         tree.is_executing = False
         tree.do_live_update = True
         
-
-
-
 import bpy
 
 from bpy_extras.io_utils import ImportHelper, ExportHelper
@@ -904,9 +1092,11 @@ class MantisExportNodeTreeSaveAs(Operator, ExportHelper):
         for t in trees:
             prGreen ("Node graph: \"%s\"" % (t.name))
         base_tree.is_exporting = True
-        export_to_json(trees, self.filepath)
+        export_data = export_to_json(trees, base_tree, self.filepath)
+        write_json_data(export_data, self.filepath)
         base_tree.is_exporting = False
         base_tree.prevent_next_exec = True
+        base_tree.filepath = self.filepath
         return {'FINISHED'}
 
 # Save
@@ -928,7 +1118,8 @@ class MantisExportNodeTreeSave(Operator):
         for t in trees:
             prGreen ("Node graph: \"%s\"" % (t.name))
         base_tree.is_exporting = True
-        export_to_json(trees, self.filepath)
+        export_to_json(trees, base_tree, base_tree.filepath)
+        write_json_data(export_data, base_tree.filepath)
         base_tree.is_exporting = False
         base_tree.prevent_next_exec = True
         return {'FINISHED'}

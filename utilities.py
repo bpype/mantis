@@ -408,6 +408,13 @@ def import_object_from_file(path):
     else:
         raise RuntimeError(f"Failed to parse filename {path}")
         
+def import_curve_data_to_object(curve_name, curve_data):
+    # the curve data will come as a single curve's data
+    from bpy import data
+    curve_object = data.objects.new(curve_name, data.curves.new(name=curve_name, type='CURVE'))
+
+    for spline in curve_data:
+        curve_object.data.splines.new(type=spline['type'])
 
 ##############################
 #  READ TREE and also Schema Solve!

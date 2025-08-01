@@ -44,7 +44,7 @@ class MantisGroupNodes(Operator):
             from random import random
             grp_name = "".join([chr(int(random()*30)+35) for i in range(20)])
             trees=[base_tree]
-            selected_nodes=export_to_json(trees, write_file=False, only_selected=True)
+            selected_nodes=export_to_json(trees, base_tree=None, write_file=False, only_selected=True)
             # this snippet of confusing indirection edits the name of the base tree in the JSON data
             selected_nodes[base_tree.name][0]["name"]=grp_name
             do_import(selected_nodes, context)
