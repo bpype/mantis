@@ -892,13 +892,14 @@ class CollectionDeclarationSocket(MantisSocket):
     def draw_color_simple(self):
         return self.color_simple
 class BoneCollectionSocket(MantisSocket):
-    """Bone Collection socket"""
+    """Collection socket"""
     bl_idname = 'BoneCollectionSocket'
-    bl_label = "Bone Collection"
+    bl_label = "Collection"
     default_value: bpy.props.StringProperty(default = "Collection", update = update_socket,)
     input : bpy.props.BoolProperty(default =False,)
     color_simple = cBoneCollection
     color : bpy.props.FloatVectorProperty(default=cBoneCollection, size=4)
+    is_valid_interface_type=True
     
     def draw(self, context, layout, node, text):
         ChooseDraw(self, context, layout, node, text)
@@ -993,7 +994,7 @@ class ColorSetSocket(MantisSocket):
     selected_color : bpy.props.FloatVectorProperty(
         name='Selected Color', size=3, subtype='COLOR_GAMMA',
         default=get_select_color(None),)
-    is_valid_interface_type=False
+    is_valid_interface_type=True
     def draw(self, context, layout, node, text):
         inherit_color_socket = self.node.inputs.get("Inherit Color")
         if (self.is_output == False) and (self.is_linked == True):
