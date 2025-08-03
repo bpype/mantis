@@ -330,6 +330,11 @@ def export_to_json(trees, path="", write_file=True, only_selected=False):
                     if not out_sock:
                         out_sock = {}; out_sockets[sock_name] = out_sock
                         out_sock["index"]=len(out_sockets) # zero indexed, so zero length makes zero the first index and so on, this works
+                    # what in the bad word is happening here?
+                    # why?
+                    # why no de-duplication?
+                    # what was I thinking?
+                    # TODO REFACTOR THIS SOON
                     out_sock["name"] = sock_name
                     out_sock["identifier"] = sock_name
                     out_sock["bl_idname"] = link.to_socket.bl_idname
@@ -340,7 +345,9 @@ def export_to_json(trees, path="", write_file=True, only_selected=False):
                     sock_data["name"] = sock_name
                     sock_data["item_type"] = "SOCKET"
                     sock_data["default_closed"] = False
+                    # these two are the same thing, but I need both?
                     sock_data["socket_type"] = link.from_socket.bl_idname
+                    sock_data["bl_socket_idname"] = link.from_socket.bl_idname
                     sock_data["identifier"] = sock_name
                     sock_data["in_out"]="OUTPUT"
                     sock_data["index"]=out_sock["index"]
@@ -377,7 +384,9 @@ def export_to_json(trees, path="", write_file=True, only_selected=False):
                         sock_data["name"] = sock_name
                         sock_data["item_type"] = "SOCKET"
                         sock_data["default_closed"] = False
+                        # these two are the same thing, but I need both?
                         sock_data["socket_type"] = link.from_socket.bl_idname
+                        sock_data["bl_socket_idname"] = link.from_socket.bl_idname
                         sock_data["identifier"] = sock_name
                         sock_data["in_out"]="INPUT"
                         sock_data["index"]=in_sock["index"]
