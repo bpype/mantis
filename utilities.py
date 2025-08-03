@@ -41,6 +41,20 @@ def socket_seek(start_link, links):
             break
     return link.from_socket
 
+# THIS ONE is better. I don't know what I was thinking up above.
+# TODO: try and refactor to use this function instead
+def find_reroute_start_socket(reroute):
+    socket = None
+    while (reroute):
+        if len(reroute.inputs[0].links) == 1:
+            link = reroute.inputs[0].links[0]
+            socket = link.from_socket
+            if link.from_node.bl_idname == 'NodeReroute':
+                reroute =  link.from_node
+            else:
+                link, reroute = None, None
+    return socket
+
 # this creates fake links that have the same interface as Blender's
 # so that I can bypass Reroutes
 def clear_reroutes(links):
@@ -165,8 +179,12 @@ def do_relink(node, s, map, in_out='INPUT', parent_name = ''):
         for sub_val in val:
             # this will only happen once because it assigns s, so it is safe to do in the for loop.
             if s is None:
-                name = unique_socket_name(node, sub_val, tree)
-                sock_type = sub_val.bl_idname
+                socket = sub_val
+                if sub_val.bl_idname == "NodeReroute":
+                    # we have to trace the reroute node...
+                    socket = find_reroute_start_socket(sub_val)
+                sock_type = socket.bl_idname
+                name = unique_socket_name(node, socket, tree)
                 if parent_name:
                     interface_socket = update_interface(tree.interface, name, interface_in_out, sock_type, parent_name)
                 if in_out =='INPUT':
