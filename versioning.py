@@ -2,6 +2,7 @@
 # this will be the new versioning system, and will deprecate the old SOCKETS_ADDED and such
 
 from bpy.types import Node, NodeSocket
+from bpy.app import version as bpy_version
 from .utilities import prRed, prGreen, prPurple
 
 def version_upgrade_very_old(*args, **kwargs):
@@ -172,13 +173,31 @@ def up_0_12_1_add_inherit_color(*args, **kwargs):
         prRed(f"Error updating version in node: {node.id_data.name}::{node.name}; see error:")
         print(e)
 
-
+# versioning tasks that involve Blender versions rather than Mantis versions:
+def cleanup_4_5_0_LTS_interface_workaround(*args, **kwargs):
+    # this is a function for cleaning up the workaround up above
+    tree = kwargs['tree']
+    if bpy_version == (4,5,0): return
+    if not hasattr(tree, interface_helper):
+        return
+    import json
+    interface_helper = json.loads(tree.interface_helper)
+    prPurple(f"Restoring Tree Interface for {tree.name}.")
+    for interface_item in tree.interface.items_tree:
+        if interface_item.item_type == 'PANEL': continue
+        # now we need to restore the socket types, which are in the interface helper
+        # keep the interface stuff around, I'll use it for marking arrays in the future
+        int_info = interface_helper[interface_item.identifier]
+        socket_type = int_info['bl_socket_idname']
+        interface_item.socket_type = socket_type
+    # that should be enough!
 
 versioning_tasks = [
     # node bl_idname    task                required keyword arguments 
     (['ALL'], version_upgrade_very_old, ['node_tree', 'node'],),
     (['xFormBoneNode'], version_upgrade_bone_0_12_0_from_older, ['node'],),
     (['xFormBoneNode'], up_0_12_1_add_inherit_color, ['node'],),
+    (['MantisTree', 'SchemaTree'], cleanup_4_5_0_LTS_interface_workaround, ['tree']),
 ]
 
 
@@ -208,8 +227,6 @@ def workaround_4_5_0_interface_update(tree, name, in_out, sock_type, parent_name
     sock.description = error_message # this tells the user why the socket looks weird.
     tree.interface_helper = json.dumps(interface_helper)
     if do_parent and (parent := tree.interface.items_tree.get(parent_name)):
-        prRed(parent.name)
-
         tree.interface.move_to_parent(
                                 sock,
                                 parent,
@@ -229,3 +246,4 @@ def socket_add_workaround_for_4_5_0_LTS(item, socket_collection, multi):
         identifier=item.identifier,
         use_multi_input=multi, )
     return s
+

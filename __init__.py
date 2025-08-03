@@ -285,6 +285,13 @@ def do_version_update(node_tree):
     for node in node_tree.nodes:
         if hasattr(node, 'is_updating'):
             node.is_updating = True
+    # start by doing tree versioning tasks
+    for affected_bl_idnames, task, arguments_needed in versioning_tasks:
+        if node_tree.bl_idname not in affected_bl_idnames: continue # this is a node task.
+        arguments = {}
+        if 'tree' in arguments_needed:
+            arguments['tree']=node_tree
+        task(**arguments)
     # run the updates that have no prerequisites
     for node in node_tree.nodes:
         node_version_update(node)
