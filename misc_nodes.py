@@ -1275,6 +1275,11 @@ class InputWidget(MantisNode):
         axes_flipped = self.evaluate_input('Flip Axes')
         do_mirror = True
         from os import path as os_path
+        from .preferences import get_bl_addon_object
+        bl_mantis_addon = get_bl_addon_object()
+        widgets_path = bl_mantis_addon.preferences.WidgetsLibraryFolder
+        path = widgets_path+path # this guards the widgets root so the end-user
+        #  can easily change the widgets directory without breaking things
         file_name = os_path.split(path)[-1]
         obj_name = os_path.splitext(file_name)[0]
         obj_name_full = obj_name

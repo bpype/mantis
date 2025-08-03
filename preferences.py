@@ -19,6 +19,34 @@ def get_bl_addon_object(raise_error = False):
                     " Please report it on gitlab.")
     return bl_mantis_addon
 
+# Just look and see if it is a ridiculous choice and show an error popup if the user needs
+#    to select a different directory
+def filepath_idiot_test(path):
+    def do_error_popup():
+            def error_popup_draw(self, context):
+                self.layout.label(text="A maximum of 1000 widget files is allowed in the Widget Library.")
+                self.layout.label(text="Make sure the WIdget Library does not scan a huge number of files/folders.")
+            from bpy import context
+            context.window_manager.popup_menu(error_popup_draw, title="Error", icon='ERROR')
+    try:
+        if tot_files := sum([len(files) for r, d, files in os.walk(path)]) > 1000:
+            do_error_popup()
+            return ''
+        else:
+            return path
+    except FileNotFoundError:
+        return ''
+    except RecursionError:
+        do_error_popup()
+        return ''
+    
+
+
+def widget_library_get(self):
+    return self.widget_library_path
+def widget_library_idiot_test(self, value):
+    self.widget_library_path = filepath_idiot_test(value)
+
 class MantisPreferences(bpy.types.AddonPreferences):
     bl_idname = __package__
 
@@ -34,8 +62,11 @@ class MantisPreferences(bpy.types.AddonPreferences):
     #     name = "Seperator file",
     #     subtype = 'FILE_PATH',
     #     default = dir_path + '/preferences/seperator.json',)
+    widget_library_path : bpy.props.StringProperty()
     WidgetsLibraryFolder:bpy.props.StringProperty(
         name = "Widget Library Folder",
+        get=widget_library_get,
+        set=widget_library_idiot_test,
         subtype = 'FILE_PATH',
         default = os.path.join(dir_path, 'widgets'),)
     

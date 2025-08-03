@@ -353,6 +353,19 @@ def update_metarig_posebone(self, context,):
     self.node.pose_bone = self.default_value
     default_update(self,context)
 
+def update_socket_external_load(self, context):
+    # this is a socket update for sockets that load data from a pack
+    # e.g. widget, metarig, curve, or component selector sockets
+    # currently no plans to add any but widgets, but whatever
+    default_update(self, context)
+    self.previous_value = self.default_value # this is all I need to do lol
+    items = get_widget_library_items(self, context) # feels silly to do this here
+    for item in items:
+        if item[0] == self.default_value:
+            self.previous_index = item[-1]
+            break
+    
+
 
 
 ########################################################################
@@ -1360,23 +1373,31 @@ class EnumMetaBoneSocket(MantisSocket):
 def get_widget_library_items(self, context):
     from .preferences import get_bl_addon_object
     bl_mantis_addon = get_bl_addon_object()
-    return_value = [('NONE', 'None', 'None', 'ERROR', 0)]
+    from os import path as os_path
+    prev_name = os_path.split(self.previous_value)[-1]
+    default_missing_value = ('MISSING', f'MISSING: {prev_name}', self.previous_value, 'ERROR', self.previous_index)
+    return_value = [default_missing_value]
     widget_names={}
     if bl_mantis_addon:
         widgets_path = bl_mantis_addon.preferences.WidgetsLibraryFolder
-        import os
-        for path_root, dirs, files, in os.walk(widgets_path):
+        from os import walk as os_walk
+        for path_root, dirs, files, in os_walk(widgets_path):
             # TODO handle .blend files
-            # for file in files: # check .blend files first, objs should take precedence
-            #     if file.endswith('.blend'):
-            #         widget_names[file[:-6]] = os.path.join(path_root, file)
             for file in files:
+                relative_file_name = os_path.join(os_path.sep.join(dirs), file)
                 if file.endswith('.obj'):
-                    widget_names[file[:-4]] = os.path.join(path_root, file)
+                    widget_names[relative_file_name[:-4]] = relative_file_name
     if widget_names.keys():
         return_value=[]
+        # first we select the previous value if it exists
+        add_missing_key=False
+        add_one=0
+        if self.previous_value not in widget_names.values():
+            add_missing_key=True # we need to add the missing key at the previous index
         for i, (name, path) in enumerate(widget_names.items()):
-            return_value.append( (path, name, path, 'GIZMO', i) )
+            if add_missing_key and i == self.previous_index:
+                add_one+=1; return_value.append(default_missing_value)
+            return_value.append( (path, name, path, 'GIZMO', i+add_one) )
     return return_value
 
 # THIS is a special socket type that finds the widgets in your widgets library (set in preferences)
@@ -1390,9 +1411,11 @@ class EnumWidgetLibrarySocket(MantisSocket):
         name="Widget",
         description="Which widget to use",
         default = 0,
-        update = update_socket,)
+        update = update_socket_external_load,)
     color_simple = cString
     color : bpy.props.FloatVectorProperty(default=cString, size=4)
+    previous_value : bpy.props.StringProperty(default="")
+    previous_index : bpy.props.IntProperty(default=0)
     def draw(self, context, layout, node, text):
         ChooseDraw(self, context, layout, node, text, use_enum=False)
     def draw_color(self, context, node):
