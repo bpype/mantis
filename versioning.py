@@ -174,11 +174,13 @@ def up_0_12_1_add_inherit_color(*args, **kwargs):
         print(e)
 
 # versioning tasks that involve Blender versions rather than Mantis versions:
+error_description_4_5_0_LTS = 'There is a bug in Blender 4.5.0 LTS, that is why these sockets are blue.'\
+                             ' This will be fixed in future Blender versions.'
 def cleanup_4_5_0_LTS_interface_workaround(*args, **kwargs):
     # this is a function for cleaning up the workaround up above
     tree = kwargs['tree']
     if bpy_version == (4,5,0): return
-    if not hasattr(tree, interface_helper):
+    if not hasattr(tree, "interface_helper"):
         return
     import json
     interface_helper = json.loads(tree.interface_helper)
@@ -190,6 +192,8 @@ def cleanup_4_5_0_LTS_interface_workaround(*args, **kwargs):
         int_info = interface_helper[interface_item.identifier]
         socket_type = int_info['bl_socket_idname']
         interface_item.socket_type = socket_type
+        if interface_item.description == error_description_4_5_0_LTS:
+            interface_item.description = ''
     # that should be enough!
 
 versioning_tasks = [
@@ -213,8 +217,7 @@ def workaround_4_5_0_interface_update(tree, name, in_out, sock_type, parent_name
     interface_helper = {} # initialize it if it is empty
     if tree.interface_helper: # may be empty, check here
         interface_helper = json.loads(tree.interface_helper)
-    error_message= 'There is a bug in Blender 4.5.0 LTS, that is why these sockets are blue.'\
-                    ' This will be fixed in future Blender versions.'
+    error_message = error_description_4_5_0_LTS
     interface_helper[sock.identifier] = {
             'name'             : sock.name,
             'identifier'       : sock.identifier,
