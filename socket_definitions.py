@@ -25,9 +25,19 @@ if bpy_version == (4,5,0): # THere is a bug that requires the socket type to inh
     from bpy.types import NodeSocketGeometry # so we will just inherit from NodeSocketGeometry
     class MantisSocket(NodeSocketGeometry, NodeSocket): # even though that is kinda silly
         is_valid_interface_type=False
+        @property
+        def interface_type(self):
+            return NodeSocketGeometry.bl_idname
 else:
     class MantisSocket(NodeSocket):
         is_valid_interface_type=False
+        @property
+        def interface_type(self):
+            # this is stupid but it is the fastest way to implement this
+            # TODO: refactor this, it should be a class property
+            return map_color_to_socket_type(self.color)
+
+
     
 
 from .utilities import (prRed, prGreen, prPurple, prWhite,
@@ -105,6 +115,44 @@ cGeometry          = (0.000000, 0.672443, 0.366253, 1.000000)
    # scale
 
 # OR make all of it a reference to the type of data within?
+
+def map_color_to_socket_type(socket_color):
+    # let's get the socket type by color for e.g. wildcard sockets.
+    # for some reason I can't use match-case here. dumb.
+    if socket_color == cFloat:
+        return "FloatSocket"
+    if socket_color == cColor:
+        return "ColorSetSocket"
+    if socket_color == cVector:
+        return "VectorSocket"
+    if socket_color == cInt:
+        return "IntSocket"
+    if socket_color == cDriver:
+        return "DriverSocket"
+    if socket_color == cDriverVariable:
+        return "DriverVariableSocket"
+    if socket_color == cFCurve:
+        return "FCurveSocket"
+    if socket_color == cKeyframe:
+        return "KeyframeSocket"
+    if socket_color == cEnable:
+        return "BooleanSocket"
+    if socket_color == cBoneCollection:
+        return "KeyframeSocket"
+    if socket_color == cDeformer:
+        return "DeformerSocket"
+    if socket_color == cShapeKey:
+        return "MorphTargetSocket"
+    if socket_color == cMatrix:
+        return "MatrixSocket"
+    if socket_color == cxForm:
+        return "xFormSocket"
+    if socket_color == cBool:
+        return "BooleanSocket"
+    if socket_color == cBool3:
+        return "BooleanThreeTupleSocket"
+    return "StringSocket"
+
 
 # Hybrid approach: Make same-data, similar purpose have similar colors.
 from typing import List

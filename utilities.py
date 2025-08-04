@@ -196,6 +196,7 @@ def do_relink(node, s, map, in_out='INPUT', parent_name = ''):
                         socket = find_reroute_start_socket(sub_val)
                     else:
                         socket = find_reroute_start_socket(sub_val, track="FORWARD")
+                sock_type = socket.interface_type
                 name = unique_socket_name(node, socket, tree)
                 if parent_name:
                     interface_socket = update_interface(tree.interface, name, interface_in_out, sock_type, parent_name)
