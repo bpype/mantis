@@ -43,14 +43,24 @@ def socket_seek(start_link, links):
 
 # THIS ONE is better. I don't know what I was thinking up above.
 # TODO: try and refactor to use this function instead
-def find_reroute_start_socket(reroute):
+def find_reroute_start_socket(reroute, track='BACK'):
+    # "BACK" traces back through the tree
+    # "FORWARD" traces forward through the tree
     socket = None
-    while (reroute):
+    while (reroute and track == 'BACK'):
         if len(reroute.inputs[0].links) == 1:
             link = reroute.inputs[0].links[0]
             socket = link.from_socket
             if link.from_node.bl_idname == 'NodeReroute':
                 reroute =  link.from_node
+            else:
+                link, reroute = None, None
+    while (reroute and track == 'FORWARD'):
+        if len(reroute.outputs[0].links) == 1:
+            link = reroute.outputs[0].links[0]
+            socket = link.to_socket
+            if link.to_node.bl_idname == 'NodeReroute':
+                reroute =  link.to_node
             else:
                 link, reroute = None, None
     return socket
@@ -182,8 +192,10 @@ def do_relink(node, s, map, in_out='INPUT', parent_name = ''):
                 socket = sub_val
                 if sub_val.bl_idname == "NodeReroute":
                     # we have to trace the reroute node...
-                    socket = find_reroute_start_socket(sub_val)
-                sock_type = socket.bl_idname
+                    if in_out == 'INPUT':
+                        socket = find_reroute_start_socket(sub_val)
+                    else:
+                        socket = find_reroute_start_socket(sub_val, track="FORWARD")
                 name = unique_socket_name(node, socket, tree)
                 if parent_name:
                     interface_socket = update_interface(tree.interface, name, interface_in_out, sock_type, parent_name)
