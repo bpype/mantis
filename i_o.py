@@ -15,8 +15,9 @@ SOCKETS_REMOVED=[("UtilityDriverVariable", "Transform Channel"),
                  ("LinkDrivenParameter", "Enable")]
                   # Node Class           #Prior bl_idname  # prior name # new bl_idname #       new name,          # Multi
 
-
-
+# Debugging values.
+print_read_only_warning = False
+print_link_failure = False
 
 # ignore these because they are either unrelated python stuff or useless or borked
 prop_ignore = [ "__dict__", "__doc__", "__module__", "__weakref__",# "name",
@@ -624,12 +625,14 @@ def do_import(data, context):
                                 socket = n.outputs.new(s_val["bl_idname"], s_val["name"], identifier=s_id)
                             finally:
                                 n.is_updating=False
-                        else: # IT IS NOT CLEAR but this is what throws the index error below BAD
+                        else: 
                             for socket in n.outputs:
                                 if socket.identifier == s_id:
                                     break
+                                # this often fails for group outputs and such
+                                # because the socket ID may not be the same when it is re-generated
                             else: # otherwise try to get the index
-                                prRed("Getting Imported Socket by Index. Maybe there will be an error.")
+                                # IT IS NOT CLEAR but this is what throws the index error below BAD
                                 socket = n.outputs[int(s_val["index"])]
                     else:
                         for removed_index in sockets_removed:
@@ -651,13 +654,14 @@ def do_import(data, context):
                                 prRed("Index: ", s_val["index"], "Number of inputs", len(n.inputs))
                                 raise NotImplementedError(wrapRed(f"{n.bl_idname} in {n.id_data.name} needs to be handled in JSON load."))
                         else:
-                            # IT IS NOT CLEAR but this is what throws the index error below BAD
                             # first try to get by ID
                             for socket in n.inputs:
                                 if socket.identifier == s_id:
                                     break
+                                # failing to find the socket by ID is less common for inputs than outputs.
+                                # it usually isn't a problem.
                             else: # otherwise try to get the index
-                                prRed("Getting Imported Socket by Index. Maybe there will be an error.")
+                                # IT IS NOT CLEAR but this is what throws the index error below BAD
                                 socket = n.inputs[int(s_val["index"])]
                 except IndexError:
                     socket = fix_custom_parameter(n, propslist["sockets"][s_id])
@@ -690,8 +694,9 @@ def do_import(data, context):
                         prRed("Can't set socket due to type mismatch: ", n.name,  socket.name, s_p, s_v)
                         # raise e
                     except AttributeError as e:
-                        prWhite("Tried to write a read-only property, ignoring...")
-                        prWhite(f"{socket.node.name}[{socket.name}].{s_p} is read only, cannot set value to {s_v}")
+                        if print_read_only_warning == True:
+                            prWhite("Tried to write a read-only property, ignoring...")
+                            prWhite(f"{socket.node.name}[{socket.name}].{s_p} is read only, cannot set value to {s_v}")
 
             for p, v in propslist.items():
                 if p in ["node_tree", "sockets", "warning_propagation",  "socket_idname"]:
@@ -710,14 +715,13 @@ def do_import(data, context):
                 except Exception as e:
                     print (p)
                     raise e
-        
         for l in links:
 
             id1 = l[1]
             id2 = l[3]
             #
-            name1=l[6]
-            name2=l[7]
+            name1=l[0]
+            name2=l[2]
             
             # if the from/to socket or node has been removed, continue
             from_node = tree.nodes.get(l[0])
@@ -769,28 +773,29 @@ def do_import(data, context):
                 if ((id1 is not None) and ("Layer Mask" in id1)) or ((id2 is not None) and ("Layer Mask" in id2)):
                     pass
                 else:
-                    prWhite(f"looking for... {name1}:{id1}, {name2}:{id2}")
-                    prRed (f"Failed: {l[0]}:{l[1]} --> {l[2]}:{l[3]}")
-                    prRed (f" got node: {from_node.name}, {to_node.name}")
-                    prRed (f" got socket: {from_sock}, {to_sock}")
-                    prOrange(to_node.inputs.keys())
-
-                    if from_sock is None:
-                        prOrange ("Candidates...")
-                        for out in from_node.outputs:
-                            prOrange("   %s, id=%s" % (out.name, out.identifier))
-                        for k, v in tree_sock_id_map.items():
-                            print (wrapOrange(k), wrapPurple(v))
-                    if to_sock is None:
-                        prOrange ("Candidates...")
-                        for inp in to_node.inputs:
-                            prOrange("   %s, id=%s" % (inp.name, inp.identifier))
-                        for k, v in tree_sock_id_map.items():
-                            print (wrapOrange(k), wrapPurple(v))
-                    raise RuntimeError
+                    if print_link_failure:
+                        prWhite(f"looking for... {name1}:{id1}, {name2}:{id2}")
+                        prRed (f"Failed: {l[0]}:{l[1]} --> {l[2]}:{l[3]}")
+                        prRed (f" got node: {from_node.name}, {to_node.name}")
+                        prRed (f" got socket: {from_sock}, {to_sock}")
+                        prOrange(to_node.inputs.keys())
+                        if from_sock is None:
+                            prOrange ("Candidates...")
+                            for out in from_node.outputs:
+                                prOrange("   %s, id=%s" % (out.name, out.identifier))
+                            for k, v in tree_sock_id_map.items():
+                                print (wrapOrange(k), wrapPurple(v))
+                        if to_sock is None:
+                            prOrange ("Candidates...")
+                            for inp in to_node.inputs:
+                                prOrange("   %s, id=%s" % (inp.name, inp.identifier))
+                            for k, v in tree_sock_id_map.items():
+                                print (wrapOrange(k), wrapPurple(v))
+                        raise RuntimeError
+                    else:
+                        prRed(f"Failed to add link in {tree.name}: {name1}:{id1}, {name2}:{id2}")
             
             # if at this point it doesn't work... we need to fix
-            
         for name, p in parent_me:
             if (n := tree.nodes.get(name)) and (p := tree.nodes.get(p)):
                 n.parent = p
