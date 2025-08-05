@@ -309,6 +309,8 @@ def default_update(ui_socket, context, do_execute=True):
         node_tree = context.space_data.path[0].node_tree
     except IndexError: # not in the UI, for example, in a script instead.
         return
+    if node_tree is None:
+        return
     if node_tree.is_executing or node_tree.is_exporting or not node_tree.do_live_update:
         return
     # if it is a Schema Node, it will fail the checks below -- but we need it to update the tree.
