@@ -623,7 +623,7 @@ def do_import(data, context):
                                 n.is_updating=False
                         else: # IT IS NOT CLEAR but this is what throws the index error below BAD
                             for socket in n.outputs:
-                                if socket.identifier == s_val['identifier']:
+                                if socket.identifier == s_id:
                                     break
                             else: # otherwise try to get the index
                                 prRed("Getting Imported Socket by Index. Maybe there will be an error.")
@@ -651,7 +651,7 @@ def do_import(data, context):
                             # IT IS NOT CLEAR but this is what throws the index error below BAD
                             # first try to get by ID
                             for socket in n.inputs:
-                                if socket.identifier == s_val['identifier']:
+                                if socket.identifier == s_id:
                                     break
                             else: # otherwise try to get the index
                                 prRed("Getting Imported Socket by Index. Maybe there will be an error.")
