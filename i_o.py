@@ -621,8 +621,13 @@ def do_import(data, context):
                                 socket = n.outputs.new(s_val["bl_idname"], s_val["name"], identifier=s_id)
                             finally:
                                 n.is_updating=False
-                        else:
-                            socket = n.outputs[int(s_val["index"])]
+                        else: # IT IS NOT CLEAR but this is what throws the index error below BAD
+                            for socket in n.outputs:
+                                if socket.identifier == s_val['identifier']:
+                                    break
+                            else: # otherwise try to get the index
+                                prRed("Getting Imported Socket by Index. Maybe there will be an error.")
+                                socket = n.outputs[int(s_val["index"])]
                     else:
                         for removed_index in sockets_removed:
                             if s_val["index"] > removed_index:
@@ -636,15 +641,21 @@ def do_import(data, context):
                                     socket = n.inputs.new(s_val["bl_idname"], s_val["name"], identifier=s_id, use_multi_input=s_val["is_multi_input"])
                                 finally:
                                     n.is_updating=False
-
                             elif n.bl_idname in ["NodeGroupOutput"]:
                                 pass # this is dealt with separately
                             else:
                                 prWhite("Not found: ", n.name, s_val["name"], s_id)
                                 prRed("Index: ", s_val["index"], "Number of inputs", len(n.inputs))
                                 raise NotImplementedError(wrapRed(f"{n.bl_idname} needs to be handled in JSON load."))
-                        else: # most of the time
-                            socket = n.inputs[int(s_val["index"])]
+                        else:
+                            # IT IS NOT CLEAR but this is what throws the index error below BAD
+                            # first try to get by ID
+                            for socket in n.inputs:
+                                if socket.identifier == s_val['identifier']:
+                                    break
+                            else: # otherwise try to get the index
+                                prRed("Getting Imported Socket by Index. Maybe there will be an error.")
+                                socket = n.inputs[int(s_val["index"])]
                 except IndexError:
                     socket = fix_custom_parameter(n, propslist["sockets"][s_id])
                     if socket is None:
