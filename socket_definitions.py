@@ -139,8 +139,6 @@ def map_color_to_socket_type(socket_color):
         return "KeyframeSocket"
     if socket_color == cEnable:
         return "BooleanSocket"
-    if socket_color == cBoneCollection:
-        return "KeyframeSocket"
     if socket_color == cDeformer:
         return "DeformerSocket"
     if socket_color == cShapeKey:
