@@ -183,7 +183,10 @@ def cleanup_4_5_0_LTS_interface_workaround(*args, **kwargs):
     if not hasattr(tree, "interface_helper"):
         return
     import json
-    interface_helper = json.loads(tree.interface_helper)
+    try:
+        interface_helper = json.loads(tree.interface_helper)
+    except:
+        return # this should mean it was never a problem to begin with.
     prPurple(f"Restoring Tree Interface for {tree.name}.")
     for interface_item in tree.interface.items_tree:
         if interface_item.item_type == 'PANEL': continue
