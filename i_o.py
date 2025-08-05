@@ -70,6 +70,9 @@ if version >= (4,5,0):
 add_inputs_bl_idnames = [
     "UtilityDriver", "UtilityFCurve", "DeformerMorphTargetDeform",
     "LinkArmature",
+    'xFormBoneNode', # for custom properties, right?
+    # For a long time this wasn't in here and I guess there weren't problems
+    # I really don't know if adding it here is right...
     ]
 
 # this works but it is really ugly and probably quite inneficient
@@ -644,9 +647,9 @@ def do_import(data, context):
                             elif n.bl_idname in ["NodeGroupOutput"]:
                                 pass # this is dealt with separately
                             else:
-                                prWhite("Not found: ", n.name, s_val["name"], s_id)
+                                prWhite("Not found: ", propslist['name'], s_val["name"], s_id)
                                 prRed("Index: ", s_val["index"], "Number of inputs", len(n.inputs))
-                                raise NotImplementedError(wrapRed(f"{n.bl_idname} needs to be handled in JSON load."))
+                                raise NotImplementedError(wrapRed(f"{n.bl_idname} in {n.id_data.name} needs to be handled in JSON load."))
                         else:
                             # IT IS NOT CLEAR but this is what throws the index error below BAD
                             # first try to get by ID
