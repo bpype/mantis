@@ -236,7 +236,6 @@ def get_tree_data(tree):
 def get_interface_data(tree, tree_in_out):
     for sock in tree.interface.items_tree:
         sock_data={}
-
         if sock.item_type == 'PANEL':
             sock_data["name"] = sock.name
             sock_data["item_type"] = sock.item_type
@@ -246,6 +245,12 @@ def get_interface_data(tree, tree_in_out):
 
         # if it is a socket....
         else:
+            # we need to get the socket class from the bl_idname
+            bl_socket_idname = sock.bl_socket_idname
+            # try and import it
+            from . import socket_definitions
+            # WANT an attribute error if this fails.
+            socket_class = getattr(socket_definitions, bl_socket_idname)
             sock_parent = None
             if sock.parent:
                 sock_parent = sock.parent.name
@@ -261,6 +266,8 @@ def get_interface_data(tree, tree_in_out):
                 if not is_jsonable( v ):
                     raise RuntimeError(f"{propname}, {type(v)}")
                 sock_data[propname] = v
+            # this is a property. pain.
+            sock_data["socket_type"] = socket_class.interface_type.fget(socket_class)
             tree_in_out[sock.identifier] = sock_data
                 
 
@@ -345,8 +352,8 @@ def export_to_json(trees, path="", write_file=True, only_selected=False):
                     sock_data["name"] = sock_name
                     sock_data["item_type"] = "SOCKET"
                     sock_data["default_closed"] = False
-                    # these two are the same thing, but I need both?
-                    sock_data["socket_type"] = link.from_socket.bl_idname
+                        # record the actual bl_idname and the proper interface type.
+                    sock_data["socket_type"] = link.from_socket.interface_type
                     sock_data["bl_socket_idname"] = link.from_socket.bl_idname
                     sock_data["identifier"] = sock_name
                     sock_data["in_out"]="OUTPUT"
@@ -384,8 +391,8 @@ def export_to_json(trees, path="", write_file=True, only_selected=False):
                         sock_data["name"] = sock_name
                         sock_data["item_type"] = "SOCKET"
                         sock_data["default_closed"] = False
-                        # these two are the same thing, but I need both?
-                        sock_data["socket_type"] = link.from_socket.bl_idname
+                        # record the actual bl_idname and the proper interface type.
+                        sock_data["socket_type"] = link.from_socket.interface_type
                         sock_data["bl_socket_idname"] = link.from_socket.bl_idname
                         sock_data["identifier"] = sock_name
                         sock_data["in_out"]="INPUT"
@@ -513,9 +520,9 @@ def do_import(data, context):
 
         for s_name, s_props in tree_in_out.items():
             if s_props["item_type"] == 'SOCKET':
-                if s_props["bl_socket_idname"] == "LayerMaskSocket":
+                if s_props["socket_type"] == "LayerMaskSocket":
                     continue
-                if (socket_type := s_props["bl_socket_idname"]) == "NodeSocketColor":
+                if (socket_type := s_props["socket_type"]) == "NodeSocketColor":
                     socket_type = "VectorSocket"
                 if bpy.app.version != (4,5,0):
                     sock = tree.interface.new_socket(s_props["name"], in_out=s_props["in_out"], socket_type=socket_type)

@@ -25,7 +25,7 @@ if bpy_version == (4,5,0): # THere is a bug that requires the socket type to inh
     from bpy.types import NodeSocketGeometry # so we will just inherit from NodeSocketGeometry
     class MantisSocket(NodeSocketGeometry, NodeSocket): # even though that is kinda silly
         is_valid_interface_type=False
-        @property
+        @property # making this a classmethod is apparently not gonna work
         def interface_type(self):
             return NodeSocketGeometry.bl_idname
 else:
@@ -35,7 +35,9 @@ else:
         def interface_type(self):
             # this is stupid but it is the fastest way to implement this
             # TODO: refactor this, it should be a class property
-            return map_color_to_socket_type(self.color)
+            if hasattr(self, "color"):
+                return map_color_to_socket_type(self.color)
+            return map_color_to_socket_type(self.color_simple)
 
 
     
