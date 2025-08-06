@@ -639,11 +639,8 @@ def do_import(data, context):
                                     socket = n.outputs[int(s_val["index"])]
                             if socket.name != s_val["name"]:
                                 right_name = s_val['name']
-                                print (n.id_data.name, n.name)
                                 prRed( "There has been an error getting a socket while importing data."
                                         f"found name: {socket.name}; should have found: {right_name}.")
-                                for s in n.outputs:
-                                    print (s.name, s.bl_idname, s.identifier)
                     else:
                         for removed_index in sockets_removed:
                             if s_val["index"] > removed_index:
@@ -677,11 +674,8 @@ def do_import(data, context):
                                 # finally we need to check that the name matches.
                             if socket.name != s_val["name"]:
                                 right_name = s_val['name']
-                                print (n.id_data.name, n.name)
                                 prRed( "There has been an error getting a socket while importing data."
                                         f"found name: {socket.name}; should have found: {right_name}.")
-                                for s in n.inputs:
-                                    print (s.name, s.bl_idname, s.identifier)
 
                 except IndexError:
                     socket = fix_custom_parameter(n, propslist["sockets"][s_id])
@@ -691,6 +685,8 @@ def do_import(data, context):
                         raise RuntimeError(is_output, n.name, s_val["name"], s_id, len(n.inputs))
                 
                 for s_p, s_v in s_val.items():
+                    if n.bl_idname in ['NodeReroute']:
+                        break # Reroute Nodes do not have anything I can set or modify.
                     if s_p not in ["default_value"]:
                         if s_p == "search_prop" and n.bl_idname == 'UtilityMetaRig':
                             socket.node.armature= s_v
