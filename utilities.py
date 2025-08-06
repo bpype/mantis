@@ -229,6 +229,17 @@ def do_relink(node, s, map, in_out='INPUT', parent_name = ''):
                 raise RuntimeError("Unhandled case in do_relink()")
     elif get_string != "__extend__":
         if not s.is_output:
+            from bpy.app import version as bpy_version
+            if bpy_version >=(4,5,0): # VERSIONING
+                # for some reason, this is throwing an error now
+                from bpy.types import bpy_prop_array
+                if isinstance(val, bpy_prop_array):
+                    if in_out == "INPUT" and s.input == False:
+                        return # doesn't matter, this is a Matrix socket in a bone or something
+                    raise RuntimeError(
+                          f"Cannot set property in socket of type {s.bl_idname} due to bug in Blender: "
+                          f"{node.id_data.name}:{node.name}:{s.name} ")
+                    # TODO: report this weird bug!
             try:
                 s.default_value = val
             except (AttributeError, ValueError): # must be readonly or maybe it doesn't have a d.v.
