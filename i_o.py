@@ -495,6 +495,8 @@ def get_link_sockets(link, tree, tree_socket_id_map):
     id1 = from_socket_id
     if hasattr(from_node, "node_tree") or \
         from_node.bl_idname in ["SchemaArrayInput",
+                                "SchemaArrayInputGet",
+                                "SchemaArrayInputAll",
                                 "SchemaConstInput",
                                 "SchemaIncomingConnection", ]: # now we have to map by something else
                 try:
@@ -780,6 +782,7 @@ def do_import(data, context):
 
             if n.bl_idname in [ "SchemaArrayInput",
                                 "SchemaArrayInputGet",
+                                "SchemaArrayInputAll",
                                 "SchemaArrayOutput",
                                 "SchemaConstInput",
                                 "SchemaConstOutput",
