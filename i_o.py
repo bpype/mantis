@@ -208,6 +208,8 @@ def get_node_data(ui_node):
             location_acc += getattr(ui_node, propname)
             node_props[propname] = tuple(location_acc)
             # this works!
+    if ui_node.bl_idname in ['RerouteNode']:
+        return node_props # we don't need to get the socket information.
     for i, ui_socket in enumerate(ui_node.inputs):
         socket = get_socket_data(ui_socket)
         socket["index"]=i
@@ -631,11 +633,17 @@ def do_import(data, context):
                                 # because the socket ID may not be the same when it is re-generated
                             else: # otherwise try to get the index
                                 # IT IS NOT CLEAR but this is what throws the index error below BAD
-                                socket = n.outputs[int(s_val["index"])]
-                                if socket.name != s_val["name"]:
-                                    right_name = s_val['name']
-                                    prRed( "There has been an error getting a socket while importing data."
-                                          f"found name: {socket.name}; should have found: {right_name}.")
+                                # try to get by name
+                                socket = n.outputs.get(s_val['name'])
+                                if not socket:
+                                    socket = n.outputs[int(s_val["index"])]
+                            if socket.name != s_val["name"]:
+                                right_name = s_val['name']
+                                print (n.id_data.name, n.name)
+                                prRed( "There has been an error getting a socket while importing data."
+                                        f"found name: {socket.name}; should have found: {right_name}.")
+                                for s in n.outputs:
+                                    print (s.name, s.bl_idname, s.identifier)
                     else:
                         for removed_index in sockets_removed:
                             if s_val["index"] > removed_index:
@@ -643,7 +651,6 @@ def do_import(data, context):
                         if s_val["index"] >= len(n.inputs):
                             if n.bl_idname in add_inputs_bl_idnames:
                                 socket = n.inputs.new(s_val["bl_idname"], s_val["name"], identifier=s_id, use_multi_input=s_val["is_multi_input"])
-                                prGreen (n.id_data.name, propslist['name'], socket.name, socket.bl_idname)
                             elif n.bl_idname in ["MantisSchemaGroup"]:
                                 n.is_updating = True
                                 try:
@@ -664,12 +671,17 @@ def do_import(data, context):
                                 # it usually isn't a problem.
                             else: # otherwise try to get the index
                                 # IT IS NOT CLEAR but this is what throws the index error below BAD
-                                socket = n.inputs[int(s_val["index"])]
+                                socket = n.inputs.get(s_val["name"])
+                                if not socket:
+                                    socket = n.inputs[int(s_val["index"])]
                                 # finally we need to check that the name matches.
-                                if socket.name != s_val["name"]:
-                                    right_name = s_val['name']
-                                    prRed( "There has been an error getting a socket while importing data."
-                                          f"found name: {socket.name}; should have found: {right_name}.")
+                            if socket.name != s_val["name"]:
+                                right_name = s_val['name']
+                                print (n.id_data.name, n.name)
+                                prRed( "There has been an error getting a socket while importing data."
+                                        f"found name: {socket.name}; should have found: {right_name}.")
+                                for s in n.inputs:
+                                    print (s.name, s.bl_idname, s.identifier)
 
                 except IndexError:
                     socket = fix_custom_parameter(n, propslist["sockets"][s_id])
@@ -730,78 +742,88 @@ def do_import(data, context):
             #
             name1=l[0]
             name2=l[2]
+
+            from_node_name = l[0]
+            from_socket_id = l[1]
+            to_node_name = l[2]
+            to_socket_id = l[3]
+            from_output_index = l[4]
+            to_input_index = l[5]
+            from_socket_name = l[6]
+            to_socket_name = l[7]
             
             # if the from/to socket or node has been removed, continue
-            from_node = tree.nodes.get(l[0])
+            from_node = tree.nodes.get(from_node_name)
             if not from_node:
-                prWhite(f"INFO: cannot create link {l[0]}:{l[1]} -->  {l[2]}:{l[3]}")
+                prWhite(f"ERROR: cannot create link "
+                        f"{from_node_name}:{from_socket_id} -->  {to_node_name}:{to_socket_id}")
                 continue
-            if hasattr(from_node, "node_tree"): # now we have to map by name actually
-                try:
-                    id1 = from_node.outputs[l[4]].identifier
-                except IndexError:
-                    prRed ("Index incorrect")
-                    id1 = None
+            if hasattr(from_node, "node_tree") or \
+                from_node.bl_idname in ["SchemaArrayInput",
+                                        "SchemaConstInput",
+                                                "SchemaIncomingConnection"]: # now we have to map by something else
+                        try:
+                            id1 = from_node.outputs[from_socket_name].identifier
+                        except KeyError: # we'll try index if nothing else works
+                            pass
+                        try:
+                            id1 = from_node.outputs[from_output_index].identifier
+                        except IndexError as e:
+                            prRed("failed to create link: "
+                                f"{from_node_name}:{from_socket_id} --> {to_node_name}:{to_socket_id}")
             elif from_node.bl_idname in ["NodeGroupInput"]:
-                id1 = tree_sock_id_map.get(l[1])
-                if id1 is None:
-                    prRed(l[1])
-#                prOrange (l[1], id1)
-            elif from_node.bl_idname in ["SchemaArrayInput", "SchemaConstInput", "SchemaIncomingConnection"]:
-                # try the index instead
-                id1 = from_node.outputs[l[4]].identifier
-            
-
+                id1 = tree_sock_id_map.get(from_socket_id)
             for from_sock in from_node.outputs:
                 if from_sock.identifier == id1: break
-            else: # we can raise a runtime error here actually
+            else: 
                 from_sock = None
-                
-            to_node = tree.nodes[l[2]]
-            if hasattr(to_node, "node_tree"):
-                try:
-                    id2 = to_node.inputs[l[5]].identifier
-                except IndexError:
-                    prRed ("Index incorrect")
-                    id2 = None
+            to_node = tree.nodes[name2]
+            if hasattr(to_node, "node_tree") or \
+                to_node.bl_idname in ["SchemaArrayOutput",
+                                        "SchemaConstOutput",
+                                        "SchemaOutgoingConnection"]: # now we have to map by something else
+                        try:
+                            id2 = to_node.inputs[to_socket_name].identifier
+                        except KeyError: # we'll try index if nothing else works
+                            pass
+                        try:
+                            id2 = to_node.inputs[to_input_index].identifier
+                        except IndexError as e:
+                            prRed("failed to create link: "
+                                f"{from_node_name}:{from_socket_id} --> {to_node_name}:{to_socket_id}")
             elif to_node.bl_idname in ["NodeGroupOutput"]:
-                id2 = tree_sock_id_map.get(l[3])
-            elif to_node.bl_idname in ["SchemaArrayOutput", "SchemaConstOutput", "SchemaOutgoingConnection"]:
-                # try the index instead
-                id2 = to_node.inputs[l[5]].identifier
+                id2 = tree_sock_id_map.get(to_socket_id)
 
             for to_sock in to_node.inputs:
                 if to_sock.identifier == id2: break
             else:
                 to_sock = None
-            
             try:
                 link = tree.links.new(from_sock, to_sock)
             except TypeError:
-                if ((id1 is not None) and ("Layer Mask" in id1)) or ((id2 is not None) and ("Layer Mask" in id2)):
-                    pass
+                prPurple (from_sock)
+                prOrange (to_sock)
+                if print_link_failure:
+                    prWhite(f"looking for... {name1}:{id1}, {name2}:{id2}")
+                    prRed (f"Failed: {l[0]}:{l[1]} --> {l[2]}:{l[3]}")
+                    prRed (f" got node: {from_node.name}, {to_node.name}")
+                    prRed (f" got socket: {from_sock}, {to_sock}")
+                    prOrange(to_node.inputs.keys())
+                    if from_sock is None:
+                        prOrange ("Candidates...")
+                        for out in from_node.outputs:
+                            prOrange("   %s, id=%s" % (out.name, out.identifier))
+                        for k, v in tree_sock_id_map.items():
+                            print (wrapOrange(k), wrapPurple(v))
+                    if to_sock is None:
+                        prOrange ("Candidates...")
+                        for inp in to_node.inputs:
+                            prOrange("   %s, id=%s" % (inp.name, inp.identifier))
+                        for k, v in tree_sock_id_map.items():
+                            print (wrapOrange(k), wrapPurple(v))
+                    raise RuntimeError
                 else:
-                    if print_link_failure:
-                        prWhite(f"looking for... {name1}:{id1}, {name2}:{id2}")
-                        prRed (f"Failed: {l[0]}:{l[1]} --> {l[2]}:{l[3]}")
-                        prRed (f" got node: {from_node.name}, {to_node.name}")
-                        prRed (f" got socket: {from_sock}, {to_sock}")
-                        prOrange(to_node.inputs.keys())
-                        if from_sock is None:
-                            prOrange ("Candidates...")
-                            for out in from_node.outputs:
-                                prOrange("   %s, id=%s" % (out.name, out.identifier))
-                            for k, v in tree_sock_id_map.items():
-                                print (wrapOrange(k), wrapPurple(v))
-                        if to_sock is None:
-                            prOrange ("Candidates...")
-                            for inp in to_node.inputs:
-                                prOrange("   %s, id=%s" % (inp.name, inp.identifier))
-                            for k, v in tree_sock_id_map.items():
-                                print (wrapOrange(k), wrapPurple(v))
-                        raise RuntimeError
-                    else:
-                        prRed(f"Failed to add link in {tree.name}: {name1}:{id1}, {name2}:{id2}")
+                    prRed(f"Failed to add link in {tree.name}: {name1}:{from_socket_name}, {name2}:{to_socket_name}")
             
             # if at this point it doesn't work... we need to fix
         for name, p in parent_me:
