@@ -209,12 +209,10 @@ def get_node_data(ui_node):
             node_props[propname] = tuple(location_acc)
             # this works!
     for i, ui_socket in enumerate(ui_node.inputs):
-        if ui_socket.is_linked: continue # not necessary to save it since it doesn't affect the tree
         socket = get_socket_data(ui_socket)
         socket["index"]=i
         sockets[ui_socket.identifier] = socket
     for i, ui_socket in enumerate(ui_node.outputs):
-        if ui_socket.is_linked: continue # see above
         socket = get_socket_data(ui_socket)
         socket["index"]=i
         sockets[ui_socket.identifier] = socket
@@ -625,15 +623,19 @@ def do_import(data, context):
                                 socket = n.outputs.new(s_val["bl_idname"], s_val["name"], identifier=s_id)
                             finally:
                                 n.is_updating=False
-                        else: 
+                        else: # first try to get by ID AND name. ID's switch around a bit so we need both to match.
                             for socket in n.outputs:
-                                if socket.identifier == s_id:
+                                if socket.identifier == s_id and socket.name == s_val['name']:
                                     break
                                 # this often fails for group outputs and such
                                 # because the socket ID may not be the same when it is re-generated
                             else: # otherwise try to get the index
                                 # IT IS NOT CLEAR but this is what throws the index error below BAD
                                 socket = n.outputs[int(s_val["index"])]
+                                if socket.name != s_val["name"]:
+                                    right_name = s_val['name']
+                                    prRed( "There has been an error getting a socket while importing data."
+                                          f"found name: {socket.name}; should have found: {right_name}.")
                     else:
                         for removed_index in sockets_removed:
                             if s_val["index"] > removed_index:
@@ -641,6 +643,7 @@ def do_import(data, context):
                         if s_val["index"] >= len(n.inputs):
                             if n.bl_idname in add_inputs_bl_idnames:
                                 socket = n.inputs.new(s_val["bl_idname"], s_val["name"], identifier=s_id, use_multi_input=s_val["is_multi_input"])
+                                prGreen (n.id_data.name, propslist['name'], socket.name, socket.bl_idname)
                             elif n.bl_idname in ["MantisSchemaGroup"]:
                                 n.is_updating = True
                                 try:
@@ -653,16 +656,21 @@ def do_import(data, context):
                                 prWhite("Not found: ", propslist['name'], s_val["name"], s_id)
                                 prRed("Index: ", s_val["index"], "Number of inputs", len(n.inputs))
                                 raise NotImplementedError(wrapRed(f"{n.bl_idname} in {n.id_data.name} needs to be handled in JSON load."))
-                        else:
-                            # first try to get by ID
+                        else: # first try to get by ID AND name. ID's switch around a bit so we need both to match.
                             for socket in n.inputs:
-                                if socket.identifier == s_id:
+                                if socket.identifier == s_id and socket.name == s_val['name']:
                                     break
                                 # failing to find the socket by ID is less common for inputs than outputs.
                                 # it usually isn't a problem.
                             else: # otherwise try to get the index
                                 # IT IS NOT CLEAR but this is what throws the index error below BAD
                                 socket = n.inputs[int(s_val["index"])]
+                                # finally we need to check that the name matches.
+                                if socket.name != s_val["name"]:
+                                    right_name = s_val['name']
+                                    prRed( "There has been an error getting a socket while importing data."
+                                          f"found name: {socket.name}; should have found: {right_name}.")
+
                 except IndexError:
                     socket = fix_custom_parameter(n, propslist["sockets"][s_id])
                     if socket is None:
