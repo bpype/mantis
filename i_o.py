@@ -61,6 +61,20 @@ prop_ignore.extend(['keymesh'])
 prop_ignore_tree = prop_ignore.copy()
 prop_ignore_tree.extend(["bl_label", "name"])
 
+prop_ignore_interface = prop_ignore.copy()
+                                # Geometry Nodes stuff that Mantis doesn't use
+prop_ignore_interface.extend( [ "attribute_domain",
+                                "default_attribute_name",
+                                "default_input",
+                                "force_non_field",
+                                "hide_in_modifier",
+                                "hide_value",
+                                # no idea what this is, also don't care
+                                "is_inspect_output",
+                                "is_panel_toggle",
+                                "layer_selection_field",
+                                "structure_type",  ] )
+
 
 
 from bpy.app import version
@@ -71,7 +85,8 @@ if version >= (4,5,0):
 add_inputs_bl_idnames = [
     "UtilityDriver", "UtilityFCurve", "DeformerMorphTargetDeform",
     "LinkArmature",
-    'xFormBoneNode', # for custom properties, right?
+    "xFormBoneNode"
+    # for custom properties, right?
     # For a long time this wasn't in here and I guess there weren't problems
     # I really don't know if adding it here is right...
     ]
@@ -178,7 +193,7 @@ def get_node_data(ui_node):
             node_group_update(ui_node, force=True)
         finally: # ensure this line is run even if there is an error
             ui_node.is_updating = False
-    node_props, sockets = {}, {}
+    node_props, inputs, outputs = {}, {}, {}
     for propname  in dir(ui_node):
         value = getattr(ui_node, propname)
         if propname in ['fake_fcurve_ob']:
@@ -213,12 +228,13 @@ def get_node_data(ui_node):
     for i, ui_socket in enumerate(ui_node.inputs):
         socket = get_socket_data(ui_socket)
         socket["index"]=i
-        sockets[ui_socket.identifier] = socket
+        inputs[ui_socket.identifier] = socket
     for i, ui_socket in enumerate(ui_node.outputs):
         socket = get_socket_data(ui_socket)
         socket["index"]=i
-        sockets[ui_socket.identifier] = socket
-    node_props["sockets"] = sockets
+        outputs[ui_socket.identifier] = socket
+    node_props["inputs"] = inputs
+    node_props["outputs"] = outputs
     return node_props
 
 def get_tree_data(tree):
@@ -246,7 +262,6 @@ def get_interface_data(tree, tree_in_out):
             sock_data["description"] = sock.description
             sock_data["default_closed"] = sock.default_closed
             tree_in_out[sock.name] = sock_data
-
         # if it is a socket....
         else:
             # we need to get the socket class from the bl_idname
@@ -259,11 +274,13 @@ def get_interface_data(tree, tree_in_out):
             if sock.parent:
                 sock_parent = sock.parent.name
             for propname  in dir(sock):
-                v = getattr(sock, propname)
-                if (propname in prop_ignore) or ( callable(v) ):
+                if propname in prop_ignore_interface:
                     continue
                 if (propname == "parent"):
                     sock_data[propname] = sock_parent
+                    continue
+                v = getattr(sock, propname)
+                if (propname in prop_ignore) or ( callable(v) ):
                     continue
                 if isinstance(getattr(sock, propname), bpy.types.bpy_prop_array):
                     v = tuple(getattr(sock, propname))
@@ -273,7 +290,7 @@ def get_interface_data(tree, tree_in_out):
             # this is a property. pain.
             sock_data["socket_type"] = socket_class.interface_type.fget(socket_class)
             tree_in_out[sock.identifier] = sock_data
-                
+            
 
 def export_to_json(trees, path="", write_file=True, only_selected=False):
     export_data = {}
@@ -303,8 +320,8 @@ def export_to_json(trees, path="", write_file=True, only_selected=False):
         in_sockets, out_sockets = {}, {}
         unique_sockets_from, unique_sockets_to = {}, {}
 
-        in_node = {"name":"MANTIS_AUTOGEN_GROUP_INPUT", "bl_idname":"NodeGroupInput", "sockets":in_sockets}
-        out_node = {"name":"MANTIS_AUTOGEN_GROUP_OUTPUT", "bl_idname":"NodeGroupOutput", "sockets":out_sockets}
+        in_node = {"name":"MANTIS_AUTOGEN_GROUP_INPUT", "bl_idname":"NodeGroupInput", "inputs":in_sockets}
+        out_node = {"name":"MANTIS_AUTOGEN_GROUP_OUTPUT", "bl_idname":"NodeGroupOutput", "outputs":out_sockets}
         add_input_node, add_output_node = False, False
 
         for link in tree.links:
@@ -325,7 +342,7 @@ def export_to_json(trees, path="", write_file=True, only_selected=False):
             else:
                 problem = link.to_node.name + "::" + link.to_socket.name
                 raise RuntimeError(wrapRed(f"Error saving index of socket: {problem}"))
-
+            
             if current_tree_is_base_tree:
                 if (only_selected and link.from_node.select) and (not link.to_node.select):
                     # handle an output in the tree
@@ -458,7 +475,177 @@ def export_to_json(trees, path="", write_file=True, only_selected=False):
     # I'm gonna do this in a totally naive way, because this should already be sorted properly
     #   for the sake of dependency satisfaction. So the current "tree" should be the "main" tree
     tree.filepath = path
-    
+        
+def get_link_sockets(link, tree, tree_socket_id_map):
+    from_node_name = link[0]
+    from_socket_id = link[1]
+    to_node_name = link[2]
+    to_socket_id = link[3]
+    from_output_index = link[4]
+    to_input_index = link[5]
+    from_socket_name = link[6]
+    to_socket_name = link[7]
+
+    # TODO: make this a loop and swap out the in/out stuff
+    # this is OK but I want to avoid code-duplication, which this almost is.
+    from_node = tree.nodes.get(from_node_name)
+    # first try and get by name. we'll use this if the ID and the name do not match.
+    # from_sock = from_node.outputs.get(from_socket_name)
+
+    id1 = from_socket_id
+    if hasattr(from_node, "node_tree") or \
+        from_node.bl_idname in ["SchemaArrayInput",
+                                "SchemaConstInput",
+                                "SchemaIncomingConnection", ]: # now we have to map by something else
+                try:
+                    id1 = from_node.outputs[from_socket_name].identifier
+                except KeyError: # we'll try index if nothing else works
+                    try:
+                        id1 = from_node.outputs[from_output_index].identifier
+                    except IndexError as e:
+                        prRed("failed to create link: "
+                            f"{from_node_name}:{from_socket_id} --> {to_node_name}:{to_socket_id}")
+                        return (None, None)
+    elif from_node.bl_idname in ["NodeGroupInput"]:
+        id1 = tree_socket_id_map.get(from_socket_id)
+    for from_sock in from_node.outputs:
+        if from_sock.identifier == id1: break
+    else: 
+        from_sock = None
+
+    id2 = to_socket_id
+    to_node = tree.nodes[to_node_name]
+    if hasattr(to_node, "node_tree") or \
+        to_node.bl_idname in ["SchemaArrayOutput",
+                              "SchemaConstOutput",
+                              "SchemaOutgoingConnection", ]: # now we have to map by something else
+                try:
+                    id2 = to_node.inputs[to_socket_name].identifier
+                except KeyError: # we'll try index if nothing else works
+                    try:  # nesting try/except is ugly but it is right...
+                        id2 = to_node.inputs[to_input_index].identifier
+                    except IndexError as e:
+                        prRed("failed to create link: "
+                            f"{from_node_name}:{from_socket_id} --> {to_node_name}:{to_socket_id}")
+                    return (None, None)
+    elif to_node.bl_idname in ["NodeGroupOutput"]:
+        id2 = tree_socket_id_map.get(to_socket_id)
+
+    for to_sock in to_node.inputs:
+        if to_sock.identifier == id2: break
+    else:
+        to_sock = None
+    return from_sock, to_sock
+
+def setup_sockets(node, propslist, in_out="inputs"):
+        sockets_removed = []
+        for i, (s_id, s_val) in enumerate(propslist[in_out].items()):
+            if node.bl_idname in ['NodeReroute']:
+                break # Reroute Nodes do not have anything I can set or modify.
+            for socket_removed in SOCKETS_REMOVED:
+                if node.bl_idname == socket_removed[0] and s_id == socket_removed[1]:
+                    prWhite(f"INFO: Ignoring import of socket {s_id}; it has been removed.")
+                    sockets_removed.append(s_val["index"])
+                    sockets_removed.sort()
+                    continue
+            if s_val["is_output"]:
+                if node.bl_idname in "MantisSchemaGroup":
+                    node.is_updating = True
+                    try:
+                        socket = node.outputs.new(s_val["bl_idname"], s_val["name"], identifier=s_id)
+                    finally:
+                        node.is_updating=False
+                elif s_val["index"] >= len(node.outputs):
+                    if node.bl_idname in add_inputs_bl_idnames:
+                        socket = node.outputs.new(s_val["bl_idname"], s_val["name"], identifier=s_id, )
+                else: # first try to get by ID AND name. ID's switch around a bit so we need both to match.
+                    for socket in node.outputs:
+                        if socket.identifier == s_id and socket.name == s_val['name']:
+                            break
+                        # this often fails for group outputs and such
+                        # because the socket ID may not be the same when it is re-generated
+                    else: # otherwise try to get the index
+                        # IT IS NOT CLEAR but this is what throws the index error below BAD
+                        # try to get by name
+                        socket = node.outputs.get(s_val['name'])
+                        if not socket:
+                            try:
+                                socket = node.outputs[int(s_val["index"])]
+                            except IndexError as e:
+                                print (node.id_data.name)
+                                print (propslist['name'])
+                                print (s_id, s_val['name'], s_val['index'])
+                                raise e
+
+                    if socket.name != s_val["name"]:
+                        right_name = s_val['name']
+                        prRed( "There has been an error getting a socket while importing data."
+                                f"found name: {socket.name}; should have found: {right_name}.")
+            else:
+                for removed_index in sockets_removed:
+                    if s_val["index"] > removed_index:
+                        s_val["index"]-=1
+                if s_val["index"] >= len(node.inputs):
+                    if node.bl_idname in add_inputs_bl_idnames:
+                        socket = node.inputs.new(s_val["bl_idname"], s_val["name"], identifier=s_id, use_multi_input=s_val["is_multi_input"])
+                    elif node.bl_idname in ["MantisSchemaGroup"]:
+                        node.is_updating = True
+                        try:
+                            socket = node.inputs.new(s_val["bl_idname"], s_val["name"], identifier=s_id, use_multi_input=s_val["is_multi_input"])
+                        finally:
+                            node.is_updating=False
+                    elif node.bl_idname in ["NodeGroupOutput"]:
+                        pass # this is dealt with separately
+                    else:
+                        prWhite("Not found: ", propslist['name'], s_val["name"], s_id)
+                        prRed("Index: ", s_val["index"], "Number of inputs", len(node.inputs))
+                        for thing1, thing2 in zip(propslist[in_out].keys(), getattr(node, in_out).keys()):
+                            print (thing1, thing2)
+                        raise NotImplementedError(wrapRed(f"{node.bl_idname} in {node.id_data.name} needs to be handled in JSON load."))
+                else: # first try to get by ID AND name. ID's switch around a bit so we need both to match.
+                    for socket in node.inputs:
+                        if socket.identifier == s_id and socket.name == s_val['name']:
+                            break
+                        # failing to find the socket by ID is less common for inputs than outputs.
+                        # it usually isn't a problem.
+                    else: # otherwise try to get the index
+                        # IT IS NOT CLEAR but this is what throws the index error below BAD
+                        socket = node.inputs.get(s_val["name"])
+                        if not socket:
+                            socket = node.inputs[int(s_val["index"])]
+                        # finally we need to check that the name matches.
+                    if socket.name != s_val["name"]:
+                        right_name = s_val['name']
+                        prRed( "There has been an error getting a socket while importing data."
+                                f"found name: {socket.name}; should have found: {right_name}.")
+            # set the value
+            for s_p, s_v in s_val.items():
+                if s_p not in ["default_value"]:
+                    if s_p == "search_prop" and node.bl_idname == 'UtilityMetaRig':
+                        socket.node.armature= s_v
+                        socket.search_prop=bpy.data.objects.get(s_v)
+                    if s_p == "search_prop" and node.bl_idname in ['UtilityMatrixFromCurve', 'UtilityMatricesFromCurve']:
+                        socket.search_prop=bpy.data.objects.get(s_v)
+                    elif s_p == "bone" and socket.bl_idname == 'EnumMetaBoneSocket':
+                        socket.bone = s_v
+                        socket.node.pose_bone = s_v
+                    continue # not editable and NOT SAFE
+                #
+                if socket.bl_idname in ["BooleanThreeTupleSocket"]:
+                    value = bool(s_v[0]), bool(s_v[1]), bool(s_v[2]),
+                    s_v = value
+                try:
+                    setattr(socket, s_p , s_v)
+                except TypeError as e:
+                    prRed("Can't set socket due to type mismatch: ", node.name, socket.name, s_p, s_v)
+                    # raise e
+                except ValueError as e:
+                    prRed("Can't set socket due to type mismatch: ", node.name,  socket.name, s_p, s_v)
+                    # raise e
+                except AttributeError as e:
+                    if print_read_only_warning == True:
+                        prWhite("Tried to write a read-only property, ignoring...")
+                        prWhite(f"{socket.node.name}[{socket.name}].{s_p} is read only, cannot set value to {s_v}")
 
 def do_import_from_file(filepath, context):
     import json
@@ -492,6 +679,7 @@ def do_import_from_file(filepath, context):
     for tree in all_trees:
             do_cleanup(tree)
     return {'CANCELLED'}
+
 
 def do_import(data, context):
     trees = []
@@ -553,8 +741,8 @@ def do_import(data, context):
                                     )
         
         # BUG this was screwing up the order of things
-        # so I wan tot fix it and re-enable it
-        if False:
+        # so I want to fix it and re-enable it
+        if True:
             # Go BACK through and set the index/position now that all items exist.
             interface_sockets.sort(key=lambda a : a[1])
             for (socket, position) in interface_sockets:
@@ -608,114 +796,23 @@ def do_import(data, context):
                     node_group_update(n, force = True)
                 finally:
                     n.is_updating=False
-            
-            sockets_removed = []
-            for i, (s_id, s_val) in enumerate(propslist["sockets"].items()):
-                for socket_removed in SOCKETS_REMOVED:
-                    if n.bl_idname == socket_removed[0] and s_id == socket_removed[1]:
-                        prWhite(f"INFO: Ignoring import of socket {s_id}; it has been removed.")
-                        sockets_removed.append(s_val["index"])
-                        sockets_removed.sort()
-                        continue
-                try:
-                    if s_val["is_output"]: # for some reason it thinks the index is a string?
-                        if n.bl_idname in "MantisSchemaGroup":
-                            n.is_updating = True
-                            try:
-                                socket = n.outputs.new(s_val["bl_idname"], s_val["name"], identifier=s_id)
-                            finally:
-                                n.is_updating=False
-                        else: # first try to get by ID AND name. ID's switch around a bit so we need both to match.
-                            for socket in n.outputs:
-                                if socket.identifier == s_id and socket.name == s_val['name']:
-                                    break
-                                # this often fails for group outputs and such
-                                # because the socket ID may not be the same when it is re-generated
-                            else: # otherwise try to get the index
-                                # IT IS NOT CLEAR but this is what throws the index error below BAD
-                                # try to get by name
-                                socket = n.outputs.get(s_val['name'])
-                                if not socket:
-                                    socket = n.outputs[int(s_val["index"])]
-                            if socket.name != s_val["name"]:
-                                right_name = s_val['name']
-                                prRed( "There has been an error getting a socket while importing data."
-                                        f"found name: {socket.name}; should have found: {right_name}.")
-                    else:
-                        for removed_index in sockets_removed:
-                            if s_val["index"] > removed_index:
-                                s_val["index"]-=1
-                        if s_val["index"] >= len(n.inputs):
-                            if n.bl_idname in add_inputs_bl_idnames:
-                                socket = n.inputs.new(s_val["bl_idname"], s_val["name"], identifier=s_id, use_multi_input=s_val["is_multi_input"])
-                            elif n.bl_idname in ["MantisSchemaGroup"]:
-                                n.is_updating = True
-                                try:
-                                    socket = n.inputs.new(s_val["bl_idname"], s_val["name"], identifier=s_id, use_multi_input=s_val["is_multi_input"])
-                                finally:
-                                    n.is_updating=False
-                            elif n.bl_idname in ["NodeGroupOutput"]:
-                                pass # this is dealt with separately
-                            else:
-                                prWhite("Not found: ", propslist['name'], s_val["name"], s_id)
-                                prRed("Index: ", s_val["index"], "Number of inputs", len(n.inputs))
-                                raise NotImplementedError(wrapRed(f"{n.bl_idname} in {n.id_data.name} needs to be handled in JSON load."))
-                        else: # first try to get by ID AND name. ID's switch around a bit so we need both to match.
-                            for socket in n.inputs:
-                                if socket.identifier == s_id and socket.name == s_val['name']:
-                                    break
-                                # failing to find the socket by ID is less common for inputs than outputs.
-                                # it usually isn't a problem.
-                            else: # otherwise try to get the index
-                                # IT IS NOT CLEAR but this is what throws the index error below BAD
-                                socket = n.inputs.get(s_val["name"])
-                                if not socket:
-                                    socket = n.inputs[int(s_val["index"])]
-                                # finally we need to check that the name matches.
-                            if socket.name != s_val["name"]:
-                                right_name = s_val['name']
-                                prRed( "There has been an error getting a socket while importing data."
-                                        f"found name: {socket.name}; should have found: {right_name}.")
-
-                except IndexError:
-                    socket = fix_custom_parameter(n, propslist["sockets"][s_id])
-                    if socket is None:
-                        is_output = "output" if {s_val["is_output"]} else "input"
-                        prRed(s_val, type(s_val))
-                        raise RuntimeError(is_output, n.name, s_val["name"], s_id, len(n.inputs))
-                
-                for s_p, s_v in s_val.items():
-                    if n.bl_idname in ['NodeReroute']:
-                        break # Reroute Nodes do not have anything I can set or modify.
-                    if s_p not in ["default_value"]:
-                        if s_p == "search_prop" and n.bl_idname == 'UtilityMetaRig':
-                            socket.node.armature= s_v
-                            socket.search_prop=bpy.data.objects.get(s_v)
-                        if s_p == "search_prop" and n.bl_idname in ['UtilityMatrixFromCurve', 'UtilityMatricesFromCurve']:
-                            socket.search_prop=bpy.data.objects.get(s_v)
-                        elif s_p == "bone" and socket.bl_idname == 'EnumMetaBoneSocket':
-                            socket.bone = s_v
-                            socket.node.pose_bone = s_v
-                        continue # not editable and NOT SAFE
-                    #
-                    if socket.bl_idname in ["BooleanThreeTupleSocket"]:
-                        value = bool(s_v[0]), bool(s_v[1]), bool(s_v[2]),
-                        s_v = value
-                    try:
-                        setattr(socket, s_p , s_v)
-                    except TypeError as e:
-                        prRed("Can't set socket due to type mismatch: ", n.name, socket.name, s_p, s_v)
-                        # raise e
-                    except ValueError as e:
-                        prRed("Can't set socket due to type mismatch: ", n.name,  socket.name, s_p, s_v)
-                        # raise e
-                    except AttributeError as e:
-                        if print_read_only_warning == True:
-                            prWhite("Tried to write a read-only property, ignoring...")
-                            prWhite(f"{socket.node.name}[{socket.name}].{s_p} is read only, cannot set value to {s_v}")
+            # set up sockets
+            try:
+                setup_sockets(n, propslist, in_out="inputs")
+            except IndexError:
+                prRed("asdasdasda")
+            try:
+                setup_sockets(n, propslist, in_out="outputs")
+            except IndexError:
+                prRed("dfdfdfddfd")
 
             for p, v in propslist.items():
-                if p in ["node_tree", "sockets", "warning_propagation",  "socket_idname"]:
+                if p in ["node_tree",
+                         "sockets",
+                         "inputs",
+                         "outputs",
+                         "warning_propagation", 
+                         "socket_idname"]:
                     continue
                 # will throw AttributeError if read-only
                 # will throw TypeError if wrong type...
@@ -731,92 +828,26 @@ def do_import(data, context):
                 except Exception as e:
                     print (p)
                     raise e
+                
+
         for l in links:
-
-            id1 = l[1]
-            id2 = l[3]
-            #
-            name1=l[0]
-            name2=l[2]
-
-            from_node_name = l[0]
-            from_socket_id = l[1]
-            to_node_name = l[2]
-            to_socket_id = l[3]
-            from_output_index = l[4]
-            to_input_index = l[5]
             from_socket_name = l[6]
             to_socket_name = l[7]
-            
-            # if the from/to socket or node has been removed, continue
-            from_node = tree.nodes.get(from_node_name)
-            if not from_node:
-                prWhite(f"ERROR: cannot create link "
-                        f"{from_node_name}:{from_socket_id} -->  {to_node_name}:{to_socket_id}")
-                continue
-            if hasattr(from_node, "node_tree") or \
-                from_node.bl_idname in ["SchemaArrayInput",
-                                        "SchemaConstInput",
-                                                "SchemaIncomingConnection"]: # now we have to map by something else
-                        try:
-                            id1 = from_node.outputs[from_socket_name].identifier
-                        except KeyError: # we'll try index if nothing else works
-                            pass
-                        try:
-                            id1 = from_node.outputs[from_output_index].identifier
-                        except IndexError as e:
-                            prRed("failed to create link: "
-                                f"{from_node_name}:{from_socket_id} --> {to_node_name}:{to_socket_id}")
-            elif from_node.bl_idname in ["NodeGroupInput"]:
-                id1 = tree_sock_id_map.get(from_socket_id)
-            for from_sock in from_node.outputs:
-                if from_sock.identifier == id1: break
-            else: 
-                from_sock = None
-            to_node = tree.nodes[name2]
-            if hasattr(to_node, "node_tree") or \
-                to_node.bl_idname in ["SchemaArrayOutput",
-                                        "SchemaConstOutput",
-                                        "SchemaOutgoingConnection"]: # now we have to map by something else
-                        try:
-                            id2 = to_node.inputs[to_socket_name].identifier
-                        except KeyError: # we'll try index if nothing else works
-                            pass
-                        try:
-                            id2 = to_node.inputs[to_input_index].identifier
-                        except IndexError as e:
-                            prRed("failed to create link: "
-                                f"{from_node_name}:{from_socket_id} --> {to_node_name}:{to_socket_id}")
-            elif to_node.bl_idname in ["NodeGroupOutput"]:
-                id2 = tree_sock_id_map.get(to_socket_id)
-
-            for to_sock in to_node.inputs:
-                if to_sock.identifier == id2: break
-            else:
-                to_sock = None
+            name1=l[0]
+            name2=l[2]
+            from_sock, to_sock = get_link_sockets(l, tree, tree_sock_id_map)
             try:
                 link = tree.links.new(from_sock, to_sock)
             except TypeError:
                 prPurple (from_sock)
                 prOrange (to_sock)
                 if print_link_failure:
-                    prWhite(f"looking for... {name1}:{id1}, {name2}:{id2}")
+                    from_node_name = link[0]; from_socket_id = link[1]
+                    to_node_name = link[2]; to_socket_id = link[3]
+                    prWhite(f"looking for... {from_node_name}:{from_socket_id}, {to_node_name}:{to_socket_id}")
                     prRed (f"Failed: {l[0]}:{l[1]} --> {l[2]}:{l[3]}")
-                    prRed (f" got node: {from_node.name}, {to_node.name}")
+                    prRed (f" got node: {from_node_name}, {to_node_name}")
                     prRed (f" got socket: {from_sock}, {to_sock}")
-                    prOrange(to_node.inputs.keys())
-                    if from_sock is None:
-                        prOrange ("Candidates...")
-                        for out in from_node.outputs:
-                            prOrange("   %s, id=%s" % (out.name, out.identifier))
-                        for k, v in tree_sock_id_map.items():
-                            print (wrapOrange(k), wrapPurple(v))
-                    if to_sock is None:
-                        prOrange ("Candidates...")
-                        for inp in to_node.inputs:
-                            prOrange("   %s, id=%s" % (inp.name, inp.identifier))
-                        for k, v in tree_sock_id_map.items():
-                            print (wrapOrange(k), wrapPurple(v))
                     raise RuntimeError
                 else:
                     prRed(f"Failed to add link in {tree.name}: {name1}:{from_socket_name}, {name2}:{to_socket_name}")
