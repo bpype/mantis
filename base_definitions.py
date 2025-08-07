@@ -40,7 +40,6 @@ def valid_interface_types(cls : NodeTree, socket_idname : str):
     else: # once versioning is finished this will be unnecesary.
         return socket_idname in tell_valid_bl_idnames()
 
-
 def fix_reroute_colors(tree):
     context = bpy.context
     if any((tree.is_executing, tree.is_exporting, tree.do_live_update==False, context.space_data is None) ):
@@ -90,7 +89,10 @@ class MantisTree(NodeTree):
     hash:StringProperty(default='')
     do_live_update:BoolProperty(default=True) # use this to disable updates for e.g. scripts
     num_links:IntProperty(default=-1)
+    # operator settings for re-exporting the tree.
     filepath:StringProperty(default="", subtype='FILE_PATH')
+    export_all_subtrees_together:BoolProperty(default=True)
+    #
     is_executing:BoolProperty(default=False)
     is_exporting:BoolProperty(default=False)
     execution_id:StringProperty(default='')

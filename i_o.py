@@ -851,7 +851,7 @@ def do_import_from_file(filepath, context):
 
     with open(filepath, 'r', encoding='utf-8') as f:
         data = json.load(f)
-        do_import(data,context)
+        do_import(data,context, search_multi_files=True, filepath=filepath)
 
         for tree in all_trees:
             do_cleanup(tree)
@@ -868,8 +868,19 @@ def do_import_from_file(filepath, context):
             do_cleanup(tree)
     return {'CANCELLED'}
 
+# TODO figure out the right way to dedupe this stuff (see above)
+# I need this function for recursing through multi-file components
+# but I am using the with statement in the above function...
+# it should be easy to refactor but I don't know 100% for sure
+# the behaviour will be identical or if that matters.
+def get_graph_data_from_json(filepath) -> dict:
+    import json
+    with open(filepath, 'r', encoding='utf-8') as f:
+        data = json.load(f)
+    return data
 
-def do_import(data, context):
+
+def do_import(data, context, search_multi_files=False, filepath=''):
     trees = []
     tree_sock_id_maps = {}
 
@@ -978,7 +989,27 @@ def do_import(data, context):
 
             
             if sub_tree := propslist.get("node_tree"):
-                n.node_tree = bpy.data.node_groups.get(sub_tree)
+                # now that I am doing multi-file exports, this is tricky
+                # we need to see if the tree exists and if not, recurse
+                # and import that tree before continuing.
+                grp_tree = bpy.data.node_groups.get(sub_tree)
+                if grp_tree is None: # for multi-file component this is intentional
+                    if search_multi_files: # we'll get the filename and recurse
+                        from bpy.path import native_pathsep, clean_name
+                        from os import path as os_path
+                        native_filepath = native_pathsep(filepath)
+                        directory = os_path.split(native_filepath)[0]
+                        subtree_filepath = os_path.join(directory, clean_name(sub_tree)+'.rig')
+                        subtree_data = get_graph_data_from_json(subtree_filepath)
+                        do_import(subtree_data, context,
+                                  search_multi_files=True,
+                                  filepath=subtree_filepath)
+                        #now get the grp_tree lol
+                        grp_tree = bpy.data.node_groups[sub_tree]
+                    else: # otherwise it is an error
+                        raise RuntimeError(f"Tree {sub_tree} not available to import.")
+
+                n.node_tree = grp_tree
                 from .base_definitions import node_group_update
                 n.is_updating = True
                 try:
@@ -1008,7 +1039,7 @@ def do_import(data, context):
                 try:
                     setattr(n, p, v)
                 except Exception as e:
-                    print (p)
+                    prRed (p)
                     raise e
                 
 
@@ -1055,6 +1086,21 @@ def do_import(data, context):
         tree.is_executing = False
         tree.do_live_update = True
         
+
+def export_multi_file(trees : list, filepath : str, base_name :str) -> None:
+    for t in trees:
+        # this should name them the name of the tree...
+        from bpy.path import native_pathsep, clean_name
+        from os import path as os_path
+        from os import mkdir
+        native_filepath = native_pathsep(filepath)
+        directory = os_path.split(native_filepath)[0]
+        export_data = export_to_json([t], os_path.join(directory,
+                        clean_name(t.name)+'.rig'))
+        write_json_data(export_data, os_path.join(directory,
+                        clean_name(t.name)+'.rig'))
+        
+
 import bpy
 
 from bpy_extras.io_utils import ImportHelper, ExportHelper
@@ -1076,6 +1122,12 @@ class MantisExportNodeTreeSaveAs(Operator, ExportHelper):
         maxlen=255,  # Max internal buffer length, longer would be clamped.
     )
 
+    export_trees_together : BoolProperty(
+        default=False,
+        name="Pack All Sub-Trees",
+        description="Pack all Sub-trees into one file?")
+
+
     @classmethod
     def poll(cls, context):
         return hasattr(context.space_data, 'path')
@@ -1092,11 +1144,16 @@ class MantisExportNodeTreeSaveAs(Operator, ExportHelper):
         for t in trees:
             prGreen ("Node graph: \"%s\"" % (t.name))
         base_tree.is_exporting = True
-        export_data = export_to_json(trees, base_tree, self.filepath)
-        write_json_data(export_data, self.filepath)
+        if self.export_trees_together:
+            export_data = export_to_json(trees, base_tree, self.filepath)
+            write_json_data(export_data, self.filepath)
+        else:
+            export_multi_file(trees, self.filepath, base_tree.name)
         base_tree.is_exporting = False
         base_tree.prevent_next_exec = True
+        # set the properties on the base tree for re-exporting with alt-s
         base_tree.filepath = self.filepath
+        base_tree.export_all_subtrees_together = self.export_trees_together
         return {'FINISHED'}
 
 # Save
@@ -1110,16 +1167,19 @@ class MantisExportNodeTreeSave(Operator):
         return hasattr(context.space_data, 'path')
 
     def execute(self, context):
-        
         base_tree=context.space_data.path[-1].node_tree
+        filepath = base_tree.filepath
         from .utilities import all_trees_in_tree
         trees = all_trees_in_tree(base_tree)[::-1]
         prGreen("Exporting node graph with dependencies...")
         for t in trees:
             prGreen ("Node graph: \"%s\"" % (t.name))
         base_tree.is_exporting = True
-        export_to_json(trees, base_tree, base_tree.filepath)
-        write_json_data(export_data, base_tree.filepath)
+        if base_tree.export_all_subtrees_together:
+            export_data = export_to_json(trees, filepath)
+            write_json_data(export_data, filepath)
+        else:
+            export_multi_file(trees, filepath, base_tree.name)
         base_tree.is_exporting = False
         base_tree.prevent_next_exec = True
         return {'FINISHED'}
