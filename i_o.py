@@ -261,7 +261,7 @@ def get_curve_for_pack(object):
                         tilt   = point.tilt,
                         w      = point.co[3],
                 )
-                points.append(export_pnt)
+                points.append(asdict(export_pnt))
         export_spl = spline_data(
                 type                  = spline.type,
                 points                = points,
@@ -297,17 +297,11 @@ class metabone_data:
 
 def get_armature_for_pack(object):
     metarig_data = {}
-    armature_data = metabone_data( object_name = object.name,
-        name=object.name, type='ARMATURE',
-        matrix=matrix_as_tuple(object.matrix_world),
-        parent="", # NOTE that this is not always a fair assumption!
-        length = -1.0, children =[],)
-    metarig_data[object.name] = asdict(armature_data)
-    metarig_data["MANTIS_RESERVED"] = asdict(armature_data) # just in case a bone is named the same as the armature
+    armature_children = []
     for bone in object.data.bones:
         parent_name = ''
         if bone.parent is None:
-            armature_data.children.append(bone.name)
+            armature_children.append(bone.name)
         else:
             parent_name=bone.parent.name
         children=[]
@@ -319,6 +313,13 @@ def get_armature_for_pack(object):
             parent=parent_name, length = bone.length, children = children,
         )
         metarig_data[bone.name]=asdict(bone_data)
+    armature_data = metabone_data( object_name = object.name,
+        name=object.name, type='ARMATURE',
+        matrix=matrix_as_tuple(object.matrix_world),
+        parent="", # NOTE that this is not always a fair assumption!
+        length = -1.0, children = armature_children,)
+    metarig_data[object.name] = asdict(armature_data)
+    metarig_data["MANTIS_RESERVED"] = asdict(armature_data) # just in case a bone is named the same as the armature
     return metarig_data
 
 def get_socket_data(socket, ignore_if_default=False):
@@ -889,6 +890,23 @@ def do_import(data, context, search_multi_files=False, filepath=''):
         tree_info = tree_data[0]
         tree_in_out = tree_data[1]
 
+
+        # TODO: IMPORT THIS DATA HERE!!!
+        try:
+            curves = tree_data[4]
+            armatures = tree_data[5]
+        except IndexError: # shouldn't happen but maybe someone has an old file
+            curves = {}
+            armatures = {}
+        
+        for curve_name, curve_data in curves.items():
+            from .utilities import import_curve_data_to_object, import_metarig_data
+            import_curve_data_to_object(curve_name, curve_data)
+            for armature_name, armature_data in armatures.items():
+                import_metarig_data(armature_data)
+        
+
+
         # need to make a new tree; first, try to get it:
         tree = bpy.data.node_groups.get(tree_info["name"])
         if tree is None:
@@ -1070,18 +1088,6 @@ def do_import(data, context, search_multi_files=False, filepath=''):
             if (n := tree.nodes.get(name)) and (p := tree.nodes.get(p)):
                 n.parent = p
             # otherwise the frame node is missing because it was not included in the data e.g. when grouping nodes.
-        
-        # TODO: IMPORT THIS DATA HERE!!!
-        # try:
-        #     curves = tree_data[4]
-        #     armatures = tree_data[5]
-        # except KeyError: # shouldn't happen but maybe someone has an old file
-        #     curves = {}
-        #     armatures = {}
-        
-        # for curve_name, curve_data in curves.items():
-        #     from .utilities import import_curve_data_to_object
-        #     import_curve_data_to_object(curve_name, curve_data)
         
         tree.is_executing = False
         tree.do_live_update = True

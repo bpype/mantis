@@ -407,14 +407,80 @@ def import_object_from_file(path):
         return import_widget_obj(path,)
     else:
         raise RuntimeError(f"Failed to parse filename {path}")
+
+def import_metarig_data(metarig_data : dict, ):
+    from bpy import data, context
+    from mathutils import Matrix
+    from collections import deque
+    # the metarig data is a dict with a bunch of nodes in it
+    # start at node 'MANTIS_RESERVED'
+    armature_data = metarig_data['MANTIS_RESERVED']
+    children = deque(armature_data["children"].copy())
+    armature = data.armatures.new(armature_data['name'])
+    armature_object = data.objects.new(armature_data['name'], object_data=armature)
+    armature_object.matrix_world = Matrix(
+            (   armature_data['matrix'][:4],
+                armature_data['matrix'][4:8],
+                armature_data['matrix'][8:12],
+                armature_data['matrix'][12:16], )
+        )
+    
+    # have to add it to the view layer to switch modes.
+    context.collection.objects.link(armature_object)
+    switch_mode('EDIT', objects = [armature_object])
+    
+    while (children):
+        child_name = children.pop()
+        child_data = metarig_data[child_name]
+        eb = armature.edit_bones.new(name=child_data['name'])
+        if parent_name := child_data['parent']:
+            eb.parent = armature.edit_bones[parent_name]
+        eb.length = child_data['length']
+        eb.matrix = Matrix(
+            (   child_data['matrix'][:4],
+                child_data['matrix'][4:8],
+                child_data['matrix'][8:12],
+                child_data['matrix'][12:16],   )
+            )
+        displacement = eb.matrix.to_3x3().transposed().row[1] * child_data['length']
+        eb.tail = eb.matrix.decompose()[0] + displacement
+        children.extendleft (child_data['children'].copy())
+    switch_mode('OBJECT', objects = [armature_object])
+
+    return armature_object
+    
         
 def import_curve_data_to_object(curve_name, curve_data):
     # the curve data will come as a single curve's data
     from bpy import data
     curve_object = data.objects.new(curve_name, data.curves.new(name=curve_name, type='CURVE'))
+    curve_object.data.dimensions = '3D'
+    prGreen (curve_name)
 
-    for spline in curve_data:
-        curve_object.data.splines.new(type=spline['type'])
+    for spline_data in curve_data:
+        prWhite ('spline')
+        spline = curve_object.data.splines.new(type=spline_data['type'])
+        points_data = spline_data['points']
+        points_collection = spline.points
+        if spline.type == 'BEZIER':
+            # the points are bez_pts
+            spline.bezier_points.add(len(points_data)-1)
+            points_collection = spline.bezier_points
+        else:
+            spline.points.add(len(points_data)-1) # it starts with 1 already
+        for i, point_data in enumerate(points_data):
+            pt = spline.bezier_points[i]
+            for prop in dir(pt):
+                if prop in point_data.keys():
+                    setattr(pt, prop, point_data[prop])
+            prPurple (pt.co)
+        for prop in dir(spline):
+            if prop in spline_data.keys():
+                if prop in ['points', 'type', 'index']: continue
+                setattr(spline, prop, spline_data[prop])
+    return curve_object
+
+
 
 ##############################
 #  READ TREE and also Schema Solve!
