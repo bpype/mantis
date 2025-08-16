@@ -323,16 +323,17 @@ class xFormBone(xFormNode):
             bCols = '|'.join(bCol_groups)
         else:
             bCols = self.evaluate_input("Bone Collection")
-        bone_collections = bCols.split("|")
-        for collection_list in bone_collections:
-            hierarchy = collection_list.split(">")
-            col_parent = None
-            for bCol in hierarchy:
-                if ( col := d.collections_all.get(bCol) ) is None:
-                    col = d.collections.new(bCol)
-                col.parent = col_parent
-                col_parent = col
-            d.collections_all.get(hierarchy[-1]).assign(eb)
+        if bCols: # it is actually possible to add a bone to no collections. odd.
+            bone_collections = bCols.split("|")
+            for collection_list in bone_collections:
+                hierarchy = collection_list.split(">")
+                col_parent = None
+                for bCol in hierarchy:
+                    if ( col := d.collections_all.get(bCol) ) is None:
+                        col = d.collections.new(bCol)
+                    col.parent = col_parent
+                    col_parent = col
+                d.collections_all.get(hierarchy[-1]).assign(eb)
         
         if (eb.name != name):
             prRed(f"Expected bone of name: {name}, got {eb.name} instead.")
