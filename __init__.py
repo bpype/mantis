@@ -74,6 +74,7 @@ input_category=[
             NodeItem("InputFloatNode"),
             NodeItem("InputVectorNode"),
             NodeItem("InputBooleanNode"),
+            NodeItem("InputBooleanThreeTupleNode"),
             NodeItem("InputStringNode"),
             NodeItem("InputIntNode"),
             NodeItem("InputMatrixNode"),

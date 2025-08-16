@@ -140,7 +140,8 @@ class InputBooleanThreeTupleNode(Node, MantisUINode):
     mantis_node_class_name=bl_idname[:-4]
 
     def init(self, context):
-        self.outputs.new('BooleanThreeTupleSocket', "")
+        o = self.outputs.new('BooleanThreeTupleSocket', "")
+        o.input = True
         self.initialized = True
 
 class InputRotationOrderNode(Node, MantisUINode):
