@@ -494,12 +494,21 @@ def import_curve_data_to_object(curve_name, curve_data):
             points_collection = spline.bezier_points
         else:
             spline.points.add(len(points_data)-1) # it starts with 1 already
+            
         for i, point_data in enumerate(points_data):
-            pt = spline.bezier_points[i]
+            if spline.type == 'BEZIER':
+                pt = spline.bezier_points[i]
+            else:
+                pt = spline.points[i]
             for prop in dir(pt):
+                if prop == 'w':
+                    continue
+                if prop == 'co' and spline.type != 'BEZIER':
+                    value = point_data[prop]
+                    pt.co = (value[0], value[1], value[2], point_data['w'])
+                    continue
                 if prop in point_data.keys():
                     setattr(pt, prop, point_data[prop])
-            prPurple (pt.co)
         for prop in dir(spline):
             if prop in spline_data.keys():
                 if prop in ['points', 'type', 'index']: continue
