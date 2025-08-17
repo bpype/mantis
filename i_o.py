@@ -916,10 +916,10 @@ def get_graph_data_from_json(filepath) -> dict:
     return data
 
 
-def do_import(data, context, search_multi_files=False, filepath=''):
+def do_import(data, context, search_multi_files=False, filepath='', skip_existing=False):
     trees = []
     tree_sock_id_maps = {}
-
+    skip_trees = set()
     # First: init the interface of the node graph
     for tree_name, tree_data in data.items():
         tree_info = tree_data[0]
@@ -944,6 +944,9 @@ def do_import(data, context, search_multi_files=False, filepath=''):
 
         # need to make a new tree; first, try to get it:
         tree = bpy.data.node_groups.get(tree_info["name"])
+        if tree and skip_existing:
+            skip_trees.add(tree.name)
+            continue # already done here because the tree already exists.
         if tree is None:
             tree = bpy.data.node_groups.new(tree_info["name"], tree_info["bl_idname"])
         tree.nodes.clear(); tree.links.clear(); tree.interface.clear()
@@ -1002,6 +1005,8 @@ def do_import(data, context, search_multi_files=False, filepath=''):
         
     # Now go and do nodes and links
     for tree_name, tree_data in data.items():
+        if tree_name in skip_trees:
+            continue
         print ("Importing sub-graph: %s with %s nodes" % (wrapGreen(tree_name), wrapPurple(len(tree_data[2]))) )
 
         tree_info = tree_data[0]
@@ -1272,8 +1277,26 @@ class MantisImportNodeTree(Operator, ImportHelper):
     )
 
     def execute(self, context):
-        return do_import_from_file(self.filepath, context)
-
+        import cProfile
+        from os import environ
+        do_profile=False
+        if environ.get("DOPROFILE"):
+            do_profile=True
+        pass_error = True
+        if do_profile:
+            import pstats, io
+            from pstats import SortKey
+            with cProfile.Profile() as pr:
+                return_value = do_import_from_file(self.filepath, context)
+                s = io.StringIO()
+                sortby = SortKey.TIME
+                # sortby = SortKey.CUMULATIVE
+                ps = pstats.Stats(pr, stream=s).strip_dirs().sort_stats(sortby)
+                ps.print_stats(20) # print the top 20
+                print(s.getvalue())
+                return return_value
+        else:
+            return do_import_from_file(self.filepath, context)
 
 
 class MantisImportNodeTreeNoMenu(Operator):
