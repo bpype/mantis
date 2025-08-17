@@ -441,38 +441,42 @@ def import_metarig_data(metarig_data : dict, ):
     # start at node 'MANTIS_RESERVED'
     armature_data = metarig_data['MANTIS_RESERVED']
     children = deque(armature_data["children"].copy())
-    armature = data.armatures.new(armature_data['name'])
-    armature_object = data.objects.new(armature_data['name'], object_data=armature)
-    armature_object.matrix_world = Matrix(
-            (   armature_data['matrix'][:4],
-                armature_data['matrix'][4:8],
-                armature_data['matrix'][8:12],
-                armature_data['matrix'][12:16], )
-        )
-    
-    # have to add it to the view layer to switch modes.
-    collection = get_default_collection(collection_type="ARMATURE")
-    collection.objects.link(armature_object)
-    switch_mode('EDIT', objects = [armature_object])
-    
-    while (children):
-        child_name = children.pop()
-        child_data = metarig_data[child_name]
-        eb = armature.edit_bones.new(name=child_data['name'])
-        if parent_name := child_data['parent']:
-            eb.parent = armature.edit_bones[parent_name]
-        eb.length = child_data['length']
-        eb.matrix = Matrix(
-            (   child_data['matrix'][:4],
-                child_data['matrix'][4:8],
-                child_data['matrix'][8:12],
-                child_data['matrix'][12:16],   )
+    if (armature := data.armatures.get(armature_data['name'])) is None:
+        armature = data.armatures.new(armature_data['name'])
+    # if we need to do anything here...
+    if (armature_object := data.objects.get(armature_data['name'])) is None:
+        armature_object = data.objects.new(armature_data['name'], object_data=armature)
+        armature_object.matrix_world = Matrix(
+                (   armature_data['matrix'][:4],
+                    armature_data['matrix'][4:8],
+                    armature_data['matrix'][8:12],
+                    armature_data['matrix'][12:16], )
             )
-        displacement = eb.matrix.to_3x3().transposed().row[1] * child_data['length']
-        eb.tail = eb.matrix.decompose()[0] + displacement
-        children.extendleft (child_data['children'].copy())
-    switch_mode('OBJECT', objects = [armature_object])
-
+        prGreen (armature_data['name'])
+        
+        # have to add it to the view layer to switch modes.
+        collection = get_default_collection(collection_type="ARMATURE")
+        collection.objects.link(armature_object)
+        switch_mode('EDIT', objects = [armature_object])
+        
+        while (children):
+            child_name = children.pop()
+            child_data = metarig_data[child_name]
+            eb = armature.edit_bones.new(name=child_data['name'])
+            if parent_name := child_data['parent']:
+                eb.parent = armature.edit_bones[parent_name]
+            eb.length = child_data['length']
+            eb.matrix = Matrix(
+                (   child_data['matrix'][:4],
+                    child_data['matrix'][4:8],
+                    child_data['matrix'][8:12],
+                    child_data['matrix'][12:16],   )
+                )
+            displacement = eb.matrix.to_3x3().transposed().row[1] * child_data['length']
+            eb.tail = eb.matrix.decompose()[0] + displacement
+            children.extendleft (child_data['children'].copy())
+        switch_mode('OBJECT', objects = [armature_object])
+    # note that this will not correct if the object exists and is wrong.
     return armature_object
     
         
@@ -484,7 +488,6 @@ def import_curve_data_to_object(curve_name, curve_data):
     prGreen (curve_name)
 
     for spline_data in curve_data:
-        prWhite ('spline')
         spline = curve_object.data.splines.new(type=spline_data['type'])
         points_data = spline_data['points']
         points_collection = spline.points
