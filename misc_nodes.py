@@ -253,7 +253,6 @@ class InputBoolean(SimpleInputNode):
 
 class InputBooleanThreeTuple(SimpleInputNode):
     '''A node representing a tuple of three booleans'''
-        
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree)
         outputs = [""]
@@ -1273,6 +1272,10 @@ class InputWidget(MantisNode):
         print(wrapGreen("Executing ")+wrapOrange("InputWidget Node ")+wrapWhite(f"{self}"))
         path = self.evaluate_input('Name')
         axes_flipped = self.evaluate_input('Flip Axes')
+        scaling = self.evaluate_input('Scale')
+        add_scale_modifier = False
+        if scaling[0] != 1.0 or scaling[1] != 1.0 or scaling[2] != 1.0:
+            add_scale_modifier = True
         do_mirror = True
         from os import path as os_path
         from .preferences import get_bl_addon_object
@@ -1280,19 +1283,24 @@ class InputWidget(MantisNode):
         widgets_path = bl_mantis_addon.preferences.WidgetsLibraryFolder
         path = widgets_path+path # this guards the widgets root so the end-user
         #  can easily change the widgets directory without breaking things
+        from .utilities import get_default_collection
+        collection = get_default_collection(collection_type='WIDGET')
         file_name = os_path.split(path)[-1]
         obj_name = os_path.splitext(file_name)[0]
         obj_name_full = obj_name
+        if add_scale_modifier:
+            obj_name_full+="_scaled_"+".".join(self.ui_signature[1:])
         if any(axes_flipped):
             obj_name_full+="_flipped_"
         for i, axis in enumerate("XYZ"):
             if axes_flipped[i]: obj_name_full+=axis
         from bpy import data
+        # what is this code doing? I thought I already linked it... TODO find out
         if  obj_name in data.objects.keys() and not \
             obj_name_full in data.objects.keys():
                 self.bObject = data.objects.get(obj_name).copy()
                 self.bObject.name = obj_name_full
-                if bContext: bContext.collection.objects.link(self.bObject)
+                collection.objects.link(self.bObject)
         # now check to see if it exists
         elif obj_name_full in data.objects.keys():
             prWhite(f"INFO: {obj_name_full} is already in this .blend file; skipping import.")
@@ -1303,22 +1311,32 @@ class InputWidget(MantisNode):
         else:
             from .utilities import import_object_from_file
             self.bObject = import_object_from_file(path)
-            if any(axes_flipped):
+            if any(axes_flipped) or add_scale_modifier:
                 self.bObject = self.bObject.copy()
                 self.bObject.name = obj_name_full
-                if bContext: bContext.collection.objects.link(self.bObject)
+                collection.objects.link(self.bObject)
+        # do the scaling...
+        if add_scale_modifier:
+            if (scale_modifier := self.bObject.modifiers.get("Scale Object Data")) is None:
+                scale_modifier = self.bObject.modifiers.new("Scale Object Data", type='NODES')
+            ng = data.node_groups.get("Scale Object Data")
+            if ng is None:
+                from .geometry_node_graphgen import gen_scale_object_data_modifier
+                ng = gen_scale_object_data_modifier()
+            scale_modifier.node_group = ng
+            scale_modifier['Socket_2']=scaling
         # now we'll check for the mirrors.
-        axes_flipped = self.evaluate_input('Flip Axes')
         if any(axes_flipped) and do_mirror:
-            import_modifier = self.bObject.modifiers.new("Simple Flip", type="NODES")
+            if (flip_modifier := self.bObject.modifiers.get("Simple Flip")) is None:
+                flip_modifier = self.bObject.modifiers.new("Simple Flip", type="NODES")
             ng = data.node_groups.get("Simple Flip")
             if ng is None:
                 from .geometry_node_graphgen import gen_simple_flip_modifier
                 ng = gen_simple_flip_modifier()
-            import_modifier.node_group = ng
-            import_modifier["Socket_2"]=axes_flipped[0]
-            import_modifier["Socket_3"]=axes_flipped[1]
-            import_modifier["Socket_4"]=axes_flipped[2]
+            flip_modifier.node_group = ng
+            flip_modifier["Socket_2"]=axes_flipped[0]
+            flip_modifier["Socket_3"]=axes_flipped[1]
+            flip_modifier["Socket_4"]=axes_flipped[2]
         self.prepared, self.executed = True, True
     
     def bGetObject(self, mode=''):

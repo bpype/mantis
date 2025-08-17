@@ -152,6 +152,30 @@ def gen_import_obj_node_group():
         pass
     return tree
 
+def gen_scale_object_data_modifier():
+    # A basic modifier that simply scales the object's data (for widgets)
+    # I need to be able to scale at import so that the user can easily
+    # control widget scale as inputs to components.
+    import bpy
+    from bpy import data, types
+    tree=bpy.data.node_groups.new("Scale Object Data","GeometryNodeTree")
+    tree.is_modifier=True
+    tree.interface.new_socket(name="Geometry",description="",in_out="OUTPUT",socket_type="NodeSocketGeometry")
+    tree.interface.new_socket(name="Geometry",description="",in_out="INPUT",socket_type="NodeSocketGeometry")
+    tree.interface.new_socket(name="Scale",description="",in_out="INPUT",socket_type="NodeSocketVector")
+    Group_Input = tree.nodes.new("NodeGroupInput")
+    Group_Output = tree.nodes.new("NodeGroupOutput")
+    Transform_Geometry = tree.nodes.new("GeometryNodeTransform")
+    tree.links.new(Transform_Geometry.outputs[0],Group_Output.inputs[0])
+    tree.links.new(Group_Input.outputs[0],Transform_Geometry.inputs[0])
+    tree.links.new(Group_Input.outputs[1],Transform_Geometry.inputs[3])
+    try:
+        from .utilities import SugiyamaGraph
+        SugiyamaGraph(tree, 4)
+    except: # there should not ever be a user error if this fails
+        pass
+    return tree
+
 def gen_simple_flip_modifier():
     import bpy
     from bpy import data, types

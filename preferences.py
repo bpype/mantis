@@ -39,8 +39,6 @@ def filepath_idiot_test(path):
     except RecursionError:
         do_error_popup()
         return ''
-    
-
 
 def widget_library_get(self):
     return self.widget_library_path
@@ -69,6 +67,15 @@ class MantisPreferences(bpy.types.AddonPreferences):
         set=widget_library_idiot_test,
         subtype = 'FILE_PATH',
         default = os.path.join(dir_path, 'widgets'),)
+    WidgetDefaultCollection:bpy.props.StringProperty(
+        name = "Import Widgets into Collection",
+        default = "Widgets",)
+    CurveDefaultCollection:bpy.props.StringProperty(
+        name = "Import Curves into Collection",
+        default = "MetaCurves",)
+    MetaArmatureDefaultCollection:bpy.props.StringProperty(
+        name = "Import Meta-Armatures into Collection",
+        default = "MetaRigs",)
     ComponentsLibraryFolder:bpy.props.StringProperty(
         name = "Widget Library Folder",
         subtype = 'FILE_PATH',

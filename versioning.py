@@ -173,6 +173,27 @@ def up_0_12_1_add_inherit_color(*args, **kwargs):
         prRed(f"Error updating version in node: {node.id_data.name}::{node.name}; see error:")
         print(e)
 
+def up_0_12_13_add_widget_scale(*args, **kwargs):
+    # add an inherit color input.
+    node = kwargs['node']
+    current_major_version = node.id_data.mantis_version[0]
+    current_minor_version = node.id_data.mantis_version[1]
+    current_sub_version = node.id_data.mantis_version[2]
+    if  current_major_version > 0: return# major version must be 0
+    if current_minor_version > 12: return# minor version must be 12 or less
+    if current_minor_version == 12 and current_sub_version > 12: return
+    # sub version must be 12 or less
+    prPurple(f"Adding \"Scale\" socket to {node.name}")
+    try:
+        scale = node.inputs.get('Scale')
+        if scale is None:
+            s = node.inputs.new('VectorScaleSocket', 'Scale',)
+            s.default_value=[1.0,1.0,1.0]
+            node.inputs.move(len(node.inputs)-1, 1)
+    except Exception as e:
+        prRed(f"Error updating version in node: {node.id_data.name}::{node.name}; see error:")
+        print(e)
+
 # versioning tasks that involve Blender versions rather than Mantis versions:
 error_description_4_5_0_LTS = 'There is a bug in Blender 4.5.0 LTS, that is why these sockets are blue.'\
                              ' This will be fixed in future Blender versions.'
@@ -205,6 +226,7 @@ versioning_tasks = [
     (['xFormBoneNode'], version_upgrade_bone_0_12_0_from_older, ['node'],),
     (['xFormBoneNode'], up_0_12_1_add_inherit_color, ['node'],),
     (['MantisTree', 'SchemaTree'], cleanup_4_5_0_LTS_interface_workaround, ['tree']),
+    (['InputWidget'], up_0_12_13_add_widget_scale, ['node']),
 ]
 
 

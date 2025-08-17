@@ -352,12 +352,32 @@ def bind_modifier_operator(modifier, operator):
             prWhite(f"Binding Deformer {modifier.name} to target {target.name}")
             operator(modifier=modifier.name)
 
+def get_default_collection(collection_type='WIDGET'):
+    from .preferences import get_bl_addon_object
+    from bpy import data, context
+    mantis_addon = get_bl_addon_object(raise_error=True)
+    match collection_type:
+        case "WIDGET":
+            default_collection_name=mantis_addon.preferences.WidgetDefaultCollection
+        case "CURVE":
+            default_collection_name=mantis_addon.preferences.CurveDefaultCollection
+        case "ARMATURE":
+            default_collection_name=mantis_addon.preferences.MetaArmatureDefaultCollection
+    if default_collection_name:
+        if not (default_collection := data.collections.get(default_collection_name)):
+            default_collection = data.collections.new(default_collection_name)
+            context.scene.collection.children.link(default_collection)
+        collection = default_collection
+    else: collection = context.collection
+    return collection
+
 def import_widget_obj(path,):
     from bpy.app import version as bpy_version
     from bpy import context, data
     from os import path as os_path
     file_name = os_path.split(path)[-1]
     obj_name = os_path.splitext(file_name)[0]
+    collection = get_default_collection(collection_type='WIDGET')
     if bpy_version < (4,5,0):
         original_active = context.active_object
         # for blender versions prior to 4.5.0, we have to import with an operator
@@ -377,6 +397,10 @@ def import_widget_obj(path,):
         ob = None
         for ob in data.objects:
             if ob.name in ob_names_before: continue
+            # this is easier than setting the active collection before import.
+            for other_collection in ob.users_collection:
+                other_collection.objects.unlink(ob)
+            collection.objects.link(ob)
             return ob # return the first one, that should be the one
         else: # no new object was found - fail.
             # I don't expect this to happen unless there is an error in the operator.
@@ -387,8 +411,9 @@ def import_widget_obj(path,):
         mesh = data.meshes.new(obj_name)
         ob = data.objects.new(name=obj_name, object_data=mesh)
         # we'll do a geometry nodes import
-        context.collection.objects.link(ob)
-        import_modifier = ob.modifiers.new("Import OBJ", type="NODES")
+        collection.objects.link(ob)
+        if (import_modifier := ob.modifiers.get("Import OBJ")) is None:
+            import_modifier = ob.modifiers.new("Import OBJ", type='NODES')
         ng = data.node_groups.get("Import OBJ")
         if ng is None:
             from .geometry_node_graphgen import gen_import_obj_node_group
@@ -426,7 +451,8 @@ def import_metarig_data(metarig_data : dict, ):
         )
     
     # have to add it to the view layer to switch modes.
-    context.collection.objects.link(armature_object)
+    collection = get_default_collection(collection_type="ARMATURE")
+    collection.objects.link(armature_object)
     switch_mode('EDIT', objects = [armature_object])
     
     while (children):
@@ -478,6 +504,8 @@ def import_curve_data_to_object(curve_name, curve_data):
             if prop in spline_data.keys():
                 if prop in ['points', 'type', 'index']: continue
                 setattr(spline, prop, spline_data[prop])
+    collection = get_default_collection(collection_type="CURVE")
+    collection.objects.link(curve_object)
     return curve_object
 
 

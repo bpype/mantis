@@ -7,6 +7,8 @@ SplineIndexTemplate = SockTemplate(name="Spline Index",
 InputWidgetSockets = [
     WidgetName := SockTemplate(name='Name', is_input=True,
         bl_idname="EnumWidgetLibrarySocket",),
+    Scale := SockTemplate(name='Scale', is_input=True,
+        bl_idname="VectorScaleSocket", default_value=(1.0, 1.0, 1.0)),
     FlipAxes := SockTemplate(name='Flip Axes', is_input=True,
         bl_idname="BooleanThreeTupleSocket",),
     xFormOutput := SockTemplate(name='Widget',
