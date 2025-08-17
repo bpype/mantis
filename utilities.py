@@ -400,6 +400,11 @@ def import_widget_obj(path,):
             # this is easier than setting the active collection before import.
             for other_collection in ob.users_collection:
                 other_collection.objects.unlink(ob)
+            from math import pi as PI
+            from mathutils import Matrix
+            m = ob.data
+            for v in m.vertices:
+                v.co = Matrix.Rotation(PI/2, 4, 'X') @ v.co
             collection.objects.link(ob)
             return ob # return the first one, that should be the one
         else: # no new object was found - fail.

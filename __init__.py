@@ -18,7 +18,7 @@ from .utilities import prRed
 
 MANTIS_VERSION_MAJOR=0
 MANTIS_VERSION_MINOR=12
-MANTIS_VERSION_SUB=14
+MANTIS_VERSION_SUB=15
 
 classLists = [module.TellClasses() for module in [
  link_nodes_ui,
@@ -354,7 +354,6 @@ def autoload_components(filename):
     if unlink_armatures and (armature_collection := data.collections.get(
             bl_addon_object.preferences.MetaArmatureDefaultCollection)):
         context.scene.collection.children.unlink(armature_collection)
-
 
 # I'll need to do some fiddling here when it comes time to try
 #   and make rig definitions animatable.
