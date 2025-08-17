@@ -508,7 +508,24 @@ def import_curve_data_to_object(curve_name, curve_data):
     collection.objects.link(curve_object)
     return curve_object
 
-
+def get_component_library_items():
+    from os import path as os_path
+    from .preferences import get_bl_addon_object
+    bl_mantis_addon = get_bl_addon_object()
+    return_value=[]
+    if bl_mantis_addon:
+        components_path = bl_mantis_addon.preferences.ComponentsLibraryFolder
+        component_names = {}
+        from os import walk as os_walk
+        for path_root, dirs, files, in os_walk(components_path):
+            for file in files:
+                relative_file_name = os_path.join(os_path.sep.join(dirs), file)
+                if file.endswith('.rig'):
+                    component_names[relative_file_name[:-4]] = relative_file_name
+    if component_names.keys():
+        for i, (name, path) in enumerate(component_names.items()):
+            return_value.append( (path, name, path, 'NODE_TREE', i) )
+    return return_value
 
 ##############################
 #  READ TREE and also Schema Solve!
