@@ -484,6 +484,58 @@ def execution_error_cleanup(node, exception, switch_objects = [], show_error=Fal
     prRed(f"Error: {exception} in node {ui_sig}")
     return exception
 
+def sort_execution(nodes, xForm_pass):
+    execution_failed=False
+    sorted_nodes = []
+    from .node_container_common import GraphError
+    # check for cycles here by keeping track of the number of times a node has been visited.
+    visited={}
+    check_max_len=len(nodes)**2 # seems too high but safe. In a well-ordered graph, I guess this number should be less than the number of nodes.
+    max_iterations = len(nodes)**2
+    i = 0
+    while(xForm_pass):
+        if execution_failed: break
+        if i >= max_iterations:
+            execution_failed = True
+            raise GraphError("There is probably a cycle somewhere in the graph. "
+                                "Or a connection missing in a Group/Schema Input")
+        i+=1    
+        n = xForm_pass.pop()
+        if visited.get(n.signature) is not None:
+            visited[n.signature]+=1
+        else:
+            visited[n.signature]=0
+        if visited[n.signature] > check_max_len:
+            execution_failed = True
+            raise GraphError("There is a probably a cycle in the graph somewhere. "
+                                "Or a connection missing in a Group/Schema Input")
+            # we're trying to solve the halting problem at this point.. don't do that.
+            # TODO find a better way! there are algo's for this but they will require using a different solving algo, too
+        if n.execution_prepared:
+            continue
+        if n.node_type not in ['XFORM', 'UTILITY']:
+            for dep in n.hierarchy_dependencies:
+                if not dep.execution_prepared:
+                    xForm_pass.appendleft(n) # hold it
+                    break
+            else:
+                n.execution_prepared=True
+                sorted_nodes.append(n)
+                for conn in n.hierarchy_connections:
+                    if  not conn.execution_prepared:
+                        xForm_pass.appendleft(conn)
+        else:
+            for dep in n.hierarchy_dependencies:
+                if not dep.execution_prepared:
+                    break
+            else:
+                n.execution_prepared=True
+                sorted_nodes.append(n)
+                for conn in n.hierarchy_connections:
+                    if  not conn.execution_prepared:
+                        xForm_pass.appendleft(conn)
+    return sorted_nodes, execution_failed
+
 def execute_tree(nodes, base_tree, context, error_popups = False):
     assert nodes is not None, "Failed to parse tree."
     assert len(nodes) > 0, "No parsed nodes for execution."\
@@ -494,7 +546,6 @@ def execute_tree(nodes, base_tree, context, error_popups = False):
     original_active = context.view_layer.objects.active
     start_execution_time = time()
     mContext = None
-
     from collections import deque
     xForm_pass = deque()
     for nc in nodes.values():
@@ -504,82 +555,35 @@ def execute_tree(nodes, base_tree, context, error_popups = False):
         nc.reset_execution()
         check_and_add_root(nc, xForm_pass)
     mContext.execution_failed = False
-    executed = []
 
-    # check for cycles here by keeping track of the number of times a node has been visited.
-    visited={}
-    check_max_len=len(nodes)**2 # seems too high but safe. In a well-ordered graph, I guess this number should be less than the number of nodes.
-    max_iterations = len(nodes)**2
-    i = 0
     switch_me = [] # switch the mode on these objects
     active = None # only need it for switching modes
     select_me = []
-    execution_failed=False
     try:
-        while(xForm_pass):
-            if execution_failed: break
-            if i >= max_iterations:
-                execution_failed = True
-                raise GraphError("There is probably a cycle somewhere in the graph. "
-                                 "Or a connection missing in a Group/Schema Input")
-            i+=1    
-            n = xForm_pass.pop()
-            if visited.get(n.signature) is not None:
-                visited[n.signature]+=1
-            else:
-                visited[n.signature]=0
-            if visited[n.signature] > check_max_len:
-                execution_failed = True
-                raise GraphError("There is a probably a cycle in the graph somewhere. "
-                                 "Or a connection missing in a Group/Schema Input")
-                # we're trying to solve the halting problem at this point.. don't do that.
-                # TODO find a better way! there are algo's for this but they will require using a different solving algo, too
-            if n.execution_prepared:
-                continue
-            if n.node_type not in ['XFORM', 'UTILITY']:
-                for dep in n.hierarchy_dependencies:
-                    if not dep.execution_prepared:
-                        xForm_pass.appendleft(n) # hold it
-                        break
-                else:
-                    n.execution_prepared=True
-                    executed.append(n)
-                    for conn in n.hierarchy_connections:
-                        if  not conn.execution_prepared:
-                            xForm_pass.appendleft(conn)
-            else:
-                for dep in n.hierarchy_dependencies:
-                    if not dep.execution_prepared:
-                        break
-                else:
-                    try:
-                        if not n.prepared:
-                            n.bPrepare(context)
-                        if not n.executed:
-                            n.bTransformPass(context)
-                        if (n.__class__.__name__ == "xFormArmature" ):
-                            ob = n.bGetObject()
-                            switch_me.append(ob)
-                            active = ob
-                        if not (n.__class__.__name__ == "xFormBone" ) and hasattr(n, "bGetObject"):
-                            ob = n.bGetObject()
-                            if isinstance(ob, bpy.types.Object):
-                                select_me.append(ob)
-                    except Exception as e:
-                        e = execution_error_cleanup(n, e, show_error=error_popups)
-                        if error_popups == False:
-                            raise e
-                        execution_failed = True; break
-                    n.execution_prepared=True
-                    executed.append(n)
-                    for conn in n.hierarchy_connections:
-                        if  not conn.execution_prepared:
-                            xForm_pass.appendleft(conn)
-        
+        sorted_nodes, execution_failed = sort_execution(nodes, xForm_pass)
+        for n in sorted_nodes:
+            try:
+                if not n.prepared:
+                    n.bPrepare(context)
+                if not n.executed:
+                    n.bTransformPass(context)
+                if (n.__class__.__name__ == "xFormArmature" ):
+                    ob = n.bGetObject()
+                    switch_me.append(ob)
+                    active = ob
+                if not (n.__class__.__name__ == "xFormBone" ) and hasattr(n, "bGetObject"):
+                    ob = n.bGetObject()
+                    if isinstance(ob, bpy.types.Object):
+                        select_me.append(ob)
+            except Exception as e:
+                e = execution_error_cleanup(n, e, show_error=error_popups)
+                if error_popups == False:
+                    raise e
+                execution_failed = True; break
 
         switch_mode(mode='POSE', objects=switch_me)
 
-        for n in executed:
+        for n in sorted_nodes:
             try:
                 if not n.prepared:
                     n.bPrepare(context)
@@ -600,7 +604,7 @@ def execute_tree(nodes, base_tree, context, error_popups = False):
         for ob in switch_me:
             ob.data.pose_position = 'POSE'
 
-        for n in executed:
+        for n in sorted_nodes:
             try:
                 n.bFinalize(context)
             except Exception as e:
@@ -615,7 +619,7 @@ def execute_tree(nodes, base_tree, context, error_popups = False):
             ob.data.pose_position = 'REST'
 
         # finally, apply modifiers and bind stuff
-        for n in executed:
+        for n in sorted_nodes:
             try:
                 n.bModifierApply(context)
             except Exception as e:
@@ -629,7 +633,7 @@ def execute_tree(nodes, base_tree, context, error_popups = False):
         
         tot_time = (time() - start_execution_time)
         if not execution_failed:
-            prGreen(f"Executed tree of {len(executed)} nodes in {tot_time} seconds")
+            prGreen(f"Executed tree of {len(sorted_nodes)} nodes in {tot_time} seconds")
         if (original_active):
             context.view_layer.objects.active = original_active
             original_active.select_set(True)
