@@ -18,7 +18,7 @@ from .utilities import prRed
 
 MANTIS_VERSION_MAJOR=0
 MANTIS_VERSION_MINOR=12
-MANTIS_VERSION_SUB=16
+MANTIS_VERSION_SUB=17
 
 classLists = [module.TellClasses() for module in [
  link_nodes_ui,
@@ -345,6 +345,11 @@ def autoload_components(filename):
             do_import(json_data, context,
                        search_multi_files=True, filepath=path,
                        skip_existing=True)
+            # let's get the node trees and assign a fake user
+            for tree_name in json_data.keys():
+                tree = data.node_groups.get(tree_name)
+                tree.fake_user = True
+            
     # now we need to unlink the collections, and add fake users to them
     curves_collection = get_default_collection(collection_type="CURVE")
     armature_collection = get_default_collection(collection_type="ARMATURE")
