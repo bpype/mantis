@@ -77,7 +77,8 @@ class MantisPreferences(bpy.types.AddonPreferences):
         name = "Import Meta-Armatures into Collection",
         default = "MetaRigs",)
     ComponentsLibraryFolder:bpy.props.StringProperty(
-        name = "Widget Library Folder",
+        name = "Component Library Folder",
+        description = "Location of .rig files to place in the Add Armature menu.",
         subtype = 'FILE_PATH',
         default = os.path.join(dir_path, 'widgets'),)
     ImportComponents:bpy.props.BoolProperty(default=False)
@@ -86,5 +87,8 @@ class MantisPreferences(bpy.types.AddonPreferences):
         layout = self.layout
         layout.label(text="Mantis Preferences")
         layout.prop(self, "WidgetsLibraryFolder", icon='FILE_FOLDER')
+        layout.prop(self, "WidgetDefaultCollection")
         layout.prop(self, "ComponentsLibraryFolder", icon='FILE_FOLDER')
+        layout.prop(self, "CurveDefaultCollection")
+        layout.prop(self, "MetaArmatureDefaultCollection")
         layout.prop(self, "ImportComponents")
