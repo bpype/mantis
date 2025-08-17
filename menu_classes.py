@@ -4,8 +4,8 @@ def TellClasses():
     return [
         MantisActiveTreePanel,
         MantisNodeGroupsMenu,
+        MantisAddArmature,
     ]
-
 
 # Function to append submenu to context menu
 def node_context_menu_draw(self, context):
@@ -18,15 +18,21 @@ def node_context_menu_draw(self, context):
     layout.operator("mantis.import_from_component_library")
     # layout.menu('NODE_MT_context_menu_mantis')
 
-
 # Function to append submenu to node add menu
 def node_add_menu_draw(self, context):
-    # NODE_MT_add
     layout = self.layout
     layout.separator()  # Optional: Adds a separator before your submenu
     layout.menu("NODE_MT_add_mantis_groups")
 
-    # layout.menu('NODE_MT_context_menu_mantis')
+# Function to append Mantis Component Packs to armature add menu
+def armature_add_menu_draw(self, context):
+    layout = self.layout
+    layout.separator()
+    layout.menu("VIEW3D_MT_armature_add_mantis_packs")
+
+# Function to append Mantis to Import Menu
+def import_menu_draw(self, context):
+    self.layout.operator("mantis.import_tree")
 
 class MantisNodeGroupsMenu(Menu):
     """Menu to show available node groups"""
@@ -60,8 +66,25 @@ class MantisNodeGroupsMenu(Menu):
                 operator_settings.node_group_tree_name=ng.name
                 operator_settings.tree_invoked = node_tree.name
 
-
-
+class MantisAddArmature(Menu):
+    """Menu to show the user's component pack library in the Add Armature menu"""
+    bl_idname= "VIEW3D_MT_armature_add_mantis_packs"
+    bl_label = "Mantis Rigs"
+    def draw(self, context):
+        # start showing the mantis packs
+        from .preferences import get_bl_addon_object
+        bl_mantis_addon = get_bl_addon_object()
+        if bl_mantis_addon:
+            components_path = bl_mantis_addon.preferences.ComponentsLibraryFolder
+            # now we're clear to do the menu function
+            layout = self.layout
+            from .utilities import get_component_library_items
+            component_items = get_component_library_items()
+            for component_item in component_items:
+                # how to "EXEC_DEFAULT" here?
+                operator_settings = layout.operator( operator="mantis.import_tree_no_menu", text=component_item[1])
+                from os import path as os_path
+                operator_settings.filepath = os_path.join(components_path, component_item[0])
 
 class MantisActiveTreePanel(Panel):
     """N-Panel menu for Mantis"""

@@ -81,7 +81,11 @@ class MantisPreferences(bpy.types.AddonPreferences):
         description = "Location of .rig files to place in the Add Armature menu.",
         subtype = 'FILE_PATH',
         default = os.path.join(dir_path, 'widgets'),)
-    ImportComponents:bpy.props.BoolProperty(default=False)
+    ComponentsAutoLoadFolder:bpy.props.StringProperty(
+        name = "Component Autoload Folder",
+        description = "Location of .rig files to load automatically.",
+        subtype = 'FILE_PATH',
+        default = os.path.join(dir_path, 'widgets'),)
     
     def draw(self, context):
         layout = self.layout
@@ -91,4 +95,3 @@ class MantisPreferences(bpy.types.AddonPreferences):
         layout.prop(self, "ComponentsLibraryFolder", icon='FILE_FOLDER')
         layout.prop(self, "CurveDefaultCollection")
         layout.prop(self, "MetaArmatureDefaultCollection")
-        layout.prop(self, "ImportComponents")
