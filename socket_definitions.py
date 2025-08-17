@@ -1442,7 +1442,7 @@ def get_widget_library_items(self, context):
         # first we select the previous value if it exists
         add_missing_key=False
         add_one=0
-        if self.previous_value not in widget_names.values():
+        if self.previous_value and self.previous_value not in widget_names.values():
             add_missing_key=True # we need to add the missing key at the previous index
         for i, (name, path) in enumerate(widget_names.items()):
             if add_missing_key and i == self.previous_index:
