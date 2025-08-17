@@ -103,7 +103,11 @@ add_inputs_bl_idnames = [
    # Meshes can be exported as .obj and imported via GN
 
 def TellClasses():
-    return [ MantisExportNodeTreeSaveAs, MantisExportNodeTreeSave, MantisExportNodeTree, MantisImportNodeTree, MantisReloadNodeTree]
+    return [ MantisExportNodeTreeSaveAs,
+            MantisExportNodeTreeSave,
+            MantisExportNodeTree,
+            MantisImportNodeTree, 
+            MantisReloadNodeTree]
 
 # https://stackoverflow.com/questions/42033142/is-there-an-easy-way-to-check-if-an-object-is-json-serializable-in-python - thanks!
 def is_jsonable(x):
@@ -1117,7 +1121,7 @@ from bpy.types import Operator
 class MantisExportNodeTreeSaveAs(Operator, ExportHelper):
     """Export a Mantis Node Tree by filename."""
     bl_idname = "mantis.export_save_as"
-    bl_label = "Export Mantis Tree as ...(JSON)"
+    bl_label = "Export Mantis Tree as ...(.rig)"
 
     # ExportHelper mix-in class uses this.
     filename_ext = ".rig"
@@ -1166,7 +1170,7 @@ class MantisExportNodeTreeSaveAs(Operator, ExportHelper):
 class MantisExportNodeTreeSave(Operator):
     """Save a Mantis Node Tree to disk."""
     bl_idname = "mantis.export_save"
-    bl_label = "Export Mantis Tree (JSON)"
+    bl_label = "Export Mantis Tree (.rig)"
 
     @classmethod
     def poll(cls, context):
@@ -1194,7 +1198,7 @@ class MantisExportNodeTreeSave(Operator):
 class MantisExportNodeTree(Operator):
     """Save a Mantis Node Tree to disk."""
     bl_idname = "mantis.export_save_choose"
-    bl_label = "Export Mantis Tree (JSON)"
+    bl_label = "Export Mantis Tree (.rig)"
 
     @classmethod
     def poll(cls, context):
@@ -1225,7 +1229,7 @@ class MantisExportNodeTree(Operator):
 class MantisImportNodeTree(Operator, ImportHelper):
     """Import a Mantis Node Tree."""
     bl_idname = "mantis.import_tree"
-    bl_label = "Import Mantis Tree (JSON)"
+    bl_label = "Import Mantis Tree (.rig)"
 
     # ImportHelper mixin class uses this
     filename_ext = ".rig"
