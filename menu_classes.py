@@ -3,6 +3,7 @@ from bpy.types import Panel, Menu
 def TellClasses():
     return [
         MantisActiveTreePanel,
+        MantisNodeGroupsMenu,
     ]
 
 
@@ -16,6 +17,51 @@ def node_context_menu_draw(self, context):
     layout.operator("mantis.select_nodes_of_type")
     layout.operator("mantis.import_from_component_library")
     # layout.menu('NODE_MT_context_menu_mantis')
+
+
+# Function to append submenu to node add menu
+def node_add_menu_draw(self, context):
+    # NODE_MT_add
+    layout = self.layout
+    layout.separator()  # Optional: Adds a separator before your submenu
+    layout.menu("NODE_MT_add_mantis_groups")
+
+    # layout.menu('NODE_MT_context_menu_mantis')
+
+class MantisNodeGroupsMenu(Menu):
+    """Menu to show available node groups"""
+    bl_idname= "NODE_MT_add_mantis_groups"
+    bl_label = "Components"
+    def draw(self, context):
+        node_tree = None
+        # just gonna do the same thing we do in poll operators
+        if not context.space_data:
+            return
+        if not hasattr(context.space_data, "path"):
+            return
+        try:
+            node_tree = context.space_data.path[0].node_tree
+        except IndexError: # not in the UI, for example, in a script instead.
+            return
+        if node_tree is None: # because the space is right but there is no selected tree.
+            return
+        # now we're clear to do the menu function
+        layout = self.layout
+        from bpy import data
+        for ng in data.node_groups:
+            if ng.bl_idname in ['MantisTree', 'SchemaTree']:
+                if ng.name == node_tree.name and ng.bl_idname == node_tree.bl_idname:
+                    continue # don't add the node group into itself.
+                if ng.contains_tree(node_tree):
+                    continue # don't create an infinite loop of node trees
+                operator_settings = layout.operator(
+                    "mantis.add_component", text=ng.name,
+                    icon='NODE', emboss=False,)
+                operator_settings.node_group_tree_name=ng.name
+                operator_settings.tree_invoked = node_tree.name
+
+
+
 
 class MantisActiveTreePanel(Panel):
     """N-Panel menu for Mantis"""

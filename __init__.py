@@ -342,7 +342,7 @@ def on_undo_post_handler(scene): # the undo will trigger a depsgraph update
             # set the tree to invalid to trigger a tree update
             # since the context data is wiped by an undo.
 
-from .menu_classes import node_context_menu_draw
+from .menu_classes import node_context_menu_draw, node_add_menu_draw
 
 def register():
     from bpy.utils import register_class
@@ -356,6 +356,8 @@ def register():
     nodeitems_utils.register_node_categories('MantisNodeCategories', node_categories)
     nodeitems_utils.register_node_categories('SchemaNodeCategories', schema_categories)
     bpy.types.NODE_MT_context_menu.append(node_context_menu_draw)
+    bpy.types.NODE_MT_add.append(node_add_menu_draw)
+
 
 
     km, kmi = init_keymaps()
