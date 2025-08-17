@@ -209,7 +209,6 @@ def scan_tree_dependencies(base_tree, curves:set, armatures:set, ):
         for s in ui_node.inputs:
             if s.bl_idname in 'EnumCurveSocket':
                 curve_name = n.evaluate_input(s.name)
-                prRed(curve_name)
                 if curve := data.objects.get(curve_name):
                     curves.add(curve)
                 else:
@@ -217,12 +216,10 @@ def scan_tree_dependencies(base_tree, curves:set, armatures:set, ):
         match ui_node.bl_idname:
             case "UtilityMetaRig":
                 armature_name = n.evaluate_input("Meta-Armature")
-                prWhite(armature_name)
                 if armature := data.objects.get(armature_name):
                     armatures.add(armature)
             case "InputExistingGeometryObjectNode":
                 object_name = n.evaluate_input("Name")
-                prWhite(object_name)
                 if object := data.objects.get(object_name):
                     if object.type == "ARMATURE":
                         armatures.add(object)
@@ -236,7 +233,6 @@ def scan_tree_dependencies(base_tree, curves:set, armatures:set, ):
             #         armatures.add(armature)
             case "xFormGeometryObjectNode":
                 object_name = n.evaluate_input("Name")
-                prWhite(object_name)
                 if object := data.objects.get(object_name):
                     if object.type == "ARMATURE":
                         armatures.add(object)
