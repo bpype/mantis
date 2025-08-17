@@ -520,13 +520,17 @@ def import_curve_data_to_object(curve_name, curve_data):
     collection.objects.link(curve_object)
     return curve_object
 
-def get_component_library_items():
+def get_component_library_items(path='ADD_ARMATURE'):
     from os import path as os_path
     from .preferences import get_bl_addon_object
     bl_mantis_addon = get_bl_addon_object()
     return_value=[]
     if bl_mantis_addon:
-        components_path = bl_mantis_addon.preferences.ComponentsLibraryFolder
+        match path:
+            case 'ADD_ARMATURE':
+                components_path = bl_mantis_addon.preferences.ComponentsLibraryFolder
+            case 'AUTOLOAD':
+                components_path = bl_mantis_addon.preferences.ComponentsAutoLoadFolder
         component_names = {}
         from os import walk as os_walk
         for path_root, dirs, files, in os_walk(components_path):

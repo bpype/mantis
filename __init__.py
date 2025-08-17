@@ -318,7 +318,43 @@ def version_update_handler(filename):
                (node_tree.mantis_version[1] < MANTIS_VERSION_MINOR) or \
                (node_tree.mantis_version[2] < MANTIS_VERSION_SUB):
                 do_version_update(node_tree)
-                
+
+@persistent
+def autoload_components(filename):
+    # this should not be blocking or slow!
+    print("Auto-loading components")
+    from os import path as os_path
+    from .utilities import get_component_library_items, get_default_collection
+    from .i_o import do_import
+    from .preferences import get_bl_addon_object
+    import json
+    from bpy import context, data
+    bl_addon_object = get_bl_addon_object()
+    unlink_curves = True
+    unlink_armatures = True
+    if data.collections.get(bl_addon_object.preferences.CurveDefaultCollection):
+        unlink_curves=False
+    if data.collections.get(bl_addon_object.preferences.MetaArmatureDefaultCollection):
+        unlink_armatures=False
+    base_path = bl_addon_object.preferences.ComponentsAutoLoadFolder
+    components = get_component_library_items(path='AUTOLOAD')
+    for autoload_component in components:
+        path = os_path.join(base_path, autoload_component[0])
+        with open(path, 'r', encoding='utf-8') as f:
+            json_data = json.load(f)
+            do_import(json_data, context,
+                       search_multi_files=True, filepath=path,
+                       skip_existing=True)
+    # now we need to unlink the collections, and add fake users to them
+    curves_collection = get_default_collection(collection_type="CURVE")
+    armature_collection = get_default_collection(collection_type="ARMATURE")
+    if unlink_curves and (curves_collection := data.collections.get(
+            bl_addon_object.preferences.CurveDefaultCollection)):
+        context.scene.collection.children.unlink(curves_collection)
+    if unlink_armatures and (armature_collection := data.collections.get(
+            bl_addon_object.preferences.MetaArmatureDefaultCollection)):
+        context.scene.collection.children.unlink(armature_collection)
+
 
 # I'll need to do some fiddling here when it comes time to try
 #   and make rig definitions animatable.
@@ -370,6 +406,7 @@ def register():
     # add the handlers
     bpy.app.handlers.depsgraph_update_pre.insert(0, update_handler)
     bpy.app.handlers.depsgraph_update_post.insert(0, execute_handler)
+    bpy.app.handlers.load_post.insert(0, autoload_components)
     bpy.app.handlers.load_post.insert(0, version_update_handler)
     bpy.app.handlers.animation_playback_pre.insert(0, on_animation_playback_pre_handler)
     bpy.app.handlers.animation_playback_post.insert(0, on_animation_playback_post_handler)
