@@ -462,6 +462,8 @@ def import_metarig_data(metarig_data : dict, ):
         # have to add it to the view layer to switch modes.
         collection = get_default_collection(collection_type="ARMATURE")
         collection.objects.link(armature_object)
+        # we'll do this to ensure it is actually in the scene for the mode switch
+        context.scene.collection.objects.link(armature_object)
         switch_mode('EDIT', objects = [armature_object])
         
         while (children):
@@ -481,6 +483,8 @@ def import_metarig_data(metarig_data : dict, ):
             eb.tail = eb.matrix.decompose()[0] + displacement
             children.extendleft (child_data['children'].copy())
         switch_mode('OBJECT', objects = [armature_object])
+        # and now we can remove it from the scene collection, since it is in the Armature collection
+        context.scene.collection.objects.unlink(armature_object)
     # note that this will not correct if the object exists and is wrong.
     return armature_object
     
