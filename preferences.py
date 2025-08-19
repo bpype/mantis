@@ -6,7 +6,7 @@ dir_path = os.path.dirname(os.path.realpath(__file__))
 
 def get_bl_addon_object(raise_error = False):
     from bpy import context
-    try_these_first = ['bl_ext.repos.mantis', 'bl_ext.blender_modules_enabled.mantis']
+    try_these_first = ['bl_ext.repos.mantis', 'bl_ext.blender_modules_enabled.mantis', 'bl_ext.nodes_tools.mantis']
     for mantis_key in try_these_first:
         bl_mantis_addon = context.preferences.addons.get(mantis_key)
         if bl_mantis_addon: break
