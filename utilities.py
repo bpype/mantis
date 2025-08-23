@@ -171,7 +171,7 @@ def get_socket_maps(node, force=False):
 # this function is completely overloaded with different purposes and code paths
 # TODO refactor everything that funnels into this function
 # make this stuff simpler.
-def do_relink(node, s, map, in_out='INPUT', parent_name = ''):
+def do_relink(node, socket, map, in_out='INPUT', parent_name = ''):
     if not node.__class__.is_registered_node_type(): return
     tree = node.id_data; interface_in_out = 'OUTPUT' if in_out == 'INPUT' else 'INPUT'
     if hasattr(node, "node_tree"):
@@ -179,7 +179,7 @@ def do_relink(node, s, map, in_out='INPUT', parent_name = ''):
         interface_in_out=in_out
     from bpy.types import NodeSocket, Node
     get_string = '__extend__'
-    if s: get_string = s.identifier
+    if socket: get_string = socket.identifier
     from .base_definitions import SchemaUINode
     if (hasattr(node, "node_tree") or isinstance(node, SchemaUINode)) and get_string not in map.keys():
         # this happens when we are creating a new node group and need to update it from nothing.
@@ -187,8 +187,8 @@ def do_relink(node, s, map, in_out='INPUT', parent_name = ''):
     val = map[get_string] # this will throw an error if the socket isn't there. Good!
     if isinstance(val, list):
         for sub_val in val:
-            # this will only happen once because it assigns s, so it is safe to do in the for loop.
-            if s is None:
+            # this will only happen once because it assigns socket, so it is safe to do in the for loop.
+            if socket is None:
                 socket = sub_val
                 if sub_val.bl_idname == "NodeReroute":
                     # we have to trace the reroute node...
@@ -201,47 +201,51 @@ def do_relink(node, s, map, in_out='INPUT', parent_name = ''):
                 if parent_name:
                     interface_socket = update_interface(tree.interface, name, interface_in_out, sock_type, parent_name)
                 if in_out =='INPUT':
-                    s = node.inputs.new(sock_type, name, identifier=interface_socket.identifier)
+                    socket = node.inputs.new(sock_type, name, identifier=interface_socket.identifier)
                 else:
-                    s = node.outputs.new(sock_type, name, identifier=interface_socket.identifier)
-                if parent_name == 'Array': s.display_shape='SQUARE_DOT'
-                if parent_name == 'Constant': s.display_shape='CIRCLE_DOT'
+                    socket = node.outputs.new(sock_type, name, identifier=interface_socket.identifier)
+                if parent_name == 'Array': socket.display_shape='SQUARE_DOT'
+                if parent_name == 'Constant': socket.display_shape='CIRCLE_DOT'
                 # then move it up and delete the other link.
                 # this also needs to modify the interface of the node tree.
             if isinstance(sub_val, NodeSocket):
                 l = None
                 if in_out =='INPUT':
-                    l = node.id_data.links.new(input=sub_val, output=s)
+                    l = node.id_data.links.new(input=sub_val, output=socket)
                 else:
-                    l = node.id_data.links.new(input=s, output=sub_val)
+                    l = node.id_data.links.new(input=socket, output=sub_val)
                 if l is None:
                     raise RuntimeError("Could not create link")
             elif isinstance(sub_val, Node):
                 l = None
                 # this happens when it is a NodeReroute
-                if not s.is_output:
-                    l = node.id_data.links.new(input=sub_val.outputs[0], output=s)
+                if not socket.is_output:
+                    l = node.id_data.links.new(input=sub_val.outputs[0], output=socket)
                 else:
-                    l = node.id_data.links.new(input=s, output=sub_val.inputs[0])
+                    l = node.id_data.links.new(input=socket, output=sub_val.inputs[0])
                 if l is None:
                     raise RuntimeError("Could not create link")
             else:
                 raise RuntimeError("Unhandled case in do_relink()")
     elif get_string != "__extend__":
-        if not s.is_output:
+        if not socket.is_output:
             from bpy.app import version as bpy_version
             if bpy_version >=(4,5,0): # VERSIONING
                 # for some reason, this is throwing an error now
                 from bpy.types import bpy_prop_array
                 if isinstance(val, bpy_prop_array):
-                    if in_out == "INPUT" and s.input == False:
+                    if in_out == "INPUT" and hasattr(socket, 'input') and socket.input == False:
                         return # doesn't matter, this is a Matrix socket in a bone or something
-                    raise RuntimeError(
-                          f"Cannot set property in socket of type {s.bl_idname} due to bug in Blender: "
-                          f"{node.id_data.name}:{node.name}:{s.name} ")
+                    # raise RuntimeError(
+                    #       f"Cannot set property in socket of type {socket.bl_idname} due to bug in Blender: "
+                    #       f"{node.id_data.name}:{node.name}:{socket.name} ")
                     # TODO: report this weird bug!
             try:
-                s.default_value = val
+                if socket.bl_idname == 'BooleanThreeTupleSocket':
+                    # it is so annoying that I have to do this
+                    socket.default_value = [bool(val[0]), bool(val[1]), bool(val[2])]
+                else:
+                    socket.default_value = val
             except (AttributeError, ValueError): # must be readonly or maybe it doesn't have a d.v.
                 pass
 
