@@ -763,7 +763,7 @@ def get_link_sockets(link, tree, tree_socket_id_map):
                     except IndexError as e:
                         prRed("failed to create link: "
                             f"{from_node_name}:{from_socket_id} --> {to_node_name}:{to_socket_id}")
-                    return (None, None)
+                    return (from_sock, None)
     elif to_node.bl_idname in ["NodeGroupOutput"]:
         id2 = tree_socket_id_map.get(to_socket_id)
 
@@ -775,6 +775,7 @@ def get_link_sockets(link, tree, tree_socket_id_map):
 
 def setup_sockets(node, propslist, in_out="inputs"):
         sockets_removed = []
+        socket = None
         for i, (s_id, s_val) in enumerate(propslist[in_out].items()):
             if node.bl_idname in ['NodeReroute']:
                 break # Reroute Nodes do not have anything I can set or modify.
@@ -812,7 +813,6 @@ def setup_sockets(node, propslist, in_out="inputs"):
                                 print (propslist['name'])
                                 print (s_id, s_val['name'], s_val['index'])
                                 raise e
-
                     if socket.name != s_val["name"]:
                         right_name = s_val['name']
                         prRed( "There has been an error getting a socket while importing data."
@@ -854,6 +854,9 @@ def setup_sockets(node, propslist, in_out="inputs"):
                         right_name = s_val['name']
                         prRed( "There has been an error getting a socket while importing data."
                                 f"found name: {socket.name}; should have found: {right_name}.")
+            if socket is None:
+                # Error?
+                return
             # set the value
             for s_p, s_v in s_val.items():
                 if s_p not in ["default_value"]:
