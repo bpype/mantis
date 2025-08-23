@@ -480,8 +480,25 @@ def get_interface_data(tree, tree_in_out):
             bl_socket_idname = sock.bl_socket_idname
             # try and import it
             from . import socket_definitions
-            # WANT an attribute error if this fails.
-            socket_class = getattr(socket_definitions, bl_socket_idname)
+            # some mistakes in versioning makes it possible for older trees to have
+            # standard Blender types instead of Mantis types
+            if bl_socket_idname == 'NodeSocketFloat':
+                bl_socket_idname = 'FloatSocket'
+            elif bl_socket_idname == 'NodeSocketVector':
+                bl_socket_idname = 'VectorSocket'
+            elif bl_socket_idname == 'NodeSocketInt':
+                bl_socket_idname = 'IntSocket'
+            
+            try:
+                socket_class = getattr(socket_definitions, bl_socket_idname)
+            except AttributeError: # sometimes the class doesn't work.
+                # I think this happens because of an oversight in versioning. Sorry.
+                socket_class = getattr(socket_definitions, "FloatSocket")
+                prRed(f"Cannot export interface socket of type {bl_socket_idname}.\n"
+                      f"See interface socket: {sock.name} in tree {tree.name}.\n"
+                      f"Try to change the socket type to a Mantis type.\n"
+                      f"Exporting a FloatSocket instead. This will not alter Mantis' "
+                      f"usability or behavior.")
             sock_parent = None
             if sock.parent:
                 sock_parent = sock.parent.name
@@ -1109,12 +1126,13 @@ def do_import(data, context, search_multi_files=False, filepath='', skip_existin
                 prPurple (from_sock)
                 prOrange (to_sock)
                 if print_link_failure:
-                    from_node_name = link[0]; from_socket_id = link[1]
-                    to_node_name = link[2]; to_socket_id = link[3]
+                    from_node_name = l[0]; from_socket_id = l[1]
+                    to_node_name = l[2]; to_socket_id = l[3]
                     prWhite(f"looking for... {from_node_name}:{from_socket_id}, {to_node_name}:{to_socket_id}")
                     prRed (f"Failed: {l[0]}:{l[1]} --> {l[2]}:{l[3]}")
                     prRed (f" got node: {from_node_name}, {to_node_name}")
                     prRed (f" got socket: {from_sock}, {to_sock}")
+                    prWhite(f"Failed to add link in {tree.name}: {name1}:{from_socket_name}, {name2}:{to_socket_name}")
                     raise RuntimeError
                 else:
                     prRed(f"Failed to add link in {tree.name}: {name1}:{from_socket_name}, {name2}:{to_socket_name}")
