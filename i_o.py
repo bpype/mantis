@@ -568,7 +568,7 @@ def export_to_json(trees, base_tree=None, path="", write_file=True, only_selecte
             from_socket_name, to_socket_name = link.from_socket.name, link.to_socket.name
 
             # get the indices of the sockets to be absolutely sure
-            for from_outoput_index, outp in enumerate(link.from_node.outputs):
+            for from_output_index, outp in enumerate(link.from_node.outputs):
                 # for some reason, 'is' does not return True no matter what...
                 # so we are gonn compare the memory address directly, this is stupid
                 if (outp.as_pointer() == link.from_socket.as_pointer()): break
@@ -662,7 +662,7 @@ def export_to_json(trees, base_tree=None, path="", write_file=True, only_selecte
 
                     from_node_name=in_node.get("name")
                     from_socket_id=in_sock["identifier"]
-                    from_outoput_index=in_sock["index"]
+                    from_output_index=in_sock["index"]
                     from_socket_name=in_node.get("name")
                 # parentheses matter here...
                 elif (only_selected and not (link.from_node.select and link.to_node.select)):
@@ -673,7 +673,7 @@ def export_to_json(trees, base_tree=None, path="", write_file=True, only_selecte
                            from_socket_id,
                            to_node_name,
                            to_socket_id,
-                           from_outoput_index,
+                           from_output_index,
                            to_input_index,
                            from_socket_name,
                            to_socket_name) ) # it's a tuple
@@ -1044,17 +1044,29 @@ def do_import(data, context, search_multi_files=False, filepath='', skip_existin
 #        from mantis.utilities import prRed, prWhite, prOrange, prGreen
         for name, propslist in nodes.items():
             bl_idname = propslist["bl_idname"]
+            do_socket_setup = True
             if bl_idname in NODES_REMOVED:
                 prWhite(f"INFO: Ignoring import of node {name} of type {bl_idname}; it has been removed.")
                 continue
             n = tree.nodes.new(bl_idname)
             if bl_idname in ["DeformerMorphTargetDeform"]:
                 n.inputs.remove(n.inputs[-1]) # get rid of the wildcard
-            if bl_idname in ['UtilityDeclareCollections']:
+            elif bl_idname in ['UtilityDeclareCollections']:
                 n.collection_declarations = propslist['collection_declarations']
                 n.update_interface()
-                continue
-            if n.bl_idname in [ "SchemaArrayInput",
+                do_socket_setup = False
+            elif bl_idname in ['InputColorSetPallete']:
+                # because the user can add and remove sockets, we need to match the names.
+                # since the user's sockets could be 000, 001, 003, 004 or something like
+                socket_names = list(propslist['outputs'].keys())
+                for i in range(len(propslist['outputs'])):
+                    socket = n.outputs.new("ColorSetSocket", socket_names[i] )
+                    color_values = propslist['outputs'][socket.name]['default_value']
+                    socket.active_color = color_values[:3]
+                    socket.normal_color = color_values[3:6]
+                    socket.selected_color = color_values[6:9]
+                do_socket_setup = False
+            elif bl_idname in [ "SchemaArrayInput",
                                 "SchemaArrayInputGet",
                                 "SchemaArrayInputAll",
                                 "SchemaArrayOutput",
@@ -1094,8 +1106,9 @@ def do_import(data, context, search_multi_files=False, filepath='', skip_existin
                 finally:
                     n.is_updating=False
             # set up sockets
-            setup_sockets(n, propslist, in_out="inputs")
-            setup_sockets(n, propslist, in_out="outputs")
+            if do_socket_setup:
+                setup_sockets(n, propslist, in_out="inputs")
+                setup_sockets(n, propslist, in_out="outputs")
             for p, v in propslist.items():
                 if p in ["node_tree",
                          "sockets",

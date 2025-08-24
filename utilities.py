@@ -143,8 +143,6 @@ def get_socket_maps(node, force=False):
                         other_socket.bl_idname == 'NodeSocketUndefined':
                             continue # this one is bad
                     keep_sockets.append(other_socket)
-                # if len(keep_sockets) == 0:
-                #     keep_sockets = None
                 map[sock.identifier]= keep_sockets
             elif hasattr(sock, "default_value"):
                 if sock.get("default_value") is not None:
@@ -690,7 +688,7 @@ def link_node_containers(tree_path_names, link, local_nc, from_suffix='', to_suf
             raise e
     else:
         prRed(nc_from, nc_to, (*tree_path_names, from_name+from_suffix), (*tree_path_names, to_name+to_suffix))
-        raise RuntimeError(wrapRed("Link not connected: %s -> %s in tree %s" % (from_name, to_name, tree_path_names[-1])))
+        raise RuntimeError(wrapRed(f"Link not connected: {nc_from} -> {nc_to} in tree" ))
     
 def get_all_dependencies(nc):
     from .base_definitions import GraphError
