@@ -344,12 +344,24 @@ def node_group_update(node, force = False):
            (node.id_data.is_exporting == True):
             return
     # note: if (node.id_data.is_exporting == True) I need to be able to update so I can make links.
-
+    
+    if node.node_tree is None:
+        node.inputs.clear(); node.outputs.clear()
+        node.id_data.do_live_update = toggle_update
+        return
+    
     toggle_update = node.id_data.do_live_update
     node.id_data.do_live_update = False
 
     identifiers_in={socket.identifier:socket for socket in node.inputs}
     identifiers_out={socket.identifier:socket for socket in node.outputs}
+    interface_names_in, interface_names_out = {}, {}
+    for interface_item in node.node_tree.interface.items_tree:
+        if interface_item.item_type != 'SOCKET': continue
+        if interface_item.in_out == 'INPUT':
+            interface_names_in[interface_item.identifier] = interface_item.name
+        else:
+            interface_names_out[interface_item.identifier] = interface_item.name
     indices_in,indices_out={},{} # check by INDEX to see if the socket's name/type match.
     for collection, map in [(node.inputs, indices_in), (node.outputs, indices_out)]:
         for i, socket in enumerate(collection):
@@ -365,6 +377,7 @@ def node_group_update(node, force = False):
         if item.item_type != "SOCKET": continue
         if item.in_out == 'OUTPUT':
             if s:= identifiers_out.get(item.identifier): # if the requested output doesn't exist, update
+                if interface_names_out.get(item.identifier) != s.name: update_output = True; continue
                 found_out.append(item.identifier)
                 if (indices_out[s.identifier]!=item.index): update_output=True; continue
                 if update_output: continue
@@ -372,6 +385,7 @@ def node_group_update(node, force = False):
             else: update_output = True; continue
         else:
             if s:= identifiers_in.get(item.identifier): # if the requested input doesn't exist, update
+                if interface_names_in.get(item.identifier) != s.name: update_input = True; continue
                 found_in.append(item.identifier)
                 if (indices_in[s.identifier]!=item.index): update_input=True; continue
                 if update_input: continue # done here
@@ -381,7 +395,20 @@ def node_group_update(node, force = False):
     # Schema has an extra input for Length and for Extend.
     if node.bl_idname == 'MantisSchemaGroup':
         found_in.extend(['Schema Length', ''])
-
+    
+    # get the socket maps before modifying stuff
+    if update_input or update_output:
+        socket_maps = get_socket_maps(node,)
+        if socket_maps:
+            socket_map_in, socket_map_out = socket_maps
+        if node.bl_idname == "MantisSchemaGroup" and \
+            len(node.inputs)+len(node.outputs)<=2 and\
+                len(node.node_tree.interface.items_tree) > 0:
+            socket_map_in, socket_map_out = None, None
+            # We have to initialize the node because it only has its base inputs.
+        elif socket_maps is None:
+            node.id_data.do_live_update = toggle_update
+    
     # if we have too many elements, just get rid of the ones we don't need
     if len(node.inputs) > len(found_in):#
         for inp in node.inputs:
@@ -399,19 +426,7 @@ def node_group_update(node, force = False):
         node.id_data.do_live_update = toggle_update
         return
 
-    if update_input or update_output:
-        socket_maps = get_socket_maps(node,)
-        if socket_maps:
-            socket_map_in, socket_map_out = socket_maps
-        if node.bl_idname == "MantisSchemaGroup" and \
-            len(node.inputs)+len(node.outputs)<=2 and\
-                len(node.node_tree.interface.items_tree) > 0:
-            socket_map_in, socket_map_out = None, None
-            # We have to initialize the node because it only has its base inputs.
-        elif socket_maps is None:
-            node.id_data.do_live_update = toggle_update
-            return
-
+    if update_input or update_output and (socket_maps is not None):
         if update_input :
             if node.bl_idname == 'MantisSchemaGroup':
                 schema_length=0
