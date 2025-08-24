@@ -188,7 +188,7 @@ def scan_tree_dependencies(base_tree, curves:set, armatures:set, ):
         nodes = base_tree.parsed_tree
     else:
         base_tree.update_tree(context=context)
-        nodes = base_tree
+        nodes = base_tree.parsed_tree
     for nc in nodes.values():
         nc.reset_execution()
         check_and_add_root(nc, xForm_pass)
@@ -1050,7 +1050,10 @@ def do_import(data, context, search_multi_files=False, filepath='', skip_existin
             n = tree.nodes.new(bl_idname)
             if bl_idname in ["DeformerMorphTargetDeform"]:
                 n.inputs.remove(n.inputs[-1]) # get rid of the wildcard
-
+            if bl_idname in ['UtilityDeclareCollections']:
+                n.collection_declarations = propslist['collection_declarations']
+                n.update_interface()
+                continue
             if n.bl_idname in [ "SchemaArrayInput",
                                 "SchemaArrayInputGet",
                                 "SchemaArrayInputAll",
