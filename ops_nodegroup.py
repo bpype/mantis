@@ -421,8 +421,6 @@ class QueryNodeSockets(Operator):
     bl_label = "Query Node Sockets"
     bl_options = {'REGISTER', 'UNDO'}
 
-
-
     @classmethod
     def poll(cls, context):
         return (mantis_tree_poll_op(context))
@@ -431,12 +429,28 @@ class QueryNodeSockets(Operator):
         active_node = context.active_node
         tree = active_node.id_data
         for node in tree.nodes:
-            if not node.select: continue
-
-
-        
+            if not node.select: continue 
         return {"FINISHED"}
 
+class FoceUpdateGroup(Operator):
+    """Developer Tool to force a group update"""
+    bl_idname = "mantis.force_update_group"
+    bl_label = "Force Mantis Group Update"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    @classmethod
+    def poll(cls, context):
+        return (mantis_tree_poll_op(context))
+
+    def execute(self, context):
+        active_node = context.active_node
+        from .base_definitions import node_group_update
+        try:
+            active_node.is_updating = True
+            node_group_update(active_node, force=True)
+        finally:
+            active_node.is_updating = False
+        return {"FINISHED"}
 
 class ForceDisplayUpdate(Operator):
     """Utility Operator for querying the data in a socket"""
@@ -1029,6 +1043,7 @@ classes = [
         ExecuteNodeTree,
         # CreateMetaGroup,
         QueryNodeSockets,
+        FoceUpdateGroup,
         ForceDisplayUpdate,
         CleanUpNodeGraph,
         MantisMuteNode,
