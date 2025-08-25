@@ -18,7 +18,7 @@ from .utilities import prRed
 
 MANTIS_VERSION_MAJOR=0
 MANTIS_VERSION_MINOR=12
-MANTIS_VERSION_SUB=19
+MANTIS_VERSION_SUB=20
 
 classLists = [module.TellClasses() for module in [
  link_nodes_ui,
