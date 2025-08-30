@@ -406,6 +406,7 @@ def get_node_data(ui_node):
         finally: # ensure this line is run even if there is an error
             ui_node.is_updating = False
     node_props, inputs, outputs = {}, {}, {}
+    node_props["inputs"], node_props['outputs'] = {}, {} # just good to have a default
     for propname  in dir(ui_node):
         value = getattr(ui_node, propname)
         if propname in ['fake_fcurve_ob']:
@@ -558,8 +559,10 @@ def export_to_json(trees, base_tree=None, path="", write_file=True, only_selecte
         in_sockets, out_sockets = {}, {}
         unique_sockets_from, unique_sockets_to = {}, {}
 
-        in_node = {"name":"MANTIS_AUTOGEN_GROUP_INPUT", "bl_idname":"NodeGroupInput", "inputs":in_sockets}
-        out_node = {"name":"MANTIS_AUTOGEN_GROUP_OUTPUT", "bl_idname":"NodeGroupOutput", "outputs":out_sockets}
+        # TODO BUG HACK BAD UGLY WRONG this code should NOT be isolated from the node generation code!
+        # in the future, try to use dataclasses to enforce defaults and such. then as_dict() or whatever
+        in_node = {"name":"MANTIS_AUTOGEN_GROUP_INPUT", "bl_idname":"NodeGroupInput", "inputs":in_sockets, "outputs":{}}
+        out_node = {"name":"MANTIS_AUTOGEN_GROUP_OUTPUT", "bl_idname":"NodeGroupOutput", "inputs":{}, "outputs":out_sockets}
         add_input_node, add_output_node = False, False
 
         for link in tree.links:

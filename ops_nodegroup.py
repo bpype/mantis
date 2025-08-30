@@ -94,24 +94,25 @@ class MantisGroupNodes(Operator):
 
             # for each node in the JSON
             for n in selected_nodes[base_tree.name][2].values():
-                for s in n["sockets"].values(): # for each socket in the node
-                    if source := s.get("source"):
-                        prGreen (s["name"], source[0], source[1])
-                        base_tree_node=base_tree.nodes.get(source[0])
-                        if s["is_output"]:
-                            for output in base_tree_node.outputs:
-                                if output.identifier == source[1]:
-                                    break
+                for socket_collection in ['inputs', 'outputs']:
+                    for s in n[socket_collection].values(): # for each socket in the node
+                        if source := s.get("source"):
+                            prGreen (s["name"], source[0], source[1])
+                            base_tree_node=base_tree.nodes.get(source[0])
+                            if s["is_output"]:
+                                for output in base_tree_node.outputs:
+                                    if output.identifier == source[1]:
+                                        break
+                                else:
+                                    raise RuntimeError(wrapRed("Socket not found when grouping"))
+                                base_tree.links.new(input=output, output=grp_node.inputs[s["name"]])
                             else:
-                                raise RuntimeError(wrapRed("Socket not found when grouping"))
-                            base_tree.links.new(input=output, output=grp_node.inputs[s["name"]])
-                        else:
-                            for s_input in base_tree_node.inputs:
-                                if s_input.identifier == source[1]:
-                                    break
-                            else:
-                                raise RuntimeError(wrapRed("Socket not found when grouping"))
-                            base_tree.links.new(input=grp_node.outputs[s["name"]], output=s_input)
+                                for s_input in base_tree_node.inputs:
+                                    if s_input.identifier == source[1]:
+                                        break
+                                else:
+                                    raise RuntimeError(wrapRed("Socket not found when grouping"))
+                                base_tree.links.new(input=grp_node.outputs[s["name"]], output=s_input)
 
             for n in delete_me: base_tree.nodes.remove(n)
             base_tree.nodes.active = grp_node
