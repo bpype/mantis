@@ -1,5 +1,6 @@
 from .base_definitions import MantisSocketTemplate as SockTemplate
 from bpy import app
+from dataclasses import replace
 
 from .misc_nodes_socket_templates import SplineIndexTemplate
 # Socket Templates we will reuse:
@@ -80,7 +81,7 @@ OutputRelationshipTemplate : SockTemplate = SockTemplate(
     name="Output Relationship", is_input=False,  bl_idname='RelationshipSocket', )
 
 
-LinkInheritSockets = [              
+LinkInheritSockets = [
     SockTemplate(name="Inherit Rotation", is_input=True,
                  bl_idname='BooleanSocket',       default_value=True,),
     SockTemplate(name="Inherit Scale",    is_input=True,
@@ -106,7 +107,7 @@ LinkCopyLocationSockets = [
     EnableTemplate,
     OutputRelationshipTemplate,
 ]
-    
+
 LinkCopyRotationSockets = [
     InputRelationshipTemplate,
     SockTemplate(name='RotationOrder', bl_idname='RotationOrderSocket', is_input=True,
@@ -160,7 +161,7 @@ TransformationMinMaxTemplateGenerator = lambda name, bprop  : SockTemplate(
     bl_idname='EnumTransformationAxes' if "Source" in name else "FloatSocket",
     default_value='X' if "Source" in name else 1.0,
     blender_property=bprop)
-    
+
 LinkTransformationSockets = [
     InputRelationshipTemplate,
     TargetTemplate,
@@ -370,7 +371,7 @@ LinkDrivenParameterSockets = [
                  default_value=0,),
     OutputRelationshipTemplate,
 ]
-  
+
 LinkArmatureSockets=[
     InputRelationshipTemplate,
     SockTemplate(name="Preserve Volume", bl_idname='BooleanSocket', is_input=True,
@@ -418,6 +419,39 @@ LinkFloorSockets = [
             is_input=True, default_value=False, blender_property='use_rotation',),
     TargetSpaceTemplate,
     OwnerSpaceTemplate,
+    InfluenceTemplate,
+    EnableTemplate,
+    OutputRelationshipTemplate,
+]
+
+# DO: arrange these guys in order for goodness' sake
+LinkShrinkWrapSockets = [
+    InputRelationshipTemplate,
+    TargetTemplate, # IMPORTANT TO DO: targets should be an array
+    # and the constraints are made  ONLY if the target is valid...
+    # for BONE targets, maybe auto-magically build a mesh for the user.
+    CullFaceTemplate := SockTemplate(name='Face Cull', is_input = True,
+            bl_idname="EnumShrinkwrapFaceCullSocket", default_value='OFF',
+            blender_property = "cull_face"),
+    SWDistanceTemplate := SockTemplate(name="Distance", bl_idname="FloatSocket",
+            is_input=True, default_value=0.0, blender_property='distance'),
+    ProjectAxisTemplate := SockTemplate(name="Project Axis",
+            bl_idname="EnumShrinkwrapProjectAxisSocket", is_input=True,
+            blender_property='project_axis'),
+    TrackAxisTemplate:= SockTemplate(name="Track Axis", bl_idname="EnumTrackAxis",
+            is_input=True, blender_property='track_axis'),
+    ProjectAxisSpaceTemplate := replace(TargetSpaceTemplate, name='Space',
+            blender_property='project_axis_space'),
+    UseInvertCullTemplate:= SockTemplate(name="Invert Cull",
+            bl_idname="BooleanSocket", is_input=True,
+            blender_property='use_invert_cull'),
+    UseProjectOppositeTemplate:= replace(UseInvertCullTemplate,
+            name="Project Opposite", blender_property='use_project_opposite'),
+    UseTrackNormalTemplate:= replace(UseInvertCullTemplate,
+            name="Align to Normal", blender_property='use_track_normal'),
+    ShrinkwrapModeTemplate := SockTemplate(name="Snap Mode",
+            bl_idname="EnumShrinkwrapModeSocket", is_input=True,
+            blender_property='wrap_mode'),
     InfluenceTemplate,
     EnableTemplate,
     OutputRelationshipTemplate,

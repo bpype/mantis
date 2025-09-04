@@ -1,5 +1,5 @@
 from . import ( ops_nodegroup,
-                ops_ui, 
+                ops_ui,
                 base_definitions,
                 socket_definitions,
                 link_nodes_ui,
@@ -104,6 +104,7 @@ link_tracking_category = [
         NodeItem("LinkDampedTrack"),
         NodeItem("LinkLockedTrack"),
         NodeItem("LinkTrackTo"),
+        NodeItem("LinkShrinkWrap"),
     ]
 link_relationship_category = [
         NodeItem("linkInherit"),
@@ -245,7 +246,7 @@ def update_handler(scene):
         if not trees: return
         if (node_tree := trees[0]).bl_idname in ['MantisTree']:
             if node_tree.is_exporting:
-                return 
+                return
             if node_tree.prevent_next_exec : pass
             elif node_tree.do_live_update and not (node_tree.is_executing):
                 node_tree.update_tree(context)
@@ -349,7 +350,7 @@ def autoload_components(filename):
             for tree_name in json_data.keys():
                 tree = data.node_groups.get(tree_name)
                 tree.use_fake_user = True
-            
+
     # now we need to unlink the collections, and add fake users to them
     curves_collection = get_default_collection(collection_type="CURVE")
     armature_collection = get_default_collection(collection_type="ARMATURE")
@@ -387,7 +388,7 @@ from .menu_classes import (node_context_menu_draw, node_add_menu_draw,
 
 def register():
     from bpy.utils import register_class
-    
+
     for cls in classes:
         try:
             register_class(cls)
@@ -431,7 +432,7 @@ def unregister():
     from bpy.utils import unregister_class
     for cls in reversed(classes):
         unregister_class(cls)
-    
+
     for km, kmi in addon_keymaps:
         km.keymap_items.remove(kmi)
     addon_keymaps.clear()

@@ -29,7 +29,9 @@ def TellClasses():
              # IK
              LinkInverseKinematics,
              LinkSplineIK,
+             # stuff that snaps or limits a bone
              LinkFloor,
+             LinkShrinkWrap,
              # Drivers
              LinkDrivenParameter,
             ]
@@ -53,10 +55,10 @@ class MantisLinkNode(MantisNode):
             if socket.is_linked:
                 return socket.links[0].from_node
             return None
-            
+
         else:
             return super().evaluate_input(input_name)
-    
+
     def gen_property_socket_map(self) -> dict:
         props_sockets = super().gen_property_socket_map()
         if (os := self.inputs.get("Owner Space")) and os.is_connected and os.links[0].from_node.node_type == 'XFORM':
@@ -64,7 +66,7 @@ class MantisLinkNode(MantisNode):
         if ts := self.inputs.get("Target_Space") and ts.is_connected and ts.links[0].from_node.node_type == 'XFORM':
             del props_sockets['target_space']
         return props_sockets
-    
+
     def set_custom_space(self):
         for c in self.bObject:
             if (os := self.inputs.get("Owner Space")) and os.is_connected and os.links[0].from_node.node_type == 'XFORM':
@@ -81,7 +83,7 @@ class MantisLinkNode(MantisNode):
                     c.space_object=self.inputs["Target_Space Space"].links[0].from_node.bGetParentArmature(); c.space_subtarget=xf.name
                 else:
                     c.space_object=xf
-        
+
     def GetxForm(nc, output_name="Output Relationship"):
         break_condition= lambda node : node.node_type=='XFORM'
         xforms = trace_line_up_branching(nc, output_name, break_condition)
@@ -93,11 +95,11 @@ class MantisLinkNode(MantisNode):
                 continue
             return_me.append(xf)
         return return_me
-    
+
     def reset_execution(self):
         super().reset_execution()
         self.prepared = True; self.bObject = []
-    
+
     def bFinalize(self, bContext=None):
         finish_drivers(self)
 
@@ -108,13 +110,13 @@ class MantisLinkNode(MantisNode):
 
 class LinkInherit(MantisLinkNode):
     '''A node representing inheritance'''
-    
+
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, LinkInheritSockets)
         self.init_parameters()
         self.set_traverse([('Parent', 'Inheritance')])
         self.executed = True
-    
+
     def GetxForm(self):
         # I think this is only run in display update.
         trace = trace_single_line_up(self, "Inheritance")
@@ -125,7 +127,7 @@ class LinkInherit(MantisLinkNode):
 
 class LinkCopyLocation(MantisLinkNode):
     '''A node representing Copy Location'''
-    
+
     def __init__(self, signature : tuple,
                  base_tree : NodeTree,):
         super().__init__(signature, base_tree, LinkCopyLocationSockets)
@@ -148,10 +150,10 @@ class LinkCopyLocation(MantisLinkNode):
             props_sockets = self.gen_property_socket_map()
             evaluate_sockets(self, c, props_sockets)
         self.executed = True
-        
+
 class LinkCopyRotation(MantisLinkNode):
     '''A node representing Copy Rotation'''
-    
+
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, LinkCopyRotationSockets)
         additional_parameters = { "Name":None }
@@ -166,7 +168,7 @@ class LinkCopyRotation(MantisLinkNode):
             print(wrapGreen("Creating ")+wrapWhite("Copy Rotation")+
                 wrapGreen(" Constraint for bone: ") +
                 wrapOrange(xf.bGetObject().name))
-            
+
             rotation_order = self.evaluate_input("RotationOrder")
             if ((rotation_order == 'QUATERNION') or (rotation_order == 'AXIS_ANGLE')):
                 c.euler_order = 'AUTO'
@@ -182,10 +184,10 @@ class LinkCopyRotation(MantisLinkNode):
             props_sockets = self.gen_property_socket_map()
             evaluate_sockets(self, c, props_sockets)
         self.executed = True
-        
+
 class LinkCopyScale(MantisLinkNode):
     '''A node representing Copy Scale'''
-    
+
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, LinkCopyScaleSockets)
         additional_parameters = { "Name":None }
@@ -218,13 +220,13 @@ class LinkCopyScale(MantisLinkNode):
                 else:
                     c.space_object=xf
             props_sockets = self.gen_property_socket_map()
-            evaluate_sockets(self, c, props_sockets)   
-        self.executed = True 
-            
+            evaluate_sockets(self, c, props_sockets)
+        self.executed = True
+
 
 class LinkCopyTransforms(MantisLinkNode):
     '''A node representing Copy Transfoms'''
-    
+
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, LinkCopyTransformsSockets)
         additional_parameters = { "Name":None }
@@ -244,17 +246,17 @@ class LinkCopyTransforms(MantisLinkNode):
             self.bObject.append(c)
             self.set_custom_space()
             props_sockets = self.gen_property_socket_map()
-            evaluate_sockets(self, c, props_sockets)  
+            evaluate_sockets(self, c, props_sockets)
         self.executed = True
 
 class LinkTransformation(MantisLinkNode):
     '''A node representing Copy Transfoms'''
-    
+
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, LinkTransformationSockets)
         self.init_parameters(additional_parameters={"Name":None })
         self.set_traverse([("Input Relationship", "Output Relationship")])
-    
+
     def ui_modify_socket(self, ui_socket, socket_name=None):
         from_suffix, to_suffix = '', ''
         if self.evaluate_input("Map From") == 'ROTATION': from_suffix='_rot'
@@ -312,7 +314,7 @@ class LinkTransformation(MantisLinkNode):
                     stub='to_max_'+axis
                     props_sockets[stub+to_replace]=props_sockets[stub]
                     del props_sockets[stub]
-            evaluate_sockets(self, c, props_sockets)  
+            evaluate_sockets(self, c, props_sockets)
         self.executed = True
 
 class LinkLimitLocation(MantisLinkNode):
@@ -335,7 +337,7 @@ class LinkLimitLocation(MantisLinkNode):
             props_sockets = self.gen_property_socket_map()
             evaluate_sockets(self, c, props_sockets)
         self.executed = True
-        
+
 class LinkLimitRotation(MantisLinkNode):
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, LinkLimitRotationSockets)
@@ -349,7 +351,7 @@ class LinkLimitRotation(MantisLinkNode):
             print(wrapGreen("Creating ")+wrapWhite("Limit Rotation")+
                 wrapGreen(" Constraint for bone: ") +
                 wrapOrange(xf.bGetObject().name))
-            
+
             if constraint_name := self.evaluate_input("Name"):
                 c.name = constraint_name
             self.bObject.append(c)
@@ -371,7 +373,7 @@ class LinkLimitScale(MantisLinkNode):
             print(wrapGreen("Creating ")+wrapWhite("Limit Scale")+
                 wrapGreen(" Constraint for bone: ") +
                 wrapOrange(xf.bGetObject().name))
-            
+
             if constraint_name := self.evaluate_input("Name"):
                 c.name = constraint_name
             self.bObject.append(c)
@@ -379,7 +381,7 @@ class LinkLimitScale(MantisLinkNode):
             props_sockets = self.gen_property_socket_map()
             evaluate_sockets(self, c, props_sockets)
         self.executed = True
- 
+
 class LinkLimitDistance(MantisLinkNode):
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, LinkLimitDistanceSockets)
@@ -423,7 +425,7 @@ class LinkStretchTo(MantisLinkNode):
             self.bObject.append(c)
             props_sockets = self.gen_property_socket_map()
             evaluate_sockets(self, c, props_sockets)
-            
+
             if (self.evaluate_input("Original Length") == 0):
                 # this is meant to be set automatically.
                 c.rest_length = xf.bGetObject().bone.length
@@ -509,7 +511,7 @@ class LinkInheritConstraint(MantisLinkNode):
             if constraint_name := self.evaluate_input("Name"):
                 c.name = constraint_name
             self.bObject.append(c)
-            
+
             props_sockets = self.gen_property_socket_map()
             evaluate_sockets(self, c, props_sockets)
             c.set_inverse_pending
@@ -520,19 +522,19 @@ class LinkInverseKinematics(MantisLinkNode):
         super().__init__(signature, base_tree, LinkInverseKinematicsSockets)
         self.init_parameters(additional_parameters={"Name":None })
         self.set_traverse([("Input Relationship", "Output Relationship")])
-    
+
     def get_base_ik_bone(self, ik_bone):
         chain_length : int = (self.evaluate_input("Chain Length"))
         if not isinstance(chain_length, (int, float)):
             raise GraphError(f"Chain Length must be an integer number in {self}::Chain Length")
         if chain_length == 0:
             chain_length = int("inf")
-        
+
         base_ik_bone = ik_bone; i=1
         while (i<chain_length) and (base_ik_bone.parent):
             base_ik_bone=base_ik_bone.parent; i+=1
         return base_ik_bone
-    
+
     # We need to do the calculation in a "full circle", meaning the pole_angle
     # can go over pi or less than -pi - but the actuall constraint value must
     # be clamped in that range.
@@ -542,7 +544,7 @@ class LinkInverseKinematics(MantisLinkNode):
         from math import pi
         from .utilities import wrap
         constraint.pole_angle = wrap(-pi, pi, angle)
-    
+
     def calc_pole_angle_pre(self, c, ik_bone):
         """
             This function gets us most of the way to a correct IK pole angle. Unfortunately,
@@ -563,9 +565,9 @@ class LinkInverseKinematics(MantisLinkNode):
         ik_pole = c.pole_target.pose.bones[c.pole_subtarget]
         if ik_pole.id_data != ik_bone.id_data:
             raise NotImplementedError(f"Currently,IK Constraint Pole Target for {self} must be a bone within the same armature.")
-        
+
         base_ik_bone = self.get_base_ik_bone(ik_bone)
-        
+
         start_effector = base_ik_bone.bone.head_local
         end_effector = ik_handle.bone.head_local
         pole_location = ik_pole.bone.head_local
@@ -596,7 +598,7 @@ class LinkInverseKinematics(MantisLinkNode):
             if angle != 0 and vector_u.cross(vector_v).angle(normal) < 1:
                 angle = -angle
             return angle
-        
+
         # we have already checked for valid data.
         ik_handle = c.target.pose.bones[c.subtarget]
         base_ik_bone = self.get_base_ik_bone(ik_bone)
@@ -614,7 +616,7 @@ class LinkInverseKinematics(MantisLinkNode):
         error=signed_angle(current_knee_direction, knee_direction, ik_axis)
         if error == 0:
             prGreen("No Fine-tuning needed."); return
-        
+
         # Flip it if needed
         dot_before=current_knee_direction.dot(knee_direction)
         if dot_before < 0 and angle!=0: # then it is not aligned and we should check the inverse
@@ -669,7 +671,7 @@ class LinkInverseKinematics(MantisLinkNode):
             self.get_target_and_subtarget(c, input_name = 'Pole Target')
             if constraint_name := self.evaluate_input("Name"):
                 c.name = constraint_name
-            
+
             self.bObject.append(c)
             c.chain_count = 1 # so that, if there are errors, this doesn't print
             #  a whole bunch of circular dependency crap from having infinite chain length
@@ -695,7 +697,7 @@ class LinkInverseKinematics(MantisLinkNode):
                     self.calc_pole_angle_post(constraint, ik_bone, bContext)
                     constraint.mute = enabled_before
         super().bFinalize(bContext)
-        
+
 
 def ik_report_error(pb, context, do_print=False):
     dg = context.view_layer.depsgraph
@@ -712,7 +714,7 @@ def ik_report_error(pb, context, do_print=False):
         print (f"IK Location Error: {location_error}")
         print (f"IK Rotation Error: {rotation_error}")
         print (f"IK Scale Error   : {scale_error}")
-    return (location_error, rotation_error, scale_error) 
+    return (location_error, rotation_error, scale_error)
 
 # This is kinda a weird design decision?
 class LinkDrivenParameter(MantisLinkNode):
@@ -767,7 +769,7 @@ class LinkDrivenParameter(MantisLinkNode):
         except TypeError:
             self.parameters["Value"] = driver
         super().bFinalize(bContext)
-    
+
 class LinkArmature(MantisLinkNode):
     '''A node representing an armature object'''
 
@@ -789,7 +791,7 @@ class LinkArmature(MantisLinkNode):
             self.bObject.append(c)
             # get number of targets
             num_targets = len( list(self.inputs.values())[6:] )//2
-            
+
             props_sockets = self.gen_property_socket_map()
             targets_weights = {}
             for i in range(num_targets):
@@ -825,7 +827,7 @@ class LinkSplineIK(MantisLinkNode):
                 wrapGreen(" Constraint for bone: ") +
                 wrapOrange(xf.bGetObject().name))
             c = xf.bGetObject().constraints.new('SPLINE_IK')
-            # set the spline - we need to get the right one 
+            # set the spline - we need to get the right one
             spline_index = self.evaluate_input("Spline Index")
             from .utilities import get_extracted_spline_object
             proto_curve = self.inputs['Target'].links[0].from_node.bGetObject()
@@ -840,7 +842,7 @@ class LinkSplineIK(MantisLinkNode):
             props_sockets = self.gen_property_socket_map()
             evaluate_sockets(self, c, props_sockets)
         self.executed = True
-    
+
 
 class LinkFloor(MantisLinkNode):
     '''A node representing an armature object'''
@@ -857,6 +859,28 @@ class LinkFloor(MantisLinkNode):
                 wrapGreen(" Constraint for bone: ") +
                 wrapOrange(xf.bGetObject().name))
             c = xf.bGetObject().constraints.new('FLOOR')
+            self.get_target_and_subtarget(c)
+            if constraint_name := self.evaluate_input("Name"):
+                c.name = constraint_name
+            self.bObject.append(c)
+            props_sockets = self.gen_property_socket_map()
+            evaluate_sockets(self, c, props_sockets)
+        self.executed = True
+
+class LinkShrinkWrap(MantisLinkNode):
+    '''A node representing a shrinkwrap relationship.'''
+    def __init__(self, signature, base_tree,):
+        super().__init__(signature, base_tree, LinkShrinkWrapSockets)
+        self.init_parameters(additional_parameters={"Name":None })
+        self.set_traverse([("Input Relationship", "Output Relationship")])
+
+    def bRelationshipPass(self, bContext = None,):
+        prepare_parameters(self)
+        for xf in self.GetxForm():
+            print(wrapGreen("Creating ")+wrapOrange("Shrinkwrap")+
+                wrapGreen(" Constraint for bone: ") +
+                wrapOrange(xf.bGetObject().name))
+            c = xf.bGetObject().constraints.new('SHRINKWRAP')
             self.get_target_and_subtarget(c)
             if constraint_name := self.evaluate_input("Name"):
                 c.name = constraint_name

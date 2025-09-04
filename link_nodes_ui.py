@@ -29,6 +29,7 @@ def TellClasses():
              LinkArmatureNode,
              LinkSplineIKNode,
              LinkFloorNode,
+             LinkShrinkWrapNode,
              LinkTransformationNode,
            ]
 
@@ -50,13 +51,13 @@ class LinkInheritNode(Node, LinkNode):
     bl_icon = 'CONSTRAINT_BONE'
     initialized : bpy.props.BoolProperty(default = False)
     mantis_node_class_name="LinkInherit"
-    
+
     def init(self, context):
         self.init_sockets(LinkInheritSockets)
         self.initialized = True
         self.use_custom_color = True
         self.color = inheritColor
-    
+
     def display_update(self, parsed_tree, context):
         node_tree = context.space_data.path[0].node_tree
         nc = parsed_tree.get(get_signature_from_edited_tree(self, context))
@@ -70,7 +71,7 @@ class LinkInheritNode(Node, LinkNode):
             try:
                 xForm = nc.GetxForm()
                 if xForm.__class__.__name__ not in "xFormBone":
-                    
+
                     bone_next=False
             except GraphError:
 
@@ -86,7 +87,7 @@ class LinkInheritNode(Node, LinkNode):
                 self.inputs["Connected"].hide        = True or self.inputs["Connected"].is_connected
             # the node_groups on the way here ought to be active if there
             #  is no funny business going on.
-    
+
 
 # DO: make another node for ITASC IK, eh?
 class LinkInverseKinematics(Node, LinkNode):
@@ -118,7 +119,7 @@ class LinkCopyLocationNode(Node, LinkNode):
         self.color = linkColor
         self.initialized = True
 
-        
+
 class LinkCopyRotationNode(Node, LinkNode):
     '''A node representing Copy Rotation'''
     bl_idname = 'LinkCopyRotation'
@@ -134,7 +135,7 @@ class LinkCopyRotationNode(Node, LinkNode):
         self.initialized = True
 
 
-        
+
 class LinkCopyScaleNode(Node, LinkNode):
     '''A node representing Copy Scale'''
     bl_idname = 'LinkCopyScale'
@@ -150,7 +151,7 @@ class LinkCopyScaleNode(Node, LinkNode):
         self.initialized = True
 
 
-        
+
 class LinkInheritConstraintNode(Node, LinkNode):
     # === Basics ===
     # Description string
@@ -186,7 +187,7 @@ class LinkCopyTransformNode(Node, LinkNode):
         self.initialized = True
 
 
-        
+
 class LinkStretchToNode(Node, LinkNode):
     '''A node representing Stretch-To'''
     bl_idname = 'LinkStretchTo'
@@ -214,7 +215,7 @@ class LinkDampedTrackNode(Node, LinkNode):
         self.initialized = True
         self.use_custom_color = True
         self.color = trackingColor
-        
+
 class LinkLockedTrackNode(Node, LinkNode):
     '''A node representing Stretch-To'''
     bl_idname = 'LinkLockedTrack'
@@ -228,7 +229,7 @@ class LinkLockedTrackNode(Node, LinkNode):
         self.initialized = True
         self.use_custom_color = True
         self.color = trackingColor
-        
+
 class LinkTrackToNode(Node, LinkNode):
     '''A node representing Stretch-To'''
     bl_idname = 'LinkTrackTo'
@@ -270,7 +271,7 @@ class LinkLimitScaleNode(Node, LinkNode):
         self.initialized = True
         self.use_custom_color = True
         self.color = linkColor
- 
+
 class LinkLimitRotationNode(Node, LinkNode):
     '''A node representing Limit Rotation'''
     bl_idname = 'LinkLimitRotation'
@@ -346,13 +347,13 @@ class LinkArmatureNode(Node, LinkNode):
     bl_icon = "CON_ARMATURE"
     initialized : bpy.props.BoolProperty(default = False)
     mantis_node_class_name=bl_idname
-    
+
     def init(self, context):
         self.init_sockets(LinkArmatureSockets)
         self.use_custom_color = True
         self.color = inheritColor
         self.initialized = True
-    
+
     def draw_buttons(self, context, layout):
         # return
         layout.operator( 'mantis.link_armature_node_add_target' )
@@ -368,13 +369,13 @@ class LinkSplineIKNode(Node, LinkNode):
     bl_icon = "CON_SPLINEIK"
     initialized : bpy.props.BoolProperty(default = False)
     mantis_node_class_name=bl_idname
-    
+
     def init(self, context):
         self.init_sockets(LinkSplineIKSockets)
         self.use_custom_color = True
         self.color = ikColor
         self.initialized = True
-        
+
 class LinkFloorNode(Node, LinkNode):
     """A node representing Blender's Floor Constraint"""
     bl_idname = "LinkFloor"
@@ -382,11 +383,25 @@ class LinkFloorNode(Node, LinkNode):
     bl_icon = "CON_FLOOR"
     initialized : bpy.props.BoolProperty(default = False)
     mantis_node_class_name=bl_idname
-    
+
     def init(self, context):
         self.init_sockets(LinkFloorSockets)
         self.use_custom_color = True
         self.color = linkColor
+        self.initialized = True
+
+class LinkShrinkWrapNode(Node, LinkNode):
+    """A node representing Blender's Shrinkwrap Constraint"""
+    bl_idname = "LinkShrinkWrap"
+    bl_label = "Shrinkwrap"
+    bl_icon = "CON_SHRINKWRAP"
+    initialized : bpy.props.BoolProperty(default = False)
+    mantis_node_class_name=bl_idname
+
+    def init(self, context):
+        self.init_sockets(LinkShrinkWrapSockets)
+        self.use_custom_color = True
+        self.color = trackingColor
         self.initialized = True
 
 # DRIVERS!!
@@ -397,7 +412,7 @@ class LinkDrivenParameterNode(Node, LinkNode):
     bl_icon = "CONSTRAINT_BONE"
     initialized : bpy.props.BoolProperty(default = False)
     mantis_node_class_name=bl_idname
-    
+
     def init(self, context):
         self.init_sockets(LinkDrivenParameterSockets)
         self.use_custom_color = True
