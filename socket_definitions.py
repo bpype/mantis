@@ -2130,7 +2130,7 @@ class EnumBBoneHandleType(MantisSocket):
         return self.color_simple
 
 eShrinkwrapType = (
-        ('NEAREST_SURFACE ', "Nearest Surface Point",
+        ('NEAREST_SURFACE', "Nearest Surface Point",
                      "Shrink the location to the nearest target surface.", 0),
         ('PROJECT', "Project", "Shrink the location to the nearest target "
                      "surface along a given axis.", 1),

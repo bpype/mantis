@@ -404,6 +404,36 @@ class LinkShrinkWrapNode(Node, LinkNode):
         self.color = trackingColor
         self.initialized = True
 
+    def display_update(self, parsed_tree, context):
+        # vast majority of the time user doesn't link this.
+        shrink_type = self.inputs['Mode'].default_value
+        if self.inputs['Mode'].is_linked:# 1% or less of cases
+            node_tree = context.space_data.path[0].node_tree
+            nc = parsed_tree.get(get_signature_from_edited_tree(self, context))
+            shrink_is_project = False
+            if nc:
+                shrink_type = nc.evaluate_input("Mode")
+        if shrink_type != "PROJECT":
+            self.inputs['Project Axis'].hide=True
+            self.inputs['Space'].hide=True
+            self.inputs['Project Distance'].hide=True
+            self.inputs['Project Opposite'].hide=True
+            self.inputs['Face Cull'].hide=True
+            self.inputs['Invert Cull'].hide=True
+        else:
+            for inp in self.inputs:
+                inp.hide=False
+        if shrink_type == 'NEAREST_VERTEX':
+            self.inputs['Snap Mode'].hide=True
+            self.inputs['Align to Normal'].hide=True
+            self.inputs['Align Normal Axis'].hide=True
+        else:
+            self.inputs['Snap Mode'].hide=False
+            self.inputs['Align to Normal'].hide=False
+            self.inputs['Align Normal Axis'].hide=False
+        # TODO: this stuff should be handled by input tags
+        # once I get that working.
+
 # DRIVERS!!
 class LinkDrivenParameterNode(Node, LinkNode):
     """Represents a driven parameter in the downstream xForm node."""
