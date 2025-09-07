@@ -454,7 +454,7 @@ def get_tree_data(tree):
     tree_info = {}
     for propname  in dir(tree):
         # if getattr(tree, propname):
-        #     pass
+        #     pass  
         if (propname in prop_ignore_tree) or ( callable(getattr(tree, propname)) ):
             continue
         v = getattr(tree, propname)
@@ -518,7 +518,11 @@ def get_interface_data(tree, tree_in_out):
                     raise RuntimeError(f"{propname}, {type(v)}")
                 sock_data[propname] = v
             # this is a property. pain.
-            sock_data["socket_type"] = socket_class.interface_type.fget(socket_class)
+            from bpy.types import NodeSocketColor
+            if hasattr(sock, "interface_type"):
+                sock_data["socket_type"] = socket_class.interface_type.fget(socket_class)
+            else:
+                sock_data["socket_type"] = sock.bl_idname
             tree_in_out[sock.identifier] = sock_data
             
 
@@ -615,7 +619,10 @@ def export_to_json(trees, base_tree=None, path="", write_file=True, only_selecte
                     sock_data["item_type"] = "SOCKET"
                     sock_data["default_closed"] = False
                         # record the actual bl_idname and the proper interface type.
-                    sock_data["socket_type"] = link.from_socket.interface_type
+                    if hasattr(link.from_socket, "interface_type"):
+                        sock_data["socket_type"] = link.from_socket.interface_type
+                    else:
+                        sock_data["socket_type"] = link.from_socket.bl_idname
                     sock_data["bl_socket_idname"] = link.from_socket.bl_idname
                     sock_data["identifier"] = sock_name
                     sock_data["in_out"]="OUTPUT"
@@ -654,7 +661,10 @@ def export_to_json(trees, base_tree=None, path="", write_file=True, only_selecte
                         sock_data["item_type"] = "SOCKET"
                         sock_data["default_closed"] = False
                         # record the actual bl_idname and the proper interface type.
-                        sock_data["socket_type"] = link.from_socket.interface_type
+                        if hasattr(link.from_socket, "interface_type"):
+                            sock_data["socket_type"] = link.from_socket.interface_type
+                        else:
+                            sock_data["socket_type"] = link.from_socket.bl_idname
                         sock_data["bl_socket_idname"] = link.from_socket.bl_idname
                         sock_data["identifier"] = sock_name
                         sock_data["in_out"]="INPUT"
