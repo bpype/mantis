@@ -118,38 +118,46 @@ cGeometry          = (0.000000, 0.672443, 0.366253, 1.000000)
 
 # OR make all of it a reference to the type of data within?
 
+def color_equivalent(color_a, color_b):
+    # because Blender's floating point numbers are not quite equal. pain.
+    from .base_definitions import FLOAT_EPSILON
+    for channel_a, channel_b in zip(color_a, color_b):
+        if abs(channel_a-channel_b) > FLOAT_EPSILON:
+            return False
+    return True
+
 def map_color_to_socket_type(socket_color):
     # let's get the socket type by color for e.g. wildcard sockets.
     # for some reason I can't use match-case here. dumb.
-    if socket_color == cFloat:
+    if color_equivalent(socket_color, cFloat):
         return "FloatSocket"
-    if socket_color == cColor:
+    if color_equivalent(socket_color, cColor):
         return "ColorSetSocket"
-    if socket_color == cVector:
+    if color_equivalent(socket_color, cVector):
         return "VectorSocket"
-    if socket_color == cInt:
+    if color_equivalent(socket_color, cInt):
         return "IntSocket"
-    if socket_color == cDriver:
+    if color_equivalent(socket_color, cDriver):
         return "DriverSocket"
-    if socket_color == cDriverVariable:
+    if color_equivalent(socket_color, cDriverVariable):
         return "DriverVariableSocket"
-    if socket_color == cFCurve:
+    if color_equivalent(socket_color, cFCurve):
         return "FCurveSocket"
-    if socket_color == cKeyframe:
+    if color_equivalent(socket_color, cKeyframe):
         return "KeyframeSocket"
-    if socket_color == cEnable:
+    if color_equivalent(socket_color, cEnable):
         return "BooleanSocket"
-    if socket_color == cDeformer:
+    if color_equivalent(socket_color, cDeformer):
         return "DeformerSocket"
-    if socket_color == cShapeKey:
+    if color_equivalent(socket_color, cShapeKey):
         return "MorphTargetSocket"
-    if socket_color == cMatrix:
+    if color_equivalent(socket_color, cMatrix):
         return "MatrixSocket"
-    if socket_color == cxForm:
+    if color_equivalent(socket_color, cxForm):
         return "xFormSocket"
-    if socket_color == cBool:
+    if color_equivalent(socket_color, cBool):
         return "BooleanSocket"
-    if socket_color == cBool3:
+    if color_equivalent(socket_color, cBool3):
         return "BooleanThreeTupleSocket"
     return "StringSocket"
 

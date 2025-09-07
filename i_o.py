@@ -999,7 +999,7 @@ def do_import(data, context, search_multi_files=False, filepath='', skip_existin
                 if s_props["socket_type"] == "LayerMaskSocket":
                     continue
                 if (socket_type := s_props["socket_type"]) == "NodeSocketColor":
-                    socket_type = "VectorSocket"
+                    socket_type = "ColorSetSocket"
                 if bpy.app.version != (4,5,0):
                     sock = tree.interface.new_socket(s_props["name"], in_out=s_props["in_out"], socket_type=socket_type)
                 else: # blender 4.5.0 LTS, have to workaround a bug!
