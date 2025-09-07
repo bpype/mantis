@@ -1457,7 +1457,10 @@ def get_widget_library_items(self, context):
         add_one=0
         if self.previous_value and self.previous_value not in widget_names.values():
             add_missing_key=True # we need to add the missing key at the previous index
-        for i, (name, path) in enumerate(widget_names.items()):
+        sorted_keys = list(widget_names.keys())
+        sorted_keys.sort()
+        for i, name in enumerate(sorted_keys):
+            path = widget_names[name]
             if add_missing_key and i == self.previous_index:
                 add_one+=1; return_value.append(default_missing_value)
             return_value.append( (path, name, path, 'GIZMO', i+add_one) )
