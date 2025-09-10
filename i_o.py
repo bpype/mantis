@@ -522,7 +522,7 @@ def get_interface_data(tree, tree_in_out):
             if hasattr(sock, "interface_type"):
                 sock_data["socket_type"] = socket_class.interface_type.fget(socket_class)
             else:
-                sock_data["socket_type"] = sock.bl_idname
+                sock_data["socket_type"] = sock.bl_socket_idname
             tree_in_out[sock.identifier] = sock_data
             
 
