@@ -6,10 +6,18 @@ dir_path = os.path.dirname(os.path.realpath(__file__))
 
 def get_bl_addon_object(raise_error = False):
     from bpy import context
-    try_these_first = ['bl_ext.repos.mantis', 'bl_ext.blender_modules_enabled.mantis', 'bl_ext.nodes_tools.mantis']
+    try_these_first = ['bl_ext.repos.mantis', 'bl_ext.blender_modules_enabled.mantis',
+        'bl_ext.nodes_tools.mantis']
     for mantis_key in try_these_first:
         bl_mantis_addon = context.preferences.addons.get(mantis_key)
         if bl_mantis_addon: break
+    else:
+        for k in context.preferences.addons.keys():
+            if "mantis" in k:
+                bl_mantis_addon = context.preferences.addons[k]
+                prWhite(f"Unexpected addon preferences key: {k}")
+                break
+    raise_error = True
     if bl_mantis_addon is None:
         if raise_error==True:
             raise RuntimeError("Mantis Preferences not found. This is a bug."
@@ -86,7 +94,7 @@ class MantisPreferences(bpy.types.AddonPreferences):
         description = "Location of .rig files to load automatically.",
         subtype = 'FILE_PATH',
         default = os.path.join(dir_path, 'auto_load_components'),)
-    
+
     def draw(self, context):
         layout = self.layout
         layout.label(text="Mantis Preferences")
