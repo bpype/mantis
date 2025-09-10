@@ -6,17 +6,21 @@ dir_path = os.path.dirname(os.path.realpath(__file__))
 
 def get_bl_addon_object(raise_error = False):
     from bpy import context
-    try_these_first = ['bl_ext.repos.mantis', 'bl_ext.blender_modules_enabled.mantis',
-        'bl_ext.nodes_tools.mantis']
+    try_these_first = ['bl_ext.nodes_tools.mantis', 
+        'bl_ext.repos.mantis', 'bl_ext.blender_modules_enabled.mantis',]
     for mantis_key in try_these_first:
         bl_mantis_addon = context.preferences.addons.get(mantis_key)
-        if bl_mantis_addon: break
+        if bl_mantis_addon is not None: # chekc the addon AND the prefs
+            if bl_mantis_addon.preferences is not None: break
+            # the prefs will be None if the addon is disabled.
     else:
         for k in context.preferences.addons.keys():
-            if "mantis" in k:
+            if k.endswith("mantis"):
                 bl_mantis_addon = context.preferences.addons[k]
-                prWhite(f"Unexpected addon preferences key: {k}")
-                break
+                print(f"Unexpected addon preferences key: {k}")
+                if bl_mantis_addon is not None:
+                    if bl_mantis_addon.preferences is not None:
+                        break
     raise_error = True
     if bl_mantis_addon is None:
         if raise_error==True:
