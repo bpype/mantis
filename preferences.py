@@ -8,13 +8,10 @@ def get_bl_addon_object(raise_error = False):
     from bpy import context
     try_these_first = ['bl_ext.nodes_tools.mantis', 
         'bl_ext.repos.mantis', 'bl_ext.blender_modules_enabled.mantis',]
-    print (context.preferences.addons.keys())
     for mantis_key in try_these_first:
         bl_mantis_addon = context.preferences.addons.get(mantis_key)
         if bl_mantis_addon is not None: # chekc the addon AND the prefs
-            print (f"Found Mantis: {mantis_key}")
             if bl_mantis_addon.preferences is not None:
-                print (f"Found Mantis preferences: {mantis_key}")
                 break
             # the prefs will be None if the addon is disabled.
     else:
