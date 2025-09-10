@@ -1441,7 +1441,7 @@ def get_widget_library_items(self, context):
     default_missing_value = ('MISSING', f'MISSING: {prev_name}', self.previous_value, 'ERROR', self.previous_index)
     return_value = [default_missing_value]
     widget_names={}
-    if bl_mantis_addon:
+    if bl_mantis_addon and bl_mantis_addon.preferences:
         widgets_path = bl_mantis_addon.preferences.WidgetsLibraryFolder
         from os import walk as os_walk
         for path_root, dirs, files, in os_walk(widgets_path):

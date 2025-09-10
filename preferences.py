@@ -8,21 +8,26 @@ def get_bl_addon_object(raise_error = False):
     from bpy import context
     try_these_first = ['bl_ext.nodes_tools.mantis', 
         'bl_ext.repos.mantis', 'bl_ext.blender_modules_enabled.mantis',]
+    print (context.preferences.addons.keys())
     for mantis_key in try_these_first:
         bl_mantis_addon = context.preferences.addons.get(mantis_key)
         if bl_mantis_addon is not None: # chekc the addon AND the prefs
-            if bl_mantis_addon.preferences is not None: break
+            print (f"Found Mantis: {mantis_key}")
+            if bl_mantis_addon.preferences is not None:
+                print (f"Found Mantis preferences: {mantis_key}")
+                break
             # the prefs will be None if the addon is disabled.
     else:
         for k in context.preferences.addons.keys():
             if k.endswith("mantis"):
                 bl_mantis_addon = context.preferences.addons[k]
-                print(f"Unexpected addon preferences key: {k}")
                 if bl_mantis_addon is not None:
                     if bl_mantis_addon.preferences is not None:
+                        print(f"Unexpected addon preferences key: {k}")
                         break
-    raise_error = True
-    if bl_mantis_addon is None:
+        else:
+            print("FAILED TO FIND MANTIS.")
+    if bl_mantis_addon is None or bl_mantis_addon.preferences is None:
         if raise_error==True:
             raise RuntimeError("Mantis Preferences not found. This is a bug."
                             " Please report it on gitlab.")
