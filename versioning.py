@@ -229,13 +229,12 @@ def up_0_12_25_replace_floor_offset_type(*args, **kwargs):
     current_sub_version = node.id_data.mantis_version[2]
     if  current_major_version > 0: return# major version must be 0
     if current_minor_version > 12: return# minor version must be 12 or less
-    if current_minor_version == 12 and current_sub_version > 24: return # sub version must be 8 or less
-    # I am having it do 8 or less because there was a bug in this function prior to 9
-    # sub version doesn't matter since any subversion of 11 should trigger this task
+    if current_minor_version == 12 and current_sub_version > 24: return 
+    from .utilities import get_socket_maps, do_relink
     socket_maps = get_socket_maps(node)
     prPurple(f"Fixing \"Offset\" socket in {node.name}")
     try:
-        offset = node.inputs("Offset")
+        offset = node.inputs["Offset"]
         node.inputs.remove(offset)
         s = node.inputs.new('FloatSocket', 'Offset',)
         node.inputs.move(len(node.inputs)-1, 2)

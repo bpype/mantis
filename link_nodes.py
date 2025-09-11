@@ -63,7 +63,7 @@ class MantisLinkNode(MantisNode):
         props_sockets = super().gen_property_socket_map()
         if (os := self.inputs.get("Owner Space")) and os.is_connected and os.links[0].from_node.node_type == 'XFORM':
             del props_sockets['owner_space']
-        if ts := self.inputs.get("Target_Space") and ts.is_connected and ts.links[0].from_node.node_type == 'XFORM':
+        if (ts := self.inputs.get("Target Space")) and ts.is_connected and ts.links[0].from_node.node_type == 'XFORM':
             del props_sockets['target_space']
         return props_sockets
 
@@ -77,7 +77,7 @@ class MantisLinkNode(MantisNode):
                 else:
                     c.space_object=xf
             if ts := self.inputs.get("Target_Space") and ts.is_connected and ts.links[0].from_node.node_type == 'XFORM':
-                c.owner_space='CUSTOM'
+                c.target_space='CUSTOM'
                 xf = self.inputs["Target_Space Space"].links[0].from_node.bGetObject(mode="OBJECT")
                 if isinstance(xf, Bone):
                     c.space_object=self.inputs["Target_Space Space"].links[0].from_node.bGetParentArmature(); c.space_subtarget=xf.name
@@ -885,8 +885,9 @@ class LinkShrinkWrap(MantisLinkNode):
             self.get_target_and_subtarget(c)
             if constraint_name := self.evaluate_input("Name"):
                 c.name = constraint_name
+            props_sockets = self.gen_property_socket_map()
+            print (props_sockets.keys())
             self.bObject.append(c)
             # self.set_custom_space() # this needs to be overridden for me TODO
-            props_sockets = self.gen_property_socket_map()
             evaluate_sockets(self, c, props_sockets)
         self.executed = True
