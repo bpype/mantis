@@ -411,7 +411,7 @@ LinkSplineIKSockets = [
 LinkFloorSockets = [
     InputRelationshipTemplate,
     TargetTemplate,
-    FloorOffsetTemplate := SockTemplate(name="Offset", bl_idname="BooleanSocket",
+    FloorOffsetTemplate := SockTemplate(name="Offset", bl_idname="FloatSocket",
             is_input=True, default_value=False, blender_property='offset'),
     FloorAxisTemplate := SockTemplate(name='Min/Max', bl_idname='EnumFloorAxis',
             is_input = True, default_value="FLOOR_X", blender_property="floor_location"),

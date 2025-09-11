@@ -220,13 +220,40 @@ def cleanup_4_5_0_LTS_interface_workaround(*args, **kwargs):
             interface_item.description = ''
     # that should be enough!
 
+
+def up_0_12_25_replace_floor_offset_type(*args, **kwargs):
+    # add an inherit color input.
+    node = kwargs['node']
+    current_major_version = node.id_data.mantis_version[0]
+    current_minor_version = node.id_data.mantis_version[1]
+    current_sub_version = node.id_data.mantis_version[2]
+    if  current_major_version > 0: return# major version must be 0
+    if current_minor_version > 12: return# minor version must be 12 or less
+    if current_minor_version == 12 and current_sub_version > 24: return # sub version must be 8 or less
+    # I am having it do 8 or less because there was a bug in this function prior to 9
+    # sub version doesn't matter since any subversion of 11 should trigger this task
+    socket_maps = get_socket_maps(node)
+    prPurple(f"Fixing \"Offset\" socket in {node.name}")
+    try:
+        offset = node.inputs("Offset")
+        node.inputs.remove(offset)
+        s = node.inputs.new('FloatSocket', 'Offset',)
+        node.inputs.move(len(node.inputs)-1, 2)
+        do_relink(node, s, socket_maps[0])
+    except Exception as e:
+        prRed(f"Error updating version in node: {node.id_data.name}::{node.name}; see error:")
+        print(e)
+
+
+
 versioning_tasks = [
-    # node bl_idname    task                required keyword arguments 
+    # node bl_idname    task                required keyword arguments
     (['ALL'], version_upgrade_very_old, ['node_tree', 'node'],),
     (['xFormBoneNode'], version_upgrade_bone_0_12_0_from_older, ['node'],),
     (['xFormBoneNode'], up_0_12_1_add_inherit_color, ['node'],),
     (['MantisTree', 'SchemaTree'], cleanup_4_5_0_LTS_interface_workaround, ['tree']),
     (['InputWidget'], up_0_12_13_add_widget_scale, ['node']),
+    (['LinkFloor'], up_0_12_25_replace_floor_offset_type, ['node']),
 ]
 
 
@@ -274,4 +301,3 @@ def socket_add_workaround_for_4_5_0_LTS(item, socket_collection, multi):
         identifier=item.identifier,
         use_multi_input=multi, )
     return s
-

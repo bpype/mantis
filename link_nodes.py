@@ -863,6 +863,7 @@ class LinkFloor(MantisLinkNode):
             if constraint_name := self.evaluate_input("Name"):
                 c.name = constraint_name
             self.bObject.append(c)
+            self.set_custom_space()
             props_sockets = self.gen_property_socket_map()
             evaluate_sockets(self, c, props_sockets)
         self.executed = True
@@ -885,6 +886,7 @@ class LinkShrinkWrap(MantisLinkNode):
             if constraint_name := self.evaluate_input("Name"):
                 c.name = constraint_name
             self.bObject.append(c)
+            # self.set_custom_space() # this needs to be overridden for me TODO
             props_sockets = self.gen_property_socket_map()
             evaluate_sockets(self, c, props_sockets)
         self.executed = True
