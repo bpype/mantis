@@ -41,7 +41,7 @@ def get_pretty_name(name):
     elif name == "bbone_curveoutz": return "BBone Z Curve-Out"
     elif name == "BBone HQ Deformation":
         raise NotImplementedError(wrapRed("I wasn't expecting this property to be driven lol why would you even want to do that"))
-    
+
     elif name == "bbone_handle_type_start": return "BBone Start Handle Type"
     elif name == "bbone_handle_type_end": return "BBone End Handle Type"
     elif name == "bbone_x": return "BBone X Size"
@@ -84,16 +84,16 @@ def create_relationship_node_for_constraint(node_tree, c):
     else:
         prRed ("Not yet implemented: %s" % c.type)
         return None
-    
-    
+
+
 def fill_parameters(node, c, context):
     # just try the basic parameters...
-    
+
     node.mute = not c.enabled
     if c.mute == True and c.enabled == True:
         node.mute = c.mute
-        # this is obviously stupid, but it's the new API as of, IIRC, 2.80 
-    
+        # this is obviously stupid, but it's the new API as of, IIRC, 2.80
+
     try:
         owner_space = c.owner_space
         if c.owner_space == 'CUSTOM':
@@ -103,7 +103,7 @@ def fill_parameters(node, c, context):
             input.default_value = owner_space
     except AttributeError:
         pass
-    
+
     try:
         target_space = c.target_space
         if c.target_space == 'CUSTOM':
@@ -113,7 +113,7 @@ def fill_parameters(node, c, context):
             input.default_value = target_space
     except AttributeError:
         pass
-    
+
     try:
         use_x, use_y, use_z = c.use_x, c.use_y, c.use_z
         if ( input := node.inputs.get("Axes") ):
@@ -130,14 +130,14 @@ def fill_parameters(node, c, context):
             input.default_value[2] = invert_z
     except AttributeError:
         pass
-    
+
     try:
         influence = c.influence
         if ( input := node.inputs.get("Influence") ):
             input.default_value = influence
     except AttributeError:
         pass
-    
+
     # gonna dispense with the try/except from here on
     if   (c.type == 'COPY_LOCATION'):
         node.inputs["Head/Tail"].default_value = c.head_tail
@@ -222,6 +222,7 @@ def fill_parameters(node, c, context):
         for i in range(len(c.targets)):
             with context.temp_override(node=node):
                 bpy.ops.mantis.link_armature_node_add_target()
+                node.inputs["Weight."+str(i).zfill(3)].default_value = c.targets[i].weight
     elif (c.type == 'SPLINE_IK'):
         node.inputs["Chain Length"].default_value = c.chain_count
         node.inputs["Even Divisions"].default_value = c.use_even_divisions
@@ -235,7 +236,7 @@ def fill_parameters(node, c, context):
         for prop, (sock_name, _unused) in props.items():
             if "from" in prop:
                 if prop in ["map_from"] or "to" in prop:
-                   pass 
+                   pass
                 elif c.map_from == 'LOCATION':
                     if "scale" in prop:
                         continue
@@ -249,7 +250,7 @@ def fill_parameters(node, c, context):
                         continue
             if "to" in prop:
                 if prop in ["map_to"] or "from" in prop:
-                   pass 
+                   pass
                 elif c.map_from == 'LOCATION':
                     if "scale" in prop:
                         continue
@@ -264,7 +265,7 @@ def fill_parameters(node, c, context):
             node.inputs[sock_name].default_value = getattr(c, prop)
             if prop in "mute":
                 node.inputs[sock_name].default_value = not getattr(c, prop)
-            
+
         # should probably do it this way all over actually.
 
 
@@ -281,7 +282,7 @@ def walk_edit_bone(armOb, bone):
     while (True):
         curheight = len(bonePath)-1; ind = bonePath[-1]
         if (curheight == 0) and (ind > len(bone.children)-1):
-            break 
+            break
         if (curheight > 0):
             parent = seek.parent
             if (ind > len(seek.children)-1 ):
@@ -295,7 +296,7 @@ def walk_edit_bone(armOb, bone):
         if (seek.name not in bones):
             lines.append(bonePath.copy())
         bones.add(seek.name)
-        
+
         if (seek.children):
             bonePath.append(0)
         else:
@@ -335,7 +336,7 @@ def setup_custom_properties(bone_node, pb):
         # from rna_prop_ui import rna_idprop_ui_create
         # I have no idea how to get the data in a sane way, I guess I will use this...
         ui_data = pb.id_properties_ui(k).as_dict()
-        
+
         new_prop.default_value = ui_data['default']
         try:
             new_prop.min      = ui_data['min']
@@ -383,7 +384,7 @@ def setup_vp_settings(bone_node, pb, do_after, node_tree):
     bone_node.inputs["Bone Collection"].default_value = collection_membership
 
 
-    
+
     if (shape_ob := pb.custom_shape):
         shape_n = None
         for n in node_tree.nodes:
@@ -396,7 +397,7 @@ def setup_vp_settings(bone_node, pb, do_after, node_tree):
             shape_n.label = shape_ob.name
             shape_n.inputs["Name"].default_value = shape_ob.name
         node_tree.links.new(shape_n.outputs["Object"], bone_node.inputs['Custom Object'])
-    
+
     if (shape_xform_ob := pb.custom_shape_transform): # not implemented just yet
         shape_xform_n = None
         for n in node_tree.nodes:
@@ -462,15 +463,15 @@ def create_driver(in_node_name, out_node_name, armOb, finished_drivers, switches
             bone_node = node_tree.nodes.get(bone)
             if not (bone_node):
                 raise RuntimeError("excpected to find....", bone)
-            
-            
+
+
             p_string = fc.driver.variables[0].targets[0].data_path
             p_string = p_string.split("[\"")[-1]; p_string = p_string.split("\"]")[0]
             #switch_node.inputs["Parameter"].default_value = p_string
             #switch_node.inputs["Parameter Index"].default_value = fc.array_index
             #switch_node.inputs["Invert Switch"].default_value = inverted
             parameter = fc.data_path
-            
+
             # Try to find an existing node.
             fail = False
             switch_node = None
@@ -574,10 +575,10 @@ def create_driver(in_node_name, out_node_name, armOb, finished_drivers, switches
                         target_node2 = node_tree.nodes[bone_target2]
                     elif (target2 and not bone_target2):
                         target_node2 = node_tree.nodes[target2]
-                    
-                    
+
+
                     var_node = None
-                    for n in driver_vars:                            
+                    for n in driver_vars:
                         fail = False
                         if (inp := n.inputs['xForm 1']).is_linked:
                             if inp.links[0].from_node != target_node1:
@@ -681,8 +682,8 @@ def create_driver(in_node_name, out_node_name, armOb, finished_drivers, switches
                         kf_node.inputs[0].default_value = v['co_ui'][0]
                         kf_node.inputs[1].default_value = v['co_ui'][1]
                         node_tree.links.new(kf_node.outputs[0], fCurve_node.inputs[num_keys])
-                        
-                    
+
+
                 # NOW the driver itself
                 driver_node = None
                 # checc for it...
@@ -690,7 +691,7 @@ def create_driver(in_node_name, out_node_name, armOb, finished_drivers, switches
                 driver_node.inputs["Driver Type"].default_value = fc.driver.type
                 driver_node.inputs["Expression"].default_value = fc.driver.expression.replace ('var', 'a')
                 # HACK, fix the above with a more robust solution
-                
+
                 node_tree.links.new(fCurve_node.outputs[0], driver_node.inputs['fCurve'])
                 for i, var_node in zip(range(num_vars), var_nodes):
                     # TODO TODO BUG HACK
@@ -789,13 +790,13 @@ def do_generate_geom(ob, node_tree, parent_node=None):
             if prev_def_node:
                 node_tree.links.new(input=prev_def_node.outputs["Deformer"], inputs=def_node.inputs["Deformer"])
             prev_def_node = def_node
-    
+
     if prev_def_node:
         node_tree.links.new(input=prev_def_node.outputs["Deformer"], output=ob_node.inputs["Deformer"])
 
     if parent_node:
         node_tree.links.new(input=parent_node.outputs["Inheritance"], output=ob_node.inputs["Relationship"])
-            
+
 
     # not doing this
     # matrix_node = node_tree.nodes.new("InputMatrix")
@@ -805,7 +806,7 @@ def do_generate_geom(ob, node_tree, parent_node=None):
     # matrix_node.fourth_row=ob.matrix_world[12:15]
     # node_tree.links.new(input=matrix_node.outputs[0], output=ob_node.inputs["Matrix"])
 
-    
+
 
 
 
@@ -813,7 +814,7 @@ def do_generate_geom(ob, node_tree, parent_node=None):
 def do_generate_armature(armOb, context, node_tree, parent_node=None):
         from time import time
         start = time()
-        
+
         meta_rig_nodes = {}
         bone_inherit_node = {}
         do_after = set()
@@ -821,17 +822,17 @@ def do_generate_armature(armOb, context, node_tree, parent_node=None):
 
         armature = node_tree.nodes.new("xFormArmatureNode")
         mr_node_name = armOb.name
-        if not (mr_node:= meta_rig_nodes.get(mr_node_name)):    
+        if not (mr_node:= meta_rig_nodes.get(mr_node_name)):
             mr_node = node_tree.nodes.new("UtilityMetaRig")
             meta_rig_nodes[mr_node_name] = mr_node
             mr_node.inputs[0].search_prop=armOb
         node_tree.links.new(input=mr_node.outputs[0], output=armature.inputs["Matrix"])
         if parent_node:
             node_tree.links.new()
-        
 
-        
-        
+
+
+
         bones = []
         for root in armOb.data.bones:
             if root.parent is None:
@@ -840,14 +841,14 @@ def do_generate_armature(armOb, context, node_tree, parent_node=None):
                 prPurple("got the bone paths", time() - milestone); milestone=time()
                 armature.inputs["Name"].default_value = armOb.name + "_MANTIS"
                 armature.name = armOb.name; armature.label = armOb.name
-                
+
                 bones.extend([root])
-        
+
         if parent_node:
             node_tree.links.new(input=parent_node.outputs["Inheritance"], output=armature.inputs["Relationship"])
 
 
-            
+
         # for bone_path in lines:
         for bone in bones:
             prGreen(time() - milestone); milestone=time()
@@ -862,7 +863,7 @@ def do_generate_armature(armOb, context, node_tree, parent_node=None):
                     matrix[2][0], matrix[2][1], matrix[2][2], matrix[2][3], # last element is bone length, for mantis
                     matrix[3][0], matrix[3][1], matrix[3][2], bone.length ] #matrix[3][3], ]
             mr_node_name = armOb.name+":"+bone.name
-            if not (mr_node:= meta_rig_nodes.get(mr_node_name)):    
+            if not (mr_node:= meta_rig_nodes.get(mr_node_name)):
                 mr_node = node_tree.nodes.new("UtilityMetaRig")
                 meta_rig_nodes[mr_node_name] = mr_node
                 mr_node.inputs[0].search_prop=armOb
@@ -871,11 +872,11 @@ def do_generate_armature(armOb, context, node_tree, parent_node=None):
                 mr_node.inputs[1].default_value=bone.name
             node_tree.links.new(input=mr_node.outputs[0], output=bone_node.inputs["Matrix"])
             pb = armOb.pose.bones[bone.name]
-            
+
             if bone.parent: # not a root
-                
+
                 parent = set_parent_from_node(pb, bone_inherit_node, node_tree)
-                
+
                 print("Got parent node", time() - milestone); milestone=time()
                 if parent is None:
                     raise RuntimeError("No parent node?")
@@ -886,8 +887,8 @@ def do_generate_armature(armOb, context, node_tree, parent_node=None):
                     node_tree.links.new(armature.outputs["xForm Out"], parent.inputs['Parent'])
                     parent.inputs["Inherit Rotation"].default_value = True
                 node_tree.links.new(parent.outputs["Inheritance"], bone_node.inputs['Relationship'])
-                
-            
+
+
 
             bone_node.inputs["Lock Location"].default_value = pb.lock_location
             bone_node.inputs["Lock Rotation"].default_value = pb.lock_rotation
@@ -909,7 +910,7 @@ def do_generate_armature(armOb, context, node_tree, parent_node=None):
             bone_node.inputs["BBone End Handle Type"].default_value = pb.bone.bbone_handle_type_end
             bone_node.inputs["BBone Custom Start Handle"].default_value = pb.bone.bbone_handle_type_start
             bone_node.inputs["BBone Custom End Handle"].default_value = pb.bone.bbone_handle_type_end
-            
+
             bone_node.inputs["BBone X Curve-In"].default_value = pb.bone.bbone_curveinx
             bone_node.inputs["BBone Z Curve-In"].default_value = pb.bone.bbone_curveinz
             bone_node.inputs["BBone X Curve-Out"].default_value = pb.bone.bbone_curveoutx
@@ -917,7 +918,7 @@ def do_generate_armature(armOb, context, node_tree, parent_node=None):
 
             prRed("BBone Implementation is not complete, expect errors and missing features for now")
 
-            
+
             #
             for c in pb.constraints:
                 prWhite("constraint %s for %s" % (c.name, pb.name), time() - milestone); milestone=time()
@@ -926,23 +927,23 @@ def do_generate_armature(armOb, context, node_tree, parent_node=None):
                     c_node.label = c.name
                     # this node definitely has a parent inherit node.
                     c_node.location = parent.location; c_node.location.x += 200
-                    
+
                     try:
                         node_tree.links.new(parent.outputs["Inheritance"], c_node.inputs['Input Relationship'])
                     except KeyError: # not a inherit node anymore
                         node_tree.links.new(parent.outputs["Output Relationship"], c_node.inputs['Input Relationship'])
                     parent = c_node
-                    
+
                     #Target Tasks:
                     if (hasattr(c, "target") and not hasattr(c, "subtarget")):
                         do_after.add( ("Object Target", c_node.name , c.target.name ) )
                     if (hasattr(c, "subtarget")):
-                        if c.target and c.subtarget: # this node has a target, find the node associated with it... 
+                        if c.target and c.subtarget: # this node has a target, find the node associated with it...
                             do_after.add( ("Target", c_node.name , c.subtarget ) )
                         else:
                             do_after.add( ("Object Target", c_node.name , c.target.name ) )
                     if (hasattr(c, "pole_subtarget")):
-                        if c.pole_target and c.pole_subtarget: # this node has a pole target, find the node associated with it... 
+                        if c.pole_target and c.pole_subtarget: # this node has a pole target, find the node associated with it...
                             do_after.add( ("Pole Target", c_node.name , c.pole_subtarget ) )
                     fill_parameters(c_node, c, context)
                     if (hasattr(c, "targets")): # Armature Modifier, annoying.
@@ -966,7 +967,7 @@ def do_generate_armature(armOb, context, node_tree, parent_node=None):
             bones.extend(bone.children)
         finished_drivers = set()
         switches, driver_vars, fcurves, drivers = [],[],[],[]
-        
+
         # Now do the tasks.
         for (task, in_node_name, out_node_name) in do_after:
             prOrange(task, in_node_name, out_node_name)
@@ -998,13 +999,13 @@ def do_generate_armature(armOb, context, node_tree, parent_node=None):
                         break
                 else: # make it a task
                     prRed("Cannot set custom object transform override for %s to %s" % (in_node_name, out_node_name))
-                
+
             elif task in ["driver"]:
                 create_driver(in_node_name, out_node_name, armOb, finished_drivers, switches, driver_vars, fcurves, drivers, node_tree, context)
-                        
+
             # annoyingly, Rigify uses f-modifiers to setup its fcurves
             # I do not intend to support fcurve modifiers in Mantis at this time
-        
+
 
         for child in armOb.children:
             its_parent = None
@@ -1021,15 +1022,15 @@ def do_generate_armature(armOb, context, node_tree, parent_node=None):
                     its_parent = ppn; break
                 else:
                     its_parent = create_inheritance_node(pb, parent_name, bone_inherit_node, node_tree)
-                    
+
             if child.type in ["MESH", "CURVE", "EMPTY"]:
                 do_generate_geom(child, node_tree, its_parent)
             if child.type in ["ARMATURE"]:
                 do_generate_armature(armOb, context, node_tree, parent_node=its_parent)
-        
+
         for node in node_tree.nodes:
             node.select = False
-        
+
         prGreen("Finished generating %d nodes in %f seconds." % (len(node_tree.nodes), time() - start))
 
 
@@ -1052,13 +1053,13 @@ class GenerateMantisTree(Operator):
         space = context.space_data
         path = space.path
         node_tree = space.path[len(path)-1].node_tree
-        
+
         do_profile=False
 
-        
+
         #This will generate it in the current node tree and OVERWRITE!
         node_tree.nodes.clear() # is this wise?
-        
+
         import cProfile
         from os import environ
         print (environ.get("DOPROFILE"))
@@ -1070,15 +1071,14 @@ class GenerateMantisTree(Operator):
             node_tree.do_live_update = False
             do_generate_armature(context.active_object, context, node_tree)
 
-        
+
         from .utilities import SugiyamaGraph
         try:
+            for n in node_tree.nodes:
+                n.select = True # Sugiyama sorting requires selection.
             SugiyamaGraph(node_tree, 16)
         except ImportError:
             pass
         node_tree.do_live_update = True
 
         return {"FINISHED"}
-        
-
-
