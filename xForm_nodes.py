@@ -551,6 +551,7 @@ class xFormBone(xFormNode):
                     soft_max = int(inp.soft_max),)
             elif type(value) == bool:
                 ui_data.update() # TODO I can't figure out what the update function expects because it isn't documented
+            pb.property_overridable_library_set(f"[\"{name}\"]", True)
         
         if (pb.is_in_ik_chain):
             # this  props_socket thing wasn't really meant to work here but it does, neat
