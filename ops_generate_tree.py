@@ -76,6 +76,8 @@ constraint_link_map={
     'ARMATURE'        : "LinkArmature",
     'SPLINE_IK'       : "LinkSplineIK",
     'TRANSFORM'       : "LinkTransformation",
+    'FLOOR'           : "LinkFloor",
+    'SHRINKWRAP'      : "LinkShrinkWrap"
     }
 
 def create_relationship_node_for_constraint(node_tree, c):
@@ -84,7 +86,6 @@ def create_relationship_node_for_constraint(node_tree, c):
     else:
         prRed ("Not yet implemented: %s" % c.type)
         return None
-
 
 def fill_parameters(node, c, context):
     # just try the basic parameters...
@@ -139,139 +140,129 @@ def fill_parameters(node, c, context):
         pass
 
     # gonna dispense with the try/except from here on
-    if   (c.type == 'COPY_LOCATION'):
-        node.inputs["Head/Tail"].default_value = c.head_tail
-        node.inputs["UseBBone"].default_value  = c.use_bbone_shape
-    elif (c.type == 'COPY_ROTATION'):
-        node.inputs["RotationOrder"].default_value = c.euler_order
-        # ofset (legacy) is not supported TODO BUG
-        if (mix_mode := c.mix_mode) == 'OFFSET':
-            mix_mode = 'AFTER'
-        node.inputs["Rotation Mix"].default_value  = mix_mode
-    elif (c.type == 'COPY_SCALE'):
-        #node.inputs["Additive"].default_value = c.use_make_uniform # not yet implemented
-        #node.inputs["Power"].default_value = c.head_tail
-        node.inputs["Average"].default_value  = c.use_make_uniform
-        node.inputs["Offset"].default_value  = c.use_offset
-    elif (c.type == 'COPY_TRANSFORMS'):
-        node.inputs["Head/Tail"].default_value = c.head_tail
-        node.inputs["UseBBone"].default_value  = c.use_bbone_shape
-        node.inputs["Mix"].default_value  = c.mix_mode
-    elif (c.type == 'LIMIT_DISTANCE'):
-        print ("Not yet handled: ", c.type)
-    elif (c.type in ['LIMIT_LOCATION', 'LIMIT_ROTATION', 'LIMIT_SCALE']):
-        # print (c.type)
-        try:
-            node.inputs["Use Max X"].default_value = c.use_max_x
-            node.inputs["Use Max Y"].default_value = c.use_max_y
-            node.inputs["Use Max Z"].default_value = c.use_max_z
+    match c.type:
+        case 'COPY_LOCATION':
+            node.inputs["Head/Tail"].default_value = c.head_tail
+            node.inputs["UseBBone"].default_value  = c.use_bbone_shape
+        case 'COPY_ROTATION':
+            node.inputs["RotationOrder"].default_value = c.euler_order
+            # ofset (legacy) is not supported TODO BUG
+            if (mix_mode := c.mix_mode) == 'OFFSET':
+                mix_mode = 'AFTER' # TODO there should be a message here. IIRC rigify rigs use this
+            node.inputs["Rotation Mix"].default_value  = mix_mode
+        case'COPY_SCALE':
+            node.inputs["Additive"].default_value = c.use_make_uniform
+            node.inputs["Power"].default_value = c.power
+            node.inputs["Average"].default_value  = c.use_make_uniform
+            node.inputs["Offset"].default_value  = c.use_offset
+        case'COPY_TRANSFORMS':
+            node.inputs["Head/Tail"].default_value = c.head_tail
+            node.inputs["UseBBone"].default_value  = c.use_bbone_shape
+            node.inputs["Mix"].default_value  = c.mix_mode
+        case 'LIMIT_LOCATION' | 'LIMIT_ROTATION' | 'LIMIT_SCALE':
+            try:
+                node.inputs["Use Max X"].default_value = c.use_max_x
+                node.inputs["Use Max Y"].default_value = c.use_max_y
+                node.inputs["Use Max Z"].default_value = c.use_max_z
+                #
+                node.inputs["Use Min X"].default_value = c.use_min_x
+                node.inputs["Use Min Y"].default_value = c.use_min_y
+                node.inputs["Use Min Z"].default_value = c.use_min_z
+            except AttributeError: # rotation
+                node.inputs["Use X"].default_value = c.use_limit_x
+                node.inputs["Use Y"].default_value = c.use_limit_y
+                node.inputs["Use Z"].default_value = c.use_limit_z
+            node.inputs["Max X"].default_value = c.max_x
+            node.inputs["Max Y"].default_value = c.max_y
+            node.inputs["Max Z"].default_value = c.max_z
             #
-            node.inputs["Use Min X"].default_value = c.use_min_x
-            node.inputs["Use Min Y"].default_value = c.use_min_y
-            node.inputs["Use Min Z"].default_value = c.use_min_z
-        except AttributeError: # rotation
-            node.inputs["Use X"].default_value = c.use_limit_x
-            node.inputs["Use Y"].default_value = c.use_limit_y
-            node.inputs["Use Z"].default_value = c.use_limit_z
-        node.inputs["Max X"].default_value = c.max_x
-        node.inputs["Max Y"].default_value = c.max_y
-        node.inputs["Max Z"].default_value = c.max_z
-        #
-        node.inputs["Min X"].default_value = c.min_x
-        node.inputs["Min Y"].default_value = c.min_y
-        node.inputs["Min Z"].default_value = c.min_z
-    elif (c.type == 'DAMPED_TRACK'):
-        node.inputs["Head/Tail"].default_value   = c.head_tail
-        node.inputs["UseBBone"].default_value    = c.use_bbone_shape
-        node.inputs["Track Axis"].default_value  = c.track_axis
-    elif (c.type == 'LOCKED_TRACK'):
-        node.inputs["Head/Tail"].default_value   = c.head_tail
-        node.inputs["UseBBone"].default_value    = c.use_bbone_shape
-        node.inputs["Track Axis"].default_value  = c.track_axis
-        node.inputs["Lock Axis"].default_value   = c.lock_axis
-    elif (c.type == 'STRETCH_TO'):
-        node.inputs["Head/Tail"].default_value = c.head_tail
-        node.inputs["UseBBone"].default_value  = c.use_bbone_shape
-        node.inputs["Volume Variation"].default_value = c.bulge
-        node.inputs["Use Volume Min"].default_value = c.use_bulge_min
-        node.inputs["Volume Min"].default_value = c.bulge_min
-        node.inputs["Use Volume Max"].default_value = c.use_bulge_max
-        node.inputs["Volume Max"].default_value = c.bulge_max
-        node.inputs["Smooth"].default_value = c.bulge_smooth
-        node.inputs["Maintain Volume"].default_value = c.volume
-        node.inputs["Rotation"].default_value        = c.keep_axis
-    elif (c.type == 'TRACK_TO'):
-        print ("Not yet handled: ", c.type)
-    elif (c.type == 'CHILD_OF'):
-        print ("Not yet handled: ", c.type)
-    elif (c.type == 'IK'):
-        node.inputs["Chain Length"].default_value = c.chain_count
-        node.inputs["Use Tail"].default_value = c.use_tail
-        node.inputs["Stretch"].default_value = c.use_stretch
-        # this isn't quite right lol
-        node.inputs["Position"].default_value = c.weight
-        node.inputs["Rotation"].default_value = c.orient_weight
-        if not (c.use_location):
-            node.inputs["Position"].default_value = 0
-        if not (c.use_rotation):
-            node.inputs["Rotation"].default_value = 0
-    elif (c.type == 'ARMATURE'):
-        node.inputs["Preserve Volume"].default_value = c.use_deform_preserve_volume
-        node.inputs["Use Envelopes"].default_value = c.use_bone_envelopes
-        node.inputs["Use Current Location"].default_value = c.use_current_location
-        for i in range(len(c.targets)):
-            with context.temp_override(node=node):
-                bpy.ops.mantis.link_armature_node_add_target()
-                node.inputs["Weight."+str(i).zfill(3)].default_value = c.targets[i].weight
-    elif (c.type == 'SPLINE_IK'):
-        node.inputs["Chain Length"].default_value = c.chain_count
-        node.inputs["Even Divisions"].default_value = c.use_even_divisions
-        node.inputs["Chain Offset"].default_value = c.use_chain_offset
-        node.inputs["Use Curve Radius"].default_value = c.use_curve_radius
-        node.inputs["Y Scale Mode"].default_value = c.y_scale_mode
-        node.inputs["XZ Scale Mode"].default_value = c.xz_scale_mode
-    elif (c.type == 'TRANSFORM'):
-        # I can't be arsed to do all this work..
-        from .link_nodes import transformation_props_sockets as props
-        for prop, (sock_name, _unused) in props.items():
-            if "from" in prop:
-                if prop in ["map_from"] or "to" in prop:
-                   pass
-                elif c.map_from == 'LOCATION':
-                    if "scale" in prop:
-                        continue
-                    if "rot" in prop:
-                        continue
-                elif c.map_from == 'ROTATION':
-                    if "rot" not in prop:
-                        continue
-                elif c.map_from == 'SCALE':
-                    if "scale" not in prop:
-                        continue
-            if "to" in prop:
-                if prop in ["map_to"] or "from" in prop:
-                   pass
-                elif c.map_from == 'LOCATION':
-                    if "scale" in prop:
-                        continue
-                    if "rot" in prop:
-                        continue
-                elif c.map_from == 'ROTATION':
-                    if "rot" not in prop:
-                        continue
-                elif c.map_from == 'SCALE':
-                    if "scale" not in prop:
-                        continue
-            node.inputs[sock_name].default_value = getattr(c, prop)
-            if prop in "mute":
-                node.inputs[sock_name].default_value = not getattr(c, prop)
+            node.inputs["Min X"].default_value = c.min_x
+            node.inputs["Min Y"].default_value = c.min_y
+            node.inputs["Min Z"].default_value = c.min_z
+        case 'DAMPED_TRACK':
+            node.inputs["Head/Tail"].default_value   = c.head_tail
+            node.inputs["UseBBone"].default_value    = c.use_bbone_shape
+            node.inputs["Track Axis"].default_value  = c.track_axis
+        case 'LOCKED_TRACK':
+            node.inputs["Head/Tail"].default_value   = c.head_tail
+            node.inputs["UseBBone"].default_value    = c.use_bbone_shape
+            node.inputs["Track Axis"].default_value  = c.track_axis
+            node.inputs["Lock Axis"].default_value   = c.lock_axis
+        case 'STRETCH_TO':
+            node.inputs["Head/Tail"].default_value = c.head_tail
+            node.inputs["UseBBone"].default_value  = c.use_bbone_shape
+            node.inputs["Volume Variation"].default_value = c.bulge
+            node.inputs["Use Volume Min"].default_value = c.use_bulge_min
+            node.inputs["Volume Min"].default_value = c.bulge_min
+            node.inputs["Use Volume Max"].default_value = c.use_bulge_max
+            node.inputs["Volume Max"].default_value = c.bulge_max
+            node.inputs["Smooth"].default_value = c.bulge_smooth
+            node.inputs["Maintain Volume"].default_value = c.volume
+            node.inputs["Rotation"].default_value        = c.keep_axis
+        case 'IK':
+            node.inputs["Chain Length"].default_value = c.chain_count
+            node.inputs["Use Tail"].default_value = c.use_tail
+            node.inputs["Stretch"].default_value = c.use_stretch
+            # this isn't quite right lol
+            node.inputs["Position"].default_value = c.weight
+            node.inputs["Rotation"].default_value = c.orient_weight
+            if not (c.use_location):
+                node.inputs["Position"].default_value = 0
+            if not (c.use_rotation):
+                node.inputs["Rotation"].default_value = 0
+        case 'ARMATURE':
+            node.inputs["Preserve Volume"].default_value = c.use_deform_preserve_volume
+            node.inputs["Use Envelopes"].default_value = c.use_bone_envelopes
+            node.inputs["Use Current Location"].default_value = c.use_current_location
+            for i in range(len(c.targets)):
+                with context.temp_override(node=node):
+                    bpy.ops.mantis.link_armature_node_add_target()
+                    node.inputs["Weight."+str(i).zfill(3)].default_value = c.targets[i].weight
+        case 'SPLINE_IK':
+            node.inputs["Chain Length"].default_value = c.chain_count
+            node.inputs["Even Divisions"].default_value = c.use_even_divisions
+            node.inputs["Chain Offset"].default_value = c.use_chain_offset
+            node.inputs["Use Curve Radius"].default_value = c.use_curve_radius
+            node.inputs["Y Scale Mode"].default_value = c.y_scale_mode
+            node.inputs["XZ Scale Mode"].default_value = c.xz_scale_mode
+        case 'TRANSFORM':
+            # I can't be arsed to do all this work..
+            from .link_nodes import transformation_props_sockets as props
+            for prop, (sock_name, _unused) in props.items():
+                if "from" in prop:
+                    if prop in ["map_from"] or "to" in prop:
+                       pass
+                    elif c.map_from == 'LOCATION':
+                        if "scale" in prop:
+                            continue
+                        if "rot" in prop:
+                            continue
+                    elif c.map_from == 'ROTATION':
+                        if "rot" not in prop:
+                            continue
+                    elif c.map_from == 'SCALE':
+                        if "scale" not in prop:
+                            continue
+                if "to" in prop:
+                    if prop in ["map_to"] or "from" in prop:
+                       pass
+                    elif c.map_from == 'LOCATION':
+                        if "scale" in prop:
+                            continue
+                        if "rot" in prop:
+                            continue
+                    elif c.map_from == 'ROTATION':
+                        if "rot" not in prop:
+                            continue
+                    elif c.map_from == 'SCALE':
+                        if "scale" not in prop:
+                            continue
+                node.inputs[sock_name].default_value = getattr(c, prop)
+                if prop in "mute":
+                    node.inputs[sock_name].default_value = not getattr(c, prop)
+        case _:
+            print (f"Not yet implemented: {c.type}")
 
-        # should probably do it this way all over actually.
-
-
-    else:
-        raise NotImplementedError("Not handled yet: %s" % c.type)
-        return None
 
 
 
@@ -312,10 +303,10 @@ def get_bone_from_path(root_bone, path):
         bone = bone.children[path.pop(0)]
     return bone
 
+# THIS IS BAD AND DUMB
 def setup_custom_properties(bone_node, pb):
-    for k, v in pb.items(): # Custom Properties
+    for k, v in pb.items():
         socktype, prop_type = '', type(v)
-        # print (prop_type)
         if   prop_type == bool:
             socktype = 'ParameterBoolSocket'
         elif prop_type == int:
@@ -327,30 +318,29 @@ def setup_custom_properties(bone_node, pb):
         elif prop_type == str:
             socktype = 'ParameterStringSocket'
         else:
+            prRed(f"Cannot create property {k} of type {prop_type} in {bone_node}")
             continue # it's a PointerProp or something
-        #if self.prop_type == 'ENUM':
-        #    sock_type = 'ParameterStringSocket'
         new_prop = bone_node.inputs.new( socktype, k)
         bone_node.outputs.new( socktype, k)
         # set its value and limits and such
-        # from rna_prop_ui import rna_idprop_ui_create
-        # I have no idea how to get the data in a sane way, I guess I will use this...
+        # the ui_data is where this is stored. Feels hacky.
         ui_data = pb.id_properties_ui(k).as_dict()
-
         new_prop.default_value = ui_data['default']
-        try:
-            new_prop.min      = ui_data['min']
-            new_prop.max      = ui_data['max']
-            new_prop.soft_min = ui_data['soft_min']
-            new_prop.soft_max = ui_data['soft_max']
-        except AttributeError:
-            pass # it's not a number
-        except KeyError:
-            pass # same, or not defined maybe
-        try:
-            new_prop.description = ui_data['description']
-        except KeyError:
-            prOrange("Figure out why this happens?")
+
+        for attr_name in ['min', 'max', 'soft_min', 'soft_max', 'description']:
+            if prop_type == str and attr_name != "description":
+                continue # the first four are not available for string prop.
+            try:
+                attr_val = ui_data[attr_name]
+                # there is a weird conversion error for unset min/max
+                # because it defaults to exactly the value of long or something?
+                if not isinstance(attr_val, str): # this doesn't work??
+                    if attr_val >= 2147483647.0: attr_val = 2147483646.0
+                    if attr_val <= -2147483648.0: attr_val = -2147483647.0
+                setattr(new_prop, attr_name, attr_val)
+            except KeyError:
+                # TODO: find out why this happens and quit using exceptions
+                prRed(f"prop {k} has no attribute {attr_name} (in {bone_node})")
 
 def setup_ik_settings(bone_node, pb):
     # Set Up IK settings:
@@ -421,7 +411,7 @@ def setup_df_settings(bone_node, pb):
 
 def create_driver(in_node_name, out_node_name, armOb, finished_drivers, switches, driver_vars, fcurves, drivers, node_tree, context):
     # TODO: CLEAN this ABOMINATION
-    print ("DRIVER: ", in_node_name, out_node_name)
+    # print ("DRIVER: ", in_node_name, out_node_name)
     in_node  = node_tree.nodes[ in_node_name]
     out_node = node_tree.nodes[out_node_name]
     for fc in armOb.animation_data.drivers:
@@ -431,7 +421,7 @@ def create_driver(in_node_name, out_node_name, armOb, finished_drivers, switches
         if fc.data_path in finished_drivers:
             continue
         finished_drivers.add(fc.data_path)
-        print ("Creating driver.... %s" % fc.data_path)
+        # print ("Creating driver.... %s" % fc.data_path)
         keys = []
         for k in fc.keyframe_points:
             key = {}
@@ -506,7 +496,8 @@ def create_driver(in_node_name, out_node_name, armOb, finished_drivers, switches
                 switch_node.inputs[2].default_value = inverted
                 #print ("   Inverted?  ", inverted, (fc.evaluate(0) == 1) and (fc.evaluate(1) == 0), switch_node.inputs[3].default_value)
                 if not inverted:
-                    print ("    --> Check this node: %s" % switch_node.name)
+                    pass # TODO find out why there is a warning here?
+                    # print ("    --> Check this node: %s" % switch_node.name)
             # this may be a custom property or a normal property...
             # this should lead to a constraint
             if len(parameter.split("[\"") ) == 3:
@@ -631,13 +622,7 @@ def create_driver(in_node_name, out_node_name, armOb, finished_drivers, switches
                     # TODO: make this do more than co_ui
                     for i, k in enumerate(fc.keyframe_points):
                         keys[i] = {'co_ui':k.co_ui}
-#                                print (fc.data_path)
-#                                print (len(fc.keyframe_points))
-#                                raise NotImplementedError("Not needed for first milestone")
                 else:
-#                                fc_ob = fCurve_node.fake_fcurve_ob
-#                                node_fc = fc_ob.animation_data.action.fcurves[0]
-#                                fc.keyframe_points.add(2)
                     if ((len(fc.modifiers) == 0) or ((fc.evaluate(0) == 0) and (fc.evaluate(1) == 1))):
                         keys[0] = {'co_ui':Vector((0, 0))}
                         keys[1] = {'co_ui':Vector((1, 1))}
@@ -645,9 +630,8 @@ def create_driver(in_node_name, out_node_name, armOb, finished_drivers, switches
                         keys[0] = {'co_ui':Vector((0, 1))}
                         keys[1] = {'co_ui':Vector((1, 0))}
                     else:
-                        print ("Could not get keys!")
+                        prRed ("Could not get keys!")
                         # TODO find out why this happens
-                        # I HAVE NO IDEA
                         pass
 #                                elif (fc.evaluate(0) == 1) and (fc.evaluate(1) == 0):
 #                                    kf0 = fc.keyframe_points[0]; kf0.co_ui = (0, 1)
@@ -727,7 +711,6 @@ def create_driver(in_node_name, out_node_name, armOb, finished_drivers, switches
                     else:
                         prRed ("   couldn't find: %s, %s, %s" % (property, out_node.label, out_node.name))
                 elif len(parameter.split("[\"") ) == 2:
-                    # print (parameter.split("[\"") ); raise NotImplementedError
                     property = parameter.split(".")[-1]
                 else:
                     prWhite( "parameter: %s" % parameter)
@@ -874,18 +857,18 @@ def do_generate_armature(armOb, context, node_tree, parent_node=None):
             pb = armOb.pose.bones[bone.name]
 
             if bone.parent: # not a root
-
                 parent = set_parent_from_node(pb, bone_inherit_node, node_tree)
-
-                print("Got parent node", time() - milestone); milestone=time()
+                # prWhite("Got parent node", time() - milestone); milestone=time()
                 if parent is None:
                     raise RuntimeError("No parent node?")
             else: # This is a root
-                if (parent := bone_inherit_node.get(armOb.name)) is None:
+                if (parent_list := bone_inherit_node.get(armOb.name)) is None:
                     parent = node_tree.nodes.new("linkInherit")
                     bone_inherit_node[armOb.name] = [parent]
                     node_tree.links.new(armature.outputs["xForm Out"], parent.inputs['Parent'])
                     parent.inputs["Inherit Rotation"].default_value = True
+                else:
+                    parent = parent_list[0]
                 node_tree.links.new(parent.outputs["Inheritance"], bone_node.inputs['Relationship'])
 
 
@@ -916,12 +899,12 @@ def do_generate_armature(armOb, context, node_tree, parent_node=None):
             bone_node.inputs["BBone X Curve-Out"].default_value = pb.bone.bbone_curveoutx
             bone_node.inputs["BBone Z Curve-Out"].default_value = pb.bone.bbone_curveoutz
 
-            prRed("BBone Implementation is not complete, expect errors and missing features for now")
+            # prRed("BBone Implementation is not complete, expect errors and missing features for now")
 
 
             #
             for c in pb.constraints:
-                prWhite("constraint %s for %s" % (c.name, pb.name), time() - milestone); milestone=time()
+                # prWhite("constraint %s for %s" % (c.name, pb.name), time() - milestone); milestone=time()
                 # make relationship nodes and set up links...
                 if ( c_node := create_relationship_node_for_constraint(node_tree, c)):
                     c_node.label = c.name
@@ -970,8 +953,7 @@ def do_generate_armature(armOb, context, node_tree, parent_node=None):
 
         # Now do the tasks.
         for (task, in_node_name, out_node_name) in do_after:
-            prOrange(task, in_node_name, out_node_name)
-            # prPurple(len(node_tree.nodes))
+            # prOrange(task, in_node_name, out_node_name)f
             if task in ['Object Target']:
                 in_node  = node_tree.nodes[ in_node_name ]
                 out_node= node_tree.nodes.new("InputExistingGeometryObject")
@@ -1056,29 +1038,30 @@ class GenerateMantisTree(Operator):
 
         do_profile=False
 
-
         #This will generate it in the current node tree and OVERWRITE!
         node_tree.nodes.clear() # is this wise?
 
         import cProfile
         from os import environ
-        print (environ.get("DOPROFILE"))
         if environ.get("DOPROFILE"):
             do_profile=True
-        if do_profile:
-            cProfile.runctx("do_generate_armature(context.active_object, context, node_tree)", None, locals())
-        else:
-            node_tree.do_live_update = False
-            do_generate_armature(context.active_object, context, node_tree)
 
-
-        from .utilities import SugiyamaGraph
+        node_tree.do_live_update = False
+        node_tree.is_exporting = True
         try:
+            if do_profile:
+                cProfile.runctx("do_generate_armature(context.active_object, context, node_tree)", None, locals())
+            else:
+                do_generate_armature(context.active_object, context, node_tree)
+            from .utilities import SugiyamaGraph
             for n in node_tree.nodes:
                 n.select = True # Sugiyama sorting requires selection.
             SugiyamaGraph(node_tree, 16)
-        except ImportError:
+        except ImportError: # if for some reason Sugiyama isn't available
             pass
-        node_tree.do_live_update = True
+        finally:
+            node_tree.do_live_update = True
+            node_tree.is_exporting = False
+            node_tree.prevent_next_exec = True
 
         return {"FINISHED"}
