@@ -3,8 +3,8 @@ from .base_definitions import MantisNode, NodeSocket
 from .xForm_socket_templates import *
 
 def TellClasses():
-             
-    return [ 
+
+    return [
              # xForm
              xFormArmature,
              xFormBone,
@@ -24,7 +24,7 @@ def reset_object_data(ob):
     ob.modifiers.clear() # I would also like a way to copy modifiers and their settings, or bake them down. oh well
 
 def get_parent_node(node_container, type = 'XFORM'):
-    # type variable for selecting whether to get either 
+    # type variable for selecting whether to get either
     #   the parent xForm  or the inheritance node
     node_line, socket = trace_single_line(node_container, "Relationship")
     parent_nc = None
@@ -61,7 +61,7 @@ def set_object_parent(node):
                     prWhite(f"INFO: no parent set for {node}.")
                     return
                 prWhite(f"INFO: setting parent of {node} to {other_node}.")
-                
+
                 if (parent.bObject) is None:
                     raise GraphError(f"Could not get parent object from node {parent} for {node}")
                 if isinstance(parent, xFormBone):
@@ -79,13 +79,13 @@ class xFormNode(MantisNode):
         self.bObject=None
 
     # because new objects are created during prep phase
-    def reset_execution(self): 
+    def reset_execution(self):
         super().reset_execution()
         self.prepared=False
 
 class xFormArmature(xFormNode):
     '''A node representing an armature object'''
-    
+
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, xFormArmatureSockets)
         self.init_parameters()
@@ -97,7 +97,7 @@ class xFormArmature(xFormNode):
 
     def bTransformPass(self, bContext = None,):
         # from .utilities import get_node_prototype
-        
+
         import bpy
         if (not isinstance(bContext, bpy.types.Context)):
             raise RuntimeError("Incorrect context")
@@ -112,8 +112,8 @@ class xFormArmature(xFormNode):
                 while (ob.animation_data.drivers):
                         ob.animation_data.drivers.remove(ob.animation_data.drivers[-1])
             for pb in ob.pose.bones:
-                # clear it, even after deleting the edit bones, 
-                #  if we create them again the pose bones will be reused 
+                # clear it, even after deleting the edit bones,
+                #  if we create them again the pose bones will be reused
                 while (pb.constraints):
                     pb.constraints.remove(pb.constraints[-1])
                 if reset_transforms:
@@ -137,7 +137,7 @@ class xFormArmature(xFormNode):
             ob = bpy.data.objects.new(name, bpy.data.armatures.new(name)) #create ob
             if (ob.name != name):
                 raise RuntimeError("Could not create xForm object", name)
-            
+
         self.bObject = ob.name
         ob.matrix_world = matrix.copy()
         ob.data.pose_position = 'REST'
@@ -256,7 +256,7 @@ class xFormBone(xFormNode):
         # currently it is waiting on BBone and refactoring/cleanup.
         self.init_parameters()
         self.set_traverse([("Relationship", "xForm Out")])
-    
+
     def bGetParentArmature(self):
         if (trace := trace_single_line(self, "Relationship")[0] ) :
             for i in range(len(trace)):
@@ -265,7 +265,7 @@ class xFormBone(xFormNode):
                     return trace[ i ].bGetObject()
         return None
         #should do the trick...
-    
+
     def bSetParent(self, eb):
         # print (self.bObject)
         from bpy.types import EditBone
@@ -279,16 +279,16 @@ class xFormBone(xFormNode):
 
         if isinstance(parent, EditBone):
             eb.parent = parent
-            
+
         eb.use_connect = parent_nc.evaluate_input("Connected")
         eb.use_inherit_rotation = parent_nc.evaluate_input("Inherit Rotation")
         eb.inherit_scale = parent_nc.evaluate_input("Inherit Scale")
         # otherwise, no need to do anything.
-    
+
     def bPrepare(self, bContext=None):
         self.parameters['Matrix'] = get_matrix(self)
         self.prepared = True
-    
+
     def bTransformPass(self, bContext = None,): #possibly will need to pass context?
         import bpy
         from mathutils import Vector
@@ -301,7 +301,7 @@ class xFormBone(xFormNode):
 
         matrix = self.parameters['Matrix']
         length = matrix[3][3]
-        
+
         if (xF):
             if (xF.mode != "EDIT"):
                 raise RuntimeError("Armature Object Not in Edit Mode, exiting...")
@@ -334,7 +334,7 @@ class xFormBone(xFormNode):
                     col.parent = col_parent
                     col_parent = col
                 d.collections_all.get(hierarchy[-1]).assign(eb)
-        
+
         if (eb.name != name):
             prRed(f"Expected bone of name: {name}, got {eb.name} instead.")
             raise RuntimeError("Could not create bone ", name, "; Perhaps there is a duplicate bone name in the node tree?")
@@ -347,12 +347,12 @@ class xFormBone(xFormNode):
         assert (eb.name), "Bone must have a name."
         self.bObject = eb.name
         # The bone should have relationships going in at this point.
-        
+
         self.bSetParent(eb)
 
         if eb.head == eb.tail:
             raise RuntimeError(wrapRed(f"Could not create edit bone: {name} because bone head was located in the same place as bone tail."))
-        
+
         # Setup Deform attributes...
         eb.use_deform            = self.evaluate_input("Deform")
         eb.envelope_distance     = self.evaluate_input("Envelope Distance")
@@ -431,7 +431,7 @@ class xFormBone(xFormNode):
                 b.bbone_handle_type_start = handle_type
             if handle_type := self.evaluate_input("BBone End Handle Type"):
                 b.bbone_handle_type_end = handle_type
-            
+
             try:
                 if (custom_handle := self.evaluate_input("BBone Custom Start Handle")):
                     b.bbone_custom_handle_start = self.bGetParentArmature().data.bones[custom_handle]
@@ -454,7 +454,7 @@ class xFormBone(xFormNode):
             b.bbone_handle_use_scale_start = self.evaluate_input("BBone Start Handle Scale")
             b.bbone_handle_use_scale_end = self.evaluate_input("BBone End Handle Scale")
 
-            
+
         import bpy
         from .drivers import MantisDriver
         # prevAct = bContext.view_layer.objects.active
@@ -468,7 +468,7 @@ class xFormBone(xFormNode):
         #
         #
         # Don't need to bother about whatever that was
-        
+
         pb = self.bGetParentArmature().pose.bones[self.bObject]
         rotation_mode = self.evaluate_input("Rotation Order")
         if rotation_mode == "AUTO": rotation_mode = "XYZ"
@@ -517,42 +517,35 @@ class xFormBone(xFormNode):
             if (value is None):
                 raise RuntimeError("Could not set value of custom parameter")
                 # it creates a more confusing error later sometimes, better to catch it here.
-            
-            # IMPORTANT: Is it possible for more than one driver to
-            #   come through here, and for the variable to be
-            #   overwritten?
-                
+
             #TODO important
             #from rna_prop_ui import rna_idprop_ui_create
             # use this ^
-            
-            # add the custom properties to the **Pose Bone**
-            pb[name] = value
-            # This is much simpler now.
-            ui_data = pb.id_properties_ui(name)
-            description=''
-            ui_data.update(
-                description=description,#inp.description,
-                default=value,)
-            #if a number
 
-            if type(value) == float:
-                ui_data.update(
-                    min = inp.min,
-                    max = inp.max,
-                    soft_min = inp.soft_min,
-                    soft_max = inp.soft_max,)
-                        
-            elif type(value) == int:
-                ui_data.update(
-                    min = int(inp.min),
-                    max = int(inp.max),
-                    soft_min = int(inp.soft_min),
-                    soft_max = int(inp.soft_max),)
-            elif type(value) == bool:
-                ui_data.update() # TODO I can't figure out what the update function expects because it isn't documented
+            pb[name] = value
+            ui_data = pb.id_properties_ui(name)
+            description = ''
+            if hasattr(inp, 'description'):
+                description = int.description 
+                # i am assuming there was a reason I was not already taking inp.description
+                # So guard it a little here just to be safe and not change things too much.
+            ui_data.update(
+                default=value,
+                description=description)
+
+            #if a number, set the min/max values. it may overflow on the C side
+            if type(value) in [float, int]:
+                for prop_name in ['min', 'max', 'soft_min', 'soft_max', ]:
+                    prop_value = getattr(inp, prop_name)
+                    if type(value) == int: prop_value = int(prop_value)
+                    # DO: figure out the right way to prevent an oveflow
+                    try: # we have to do this as a keyword argument like this
+                        ui_data.update( **{prop_name:prop_value} )
+                    except OverflowError: #this occurs when the value is inf
+                        prRed(f"invalid value {prop_value} for custom prop {prop_name}"
+                             f" of type {type(value)} in {self}. It will remain unset.")
             pb.property_overridable_library_set(f"[\"{name}\"]", True)
-        
+
         if (pb.is_in_ik_chain):
             # this  props_socket thing wasn't really meant to work here but it does, neat
             props_sockets = {
@@ -619,7 +612,7 @@ class xFormBone(xFormNode):
         }
         evaluate_sockets(self, pb.bone, props_sockets)
 
-        
+
         if (driver):
             pass
         # whatever I was doing there.... was stupid. CLEAN UP TODO
@@ -634,14 +627,14 @@ class xFormBone(xFormNode):
 
         pb.custom_shape_transform = None
         pb.custom_shape = None
-        
+
         if len(self.inputs["Custom Object xForm Override"].links) > 0:
             trace = trace_single_line(self, "Custom Object xForm Override")
             try:
                 pb.custom_shape_transform = trace[0][1].bGetObject()
             except AttributeError:
                 pass
-                    
+
         if len(self.inputs["Custom Object"].links) > 0:
             trace = trace_single_line(self, "Custom Object")
             try:
@@ -649,7 +642,7 @@ class xFormBone(xFormNode):
             except AttributeError:
                 ob=None
             if type(ob) in [bpy.types.Object]:
-                pb.custom_shape = ob 
+                pb.custom_shape = ob
 
     def bGetObject(self, mode = 'POSE'):
         if self.bObject is None: return None
@@ -672,7 +665,7 @@ class xFormBone(xFormNode):
         # this is the fill_parameters that is run if it isn't a schema
         setup_custom_props(self)
         super().fill_parameters(prototype)
-        # otherwise we will do this from the schema 
+        # otherwise we will do this from the schema
         # LEGIBILITY TODO - why? explain this?
 
 class xFormGeometryObject(xFormNode):
@@ -768,8 +761,8 @@ class xFormGeometryObject(xFormNode):
             print (wrapGreen(i), wrapWhite(self), wrapPurple(driver_key))
             prOrange(driver_item)
         finish_drivers(self)
-            
-        
+
+
     def bGetObject(self, mode = 'POSE'):
         return self.bObject
 
@@ -882,7 +875,7 @@ class xFormCurvePin(xFormNode):
 
     def bPrepare(self, bContext = None,):
         from bpy import data
-        
+
         if not bContext: # lol
             import bpy
             bContext = bpy.context
@@ -897,9 +890,9 @@ class xFormCurvePin(xFormNode):
             ob.empty_display_size = 0.10
 
         self.bObject = ob
-        
+
         reset_object_data(ob)
-        
+
         node_line = trace_single_line(self, "Parent Curve")[0][1:] # slice excludes self
         for other_node in node_line:
             if other_node.node_type == 'XFORM':
@@ -968,6 +961,6 @@ class xFormCurvePin(xFormNode):
 
     def bFinalize(self, bContext = None):
         finish_drivers(self)
-            
+
     def bGetObject(self, mode = 'POSE'):
         return self.bObject
