@@ -490,21 +490,12 @@ class xFormBone(xFormNode):
                 custom_prop=True
             if custom_prop == False: continue
             name = inp.name
-
-            try:
-                value = self.evaluate_input(inp.name)
-            except KeyError as e:
-                trace = trace_single_line(self, inp.name)
-                if do_prints: print(trace[0][-1], trace[1])
-                if do_prints: print (trace[0][-1].parameters)
-                raise e
+            value = self.evaluate_input(inp.name)
             # This may be driven, so let's do this:
-            if do_prints: print (value)
             if (isinstance(value, tuple)):
                 raise RuntimeError(f"The custom property type is not supported: {self}")
             if (isinstance(value, MantisDriver)):
                 # the value should be the default for its socket...
-                if do_prints: print (type(self.parameters[inp.name]))
                 type_val_map = {
                     str:"",
                     bool:False,
@@ -518,15 +509,12 @@ class xFormBone(xFormNode):
                 raise RuntimeError("Could not set value of custom parameter")
                 # it creates a more confusing error later sometimes, better to catch it here.
 
-            #TODO important
-            #from rna_prop_ui import rna_idprop_ui_create
-            # use this ^
-
+            prRed(name)
             pb[name] = value
             ui_data = pb.id_properties_ui(name)
             description = ''
             if hasattr(inp, 'description'):
-                description = int.description 
+                description = inp.description
                 # i am assuming there was a reason I was not already taking inp.description
                 # So guard it a little here just to be safe and not change things too much.
             ui_data.update(
