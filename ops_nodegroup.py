@@ -22,6 +22,16 @@ def any_tree_poll(context):
         return True
     return False
 
+def tag_mantis_node_for_update(context, node):
+    if any_tree_poll(context):
+        from .base_definitions import get_signature_from_edited_tree
+        node_tree = context.space_data.path[0].node_tree
+        mantis_node = node_tree.parsed_tree.get(
+                    get_signature_from_edited_tree(node, context))
+        if mantis_node is None:
+            node_tree.hash = ''
+        else:
+            mantis_node.reset_execution_recursive() # tag this as a change.
 #########################################################################3
 
 class MantisGroupNodes(Operator):
@@ -119,7 +129,7 @@ class MantisGroupNodes(Operator):
         finally: # MAKE SURE to turn it back to not exporting
             for path_item in context.space_data.path:
                 path_item.node_tree.is_exporting = False
-        
+
         grp_node.node_tree.name = "Group_Node.000"
         return {'FINISHED'}
 
@@ -211,7 +221,7 @@ class MantisNewNodeTree(Operator):
         self.tree_invoked = context.node.id_data.name
         self.node_invoked = context.node.name
         return self.execute(context)
-        
+
     def execute(self, context):
         node = bpy.data.node_groups[self.tree_invoked].nodes[self.node_invoked]
         if node.bl_idname == "MantisSchemaGroup":
@@ -264,9 +274,9 @@ class ExecuteNodeTree(Operator):
     def execute(self, context):
         from time import time
         from .utilities import wrapGreen
-        
+
         tree=context.space_data.path[0].node_tree
-        
+
         import cProfile
         from os import environ
         start_time = time()
@@ -377,7 +387,7 @@ class ConnectNodeToInput(Operator):
         # we use active_node here ^ because we are comparing the active node to the selection.
         wm = context.window_manager
         return wm.invoke_props_dialog(self)
-    
+
     def execute(self, context):
         if context.space_data.node_tree.bl_idname == 'ShaderNodeTree':
             if context.space_data.shader_type == 'WORLD':
@@ -430,7 +440,7 @@ class QueryNodeSockets(Operator):
         active_node = context.active_node
         tree = active_node.id_data
         for node in tree.nodes:
-            if not node.select: continue 
+            if not node.select: continue
         return {"FINISHED"}
 
 class FoceUpdateGroup(Operator):
@@ -526,7 +536,7 @@ ePropertyType =(
         ('STRING', "String" , "String" , 4),
         #('ENUM'  , "Enum"   , "Enum"   , 5),
     )
-    
+
 
 from .base_definitions import xFormNode
 
@@ -544,26 +554,26 @@ class AddCustomProperty(bpy.types.Operator):
         description="Type of data for new Property",
         default = 'BOOL',)
     prop_name  : bpy.props.StringProperty(default='Prop')
-    
+
     min:bpy.props.FloatProperty(default = 0)
     max:bpy.props.FloatProperty(default = 1)
     soft_min:bpy.props.FloatProperty(default = 0)
     soft_max:bpy.props.FloatProperty(default = 1)
     description:bpy.props.StringProperty(default = "")
-    
+
     tree_invoked : bpy.props.StringProperty(options ={'HIDDEN'})
     node_invoked : bpy.props.StringProperty(options ={'HIDDEN'})
 
     @classmethod
     def poll(cls, context):
-        return True #( hasattr(context, 'node') ) 
+        return True #( hasattr(context, 'node') )
 
     def invoke(self, context, event):
         self.tree_invoked = context.node.id_data.name
         self.node_invoked = context.node.name
         wm = context.window_manager
         return wm.invoke_props_dialog(self)
-        
+
     def execute(self, context):
         n = bpy.data.node_groups[self.tree_invoked].nodes[self.node_invoked]
         # For whatever reason, context.node doesn't exist anymore
@@ -604,7 +614,7 @@ class AddCustomProperty(bpy.types.Operator):
         new_prop.description = self.description
         # now do the output
         n.outputs.new( socktype, self.prop_name)
-        
+        tag_mantis_node_for_update(context, n)
         return {'FINISHED'}
 
 def main_get_existing_custom_properties(operator, context):
@@ -614,7 +624,7 @@ def main_get_existing_custom_properties(operator, context):
         if 'Parameter' in inp.bl_idname:
             ret.append( (inp.identifier, inp.name, "Custom Property to Modify", i := i + 1), )
     return ret
-            
+
 
 class EditCustomProperty(bpy.types.Operator):
     """Edit Custom Property"""
@@ -640,20 +650,20 @@ class EditCustomProperty(bpy.types.Operator):
     soft_min:bpy.props.FloatProperty(default = 0)
     soft_max:bpy.props.FloatProperty(default = 1)
     description:bpy.props.StringProperty(default = "") # TODO: use getters to fill these automatically
-    
+
     tree_invoked : bpy.props.StringProperty(options ={'HIDDEN'})
     node_invoked : bpy.props.StringProperty(options ={'HIDDEN'})
 
     @classmethod
     def poll(cls, context):
-        return True #( hasattr(context, 'node') ) 
+        return True #( hasattr(context, 'node') )
 
     def invoke(self, context, event):
         self.tree_invoked = context.node.id_data.name
         self.node_invoked = context.node.name
         wm = context.window_manager
         return wm.invoke_props_dialog(self)
-        
+
     def execute(self, context):
         n = bpy.data.node_groups[self.tree_invoked].nodes[self.node_invoked]
         prop = n.inputs.get( self.prop_edit )
@@ -666,6 +676,7 @@ class EditCustomProperty(bpy.types.Operator):
                     prop.soft_min = self.soft_min
                     prop.soft_max = self.soft_max
                 prop.description = self.description
+            tag_mantis_node_for_update(context, n)
             return {'FINISHED'}
         else:
             self.report({'ERROR_INVALID_INPUT'}, "Cannot edit a property that does not exist.")
@@ -680,7 +691,7 @@ class RemoveCustomProperty(bpy.types.Operator):
 
     def get_existing_custom_properties(self, context):
         return main_get_existing_custom_properties(self, context)
-    
+
     prop_remove : bpy.props.EnumProperty(
         items=get_existing_custom_properties,
         name="Property to remove?",
@@ -705,7 +716,7 @@ class RemoveCustomProperty(bpy.types.Operator):
         #  for whatever reason I can't use tree_invoked there
         wm = context.window_manager
         return wm.invoke_props_dialog(self)
-        
+
     def execute(self, context):
         n = bpy.data.node_groups[self.tree_invoked].nodes[self.node_invoked]
         # For whatever reason, context.node doesn't exist anymore
@@ -728,6 +739,7 @@ class RemoveCustomProperty(bpy.types.Operator):
             raise RuntimeError("This should not happen!")
         n.inputs.remove ( n.inputs [i] )
         n.outputs.remove( n.outputs[j] )
+        tag_mantis_node_for_update(context, n)
         return {'FINISHED'}
 
 
@@ -739,7 +751,7 @@ class FcurveAddKeyframeInput(bpy.types.Operator):
     bl_idname = "mantis.fcurve_node_add_kf"
     bl_label = "Add Keyframe"
     bl_options = {'INTERNAL', 'REGISTER', 'UNDO'}
-    
+
     @classmethod
     def poll(cls, context):
         return (hasattr(context, 'active_node') )
@@ -754,7 +766,7 @@ class FcurveRemoveKeyframeInput(bpy.types.Operator):
     bl_idname = "mantis.fcurve_node_remove_kf"
     bl_label = "Remove Keyframe"
     bl_options = {'INTERNAL', 'REGISTER', 'UNDO'}
-        
+
     @classmethod
     def poll(cls, context):
         return (hasattr(context, 'active_node') )
@@ -769,7 +781,7 @@ class DriverAddDriverVariableInput(bpy.types.Operator):
     bl_idname = "mantis.driver_node_add_variable"
     bl_label = "Add Driver Variable"
     bl_options = {'INTERNAL', 'REGISTER', 'UNDO'}
-    
+
     @classmethod
     def poll(cls, context):
         return (hasattr(context, 'active_node') )
@@ -785,7 +797,7 @@ class DriverRemoveDriverVariableInput(bpy.types.Operator):
     bl_idname = "mantis.driver_node_remove_variable"
     bl_label = "Remove Driver Variable"
     bl_options = {'INTERNAL', 'REGISTER', 'UNDO'}
-        
+
     @classmethod
     def poll(cls, context):
         return (hasattr(context, 'active_node') )
@@ -794,13 +806,13 @@ class DriverRemoveDriverVariableInput(bpy.types.Operator):
         n = context.node
         n.inputs.remove(n.inputs[-1])
         return {'FINISHED'}
-        
+
 class LinkArmatureAddTargetInput(bpy.types.Operator):
     """Add a Driver Variable input to the Driver node"""
     bl_idname = "mantis.link_armature_node_add_target"
     bl_label = "Add Target"
     bl_options = {'INTERNAL', 'REGISTER', 'UNDO'}
-    
+
     @classmethod
     def poll(cls, context):
         return hasattr(context, 'node')
@@ -817,7 +829,7 @@ class LinkArmatureRemoveTargetInput(bpy.types.Operator):
     bl_idname = "mantis.link_armature_node_remove_target"
     bl_label = "Remove Target"
     bl_options = {'INTERNAL', 'REGISTER', 'UNDO'}
-        
+
     @classmethod
     def poll(cls, context):
         return hasattr(context, 'node')
@@ -851,7 +863,7 @@ class CollectionAddNewOutput(bpy.types.Operator):
         context.node.select = True
         wm = context.window_manager
         return wm.invoke_props_dialog(self)
-    
+
     def execute(self, context):
         if not self.collection_name:
             return {'CANCELLED'}
@@ -898,7 +910,7 @@ class CollectionRemoveOutput(bpy.types.Operator):
         t.nodes.active = context.node
         context.node.select = True
         return self.execute(context)
-    
+
     def execute(self, context):
         n = bpy.data.node_groups[self.tree_invoked].nodes[self.node_invoked]
         s = None
@@ -956,7 +968,7 @@ class B4_4_0_Workaround_NodeTree_Interface_Update(Operator):
         # we use active_node here ^ because we are comparing the active node to the selection.
         wm = context.window_manager
         return wm.invoke_props_dialog(self)
-    
+
     def execute(self, context):
         tree = bpy.data.node_groups[self.tree_invoked]
         in_out = 'OUTPUT' if self.output else 'INPUT'
@@ -965,7 +977,7 @@ class B4_4_0_Workaround_NodeTree_Interface_Update(Operator):
         # because updating the interface triggers a depsgraph update.
         # this doesn't actually work though...TODO
         if tree.bl_idname == "MantisTree":
-            tree.prevent_next_exec=True 
+            tree.prevent_next_exec=True
         return {"FINISHED"}
 
 
@@ -988,7 +1000,7 @@ class ConvertBezierCurveToNURBS(Operator):
                 bez.append(spl)
         for bez_spline in bez:
             new_spline=nurbs_copy_bez_spline(curve, bez_spline)
-            
+
             curve.data.splines.remove(bez_spline)
         return {"FINISHED"}
 
@@ -1033,7 +1045,7 @@ class ImportFromComponentLibrary(Operator):
 
     def execute(self, context):
         return {"FINISHED"}
-    
+
 
 # this has to be down here for some reason. what a pain
 classes = [

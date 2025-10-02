@@ -509,7 +509,6 @@ class xFormBone(xFormNode):
                 raise RuntimeError("Could not set value of custom parameter")
                 # it creates a more confusing error later sometimes, better to catch it here.
 
-            prRed(name)
             pb[name] = value
             ui_data = pb.id_properties_ui(name)
             description = ''
