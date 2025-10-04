@@ -28,8 +28,7 @@ def reset_object_data(ob):
 def get_parent_node(mantis_node, type = 'XFORM'):
     # type variable for selecting whether to get either
     #   the parent xForm  or the inheritance node
-    node_line, socket = trace_single_line(mantis_node, "Relationship")
-    parent_mantis_node = None
+    node_line, _last_socket = trace_single_line(mantis_node, "Relationship")
     for i in range(len(node_line)):
         # check each of the possible parent types.
         if ( (node_line[ i ].__class__.__name__ == 'LinkInherit') ):
@@ -499,9 +498,6 @@ class xFormBone(xFormNode):
             try:
                 if (custom_handle := self.evaluate_input("BBone Custom Start Handle")):
                     b.bbone_custom_handle_start = self.bGetParentArmature().data.bones[custom_handle]
-                # hypothetically we should support xForm inputs.... but we won't do that for now
-                # elif custom_handle is None:
-                #     b.bbone_custom_handle_start = self.inputs["BBone Custom Start Handle"].links[0].from_node.bGetObject().name
                 if (custom_handle := self.evaluate_input("BBone Custom End Handle")):
                     b.bbone_custom_handle_end = self.bGetParentArmature().data.bones[custom_handle]
             except KeyError:
@@ -875,8 +871,11 @@ class xFormCurvePin(xFormNode):
         for socket_name in ["Curve Pin Factor", "Forward Axis","Up Axis",]:
             if self.inputs.get(socket_name) is None: continue # in case it has been bypassed
             if self.inputs[socket_name].is_linked:
-                link = self.inputs[socket_name].links[0]
-                driver = link.from_node
+                node_line, _last_socket = trace_single_line(self, socket_name)
+                driver = None
+                for other_node in node_line:
+                    if other_node.node_type == 'DRIVER':
+                        driver = other_node; break
                 if isinstance(driver, UtilityDriver):
                     prop_amount = driver.evaluate_input("Property")
                 elif isinstance(driver, UtilitySwitch):

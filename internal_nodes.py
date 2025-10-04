@@ -1,6 +1,6 @@
 from .node_common import *
 from bpy.types import Node
-from .base_definitions import MantisNode
+from .base_definitions import MantisNode, MantisSocketTemplate
 from uuid import uuid4
 
 class DummyNode(MantisNode):
@@ -41,8 +41,8 @@ class NoOpNode(MantisNode):
         self.init_parameters()
         self.set_traverse([("Input", "Output")])
         self.node_type = 'UTILITY'
-        self.prepared = True
-        self.executed = True
+        self.prepared, self.executed = True, True
+        self.execution_prepared=True
     # this node is useful for me to insert in the tree and use for debugging especially connections.
 
 class AutoGenNode(MantisNode):
@@ -50,7 +50,25 @@ class AutoGenNode(MantisNode):
         super().__init__(signature, base_tree)
         self.node_type = 'UTILITY'
         self.prepared, self.executed = True, True
-    
+        self.execution_prepared=True
+
     def reset_execution(self):
         super().reset_execution()
         self.prepared, self.executed = True, True
+
+
+# The Group Interface node is responsible for gathering node connections
+#   going in or out of the group and connecting back out the other side
+# this is also where caching and overlays live
+class GroupInterface(MantisNode):
+    def __init__(self, signature, base_tree, ui_node, in_out):
+        super().__init__(signature, base_tree)
+        self.node_type = 'UTILITY'
+        self.prepared, self.executed = True, True; sockets = []
+        self.in_out = in_out
+        # init the sockets based on in/out, then set up traversal
+        collection = ui_node.inputs if in_out == 'INPUT' else ui_node.outputs
+        for socket in collection: sockets.append(socket.identifier)
+        self.inputs.init_sockets(sockets); self.outputs.init_sockets(sockets)
+        for socket in self.inputs.keys(): self.set_traverse( [(socket, socket)] )
+        self.execution_prepared=True

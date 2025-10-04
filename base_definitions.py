@@ -14,6 +14,7 @@ from .utilities import get_socket_maps, relink_socket_map, do_relink
 from .mantis_dataclasses import MantisSocketTemplate
 
 FLOAT_EPSILON=0.0001 # used to check against floating point inaccuracy
+links_sort_key= lambda a : (-a.multi_input_sort_id, -a.sub_sort_id)
 
 def TellClasses():
     #Why use a function to do this? Because I don't need every class to register.
@@ -80,12 +81,16 @@ def hash_tree(tree):
     links.sort(); hash_data+=''.join(links)
     return hash(hash_data)
 
+MANTIS_VERSION_MAJOR=0
+MANTIS_VERSION_MINOR=13
+MANTIS_VERSION_SUB=0
+
 class MantisTree(NodeTree):
     '''A custom node tree type that will show up in the editor type list'''
     bl_idname = 'MantisTree'
     bl_label = "Rigging Nodes"
     bl_icon = 'OUTLINER_OB_ARMATURE'
-    
+
     tree_valid:BoolProperty(default=False)
     hash:StringProperty(default='')
     do_live_update:BoolProperty(default=True) # use this to disable updates for e.g. scripts
@@ -98,21 +103,22 @@ class MantisTree(NodeTree):
     is_exporting:BoolProperty(default=False)
     execution_id:StringProperty(default='')
     # prev_execution_id:StringProperty(default='')
-    mantis_version:IntVectorProperty(default=[0,9,2])
+    mantis_version:IntVectorProperty(default=[
+        MANTIS_VERSION_MAJOR, MANTIS_VERSION_MINOR, MANTIS_VERSION_SUB])
     # this prevents the node group from executing on the next depsgraph update
     # because I don't always have control over when the dg upadte happens.
     prevent_next_exec:BoolProperty(default=False)
 
     #added to work around a bug in 4.5.0 LTS
     interface_helper : StringProperty(default='')
-    
+
     parsed_tree={}
 
     if (bpy.app.version < (4, 4, 0) or bpy.app.version >= (4,5,0)):  # in 4.4 this leads to a crash
         @classmethod
         def valid_socket_type(cls : NodeTree, socket_idname: str):
             return valid_interface_types(cls, socket_idname)
-    
+
     def update(self): # set the reroute colors
         if (bpy.app.version >= (4,4,0)):
             fix_reroute_colors(self)
@@ -156,7 +162,7 @@ class MantisTree(NodeTree):
                 except Exception as e:
                     print("Node \"%s\" failed to update display with error: %s" %(wrapGreen(node.name), wrapRed(e)))
         self.is_executing = False
-        
+
         # TODO: deal with invalid links properly.
         #    - Non-hierarchy links should be ignored in the circle-check and so the links should be marked valid in such a circle
         #    - hierarchy-links should be marked invalid and prevent the tree from executing.
@@ -190,7 +196,8 @@ class SchemaTree(NodeTree):
     is_executing:BoolProperty(default=False)
     is_exporting:BoolProperty(default=False)
 
-    mantis_version:IntVectorProperty(default=[0,9,2])
+    mantis_version:IntVectorProperty(default=[
+        MANTIS_VERSION_MAJOR, MANTIS_VERSION_MINOR, MANTIS_VERSION_SUB])
     # see the note in MantisTree
     interface_helper : StringProperty(default='')
 
@@ -219,7 +226,7 @@ class MantisUINode:
     @classmethod
     def poll(cls, ntree):
         return (ntree.bl_idname in ['MantisTree', 'SchemaTree'])
-                
+
     @classmethod
     def set_mantis_class(self):
         from importlib import import_module
@@ -243,7 +250,7 @@ class MantisUINode:
                     node_tree.num_links+=1
                 elif (link.to_socket.is_multi_input):
                     node_tree.num_links+=1
-    
+
     def init_sockets(self, socket_templates : tuple[MantisSocketTemplate]):
         for template in socket_templates:
             collection = self.outputs
@@ -269,7 +276,7 @@ class MantisUINode:
                 #   responsibility to send the right type.
             if template.use_multi_input: # this is an array
                 socket.display_shape = 'SQUARE_DOT'
-            
+
 class SchemaUINode(MantisUINode):
     mantis_node_library='.schema_nodes'
     is_updating:BoolProperty(default=False)
@@ -282,7 +289,7 @@ class LinkNode(MantisUINode):
     @classmethod
     def poll(cls, ntree):
         return (ntree.bl_idname in ['MantisTree', 'SchemaTree'])
-    
+
 class xFormNode(MantisUINode):
     mantis_node_library='.xForm_nodes'
     @classmethod
@@ -371,11 +378,11 @@ def node_group_update(node, force = False):
                 if update_input: continue # done here
                 if s.bl_idname != item.bl_socket_idname: update_input = True; continue
             else: update_input = True; continue
-    
+
     # Schema has an extra input for Length and for Extend.
     if node.bl_idname == 'MantisSchemaGroup':
         found_in.extend(['Schema Length', ''])
-    
+
     # get the socket maps before modifying stuff
     if update_input or update_output:
         socket_maps = get_socket_maps(node,)
@@ -388,7 +395,7 @@ def node_group_update(node, force = False):
             # We have to initialize the node because it only has its base inputs.
         elif socket_maps is None:
             node.id_data.do_live_update = toggle_update
-    
+
     # if we have too many elements, just get rid of the ones we don't need
     if len(node.inputs) > len(found_in):#
         for inp in node.inputs:
@@ -424,7 +431,7 @@ def node_group_update(node, force = False):
                     remove_me.append(socket)
             while remove_me:
                 node.inputs.remove(remove_me.pop())
-            
+
         if update_output:
             remove_me=[]
             for socket in node.outputs:
@@ -448,18 +455,18 @@ def node_group_update(node, force = False):
             reorder_collection = reorder_me_input if is_input else reorder_me_output
             if socket_map:
                 if item.identifier in socket_map.keys():
-                    socket = relink_socket_map_add_socket(node, socket_collection, item)
+                    socket = relink_socket_map_add_socket(node, socket_collection, item, item.in_out)
                     do_relink(node, socket, socket_map, item.in_out)
                 else:
                     for has_socket in socket_collection:
                         if has_socket.bl_idname == item.bl_socket_idname and \
-                            has_socket.name == item.name:
+                                has_socket.name == item.name:
                             reorder_collection.append((has_socket, counter))
                             break
                     else:
-                        socket = relink_socket_map_add_socket(node, socket_collection, item)
+                        socket = relink_socket_map_add_socket(node, socket_collection, item, item.in_out)
             else:
-                socket = relink_socket_map_add_socket(node, socket_collection, item)
+                socket = relink_socket_map_add_socket(node, socket_collection, item, item.in_out)
             counter += 1
 
         # TODO: de-duplicate this hideous stuff
@@ -485,7 +492,7 @@ def node_group_update(node, force = False):
                         if exists.identifier == item.identifier:
                             break
                     else:
-                        update_group_sockets(item, True)
+                        update_group_sockets(item, False)
                 else:
                     update_group_sockets(item, False)
                 output_index += 1
@@ -548,10 +555,10 @@ class MantisNodeGroup(Node, MantisUINode):
             return "Node Group"
         else:
             return self.node_tree.name
-    
+
     def draw_buttons(self, context, layout):
         group_draw_buttons(self, context, layout)
-        
+
     def update(self):
         if self.node_tree is None:
             return
@@ -586,7 +593,7 @@ def poll_node_tree_schema(self, object):
 class SchemaGroup(Node, MantisUINode):
     bl_idname = "MantisSchemaGroup"
     bl_label = "Node Schema"
-    
+
     node_tree:PointerProperty(type=NodeTree, poll=poll_node_tree_schema, update=node_tree_prop_update,)
     is_updating:BoolProperty(default=False)
 
@@ -598,7 +605,7 @@ class SchemaGroup(Node, MantisUINode):
             return "Schema Group"
         else:
             return self.node_tree.name
-        
+
     def update(self):
         if self.is_updating: # update() can be called from update() and that leads to an infinite loop.
             return           # so we check if an update is currently running.
@@ -720,7 +727,7 @@ class MantisNode:
     @property
     def name(self):
         return self.ui_signature[-1]
-    
+
     @property
     def bl_idname(self): # this and the above exist solely to maintain interface w/bpy.types.Node
         from .utilities import get_ui_node
@@ -743,7 +750,7 @@ class MantisNode:
             self.parameters[socket.name] = None
         for key, value in additional_parameters.items():
             self.parameters[key]=value
-    
+
     def gen_property_socket_map(self) -> dict:
         props_sockets = {}
         for s_template in self.socket_templates:
@@ -755,7 +762,7 @@ class MantisNode:
                 for index, sub_prop in enumerate(s_template.blender_property):
                     props_sockets[sub_prop]=( (s_template.name, index),s_template.default_value[index] )
         return props_sockets
-    
+
     def set_traverse(self, traversal_pairs = [(str, str)]) -> None:
         for (a, b) in traversal_pairs:
             self.inputs[a].set_traverse_target(self.outputs[b])
@@ -772,12 +779,12 @@ class MantisNode:
             inp.flush_links()
         for out in self.outputs.values():
             out.flush_links()
-    
+
     def update_socket_value(self, blender_property, value) -> bool:
         change_handled=False
         if self.node_type == 'LINK':
             if len(self.bObject) == 0: # - there are no downstream xForms
-                return True # so there is nothing to do here 
+                return True # so there is nothing to do here
             for b_ob in self.bObject:
                 try:
                     setattr(b_ob, blender_property, value)
@@ -827,7 +834,7 @@ class MantisNode:
                             change_handled=False
                 break # we don't have to look through any more socket templates
         return change_handled
-    
+
     # the goal here is to tag the node as unprepared
     # but some nodes are always prepared, so we have to kick it forward.
     def reset_execution_recursive(self):
@@ -835,7 +842,7 @@ class MantisNode:
         if self.prepared==False: return # all good from here
         for conn in self.hierarchy_connections:
             conn.reset_execution_recursive()
-    
+
     def evaluate_input(self, input_name, index=0)  -> Any:
         from .node_common import trace_single_line
         if not (self.inputs.get(input_name)): # get the named parameter if there is no input
@@ -845,12 +852,12 @@ class MantisNode:
         trace = trace_single_line(self, input_name, index)
         prop = trace[0][-1].parameters[trace[1].name] #trace[0] = the list of traced nodes; read its parameters
         return prop
-    
+
     def fill_parameters(self, ui_node=None)  -> None:
         from .utilities import get_ui_node
         from .node_common import get_socket_value
         if not ui_node:
-            if ( (self.signature[0] in  ["MANTIS_AUTOGENERATED", "SCHEMA_AUTOGENERATED" ]) or 
+            if ( (self.signature[0] in  ["MANTIS_AUTOGENERATED", "SCHEMA_AUTOGENERATED" ]) or
                 (self.signature[-1] in ["NodeGroupOutput", "NodeGroupInput"]) ): # I think this is harmless
                 return None
             else: # BUG shouldn't this use ui_signature??
@@ -886,7 +893,6 @@ class MantisNode:
            nodes are discovered, the method is called by each node in dependency order.
            The first argument MUST be the name of the method as a string.
         """
-        prGreen(self)
         if args[0] == 'call_on_all_ancestors': raise RuntimeError("Very funny!")
         from .utilities import get_all_dependencies
         from collections import deque
@@ -897,7 +903,6 @@ class MantisNode:
         solved = set()
         while can_solve:
             node = can_solve.pop()
-            print(node)
             method = getattr(node, args[0])
             method(*args[0:], **kwargs)
             solved.add(node)
@@ -905,7 +910,7 @@ class MantisNode:
             if self in solved:
                 break
         return
-    
+
     # gets targets for constraints and deformers and should handle all cases
     def get_target_and_subtarget(self, constraint_or_deformer, input_name = "Target"):
         from bpy.types import PoseBone, Object, SplineIKConstraint
@@ -917,7 +922,7 @@ class MantisNode:
                 else:
                     name = 'NAME NOT FOUND'
                 prRed(f"No {input_name} target found for {name} in {self} because there is no connected node, or node is wrong type")
-                return 
+                return
             if (isinstance(target.bGetObject(), PoseBone)):
                 subtarget = target.bGetObject().name
                 target = target.bGetParentArmature()
@@ -925,7 +930,7 @@ class MantisNode:
                 target = target.bGetObject()
             else:
                 raise RuntimeError("Cannot interpret constraint or deformer target!")
-        
+
         if   (isinstance(constraint_or_deformer, SplineIKConstraint)):
                 if target and target.type not in ["CURVE"]:
                     raise GraphError(wrapRed("Error: %s requires a Curve input, not %s" %
@@ -952,12 +957,12 @@ class MantisNode:
         return
     def bModifierApply(self, bContext=None):
         return
-    
+
     if environ.get("DOERROR"):
-        def __repr__(self): 
+        def __repr__(self):
             return self.signature.__repr__()
     else:
-        def __repr__(self): 
+        def __repr__(self):
             return self.ui_signature.__repr__()
 
 # do I need this and the link class above?
@@ -993,8 +998,8 @@ class NodeLink:
     from_socket = None
     to_node = None
     to_socket = None
-    
-    def __init__(self, from_node, from_socket, to_node, to_socket, multi_input_sort_id=0):
+
+    def __init__(self, from_node, from_socket, to_node, to_socket, multi_input_sort_id=0, sub_sort_id=0):
         if from_node.signature == to_node.signature:
             raise RuntimeError("Cannot connect a node to itself.")
         self.from_node = from_node
@@ -1003,11 +1008,12 @@ class NodeLink:
         self.to_socket = to_socket
         self.from_node.outputs[self.from_socket].links.append(self)
         # it is the responsibility of the node that uses these links to sort them correctly based on the sort_id
-        self.multi_input_sort_id = multi_input_sort_id
+        self.multi_input_sort_id = multi_input_sort_id # this is the sort_id of the link in the UI
+        self.sub_sort_id = sub_sort_id # this is for sorting within a  bundled link (one link in the UI)
         self.to_node.inputs[self.to_socket].links.append(self)
         self.is_hierarchy = detect_hierarchy_link(from_node, from_socket, to_node, to_socket,)
         self.is_alive = True
-    
+
     def __repr__(self):
         return self.from_node.outputs[self.from_socket].__repr__() + " --> " + self.to_node.inputs[self.to_socket].__repr__()
         # link_string =   # if I need to colorize output for debugging.
@@ -1015,12 +1021,12 @@ class NodeLink:
         #     return wrapOrange(link_string)
         # else:
         #     return wrapWhite(link_string)
-    
+
     def die(self):
         self.is_alive = False
         self.to_node.inputs[self.to_socket].flush_links()
         self.from_node.outputs[self.from_socket].flush_links()
-    
+
     def insert_node(self, middle_node, middle_node_in, middle_node_out, re_init_hierarchy = True):
         to_node = self.to_node
         to_socket = self.to_socket
@@ -1038,7 +1044,7 @@ class NodeSocket:
     # @property # this is a read-only property.
     # def is_linked(self):
     #     return bool(self.links)
-        
+
     def __init__(self, is_input = False,
                  node = None, name = None,
                  traverse_target = None):
@@ -1051,8 +1057,8 @@ class NodeSocket:
         self.is_linked = False
         if (traverse_target):
             self.can_traverse = True
-        
-    def connect(self, node, socket, sort_id=0):
+
+    def connect(self, node, socket, sort_id=0, sub_sort_id=0):
         if  (self.is_input):
             to_node   = self.node; from_node = node
             to_socket = self.name; from_socket = socket
@@ -1069,9 +1075,10 @@ class NodeSocket:
                 from_socket,
                 to_node,
                 to_socket,
-                sort_id)
+                sort_id,
+                sub_sort_id)
         return new_link
-    
+
     def set_traverse_target(self, traverse_target):
         self.traverse_target = traverse_target
         if traverse_target: self.can_traverse = True
@@ -1080,14 +1087,14 @@ class NodeSocket:
     def flush_links(self):
         """ Removes dead links from this socket."""
         self.links = [l for l in self.links if l.is_alive]
-        self.links.sort(key=lambda a : -a.multi_input_sort_id)
+        self.links.sort(key=links_sort_key)
         self.is_linked = bool(self.links)
-        
+
     @property
     def is_connected(self):
         return len(self.links)>0
-    
-    
+
+
     def __repr__(self):
         return self.node.__repr__() + "::" + self.name
 
@@ -1095,7 +1102,7 @@ class MantisNodeSocketCollection(dict):
     def __init__(self, node, is_input=False):
         self.is_input = is_input
         self.node = node
-    
+
     def init_sockets(self, sockets):
         for socket in sockets:
             if isinstance(socket, str):
@@ -1105,15 +1112,14 @@ class MantisNodeSocketCollection(dict):
                 self[socket.name] = NodeSocket(is_input=self.is_input, name=socket.name, node=self.node)
             else:
                 raise RuntimeError(f"NodeSocketCollection keys must be str or MantisSocketTemplate, not {type(socket)}")
-            
+
     def __delitem__(self, key):
         """Deletes a node socket by name, and all its links."""
         socket = self[key]
         for l in socket.links:
             l.die()
         super().__delitem__(key)
-    
+
     def __iter__(self):
         """Makes the class iterable"""
         return iter(self.values())
-

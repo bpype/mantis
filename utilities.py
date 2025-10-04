@@ -247,6 +247,27 @@ def do_relink(node, socket, map, in_out='INPUT', parent_name = ''):
             except (AttributeError, ValueError): # must be readonly or maybe it doesn't have a d.v.
                 pass
 
+def read_schema_type(interface_item):
+    # VERSIONING CODE
+    tree=interface_item.id_data
+    version = tree.mantis_version
+    old_version = False
+    if  version[0] == 0: 
+        if version[1] < 13: old_version = True
+    # unfortunately we need to check this stuff for the versioning code to run correctly the first time.
+    # UNLESS I can find a way to prevent this code from running before versioning
+
+    if old_version or (not hasattr(interface_item, 'is_array')):
+        # it is not a custom interface class and/or the file is old.
+        if interface_item.parent:
+            return interface_item.parent.name
+    else:
+        if interface_item.is_array:
+            return 'Array'
+        if interface_item.is_connection:
+            return 'Connection'
+    return 'Constant'
+
 def update_interface(interface, name, in_out, sock_type, parent_name):
     from bpy.app import version as bpy_version
     if parent_name:
@@ -268,26 +289,40 @@ def update_interface(interface, name, in_out, sock_type, parent_name):
 
 # D.node_groups['Rigging Nodes'].interface.new_socket('beans', description='the b word', socket_type='NodeSocketGeometry')
 #UGLY BAD REFACTOR
-def relink_socket_map_add_socket(node, socket_collection, item, in_out=None,):
+def relink_socket_map_add_socket(node, socket_collection, item,  in_out=None,):
     from bpy.app import version as bpy_version
-    if not in_out: in_out=item.in_out
-    if node.bl_idname in ['MantisSchemaGroup'] and item.parent and item.parent.name == 'Array':
-        multi = True if in_out == 'INPUT' else False
-        # have to work around a bug in 4.5.0 that prevents me from declaring custom socket types
-        # I have arbitrarily chosen to use the NodeSocketGeometry type to signal that this one is affected.
-        if bpy_version == (4, 5, 0) and item.bl_socket_idname == 'NodeSocketGeometry':
-            from .versioning import socket_add_workaround_for_4_5_0_LTS
-            s = socket_add_workaround_for_4_5_0_LTS(item, socket_collection, multi)
-        else:
-            s = socket_collection.new(type=item.bl_socket_idname, name=item.name, identifier=item.identifier,  use_multi_input=multi)
+    # if not in_out: in_out=item.in_out
+    multi=False
+    if in_out == 'INPUT' and read_schema_type(item) == 'Array':
+        multi = True
+    # have to work around a bug in 4.5.0 that prevents me from declaring custom socket types
+    # I have arbitrarily chosen to use the NodeSocketGeometry type to signal that this one is affected.
+    if bpy_version == (4, 5, 0) and item.bl_socket_idname == 'NodeSocketGeometry':
+        from .versioning import socket_add_workaround_for_4_5_0_LTS
+        s = socket_add_workaround_for_4_5_0_LTS(item, socket_collection, multi)
     else:
-        if bpy_version == (4, 5, 0) and item.bl_socket_idname == 'NodeSocketGeometry':
-            from .versioning import socket_add_workaround_for_4_5_0_LTS
-            s = socket_add_workaround_for_4_5_0_LTS(item, socket_collection, multi=False,)
-        else:
-            s = socket_collection.new(type=item.bl_socket_idname, name=item.name, identifier=item.identifier)
-    if item.parent.name == 'Array': s.display_shape = 'SQUARE_DOT'
-    elif item.parent.name == 'Constant': s.display_shape='CIRCLE_DOT'
+        s = socket_collection.new(type=item.bl_socket_idname, name=item.name, identifier=item.identifier,  use_multi_input=multi)
+    if hasattr(s, 'default_value') and hasattr(s, 'is_valid_interface_type') and \
+          s.is_valid_interface_type == True:
+        if s.bl_idname not in ['MatrixSocket']: # no default value implemented
+            from bpy.types import bpy_prop_array
+            from mathutils import Vector
+            default_value = 'REPORT BUG ON GITLAB' # default to bug string
+            val_type = type(s.default_value) # why tf can't I match/case here?
+            if val_type is bool: default_value = item.default_bool
+            if val_type is int: default_value = item.default_int
+            if val_type is float: default_value = item.default_float
+            if val_type is Vector: default_value = item.default_vector
+            if val_type is str: default_value = item.default_string
+            if val_type is bpy_prop_array: default_value = item.default_bool_vector
+            s.default_value = default_value
+
+    if read_schema_type(item) == 'Array': s.display_shape = 'SQUARE_DOT'
+    elif node.bl_idname in ['MantisSchemaGroup'] and read_schema_type(item) == 'Constant':
+        s.display_shape='CIRCLE_DOT'
+
+    # if item.parent.name == 'Array': s.display_shape = 'SQUARE_DOT'
+    # elif item.parent.name == 'Constant': s.display_shape='CIRCLE_DOT'
     return s
 
 # TODO REFACTOR THIS
@@ -295,9 +330,9 @@ def relink_socket_map_add_socket(node, socket_collection, item, in_out=None,):
 # but I have provided this interface to Mantis
 # I did not follow the Single Responsibility Principle
 # I am now suffering for it, as I rightly deserve.
-def relink_socket_map(node, socket_collection, map, item, in_out=None,):
-    s = relink_socket_map_add_socket(node, socket_collection, item, in_out=None,)
-    do_relink(node, s, map)
+def relink_socket_map(node, socket_collection, map, item, in_out):
+    new_socket = relink_socket_map_add_socket(node, socket_collection, item, in_out,)
+    do_relink(node, new_socket, map, in_out, parent_name=read_schema_type(item))
 
 def unique_socket_name(node, other_socket, tree):
     name_stem = other_socket.bl_label; num=0
@@ -589,7 +624,8 @@ def schema_dependency_handle_item(schema, all_mantis_nodes, item,):
     if item.in_out == 'INPUT':
         dependencies = schema.dependencies
         hierarchy_dependencies = schema.hierarchy_dependencies
-        if item.parent and item.parent.name == 'Array':
+        parent_name = read_schema_type(item)
+        if parent_name == 'Array':
             for schema_idname in ['SchemaArrayInput', 'SchemaArrayInputGet', 'SchemaArrayInputAll']:
                 if (mantis_node := all_mantis_nodes.get( (*schema.signature, schema_idname) )):
                     for to_link in mantis_node.outputs[item.name].links:
@@ -604,7 +640,7 @@ def schema_dependency_handle_item(schema, all_mantis_nodes, item,):
                             if hierarchy:
                                 hierarchy_dependencies.append(from_link.from_node)
                             dependencies.append(from_link.from_node)
-        if item.parent and item.parent.name == 'Constant':
+        if parent_name == 'Constant':
             if mantis_node := all_mantis_nodes.get((*schema.signature, 'SchemaConstInput')):
                 for to_link in mantis_node.outputs[item.name].links:
                     if to_link.to_socket in to_name_filter:
@@ -618,7 +654,7 @@ def schema_dependency_handle_item(schema, all_mantis_nodes, item,):
                         if hierarchy:
                             hierarchy_dependencies.append(from_link.from_node)
                         dependencies.append(from_link.from_node)
-        if item.parent and item.parent.name == 'Connection':
+        if parent_name == 'Connection':
             if mantis_node := all_mantis_nodes.get((*schema.signature, 'SchemaIncomingConnection')):
                 for to_link in mantis_node.outputs[item.name].links:
                     if to_link.to_socket in to_name_filter:

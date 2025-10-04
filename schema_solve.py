@@ -4,7 +4,7 @@ from .utilities import (prRed, prGreen, prPurple, prWhite,
                               wrapOrange,)
 from .utilities import init_connections, init_dependencies, get_link_in_out
 from .base_definitions import (SchemaUINode, custom_props_types, \
-    MantisNodeGroup, SchemaGroup, replace_types, GraphError)
+    MantisNodeGroup, SchemaGroup, replace_types, GraphError, links_sort_key)
 from .node_common import setup_custom_props_from_np
 # a class that solves Schema nodes
 from bpy.types import NodeGroupInput, NodeGroupOutput
@@ -61,7 +61,7 @@ class SchemaSolver:
         # Sort the multi-input nodes in reverse order of ID, this ensures that they are
         #   read in the order they were created
         for inp in self.node.inputs.values():
-            inp.links.sort(key=lambda a : -a.multi_input_sort_id)
+            inp.links.sort(key=links_sort_key)
 
         from bpy.types import NodeGroupInput, NodeGroupOutput
         for ui_node in self.tree.nodes:
@@ -101,9 +101,9 @@ class SchemaSolver:
         """ Sort and store the links to/from the Schema group node."""
         for item in self.tree.interface.items_tree:
             if item.item_type == 'PANEL': continue
-            parent_name='Constant'
-            if item.parent.name != '': # in an "prphan" item this is left blank , it is not None or an AttributeError.
-                parent_name = item.parent.name
+            from .utilities import read_schema_type
+            parent_name = read_schema_type(item)
+            # just gonna try and make the 
             match parent_name:
                 case 'Connection':
                     if item.in_out == 'INPUT':
@@ -386,7 +386,8 @@ class SchemaSolver:
             to_socket_name=ui_link.to_socket.name
             if to_node.node_type in ['DUMMY_SCHEMA']:
                 to_socket_name=ui_link.to_socket.identifier
-            connection = NodeLink(l.from_node, l.from_socket, to_node, to_socket_name, l.multi_input_sort_id)
+            connection = NodeLink(l.from_node, l.from_socket, to_node, to_socket_name,
+                                  l.multi_input_sort_id, l.sub_sort_id)
             to_node.flush_links()
 
     def handle_link_to_constant_output(self, frame_mantis_nodes, index, ui_link,  to_ui_node):

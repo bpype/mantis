@@ -7,7 +7,8 @@ from .utilities import (prRed, prGreen, prPurple, prWhite,
                               wrapOrange,)
 from bpy.props import BoolProperty
 
-from .utilities import get_socket_maps, relink_socket_map, do_relink
+from .utilities import (get_socket_maps, relink_socket_map,
+                        do_relink, read_schema_type)
 
 
 def TellClasses():
@@ -28,7 +29,6 @@ def TellClasses():
 # IMPORTANT TODO:
 # - check what happens when these get plugged into each other
 # - probably disallow all or most of these connections in insert_link or update
-
 
 class SchemaIndex(Node, SchemaUINode):
     '''The current index of the schema execution'''
@@ -66,7 +66,8 @@ class SchemaArrayInput(Node, SchemaUINode):
         self.outputs.clear()
         for item in self.id_data.interface.items_tree:
             if item.item_type == 'PANEL': continue
-            if item.parent and item.in_out == 'INPUT' and item.parent.name == 'Array':
+            parent_name = read_schema_type(item)
+            if item.in_out == 'INPUT' and parent_name == 'Array':
                 relink_socket_map(self, self.outputs, output_map, item, in_out='OUTPUT')
         if '__extend__' in output_map.keys() and output_map['__extend__']:
             do_relink(self, None, output_map, in_out='OUTPUT', parent_name='Array' )
@@ -98,7 +99,8 @@ class SchemaArrayInputAll(Node, SchemaUINode):
         self.outputs.clear()
         for item in self.id_data.interface.items_tree:
             if item.item_type == 'PANEL': continue
-            if item.parent and item.in_out == 'INPUT' and item.parent.name == 'Array':
+            parent_name = read_schema_type(item)
+            if item.in_out == 'INPUT' and parent_name == 'Array':
                 relink_socket_map(self, self.outputs, output_map, item, in_out='OUTPUT')
         if '__extend__' in output_map.keys() and output_map['__extend__']:
             do_relink(self, None, output_map, in_out='OUTPUT', parent_name='Array' )
@@ -132,7 +134,8 @@ class SchemaArrayInputGet(Node, SchemaUINode):
         self.outputs.clear()
         for item in self.id_data.interface.items_tree:
             if item.item_type == 'PANEL': continue
-            if item.parent and item.in_out == 'INPUT' and item.parent.name == 'Array':
+            parent_name = read_schema_type(item)
+            if item.in_out == 'INPUT' and parent_name == 'Array':
                 relink_socket_map(self, self.outputs, output_map, item, in_out='OUTPUT')
         if '__extend__' in output_map.keys() and output_map['__extend__']:
             do_relink(self, None, output_map, in_out='OUTPUT', parent_name='Array' )
@@ -164,7 +167,8 @@ class SchemaArrayOutput(Node, SchemaUINode):
         self.inputs.clear()
         for item in self.id_data.interface.items_tree:
             if item.item_type == 'PANEL': continue
-            if item.parent and item.in_out == 'OUTPUT' and item.parent.name == 'Array':
+            parent_name = read_schema_type(item)
+            if item.in_out == 'OUTPUT' and parent_name == 'Array':
                 relink_socket_map(self, self.inputs, input_map, item, in_out='INPUT')
         if '__extend__' in input_map.keys() and input_map['__extend__']:
             do_relink(self, None, input_map, in_out='INPUT', parent_name='Array' )
@@ -198,7 +202,8 @@ class SchemaConstInput(Node, SchemaUINode):
         self.outputs.clear()
         for item in self.id_data.interface.items_tree:
             if item.item_type == 'PANEL': continue
-            if item.parent and item.in_out == 'INPUT' and item.parent.name == 'Constant':
+            parent_name = read_schema_type(item)
+            if item.in_out == 'INPUT' and parent_name == 'Constant':
                 relink_socket_map(self, self.outputs, output_map, item, in_out='OUTPUT')
         if '__extend__' in output_map.keys() and output_map['__extend__']:
             do_relink(self, None, output_map, in_out='OUTPUT', parent_name='Constant' )
@@ -233,7 +238,8 @@ class SchemaConstOutput(Node, SchemaUINode):
         s = self.inputs.new('UnsignedIntSocket', "Expose at Index")
         for item in self.id_data.interface.items_tree:
             if item.item_type == 'PANEL': continue
-            if item.parent and item.in_out == 'OUTPUT' and item.parent.name == 'Constant':
+            parent_name = read_schema_type(item)
+            if item.in_out == 'OUTPUT' and parent_name == 'Constant':
                 relink_socket_map(self, self.inputs, input_map, item, in_out='INPUT')
         if '__extend__' in input_map.keys() and input_map['__extend__']:
             do_relink(self, None, input_map, in_out='INPUT', parent_name='Constant' )
@@ -271,7 +277,8 @@ class SchemaOutgoingConnection(Node, SchemaUINode):
         self.inputs.clear()
         for item in self.id_data.interface.items_tree:
             if item.item_type == 'PANEL': continue
-            if item.parent and item.in_out == 'OUTPUT' and item.parent.name == 'Connection':
+            parent_name = read_schema_type(item)
+            if item.in_out == 'OUTPUT' and parent_name == 'Connection':
                 relink_socket_map(self, self.inputs, input_map, item, in_out='INPUT')
         if '__extend__' in input_map.keys() and input_map['__extend__']:
             do_relink(self, None, input_map, in_out='INPUT', parent_name='Connection' )
@@ -307,7 +314,8 @@ class SchemaIncomingConnection(Node, SchemaUINode):
         self.outputs.clear()
         for item in self.id_data.interface.items_tree:
             if item.item_type == 'PANEL': continue
-            if item.parent and item.in_out == 'INPUT' and item.parent.name == 'Connection':
+            parent_name = read_schema_type(item)
+            if item.in_out == 'INPUT' and parent_name == 'Connection':
                 relink_socket_map(self, self.outputs, output_map, item, in_out='OUTPUT')
         if '__extend__' in output_map.keys() and output_map['__extend__']:
             do_relink(self, None, output_map, in_out='OUTPUT', parent_name='Connection' )

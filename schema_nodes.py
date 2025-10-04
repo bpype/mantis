@@ -16,7 +16,7 @@ def TellClasses():
     ]
 
 def schema_init_sockets(mantis_node, is_input = True, in_out='INPUT', category=''):
-    from .utilities import tree_from_mantis_node
+    from .utilities import tree_from_mantis_node, read_schema_type
     parent_tree = tree_from_mantis_node(mantis_node.signature, mantis_node.base_tree)
     if is_input:
         sockets=mantis_node.inputs
@@ -25,7 +25,7 @@ def schema_init_sockets(mantis_node, is_input = True, in_out='INPUT', category='
     if category in ['Constant', 'Array', 'Connection']:
         for item in parent_tree.interface.items_tree:
             if item.item_type == 'PANEL': continue
-            if item.parent and item.parent.name == category:
+            if item.parent and read_schema_type(item) == category:
                 if item.in_out == in_out:
                     sockets.init_sockets([item.name])
     mantis_node.init_parameters()

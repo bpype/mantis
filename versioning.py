@@ -308,6 +308,52 @@ def up_0_13_0_new_custom_prop_node(*args, **kwargs):
     else: # just need to add the socket.
         new_input = node.inputs.new("CustomPropSocket", "Custom Properties", use_multi_input=True)
 
+def schema_enable_custom_interface_types(*args, **kwargs):
+    # return
+    tree = kwargs['tree']
+    current_major_version = tree.mantis_version[0]
+    current_minor_version = tree.mantis_version[1]
+    current_sub_version = tree.mantis_version[2]
+    if  current_major_version > 0: return# major version must be 0
+    if current_minor_version >= 13: return# minor version must be 12 or less
+    # we need to set the new interface values on the schema interface stuff
+    prGreen(f"Updating Schema tree {tree.name} to support new, improved UI!")
+    tree.do_live_update = False
+    for n in tree.nodes:
+        if hasattr(n, "is_updating"):
+            n.is_updating = True
+    try:
+        for item in tree.interface.items_tree:
+            if item.item_type == 'PANEL':
+                continue
+            parent_name = 'Constant'
+            if item.parent:
+                parent_name=item.parent.name
+            if hasattr(item, "is_array"):
+                # if is_array exists we're in the custom interface class
+                # so we'll assume the other attributes exist
+                if parent_name == 'Array':
+                    item.is_array = True
+                if parent_name == 'Connection':
+                    item.is_array = False
+                    item.is_connection=True
+                    item.connected_to=item.name
+                    # since heretofore it has been a requirement that the names match
+    except Exception as e:
+        prRed(f"Error updating version in tree: {tree.name}; see error:")
+        print(e)
+    finally:
+        for n in tree.nodes:
+            if hasattr(n, "is_updating"):
+                n.is_updating = False
+        tree.do_live_update = True
+            
+
+
+
+
+
+
 versioning_tasks = [
     # node bl_idname    task                required keyword arguments
     (['ALL'], version_upgrade_very_old, ['node_tree', 'node'],),
@@ -317,6 +363,7 @@ versioning_tasks = [
     (['InputWidget'], up_0_12_13_add_widget_scale, ['node']),
     (['LinkFloor'], up_0_12_25_replace_floor_offset_type, ['node']),
     (['XFORM'], up_0_13_0_new_custom_prop_node, ['node', 'node_tree']),
+    (['SchemaTree'], schema_enable_custom_interface_types, ['tree']),
 ]
 
 

@@ -2,90 +2,104 @@ from .utilities import prRed, prGreen, prPurple, prWhite, prOrange, \
                         wrapRed, wrapGreen, wrapPurple, wrapWhite, wrapOrange
 
 
-def grp_node_reroute_common(mantis_node, to_mantis_node, all_mantis_nodes):
-    # we need to do this: go  to the to-node
-    # then reroute the link in the to_node all the way to the beginning
-    # so that the number of links in "real" nodes is unchanged
-    # then the links in the dummy nodes need to be deleted
-    for inp_name, inp in mantis_node.inputs.items():
-        # assume each input socket only has one input for now
-        if inp.is_connected:
-            while (inp.links):
-                in_link = inp.links.pop()
-                from_mantis_node = in_link.from_node
-                from_socket = in_link.from_socket
-                links = []
-                from_links = from_mantis_node.outputs[from_socket].links.copy()
-                while(from_links):
-                    from_link = from_links.pop()
-                    if from_link == in_link:
-                        from_link.die()
-                        continue # DELETE the dummy node link 
-                    links.append(from_link)
-                from_mantis_node.outputs[from_socket].links = links
-                down = to_mantis_node.outputs[inp_name]
-                for downlink in down.links:
-                    downlink.from_node = from_mantis_node
-                    downlink.from_socket = from_socket
-                    from_mantis_node.outputs[from_socket].links.append(downlink)
-                    if hasattr(downlink.to_node, "reroute_links"):
-                        downlink.to_node.reroute_links(downlink.to_node, all_mantis_nodes)
-                in_link.die()
+# this function is kind of confusing and is very important,
+# so it bears a full explanation: its purpose is to connect
+# the links going into a group to the nodes in that group.
+# FIRST we connect all the incoming links into the Group Node to
+# a Group Interface node that does nothing but mark the entrance.
+# Then, we connect all the outgoing links back to the nodes
+# that had incoming links, so the nodes OUTSIDE the Node Group
+# are connected directly to BOTH the GroupInterface and the
+# nodes INSIDE the node group.
+# we give the GroupInterface nodes an obscenely high
+# multi_input_sort_id so that they are always last.
+# but since these links are going IN, they shouldn't cause any problems.
+# the sub_sort_id is set here in case there are UI links which represent
+# multiple Mantis links - the mantis links are sorted within the UI links
+# and the UI links are sorted as normal, so all the links are in the right
+# order.... probably. BUG here?
+# I want the Group Interface nodes to be part of the hierarchy...
+# but I want to cut the links. hmmm what to do? Fix it if it causes problems.
+# solution to hypothetical BUG could be to do traversal on the links
+# instead of the sockets.
+def grp_node_reroute_common(in_node, out_node, interface):
+    from .base_definitions import links_sort_key
+    for in_node_input in in_node.inputs:
+        i = 0
+        if len(in_node_input.links)>1: # sort here to ensure correct sub_sort_id
+            in_node_input.links.sort(key=links_sort_key)
+        while (in_node_input.links):
+            in_link = in_node_input.links.pop()
+            from_node = in_link.from_node; from_socket = in_link.from_socket
+            link = from_node.outputs[from_socket].connect(
+                interface,in_node_input.name, sort_id = 2**16, sub_sort_id=i)
+            i += 1; in_link.die()
+    for out_node_output in out_node.outputs:
+        while (out_node_output.links):
+            out_link = out_node_output.links.pop()
+            to_node = out_link.to_node; to_socket = out_link.to_socket
+            for j, l in enumerate(interface.inputs[out_node_output.name].links):
+                # we are connecting the link from the ORIGINAL output to the FINAL input.
+                link = l.from_node.outputs[l.from_socket].connect(
+                    to_node, to_socket, sort_id = out_link.multi_input_sort_id)
+                link.sub_sort_id = j
+            out_link.die()
 
-def reroute_links_grp(mantis_node, all_mantis_nodes):
-    if mantis_node.inputs:
-        if (to_mantis_node := all_mantis_nodes.get( ( *mantis_node.signature, "NodeGroupInput") )):
-            grp_node_reroute_common(mantis_node, to_mantis_node, all_mantis_nodes)
+def reroute_links_grp(group, all_nodes):
+    from .internal_nodes import GroupInterface
+    interface = GroupInterface(
+        ( *group.signature, "InputInterface"),
+        group.base_tree, group.ui_node, 'INPUT',)
+    all_nodes[interface.signature] = interface
+    if group.inputs:
+        if group_input := all_nodes.get(( *group.signature, "NodeGroupInput")):
+            grp_node_reroute_common(group, group_input, interface)
         else:
             raise RuntimeError("internal error: failed to enter a node group ")
 
-def reroute_links_grpout(mantis_node, all_mantis_nodes):
-    if (to_mantis_node := all_mantis_nodes.get( ( *mantis_node.signature[:-1],) )):
-        grp_node_reroute_common(mantis_node, to_mantis_node, all_mantis_nodes)
+def reroute_links_grpout(group_output, all_nodes):
+    if (group := all_nodes.get( ( *group_output.signature[:-1],) )):
+        from .internal_nodes import GroupInterface
+        interface = GroupInterface(
+            ( *group.signature, "OutputInterface"),
+            group.base_tree, group.ui_node, 'OUTPUT',)
+        all_nodes[interface.signature] = interface
+        grp_node_reroute_common(group_output, group, interface)
     else:
-        raise RuntimeError("error leaving a node group (maybe you are running the tree from inside a node group?)")
+        prOrange(f"WARN: unconnected outputs from a node group "
+                 "(maybe you are running the tree from inside a node group?)")
 
 # FIXME I don't think these signatures are unique.
+# TODO this is a really silly and bad and also really dumb way to do this
 def insert_lazy_parents(mantis_node):
     from .link_nodes import LinkInherit
-    from .base_definitions import NodeLink
-    inherit_mantis_node = None
+    inherit_node = None
     if mantis_node.inputs["Relationship"].is_connected:
-        link = mantis_node.inputs["Relationship"].links[0]
-        # print(mantis_node)
-        from_mantis_node = link.from_node
-        if from_mantis_node.node_type in ["XFORM"] and link.from_socket in ["xForm Out"]:
-            inherit_mantis_node = LinkInherit(("MANTIS_AUTOGENERATED", *mantis_node.signature[1:], "LAZY_INHERIT"), mantis_node.base_tree)
-            for from_link in from_mantis_node.outputs["xForm Out"].links:
-                if from_link.to_node == mantis_node and from_link.to_socket == "Relationship":
-                    break # this is it
-            from_link.to_node = inherit_mantis_node; from_link.to_socket="Parent"
-            from_link.to_node.inputs[from_link.to_socket].is_linked=True
-            
-            links=[]
-            while (mantis_node.inputs["Relationship"].links):
-                to_link = mantis_node.inputs["Relationship"].links.pop()
-                if to_link.from_node == from_mantis_node and to_link.from_socket == "xForm Out":
-                    continue # don't keep this one
-                links.append(to_link)
-                to_link.from_node.outputs[from_link.from_socket].is_linked=True
-            
-            mantis_node.inputs["Relationship"].links=links
-            link=NodeLink(from_node=inherit_mantis_node, from_socket="Inheritance", to_node=mantis_node, to_socket="Relationship")
-            inherit_mantis_node.inputs["Parent"].links.append(from_link)
-            
-            inherit_mantis_node.parameters = {
-                                     "Parent":None,
-                                     "Inherit Rotation":True,
-                                     "Inherit Scale":'FULL',
-                                     "Connected":False,
-                                    }
+        from .node_common import trace_single_line
+        node_line, last_socket = trace_single_line(mantis_node, 'Relationship')
+        # if last_socket is from a valid XFORM, it is the relationship in
+        # because it was traversed from the xForm Out... so get the traverse target.
+        if last_socket.traverse_target is None:
+            return # this is not a valid lazy parent.
+        for other_node in node_line[1:]: # skip the first one, it is the same node
+            if other_node.node_type == 'LINK':
+                return # this one has a realtionship connection.
+            elif other_node.node_type == 'XFORM':
+                break
+        if other_node.node_type in ["XFORM"] and last_socket.traverse_target.name in ["xForm Out"]:
+            for link in other_node.outputs['xForm Out'].links:
+                if link.to_node == mantis_node: link.die()
+            inherit_node = LinkInherit(("MANTIS_AUTOGENERATED", *mantis_node.signature[1:], "LAZY_INHERIT"), mantis_node.base_tree)
+            l = other_node.outputs['xForm Out'].connect(inherit_node, 'Parent')
+            l1 = inherit_node.outputs['Inheritance'].connect(mantis_node, 'Relationship')
+            inherit_node.parameters = { "Parent":None,
+                                      "Inherit Rotation":True,
+                                      "Inherit Scale":'FULL',
+                                      "Connected":False, }
             # because the from node may have already been done.
-            init_connections(from_mantis_node)
-            init_dependencies(from_mantis_node)
-            init_connections(inherit_mantis_node)
-            init_dependencies(inherit_mantis_node)
-    return inherit_mantis_node
+            init_connections(other_node); init_dependencies(other_node)
+            init_connections(inherit_node); init_dependencies(inherit_node)
+    return inherit_node
 
 # *** # *** # *** # *** # *** # *** # *** # *** # *** # *** # *** # *** # *** # *** #
 #                                  DATA FROM NODES                                  #
@@ -95,9 +109,6 @@ from .base_definitions import replace_types, NodeSocket
 
 def autogen_node(base_tree, ui_socket, signature, mContext):
     mantis_node=None
-    from .utilities import  gen_mantis_node_input_for_data
-    # mantis_class = gen_mantis_node_input_for_data(ui_socket)
-    # if (mantis_class):
     from .internal_nodes import AutoGenNode
     mantis_node = AutoGenNode(signature, base_tree)
     mantis_node.mContext = mContext
@@ -187,10 +198,13 @@ def data_from_tree(base_tree, tree_path, dummy_nodes, all_mantis_nodes, all_sche
         from .utilities import clear_reroutes
         links = clear_reroutes(list(current_tree.links))
         gen_mantis_nodes(base_tree, current_tree, tree_path_names, all_mantis_nodes, local_mantis_nodes, dummy_nodes, group_nodes, all_schema)
-        
+
         from .utilities import link_mantis_nodes
         for link in links:
             link_mantis_nodes((None, *tree_path_names), link, local_mantis_nodes)
+        if current_tree == base_tree:
+            # in the base tree, we need to auto-gen the default values in a slightly different way to node groups.
+            insert_default_values_base_tree(base_tree, all_mantis_nodes)
         # Now, descend into the Node Groups and recurse
         for mantis_node in group_nodes:
             data_from_tree(base_tree, tree_path+[mantis_node.ui_node], dummy_nodes, all_mantis_nodes, all_schema)
@@ -244,7 +258,7 @@ schema_bl_idnames = [   "SchemaIndex",
                         "SchemaConstInput",
                         "SchemaConstOutput",
                         "SchemaOutgoingConnection",
-                        "SchemaIncomingConnection", 
+                        "SchemaIncomingConnection",
                     ]
 
 from .utilities import get_all_dependencies
@@ -259,7 +273,7 @@ def get_schema_length_dependencies(node, all_nodes={}):
             for l in inp.links:
                 if not l.from_node in node.hierarchy_dependencies:
                     continue
-                if "MANTIS_AUTOGENERATED" in l.from_node.signature: 
+                if "MANTIS_AUTOGENERATED" in l.from_node.signature:
                     deps.extend([l.from_node]) # why we need this lol
                 if inp.name in prepare_links_to:
                     deps.append(l.from_node)
@@ -290,11 +304,73 @@ def get_schema_length_dependencies(node, all_nodes={}):
                     trees.append((sub_node.ui_node.node_tree, sub_node.signature))
     return list(filter(deps_filter, deps))
 
+def insert_default_values_base_tree(base_tree, all_mantis_nodes):
+    # we can get this by name because group inputs are gathered to the bl_idname
+    InputNode = all_mantis_nodes.get((None, 'NodeGroupInput'))
+    if InputNode is None: return # nothing to do here.
+    ui_node = InputNode.ui_node
+
+    for i, output in enumerate(InputNode.outputs):
+        ui_output = ui_node.outputs[i] # I need this for the error messages to make sense
+        assert ui_output.identifier == output.name, "Cannot find UI Socket for Default Value"
+        for interface_item in base_tree.interface.items_tree:
+            if interface_item.item_type == 'PANEL': continue
+            if interface_item.identifier == output.name: break
+        else:
+            raise RuntimeError(f"Default value {ui_output.name} does not exist in {base_tree.name} ")
+        if interface_item.item_type == "PANEL":
+            raise RuntimeError(f"Cannot get default value for {ui_output.name} in {base_tree.name} ")
+        default_value = None
+        from bpy.types import bpy_prop_array
+        from mathutils import Vector
+        val_type = None
+        if hasattr(ui_output, 'default_value'):
+            val_type = type(ui_output.default_value) # why tf can't I match/case here?
+        if val_type is bool: default_value = interface_item.default_bool
+        elif val_type is int: default_value = interface_item.default_int
+        elif val_type is float: default_value = interface_item.default_float
+        elif val_type is Vector: default_value = interface_item.default_vector
+        elif val_type is str: default_value = interface_item.default_string
+        elif val_type is bpy_prop_array: default_value = interface_item.default_bool_vector
+        elif interface_item.bl_socket_idname == "xFormSocket":
+            if interface_item.default_xForm == 'ARMATURE':
+                default_value = 'MANTIS_DEFAULT_ARMATURE'
+            else:
+                raise RuntimeError(f"No xForm connected for {ui_output.name} in {base_tree.name}.")
+
+        else:
+            raise RuntimeError(f"Cannot get default value for {ui_output.name} in {base_tree.name} ")
+        output_name = output.name
+        if interface_item.bl_socket_idname not in ['xFormSocket']:
+            signature = ("MANTIS_AUTOGENERATED", f"Default Value {output.name}",)
+            autogen_mantis_node = all_mantis_nodes.get(signature)
+            if autogen_mantis_node is None:
+                autogen_mantis_node = autogen_node(base_tree, output, signature, InputNode.mContext)
+                autogen_mantis_node.parameters[output_name]=default_value
+        elif interface_item.bl_socket_idname == 'xFormSocket' \
+                                        and default_value == 'MANTIS_DEFAULT_ARMATURE':
+            signature = ("MANTIS_AUTOGENERATED", "MANTIS_DEFAULT_ARMATURE",)
+            autogen_mantis_node = all_mantis_nodes.get(signature)
+            if autogen_mantis_node is None:
+                from .xForm_nodes import xFormArmature
+                autogen_mantis_node = xFormArmature(signature, base_tree)
+                autogen_mantis_node.parameters['Name']=base_tree.name+'_MANTIS_AUTOGEN'
+                autogen_mantis_node.mContext =  InputNode.mContext
+                from mathutils import Matrix
+                autogen_mantis_node.parameters['Matrix'] = Matrix.Identity(4)
+            output_name = 'xForm Out'
+        while output.links:
+            l = output.links.pop()
+            to_node = l.to_node; to_socket = l.to_socket
+            l.die()
+            autogen_mantis_node.outputs[output_name].connect(to_node, to_socket)
+            init_connections(l.from_node); init_dependencies(l.from_node)
+        all_mantis_nodes[autogen_mantis_node.signature]=autogen_mantis_node
 
 def parse_tree(base_tree, error_popups=False):
     from uuid import uuid4
     base_tree.execution_id = uuid4().__str__() # set the unique id of this execution
-    
+
     from .base_definitions import MantisExecutionContext
     mContext = MantisExecutionContext(base_tree=base_tree)
 
@@ -309,7 +385,7 @@ def parse_tree(base_tree, error_popups=False):
         if (hasattr(dummy, "reroute_links")):
             dummy.reroute_links(dummy, all_mantis_nodes)
     prGreen(f"Pulling data from tree took {time.time() - data_start_time} seconds")
-    
+
     start_time = time.time()
     solve_only_these = []; solve_only_these.extend(list(all_schema.values()))
     roots, array_nodes = [], []
@@ -363,7 +439,7 @@ def parse_tree(base_tree, error_popups=False):
             for dep in n.hierarchy_dependencies:
                 if dep not in schema_solve_done and (dep in solve_only_these):
                     if dep.prepared:
-                        continue 
+                        continue
                     solve_layer.appendleft(n)
                     break
             else:
@@ -396,7 +472,6 @@ def parse_tree(base_tree, error_popups=False):
                     e = execution_error_cleanup(n, e, show_error=error_popups)
                     if error_popups == False:
                         raise e
-                    
                 schema_solve_done.add(n)
                 for conn in n.hierarchy_connections:
                     if conn not in schema_solve_done and conn not in solve_layer:
@@ -418,7 +493,8 @@ def parse_tree(base_tree, error_popups=False):
         if mantis_node.signature[0] == "MANTIS_AUTOGENERATED" and len(mantis_node.inputs) == 0 and len(mantis_node.outputs) == 1:
             from .base_definitions import can_remove_socket_for_autogen
             output=list(mantis_node.outputs.values())[0]
-            value=list(mantis_node.parameters.values())[0]   # IDEA modify the dependecy get function to exclude these nodes completely
+            value=list(mantis_node.parameters.values())[0]
+            # We can remove this node if it is safe to push it into the other node's socket.
             keep_me = False
             for l in output.links:
                 to_node = l.to_node; to_socket = l.to_socket
@@ -497,7 +573,7 @@ def sort_execution(nodes, xForm_pass):
             execution_failed = True
             raise GraphError("There is probably a cycle somewhere in the graph. "
                                 "Or a connection missing in a Group/Schema Input")
-        i+=1    
+        i+=1
         n = xForm_pass.pop()
         if visited.get(n.signature) is not None:
             visited[n.signature]+=1
@@ -554,7 +630,7 @@ def execute_tree(nodes, base_tree, context, error_popups = False, profile=False)
         check_and_add_root(mantis_node, xForm_pass)
     mContext.execution_failed = False
 
-    switch_me = [] # switch the mode on these objects
+    select_me, switch_me = [], [] # switch the mode on these objects
     active = None # only need it for switching modes
     select_me = []
     profiler = None
@@ -602,11 +678,9 @@ def execute_tree(nodes, base_tree, context, error_popups = False, profile=False)
                     raise e
                 execution_failed = True; break
 
-
         switch_mode(mode='OBJECT', objects=switch_me)
         # switch to pose mode here so that the nodes can use the final pose data
         # this will require them to update the depsgraph.
-        
 
         for ob in switch_me:
             ob.data.pose_position = 'POSE'
@@ -620,8 +694,7 @@ def execute_tree(nodes, base_tree, context, error_popups = False, profile=False)
                 if error_popups == False:
                     raise e
                 execution_failed = True; break
-        
-        
+
         # REST pose for deformer bind, so everything is in the rest position
         for ob in switch_me:
             ob.data.pose_position = 'REST'
@@ -636,10 +709,10 @@ def execute_tree(nodes, base_tree, context, error_popups = False, profile=False)
                 if error_popups == False:
                     raise e
                 execution_failed = True; break
-                
+
         for ob in switch_me:
             ob.data.pose_position = 'POSE'
-        
+
         tot_time = (time() - start_execution_time)
         if not execution_failed:
             prGreen(f"Executed tree of {len(sorted_nodes)} nodes in {tot_time} seconds")
@@ -672,4 +745,3 @@ def execute_tree(nodes, base_tree, context, error_popups = False, profile=False)
                 ob.select_set(True)
             except RuntimeError: # it isn't in the view layer
                 pass
-

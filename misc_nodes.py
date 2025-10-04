@@ -1982,13 +1982,14 @@ class UtilityArrayGet(MantisNode):
         self.rerouted=[]
 
     def bPrepare(self, bContext = None,):
+        from .base_definitions import links_sort_key
         if len(self.rerouted)>0:
             self.prepared, self.executed = True, True
             return #Either it is already done or it doesn't matter.
         elif self.prepared == False:
             # sort the array entries
             for inp in self.inputs.values():
-                inp.links.sort(key=lambda a : -a.multi_input_sort_id)
+                inp.links.sort(key=links_sort_key)
             oob   = self.evaluate_input("OoB Behaviour")
             index = self.evaluate_input("Index")
 

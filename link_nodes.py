@@ -57,7 +57,10 @@ class MantisLinkNode(MantisNode):
         if ('Target' in input_name) and input_name not in  ["Target Space", "Use Target Z"]:
             socket = self.inputs.get(input_name)
             if socket.is_linked:
-                return socket.links[0].from_node
+                node_line, _last_socket = trace_single_line(self, input_name, index)
+                for other_node in node_line:
+                    if other_node.node_type == 'XFORM':
+                        return other_node
             return None
 
         else:
@@ -65,28 +68,46 @@ class MantisLinkNode(MantisNode):
 
     def gen_property_socket_map(self) -> dict:
         props_sockets = super().gen_property_socket_map()
-        if (os := self.inputs.get("Owner Space")) and os.is_connected and os.links[0].from_node.node_type == 'XFORM':
-            del props_sockets['owner_space']
-        if (ts := self.inputs.get("Target Space")) and ts.is_connected and ts.links[0].from_node.node_type == 'XFORM':
-            del props_sockets['target_space']
+        if (os := self.inputs.get("Owner Space")) and os.is_connected:
+            node_line, _last_socket = trace_single_line(self, "Owner Space")
+            for other_node in node_line:
+                if other_node.node_type == 'XFORM':
+                    del props_sockets['owner_space']; break
+        if (ts := self.inputs.get("Target Space")) and ts.is_connected:
+            node_line, _last_socket = trace_single_line(self, "Target Space")
+            for other_node in node_line:
+                if other_node.node_type == 'XFORM':
+                    del props_sockets['target_space']; break
         return props_sockets
 
     def set_custom_space(self):
         for c in self.bObject:
-            if (os := self.inputs.get("Owner Space")) and os.is_connected and os.links[0].from_node.node_type == 'XFORM':
-                c.owner_space='CUSTOM'
-                xf = self.inputs["Owner Space"].links[0].from_node.bGetObject(mode="OBJECT")
-                if isinstance(xf, Bone):
-                    c.space_object=self.inputs["Owner Space"].links[0].from_node.bGetParentArmature(); c.space_subtarget=xf.name
-                else:
-                    c.space_object=xf
-            if ts := self.inputs.get("Target_Space") and ts.is_connected and ts.links[0].from_node.node_type == 'XFORM':
-                c.target_space='CUSTOM'
-                xf = self.inputs["Target_Space Space"].links[0].from_node.bGetObject(mode="OBJECT")
-                if isinstance(xf, Bone):
-                    c.space_object=self.inputs["Target_Space Space"].links[0].from_node.bGetParentArmature(); c.space_subtarget=xf.name
-                else:
-                    c.space_object=xf
+            if (os := self.inputs.get("Owner Space")) and os.is_connected:
+                node_line, _last_socket = trace_single_line(self, "Owner Space")
+                owner_space_target = None
+                for other_node in node_line:
+                    if other_node.node_type == 'XFORM':
+                        owner_space_target = other_node; break
+                if owner_space_target:
+                    c.owner_space='CUSTOM'
+                    xf = owner_space_target.bGetObject(mode="OBJECT")
+                    if isinstance(xf, Bone):
+                        c.space_object=owner_space_target.bGetParentArmature(); c.space_subtarget=xf.name
+                    else:
+                        c.space_object=xf
+            if (ts := self.inputs.get("Target Space")) and ts.is_connected:
+                node_line, _last_socket = trace_single_line(self, "Target Space")
+                target_space_target = None
+                for other_node in node_line:
+                    if other_node.node_type == 'XFORM':
+                        target_space_target = other_node; break
+                if target_space_target:
+                    c.target_space='CUSTOM'
+                    xf = target_space_target.bGetObject(mode="OBJECT")
+                    if isinstance(xf, Bone):
+                        c.space_object=target_space_target.bGetParentArmature(); c.space_subtarget=xf.name
+                    else:
+                        c.space_object=xf
 
     def GetxForm(mantis_node, output_name="Output Relationship"):
         break_condition= lambda node : node.node_type=='XFORM'
@@ -213,20 +234,7 @@ class LinkCopyScale(MantisLinkNode):
             if constraint_name := self.evaluate_input("Name"):
                 c.name = constraint_name
             self.bObject.append(c)
-            if self.inputs["Owner Space"].is_connected and self.inputs["Owner Space"].links[0].from_node.node_type == 'XFORM':
-                c.owner_space='CUSTOM'
-                xf = self.inputs["Owner Space"].links[0].from_node.bGetObject(mode="OBJECT")
-                if isinstance(xf, Bone):
-                    c.space_object=self.inputs["Owner Space"].links[0].from_node.bGetParentArmature(); c.space_subtarget=xf.name
-                else:
-                    c.space_object=xf
-            if self.inputs["Target Space"].is_connected and self.inputs["Target Space"].links[0].from_node.node_type == 'XFORM':
-                c.target_space='CUSTOM'
-                xf = self.inputs["Target Space"].links[0].from_node.bGetObject(mode="OBJECT")
-                if isinstance(xf, Bone):
-                    c.space_object=self.inputs["Owner Space"].links[0].from_node.bGetParentArmature(); c.space_subtarget=xf.name
-                else:
-                    c.space_object=xf
+            self.set_custom_space()
             props_sockets = self.gen_property_socket_map()
             evaluate_sockets(self, c, props_sockets)
         self.executed = True
@@ -812,7 +820,6 @@ class LinkArmature(MantisLinkNode):
                     weight_value=0
                 targets_weights[i]=weight_value
                 props_sockets["targets[%d].weight" % i] = (weight_input_name, 0)
-                # targets_weights.append({"weight":(weight_input_name, 0)})
             evaluate_sockets(self, c, props_sockets)
             for target, value in targets_weights.items():
                 c.targets[target].weight=value
@@ -837,8 +844,12 @@ class LinkSplineIK(MantisLinkNode):
             c = xf.bGetObject().constraints.new('SPLINE_IK')
             # set the spline - we need to get the right one
             spline_index = self.evaluate_input("Spline Index")
+            proto_curve = None
+            node_line, _last_socket = trace_single_line(self, "Target")
+            for other_node in node_line: # trace and get the input
+                if other_node.node_type == 'XFORM':
+                    proto_curve = other_node.bGetObject(); break
             from .utilities import get_extracted_spline_object
-            proto_curve = self.inputs['Target'].links[0].from_node.bGetObject()
             curve = get_extracted_spline_object(proto_curve, spline_index, self.mContext)
             # link it to the view layer
             if (curve.name not in bContext.view_layer.active_layer_collection.collection.objects):

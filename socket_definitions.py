@@ -299,6 +299,133 @@ def tell_valid_bl_idnames():
     valid_classes = filter(lambda cls : cls.is_valid_interface_type, [cls for cls in TellClasses()])
     return (cls.bl_idname for cls in valid_classes)
 
+
+enum_default_xForm_values =(
+        ('NONE', "None", "None - fail if unconnected (RECOMMENDED)."),
+        ('ARMATURE', "Generated Armature", "Generate an armature automatically. "
+                     "PLEASE use this only for development and testing. "
+                     "If you use this as a feature in your rigs you will be sorry."),)
+    
+# Custom Interface Types give the user the ability to set properties for the interface
+# we'll define a base class, and generate the individual classes from the base class
+# but we'll leave the option to define a few of them directly.
+from bpy.types import NodeTreeInterfaceSocket
+
+def interface_socket_update(self, context):
+    # we're just gonna do this the dumb way for now and invalidate the tree
+    # BUG HACK TODO actually I am gonna do this stuff later
+    # later, I can do this based on the connections in the tree
+    # and the socket updater can use the same code for group interface modifications
+    # TODO do this stuff because the tree will be a lot snappier
+    pass
+
+
+interface_default_value_description="The default value of the socket when it is not connected."
+class MantisInterfaceSocketBaseClass():
+    is_array : bpy.props.BoolProperty(default =False, update=interface_socket_update,
+            description="Whether the socket is an array, otherwise it is constant." ) 
+    is_connection : bpy.props.BoolProperty(default =False, update=interface_socket_update,
+            description="If the socket is a connection or not. Ensure this is always paired"
+                        " with an input and an output." ) 
+    connected_to : bpy.props.StringProperty(default="", update=interface_socket_update,
+            description="The name of the socket this one is connected to." ) 
+    # we are just gonna use ONE base class (it's easier)
+    # so generate ALL properties and show only what is needed.
+    default_string : bpy.props.StringProperty(default="", update=interface_socket_update,
+            description=interface_default_value_description, ) 
+    default_float : bpy.props.FloatProperty(default=0.0, update=interface_socket_update,
+            description=interface_default_value_description, ) 
+    default_vector : bpy.props.FloatVectorProperty( size = 3, default = (0.0, 0.0, 0.0, ),
+            description=interface_default_value_description, update=interface_socket_update,) 
+    default_int : bpy.props.IntProperty(default=0, update=interface_socket_update,
+            description=interface_default_value_description, ) 
+    default_bool : bpy.props.BoolProperty(default=False, update=interface_socket_update,
+            description=interface_default_value_description, ) 
+    default_bool_vector : bpy.props.BoolVectorProperty(subtype = "XYZ", update=interface_socket_update,
+            description=interface_default_value_description, ) 
+    default_xForm : bpy.props.EnumProperty( default = 'NONE', update = interface_socket_update,
+        items=enum_default_xForm_values, description=interface_default_value_description,)
+
+def interface_draw(self, context, layout):
+    if not self.is_connection:
+        layout.prop(self, "is_array", text="Is Array", toggle=True,)
+    if not self.is_array and self.id_data.bl_idname == 'SchemaTree':
+        layout.prop(self, "is_connection", text="Is Connection", toggle=True,)
+        if False: # DISABLED for now because it will take a big change to Schema to make this work.
+            if self.is_connection: # only show this if in a Schema AND set to is_connection
+                layout.prop(self, "connected_to", text="Connected To", toggle=True,)
+
+# Different classes to handle different data types. In the future, these should also
+#  have settable min/max and such where appropriate
+def interface_string_draw(self, context, layout):
+    layout.prop(self, "default_string", text="Default Value", toggle=True,)
+    interface_draw(self, context, layout)
+
+def interface_float_draw(self, context, layout):
+    layout.prop(self, "default_float", text="Default Value", toggle=True,)
+    interface_draw(self, context, layout)
+
+def interface_vector_draw(self, context, layout):
+    layout.prop(self, "default_vector", text="Default Value", toggle=True,)
+    interface_draw(self, context, layout)
+
+def interface_int_draw(self, context, layout):
+    layout.prop(self, "default_int", text="Default Value", toggle=True,)
+    interface_draw(self, context, layout)
+
+def interface_bool_draw(self, context, layout):
+    layout.prop(self, "default_bool", text="Default Value", toggle=True,)
+    interface_draw(self, context, layout)
+
+def interface_bool_vector_draw(self, context, layout):
+    layout.prop(self, "default_bool_vector", text="Default Value", toggle=True,)
+    interface_draw(self, context, layout)
+
+def interface_xform_draw(self, context, layout):
+    if self.in_out == 'INPUT':
+        layout.prop(self, "default_xForm", text="Default Value", toggle=True,)
+    interface_draw(self, context, layout)
+
+
+def generate_custom_interface_types():
+    generated_classes = []
+    # copied from above
+    valid_classes = filter(lambda cls : cls.is_valid_interface_type, [cls for cls in TellClasses()])
+    for cls in valid_classes:
+        name = cls.__name__ + "Interface"
+            
+        my_interface_draw = interface_draw
+        # set the right draw function by the value's type
+        match map_color_to_socket_type(cls.color_simple): #there has to be a better way to do this
+            case "BooleanSocket":
+                my_interface_draw = interface_bool_draw
+            case "IntSocket":
+                my_interface_draw = interface_int_draw
+            case "FloatSocket":
+                my_interface_draw = interface_float_draw
+            case "BooleanThreeTupleSocket":
+                my_interface_draw = interface_bool_vector_draw
+            case "VectorSocket":
+                my_interface_draw = interface_vector_draw
+            case "StringSocket":
+                my_interface_draw = interface_string_draw
+            case "xFormSocket":
+                my_interface_draw = interface_xform_draw
+
+        interface = type(
+                      name,
+                      (MantisInterfaceSocketBaseClass, NodeTreeInterfaceSocket,),
+                      {
+                          "draw"             : my_interface_draw,
+                          "bl_idname"        : name,
+                          "bl_socket_idname" : cls.bl_idname,
+                          "socket_type"      : cls.bl_idname,
+                      },
+                  )
+        generated_classes.append(interface)
+    return generated_classes
+
+
 # Was setting color like this:
 # color : bpy.props.FloatVectorProperty(size = 4, default = cFCurve,)
 # but this didn't work when Blender automatically generated interface classes?

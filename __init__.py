@@ -16,9 +16,9 @@ from .ops_generate_tree import GenerateMantisTree
 
 from .utilities import prRed
 
-MANTIS_VERSION_MAJOR=0
-MANTIS_VERSION_MINOR=13
-MANTIS_VERSION_SUB=0
+from .base_definitions import (MANTIS_VERSION_MAJOR,
+                               MANTIS_VERSION_MINOR,
+                               MANTIS_VERSION_SUB)
 
 classLists = [module.TellClasses() for module in [
  link_nodes_ui,
@@ -317,7 +317,6 @@ def version_update_handler(filename):
     for node_tree in bpy.data.node_groups: # ensure it can update again after file load.
         if node_tree.bl_idname in ["MantisTree", "SchemaTree"]:
                 node_tree.is_exporting=False; node_tree.is_executing=False
-
     for node_tree in bpy.data.node_groups:
         if node_tree.bl_idname in ["MantisTree", "SchemaTree"]:
             if (node_tree.mantis_version[0] < MANTIS_VERSION_MAJOR) or \
@@ -390,6 +389,10 @@ def on_undo_post_handler(scene): # the undo will trigger a depsgraph update
 
 from .menu_classes import (node_context_menu_draw, node_add_menu_draw,
                            armature_add_menu_draw, import_menu_draw)
+
+from .socket_definitions import generate_custom_interface_types
+generated_classes = generate_custom_interface_types()
+classes.extend(generated_classes)
 
 def register():
     from bpy.utils import register_class
