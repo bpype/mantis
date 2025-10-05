@@ -267,8 +267,7 @@ def execute_handler(scene):
                 node_tree.tree_valid=False
 
 from .versioning import versioning_tasks
-def node_version_update(node):
-    do_once = True
+def node_version_update(node, do_once):
     for bl_idname, task, required_kwargs in versioning_tasks:
         arg_map = {}
         if 'node' in required_kwargs:
@@ -279,11 +278,11 @@ def node_version_update(node):
             if do_once:
                 print (f"Updating tree {node.id_data.name} to "
                        f"{MANTIS_VERSION_MAJOR}.{MANTIS_VERSION_MINOR}.{MANTIS_VERSION_SUB}")
-                do_once=False
             task(**arg_map)
 
 def do_version_update(node_tree):
     # set updating status for dynamic nodes to prevent bugs in socket remapping
+    do_once = True
     for node in node_tree.nodes:
         if hasattr(node, 'is_updating'):
             node.is_updating = True
@@ -296,7 +295,8 @@ def do_version_update(node_tree):
         task(**arguments)
     # run the updates that have no prerequisites
     for node in node_tree.nodes:
-        node_version_update(node)
+        node_version_update(node, do_once)
+        do_once = False
     # NOTE: if future versoning tasks have prerequisites, resolve them here and update again
     # reset the updating status for dynamic nodes
     for node in node_tree.nodes:
