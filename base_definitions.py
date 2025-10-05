@@ -344,12 +344,9 @@ def node_group_update(node, force = False):
            (node.id_data.is_exporting == True):
             return
     # note: if (node.id_data.is_exporting == True) I need to be able to update so I can make links.
-    
     if node.node_tree is None:
         node.inputs.clear(); node.outputs.clear()
-        node.id_data.do_live_update = toggle_update
         return
-    
     toggle_update = node.id_data.do_live_update
     node.id_data.do_live_update = False
 
