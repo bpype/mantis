@@ -50,11 +50,6 @@ class MantisVisualizeNode(Node):
             case 'DUMMY_SCHEMA': self.color = (0.85 ,0.95, 0.9)
             case 'DUMMY':        self.color = (0.05 ,0.05, 0.15)
         
-        if mantis_node.execution_prepared:
-            self.color = (0.02, 0.98, 0.02) # GREEN!
-                
-        # if mantis_node.execution_debug_tag:
-        #     self.color = (0.02 ,0.02, 0.02)
 
         self.name = '.'.join(mantis_node.signature[1:]) # this gets trunc'd
         self.signature = '|'.join(mantis_node.signature[1:])
@@ -166,9 +161,9 @@ def visualize_tree(m_nodes, base_tree, context):
                 # not in the parsed tree or available from trace_all_nodes_from_root.
 
             for l in all_links:
-                if l.to_node.node_type in ['DUMMY_SCHEMA', 'DUMMY'] or \
-                l.from_node.node_type in ['DUMMY_SCHEMA', 'DUMMY']:
-                    pass
+                # if l.to_node.node_type in ['DUMMY_SCHEMA', 'DUMMY'] or \
+                # l.from_node.node_type in ['DUMMY_SCHEMA', 'DUMMY']:
+                #     pass
                 from_node=nodes.get(l.from_node.signature)
                 to_node=nodes.get(l.to_node.signature)
                 from_socket, to_socket = None, None
