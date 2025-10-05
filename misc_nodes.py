@@ -145,22 +145,16 @@ def array_choose_relink(node, indices, array_input, output, ):
     """
         Used to choose the correct link to send out of an array-choose node.
     """
-    prGreen(node)
-    for l in node.inputs[array_input].links:
-        print(l)
     keep_links = []
     for index in indices:
-        prOrange(index)
         l = node.inputs[array_input].links[index]
         keep_links.append(l)
     for link in node.outputs[output].links:
-        prOrange(link)
         to_node = link.to_node
         for l in keep_links:
             new_link = l.from_node.outputs[l.from_socket].connect(to_node, link.to_socket)
             array_link_init_hierarchy(new_link)
             node.rerouted.append(new_link) # so I can access this in Schema Solve
-            prPurple(new_link)
         link.die()
 
 
