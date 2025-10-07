@@ -535,7 +535,6 @@ def export_to_json(trees, base_tree=None, path="", write_file=True, only_selecte
 
         tree_info, tree_in_out = {}, {}
         tree_info = get_tree_data(tree)
-        prRed(tree.name, "B")
         curves, metarig_data = {}, {}
 
         embed_metarigs=True
@@ -952,7 +951,6 @@ def do_import(data, context, search_multi_files=False, filepath='', skip_existin
     skip_trees = set()
     # First: init the interface of the node graph
     for tree_name, tree_data in data.items():
-        prRed("C'")
         tree_info = tree_data[0]
         tree_in_out = tree_data[1]
 
