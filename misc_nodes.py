@@ -211,7 +211,7 @@ class SimpleInputNode(MantisNode):
 
 class InputFloat(SimpleInputNode):
     '''A node representing float input'''
-    
+
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree)
         outputs = ["Float Input"]
@@ -220,16 +220,16 @@ class InputFloat(SimpleInputNode):
 
 class InputIntNode(SimpleInputNode):
     '''A node representing integer input'''
-    
+
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree)
         outputs = ["Integer"]
         self.outputs.init_sockets(outputs)
         self.init_parameters()
-    
+
 class InputVector(SimpleInputNode):
     '''A node representing vector input'''
-    
+
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree)
         outputs = [""]
@@ -238,7 +238,7 @@ class InputVector(SimpleInputNode):
 
 class InputBoolean(SimpleInputNode):
     '''A node representing boolean input'''
-    
+
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree)
         outputs = [""]
@@ -252,31 +252,31 @@ class InputBooleanThreeTuple(SimpleInputNode):
         outputs = [""]
         self.outputs.init_sockets(outputs)
         self.init_parameters()
-    
+
 class InputRotationOrder(SimpleInputNode):
     '''A node representing string input for rotation order'''
-        
+
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree)
         outputs = [""]
         self.outputs.init_sockets(outputs)
         self.init_parameters()
-    
+
 class InputTransformSpace(SimpleInputNode):
     '''A node representing string input for transform space'''
-        
+
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree)
         outputs = [""]
         self.outputs.init_sockets(outputs)
         self.init_parameters()
-        
+
     def evaluate_input(self, input_name):
         return self.parameters[""]
-    
+
 class InputString(SimpleInputNode):
     '''A node representing string input'''
-        
+
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree)
         outputs = [""]
@@ -285,7 +285,7 @@ class InputString(SimpleInputNode):
 
 class InputMatrix(SimpleInputNode):
     '''A node representing axis-angle quaternion input'''
-        
+
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree)
         outputs  = ["Matrix",]
@@ -294,7 +294,7 @@ class InputMatrix(SimpleInputNode):
 
 class InputThemeBoneColorSets(SimpleInputNode):
     '''A node representing the theme's colors'''
-        
+
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree)
         from .base_definitions import MantisSocketTemplate
@@ -319,7 +319,7 @@ class InputColorSetPallete(SimpleInputNode):
     '''A node representing the theme's colors'''
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree)
-    
+
     def fill_parameters(self, ui_node=None):
         if not ui_node:
             from .utilities import get_node_prototype
@@ -397,7 +397,7 @@ class UtilityMatrixFromCurve(MantisNode):
         self.parameters["Matrix"] = mat
         self.prepared = True
         self.executed = True
-    
+
     def bFinalize(self, bContext=None):
         cleanup_curve(self.evaluate_input("Curve"), self.base_tree.execution_id)
 
@@ -431,7 +431,7 @@ class UtilityPointFromCurve(MantisNode):
             p = data[spline_index][0][0] - curve.location
         self.parameters["Point"] = p
         self.prepared, self.executed = True, True
-    
+
     def bFinalize(self, bContext=None):
         cleanup_curve(self.evaluate_input("Curve"), self.base_tree.execution_id)
 
@@ -494,7 +494,7 @@ class UtilityMatricesFromCurve(MantisNode):
         self.prepared = True
         self.executed = True
         # prGreen(f"Matrices from curves took {time.time() - start_time} seconds.")
-    
+
     def bFinalize(self, bContext=None):
         import bpy
         curve_name = self.evaluate_input("Curve")
@@ -518,7 +518,7 @@ class UtilityNumberOfCurveSegments(MantisNode):
         self.outputs.init_sockets(outputs)
         self.init_parameters()
         self.node_type = "UTILITY"
-    
+
     def bPrepare(self, bContext = None,):
         curve_name = self.evaluate_input("Curve")
         curve = bpy_object_get_guarded( curve_name, self)
@@ -535,7 +535,7 @@ class UtilityNumberOfSplines(MantisNode):
         super().__init__(signature, base_tree, NumberOfSplinesSockets)
         self.init_parameters()
         self.node_type = "UTILITY"
-    
+
     def bPrepare(self, bContext = None,):
         curve_name = self.evaluate_input("Curve")
         curve = bpy_object_get_guarded( curve_name, self)
@@ -596,7 +596,7 @@ class UtilityMatrixFromCurveSegment(MantisNode):
             m.translation = head - curve.location
             self.parameters["Matrix"] = m
         self.prepared, self.executed = True, True
-    
+
     def bFinalize(self, bContext=None):
         cleanup_curve(self.evaluate_input("Curve"), self.base_tree.execution_id)
 
@@ -605,7 +605,7 @@ class UtilityGetCurvePoint(MantisNode):
         super().__init__(signature, base_tree, GetCurvePointSockets)
         self.init_parameters()
         self.node_type = "UTILITY"
-    
+
     def bPrepare(self, bContext=None):
         import bpy
         curve_name = self.evaluate_input("Curve")
@@ -630,7 +630,7 @@ class UtilityGetNearestFactorOnCurve(MantisNode):
         super().__init__(signature, base_tree, GetNearestFactorOnCurveSockets)
         self.init_parameters()
         self.node_type = "UTILITY"
-    
+
     def bPrepare(self, bContext = None,):
         import bpy
         curve_name = self.evaluate_input("Curve")
@@ -764,14 +764,14 @@ class UtilityMetaRig(MantisNode):
         import bpy
         from mathutils import Matrix
         m = Matrix.Identity(4)
-        
+
         meta_rig  = self.evaluate_input("Meta-Armature")
         if meta_rig is None:
             raise RuntimeError("Invalid input for Meta-Armature.")
         meta_bone = self.evaluate_input("Meta-Bone")
         if meta_rig is None or meta_bone is None:
             raise RuntimeError("Invalid input for Meta-Bone.")
-        
+
         if meta_rig:
             if ( armOb := bpy.data.objects.get(meta_rig) ):
                 m = armOb.matrix_world
@@ -788,7 +788,7 @@ class UtilityMetaRig(MantisNode):
                 #     prRed("no bone for MetaRig node ", self)
         else:
             raise RuntimeError(wrapRed(f"No meta-rig input for MetaRig node {self}"))
-        
+
         self.parameters["Matrix"] = m
         self.prepared = True
         self.executed = True
@@ -814,7 +814,7 @@ class UtilityBoneProperties(SimpleInputNode):
 
     def fill_parameters(self, prototype=None):
         return
-        
+
 # TODO this should probably be moved to Links
 class UtilityDriverVariable(MantisNode):
     '''A node representing an armature object'''
@@ -838,23 +838,24 @@ class UtilityDriverVariable(MantisNode):
         self.init_parameters()
         self.node_type = "DRIVER" # MUST be run in Pose mode
         self.prepared = True
-    
+
     def reset_execution(self):
         super().reset_execution()
         # clear this to ensure there are no stale reference pointers
         self.parameters["Driver Variable"] = None
         self.prepared=True
-        
+
     def evaluate_input(self, input_name):
         if input_name == 'Property':
             if self.inputs.get('Property'):
                 if self.inputs['Property'].is_linked:
-                # get the name instead...
                     trace = trace_single_line(self, input_name)
-                    return trace[1].name # the name of the socket
+                    # CANNOT UNDERSTATE HOW CRITICAL THIS CHECK IS
+                    if trace[0][-1].node_type == 'XFORM':
+                        return trace[1].name # the name of the socket
             return self.parameters["Property"]
         return super().evaluate_input(input_name)
-        
+
     def GetxForm(self, index=1):
         trace = trace_single_line(self, "xForm 1" if index == 1 else "xForm 2")
         for node in trace[0]:
@@ -897,7 +898,7 @@ class UtilityDriverVariable(MantisNode):
             if self.evaluate_input("Property") == 'scale_average':
                 dVarChannel = "SCALE_AVG"
         if dVarChannel: v_type = "TRANSFORMS"
-        
+
         my_var = {
             "owner"         : xForm1, # will be filled in by Driver
             "prop"          : self.evaluate_input("Property"), # will be filled in by Driver
@@ -907,10 +908,11 @@ class UtilityDriverVariable(MantisNode):
             "xForm 1"       : xForm1,#self.GetxForm(index = 1),
             "xForm 2"       : xForm2,#self.GetxForm(index = 2),
             "channel"       : dVarChannel,}
-        
+
         self.parameters["Driver Variable"] = my_var
+        print (my_var['prop'])
         self.executed = True
-            
+
 class UtilityKeyframe(MantisNode):
     '''A node representing a keyframe for a F-Curve'''
 
@@ -958,7 +960,7 @@ class UtilityFCurve(MantisNode):
         self.node_type = "UTILITY"
         setup_custom_props(self)
         self.prepared = True
-    
+
     def reset_execution(self):
         super().reset_execution()
         self.prepared=True
@@ -984,7 +986,7 @@ class UtilityFCurve(MantisNode):
         keys.append(extrap_mode)
         self.parameters["fCurve"] = keys
         self.executed = True
-#TODO make the fCurve data a data class instead of a dict 
+#TODO make the fCurve data a data class instead of a dict
 
 class UtilityDriver(MantisNode):
     '''A node representing an armature object'''
@@ -1001,7 +1003,7 @@ class UtilityDriver(MantisNode):
         ]
         from .drivers import MantisDriver
         additional_parameters = {
-          "Driver":MantisDriver(), 
+          "Driver":MantisDriver(),
         }
         self.inputs.init_sockets(inputs)
         self.outputs.init_sockets(outputs)
@@ -1009,13 +1011,13 @@ class UtilityDriver(MantisNode):
         self.node_type = "DRIVER" # MUST be run in Pose mode
         setup_custom_props(self)
         self.prepared = True
-    
+
     def reset_execution(self):
         super().reset_execution()
         from .drivers import MantisDriver
         self.parameters["Driver"]=MantisDriver()
         self.prepared=True
-    
+
     def bRelationshipPass(self, bContext = None,):
         prepare_parameters(self)
         from .drivers import MantisDriver
@@ -1043,9 +1045,9 @@ class UtilityDriver(MantisNode):
                      "vars"          :  my_vars,
                      "keys"          :  keys[:-1],
                      "extrapolation" :  keys[-1] }
-        
+
         my_driver = MantisDriver(my_driver)
-        
+
         self.parameters["Driver"].update(my_driver)
         print("Initializing driver %s " % (wrapPurple(self.__repr__())) )
         self.executed = True
@@ -1065,7 +1067,7 @@ class UtilitySwitch(MantisNode):
         ]
         from .drivers import MantisDriver
         additional_parameters = {
-          "Driver":MantisDriver(), 
+          "Driver":MantisDriver(),
         }
         self.inputs.init_sockets(inputs)
         self.outputs.init_sockets(outputs)
@@ -1087,7 +1089,7 @@ class UtilitySwitch(MantisNode):
             if (node.__class__ in [xFormArmature, xFormBone]):
                 return node #this will fetch the first one, that's good!
         return None
-    
+
     def reset_execution(self):
         super().reset_execution()
         from .drivers import MantisDriver
@@ -1098,12 +1100,12 @@ class UtilitySwitch(MantisNode):
         #prepare_parameters(self)
         #prPurple ("Executing Switch Node")
         xForm = self.GetxForm()
-        if xForm : xForm = xForm.bGetObject() 
+        if xForm : xForm = xForm.bGetObject()
         if not xForm:
             raise RuntimeError("Could not evaluate xForm for %s" % self)
         from .drivers import MantisDriver
         my_driver ={ "owner" : None,
-                     "prop"  : None, # will be filled out in the node that uses the driver 
+                     "prop"  : None, # will be filled out in the node that uses the driver
                      "ind"   : -1, # same here
                      "type"  : "SCRIPTED",
                      "vars"  : [ { "owner" : xForm,
@@ -1118,13 +1120,13 @@ class UtilitySwitch(MantisNode):
                                    "type":"KEYFRAME",},],
                       "extrapolation": 'CONSTANT', }
         my_driver   ["expression"] = "a"
-        
+
         my_driver = MantisDriver(my_driver)
     # this makes it so I can check for type later!
-        
+
         if self.evaluate_input("Invert Switch") == True:
             my_driver   ["expression"] = "1 - a"
-        
+
         # this way, regardless of what order things are handled, the
         #  driver is sent to the next node.
         # In the case of some drivers, the parameter may be sent out
@@ -1153,7 +1155,7 @@ class UtilityCombineThreeBool(MantisNode):
         self.outputs.init_sockets(outputs)
         self.init_parameters()
         self.node_type = "UTILITY"
-    
+
     def reset_execution(self): # need to make sure any references are deleted
         super().reset_execution() # so we prepare the node again to reset them
         if self.parameters["Three-Bool"] is not None:
@@ -1195,7 +1197,7 @@ class UtilityCombineVector(MantisNode):
             for param in self.parameters["Vector"]:
                 if isinstance(param, dict):
                     self.prepared=False; break
-    
+
     def bPrepare(self, bContext = None,):
         #prPurple("Executing CombineVector Node")
         prepare_parameters(self)
@@ -1204,7 +1206,7 @@ class UtilityCombineVector(MantisNode):
           self.evaluate_input("Y"),
           self.evaluate_input("Z"), )
         self.prepared, self.executed = True, True
-  
+
 class UtilitySeparateVector(MantisNode):
     '''A node for separating a vector into three floats'''
 
@@ -1245,7 +1247,7 @@ class UtilityCatStrings(MantisNode):
         self.outputs.init_sockets(outputs)
         self.init_parameters()
         self.node_type = "UTILITY"
-    
+
     def bPrepare(self, bContext = None,):
         self.parameters["OutputString"] = self.evaluate_input("String_1")+self.evaluate_input("String_2")
         self.prepared, self.executed = True, True
@@ -1257,7 +1259,7 @@ class InputWidget(MantisNode):
         super().__init__(signature, base_tree, InputWidgetSockets)
         self.init_parameters()
         self.node_type = "XFORM"
-    
+
     def reset_execution(self):
         super().reset_execution()
         self.prepared=False
@@ -1332,10 +1334,10 @@ class InputWidget(MantisNode):
             flip_modifier["Socket_3"]=axes_flipped[1]
             flip_modifier["Socket_4"]=axes_flipped[2]
         self.prepared, self.executed = True, True
-    
+
     def bGetObject(self, mode=''):
         return self.bObject
-    
+
 # TODO move this to the Xform file
 class InputExistingGeometryObject(MantisNode):
     '''A node representing an existing object'''
@@ -1352,7 +1354,7 @@ class InputExistingGeometryObject(MantisNode):
         self.outputs.init_sockets(outputs)
         self.init_parameters()
         self.node_type = "XFORM"
-    
+
     def reset_execution(self):
         super().reset_execution()
         self.prepared=False
@@ -1366,7 +1368,7 @@ class InputExistingGeometryObject(MantisNode):
             prRed(f"No object found with name {name} in {self}")
         self.bObject=ob
         self.prepared, self.executed = True, True
-    
+
     def bGetObject(self, mode=''):
         return self.bObject
 
@@ -1412,7 +1414,7 @@ class UtilityDeclareCollections(MantisNode):
     def reset_execution(self):
         super().reset_execution()
         self.prepared, self.executed = True, True
-    
+
     def fill_parameters(self, ui_node=None):
         if ui_node is None:
             from .utilities import get_node_prototype
@@ -1422,7 +1424,7 @@ class UtilityDeclareCollections(MantisNode):
         for out in ui_node.outputs:
             if not (out.name in self.outputs.keys()) :
                 templates.append(SockTemplate(name=out.name,
-                        identifier=out.identifier, is_input=False,))    
+                        identifier=out.identifier, is_input=False,))
         self.outputs.init_sockets(templates)
         # now we have our parameters, fill them. This is a little inefficient I guess.
         for out in ui_node.outputs:
@@ -1439,7 +1441,7 @@ class UtilityCollectionJoin(MantisNode):
     def reset_execution(self):
         super().reset_execution()
         self.prepared, self.executed = False, False
-    
+
     def bPrepare(self, bContext = None,):
         if self.inputs['Collections'].links:
             bCol_groups = []
@@ -1607,7 +1609,7 @@ class UtilitySetBoneLength(MantisNode):
         self.outputs.init_sockets(outputs)
         self.init_parameters()
         self.node_type = "UTILITY"
-    
+
     def bPrepare(self, bContext = None,):
         from mathutils import Vector
         if matrix := self.evaluate_input("Bone Matrix"):
@@ -1636,7 +1638,7 @@ class UtilityMatrixSetLocation(MantisNode):
         self.outputs.init_sockets(outputs)
         self.init_parameters()
         self.node_type = "UTILITY"
-    
+
     def bPrepare(self, bContext = None,):
         from mathutils import Vector
         if matrix := self.evaluate_input("Matrix"):
@@ -1661,7 +1663,7 @@ class UtilityMatrixGetLocation(MantisNode):
         self.outputs.init_sockets(outputs)
         self.init_parameters()
         self.node_type = "UTILITY"
-    
+
     def bPrepare(self, bContext = None,):
         from mathutils import Vector
         if matrix := self.evaluate_input("Matrix"):
@@ -1682,14 +1684,14 @@ class UtilityMatrixFromXForm(MantisNode):
         self.inputs.init_sockets(inputs)
         self.outputs.init_sockets(outputs)
         self.init_parameters()
-    
+
     def GetxForm(self):
         trace = trace_single_line(self, "xForm")
         for node in trace[0]:
             if (node.node_type == 'XFORM'):
                 return node
         raise GraphError("%s is not connected to an xForm" % self)
-        
+
     def bPrepare(self, bContext = None,):
         from mathutils import Vector, Matrix
         self.parameters["Matrix"] = Matrix.Identity(4)
@@ -1719,7 +1721,7 @@ class UtilityAxesFromMatrix(MantisNode):
         self.outputs.init_sockets(outputs)
         self.init_parameters()
         self.node_type = "UTILITY"
-        
+
     def bPrepare(self, bContext = None,):
         from mathutils import Vector
         if matrix := self.evaluate_input("Matrix"):
@@ -1859,7 +1861,7 @@ class UtilityMatrixAlignRoll(MantisNode):
         #  it directly from the Y axis, the normalized projection of the align
         #  axis, and their cross-product. That only nearly worked.
         # this calculation should not work better, but it does. Why?
-        
+
 class UtilityTransformationMatrix(MantisNode):
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree)
