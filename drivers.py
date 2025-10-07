@@ -68,7 +68,7 @@ def CreateDrivers(drivers):
         drv.type = driver["type"]
         if (expr := driver.get("expression")) and isinstance(expr, str):
             drv.expression = expr
-        
+
         fc.extrapolation = "CONSTANT"
         if (extrapolation_mode := driver.get("extrapolation")) in ("CONSTANT", "LINEAR"):
             fc.extrapolation = extrapolation_mode
@@ -76,12 +76,12 @@ def CreateDrivers(drivers):
             prRed(f"Extrapolation Mode in driver has incorrect data: {extrapolation_mode}")
 
         # logic for handling type can go here
-        
+
         # start by clearing
         while (len(drv.variables) > 0):
             v = drv.variables[0]
             dVar = drv.variables.remove(v)
-            
+
         for v in driver["vars"]:
             pose_bone = False
             bone = ''; target2bone = ''
@@ -93,40 +93,47 @@ def CreateDrivers(drivers):
                 vob = v["owner"].id_data
                 bone = v["owner"].name
             #
-            
+
             if "xForm 2" in v.keys() and v["xForm 2"]:
                 if (isinstance(v["xForm 2"], Object)):
                     target2ob = v["xForm 2"]
                 else:
                     target2ob = v["xForm 2"].id_data
                     target2bone = v["xForm 2"].name
-            
+
             dVar = drv.variables.new()
-            
-            
+
+
             dVar.name = v["name"]
             dVar.type = v["type"]
             #for now, assume this is always true:
             #dVar.targets[0].id_type = "OBJECT"
             #it's possible to use other datablocks, but this is not commonly done
             #actually, it looks like Blender figures this out for me.
-            
+
             dVar.targets[0].id = vob
             dVar.targets[0].bone_target = bone
             if len(dVar.targets) > 1:
                 dVar.targets[1].id = target2ob
                 dVar.targets[1].bone_target = target2bone
-            
+
             if (dVar.type == "TRANSFORMS"):
                 dVar.targets[0].transform_space = v["space"]
                 dVar.targets[0].transform_type = v["channel"]
             if (dVar.type == 'SINGLE_PROP'):
                 if pose_bone:
                     stub = "pose.bones[\""+v["owner"].name+"\"]"
-                    if (hasattr( v["owner"], v["prop"] )):
+                    print (v['prop'], v['owner'].name)
+                    if v["prop"] in v["owner"].keys():
+                        print('a')
+                        dVar.targets[0].data_path = stub + brackets(v["prop"])
+                    elif (hasattr( v["owner"], v["prop"] )):
+                        print('b')
                         dVar.targets[0].data_path = stub + "."+ (v["prop"])
                     else:
-                        dVar.targets[0].data_path = stub + brackets(v["prop"])
+                        print('c')
+                        # raise RuntimeError
+
                 else:
                     if (hasattr( v["owner"], v["prop"] )):
                         dVar.targets[0].data_path = (v["prop"])
@@ -136,7 +143,7 @@ def CreateDrivers(drivers):
         kp = fc.keyframe_points
         for key in driver["keys"]:
             k = kp.insert(frame=key["co"][0], value = key["co"][1],)
-            
+
             k.interpolation     = key["interpolation"]
             if (key["interpolation"] == 'BEZIER'):
                 k.handle_left_type  = key["handle_left_type" ]
@@ -146,5 +153,3 @@ def CreateDrivers(drivers):
                 if (k.handle_right_type in ("ALIGNED", "VECTOR", "FREE")):
                     k.handle_right      = (k.co[0] + key["handle_right"][0], k.co[1] + key["handle_right"][1])
             k.type = key["type"]
-      
-      
