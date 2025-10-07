@@ -49,7 +49,7 @@ prop_ignore = [ "__dict__", "__doc__", "__module__", "__weakref__",# "name",
                 # these are in Bone
                 "socket_count", "display_bb_settings", "display_def_settings",
                 "display_ik_settings", "display_vp_settings",
-                ] 
+                ]
 # don't ignore: "bl_idname", "bl_label",
 # ignore the name, it's the dict - key for the node props
     # no that's stupid don't ignore the name good grief
@@ -127,7 +127,7 @@ def fix_custom_parameter(n, property_definition, ):
     if n.bl_idname in ['xFormNullNode', 'xFormBoneNode', 'xFormArmatureNode', 'xFormGeometryObjectNode',]:
         prop_name = property_definition["name"]
         prop_type = property_definition["bl_idname"]
-        
+
         if prop_type in ['ParameterBoolSocket', 'ParameterIntSocket', 'ParameterFloatSocket', 'ParameterVectorSocket' ]:
             # is it good to make both of them?
             input = n.inputs.new( prop_type, prop_name)
@@ -135,7 +135,7 @@ def fix_custom_parameter(n, property_definition, ):
             if property_definition["is_output"] == True:
                 return output
             return input
-    
+
     elif n.bl_idname in ['LinkArmature']:
         prop_name = property_definition["name"]
         prop_type = property_definition["bl_idname"]
@@ -173,7 +173,7 @@ def fix_custom_parameter(n, property_definition, ):
 # to see if a dependency is created by node connections.
 # TODO it remains to be seen if that is even a desirable behaviour.
 def scan_tree_for_objects(base_tree, current_tree):
-    # this should work 
+    # this should work
     armatures, curves    = set(), set()
     if current_tree == base_tree:
         scan_tree_dependencies(base_tree, curves, armatures,)
@@ -310,7 +310,7 @@ def get_curve_for_pack(object):
 
 def matrix_as_tuple(matrix):
     return ( matrix[0][0], matrix[0][1], matrix[0][2], matrix[0][3],
-             matrix[1][0], matrix[1][1], matrix[1][2], matrix[1][3], 
+             matrix[1][0], matrix[1][1], matrix[1][2], matrix[1][3],
              matrix[2][0], matrix[2][1], matrix[2][2], matrix[2][3],
              matrix[3][0], matrix[3][1], matrix[3][2], matrix[3][3], )
 
@@ -322,7 +322,7 @@ class metabone_data:
     matrix                : tuple[float] = field(default=()),
     parent                : str = field(default=''),
     length                : float = field(default=-1.0),
-    children              : list[str] = field(default_factory=[]), 
+    children              : list[str] = field(default_factory=[]),
 # keep it really simple for now. I'll add BBone and envelope later on
 # when I make them accessible from the meta-rig
 
@@ -361,7 +361,7 @@ def get_socket_data(socket, ignore_if_default=False):
     socket_data["bl_idname"] = socket.bl_idname
     socket_data["is_output"] = socket.is_output
     socket_data["is_multi_input"] = socket.is_multi_input
-    
+
     # here is where we'll handle a socket_data'socket special data
     if socket.bl_idname == "EnumMetaBoneSocket":
         socket_data["bone"] = socket.bone
@@ -454,7 +454,7 @@ def get_tree_data(tree):
     tree_info = {}
     for propname  in dir(tree):
         # if getattr(tree, propname):
-        #     pass  
+        #     pass
         if (propname in prop_ignore_tree) or ( callable(getattr(tree, propname)) ):
             continue
         v = getattr(tree, propname)
@@ -489,7 +489,7 @@ def get_interface_data(tree, tree_in_out):
                 bl_socket_idname = 'VectorSocket'
             elif bl_socket_idname == 'NodeSocketInt':
                 bl_socket_idname = 'IntSocket'
-            
+
             try:
                 socket_class = getattr(socket_definitions, bl_socket_idname)
             except AttributeError: # sometimes the class doesn't work.
@@ -524,7 +524,7 @@ def get_interface_data(tree, tree_in_out):
             else:
                 sock_data["socket_type"] = sock.bl_socket_idname
             tree_in_out[sock.identifier] = sock_data
-            
+
 
 def export_to_json(trees, base_tree=None, path="", write_file=True, only_selected=False, ):
     export_data = {}
@@ -532,9 +532,10 @@ def export_to_json(trees, base_tree=None, path="", write_file=True, only_selecte
         current_tree_is_base_tree = False
         if tree is trees[-1]:
             current_tree_is_base_tree = True
-        
+
         tree_info, tree_in_out = {}, {}
         tree_info = get_tree_data(tree)
+        prRed(tree.name, "B")
         curves, metarig_data = {}, {}
 
         embed_metarigs=True
@@ -558,7 +559,7 @@ def export_to_json(trees, base_tree=None, path="", write_file=True, only_selecte
             if only_selected and node.select == False:
                 continue
             nodes[node.name] = get_node_data(node)
-            
+
         links = []
         in_sockets, out_sockets = {}, {}
         unique_sockets_from, unique_sockets_to = {}, {}
@@ -587,7 +588,7 @@ def export_to_json(trees, base_tree=None, path="", write_file=True, only_selecte
             else:
                 problem = link.to_node.name + "::" + link.to_socket.name
                 raise RuntimeError(wrapRed(f"Error saving index of socket: {problem}"))
-            
+
             if current_tree_is_base_tree:
                 if (only_selected and link.from_node.select) and (not link.to_node.select):
                     # handle an output in the tree
@@ -670,7 +671,7 @@ def export_to_json(trees, base_tree=None, path="", write_file=True, only_selecte
                         sock_data["in_out"]="INPUT"
                         sock_data["index"]=in_sock["index"]
 
-                        
+
                         tree_in_out[sock_name] = sock_data
 
                     from_node_name=in_node.get("name")
@@ -690,8 +691,8 @@ def export_to_json(trees, base_tree=None, path="", write_file=True, only_selecte
                            to_input_index,
                            from_socket_name,
                            to_socket_name) ) # it's a tuple
-        
-        
+
+
         if add_input_node or add_output_node:
             all_nodes_bounding_box=[Vector((float("inf"),float("inf"))), Vector((-float("inf"),-float("inf")))]
             for n in nodes.values():
@@ -714,7 +715,7 @@ def export_to_json(trees, base_tree=None, path="", write_file=True, only_selecte
             nodes["MANTIS_AUTOGEN_GROUP_OUTPUT"]=out_node
 
         export_data[tree.name] = (tree_info, tree_in_out, nodes, links, curves, metarig_data,) # f_curves)
-    
+
     return export_data
 
 def write_json_data(data, path):
@@ -722,7 +723,7 @@ def write_json_data(data, path):
     with open(path, "w") as file:
         print(wrapWhite("Writing mantis tree data to: "), wrapGreen(file.name))
         file.write( json.dumps(data, indent = 4) )
-        
+
 def get_link_sockets(link, tree, tree_socket_id_map):
     from_node_name = link[0]
     from_socket_id = link[1]
@@ -759,7 +760,7 @@ def get_link_sockets(link, tree, tree_socket_id_map):
         id1 = tree_socket_id_map.get(from_socket_id)
     for from_sock in from_node.outputs:
         if from_sock.identifier == id1: break
-    else: 
+    else:
         from_sock = None
 
     id2 = to_socket_id
@@ -908,7 +909,7 @@ def do_import_from_file(filepath, context):
     for tree in all_trees:
         tree.is_exporting = True
         tree.do_live_update = False
-    
+
     def do_cleanup(tree):
         tree.is_exporting = False
         tree.do_live_update = True
@@ -951,8 +952,11 @@ def do_import(data, context, search_multi_files=False, filepath='', skip_existin
     skip_trees = set()
     # First: init the interface of the node graph
     for tree_name, tree_data in data.items():
+        prRed("C'")
         tree_info = tree_data[0]
         tree_in_out = tree_data[1]
+
+        print (tree_info)
 
 
         # TODO: IMPORT THIS DATA HERE!!!
@@ -962,14 +966,12 @@ def do_import(data, context, search_multi_files=False, filepath='', skip_existin
         except IndexError: # shouldn't happen but maybe someone has an old file
             curves = {}
             armatures = {}
-        
+
         for curve_name, curve_data in curves.items():
             from .utilities import import_curve_data_to_object, import_metarig_data
             import_curve_data_to_object(curve_name, curve_data)
             for armature_name, armature_data in armatures.items():
                 import_metarig_data(armature_data)
-        
-
 
         # need to make a new tree; first, try to get it:
         tree = bpy.data.node_groups.get(tree_info["name"])
@@ -978,21 +980,22 @@ def do_import(data, context, search_multi_files=False, filepath='', skip_existin
             continue # already done here because the tree already exists.
         if tree is None:
             tree = bpy.data.node_groups.new(tree_info["name"], tree_info["bl_idname"])
+        tree.mantis_version = tree_info['mantis_version']
         tree.nodes.clear(); tree.links.clear(); tree.interface.clear()
         # this may be a bad bad thing to do without some kind of warning TODO TODO
         tree.is_executing = True
         tree.do_live_update = False
         trees.append(tree)
-        
+
         tree_sock_id_map = {}
         tree_sock_id_maps[tree.name] = tree_sock_id_map
-        
+
         interface_parent_me = {}
 
         # I need to guarantee that the interface items are in the right order.
         interface_sockets = [] # I'll just sort them afterwards so I hold them here.
         default_position=0 # We'll use this if the position attribute is not set when e.g. making groups.
-        
+
 
         for s_name, s_props in tree_in_out.items():
             if s_props["item_type"] == 'SOCKET':
@@ -1016,14 +1019,14 @@ def do_import(data, context, search_multi_files=False, filepath='', skip_existin
                     interface_parent_me[sock] = (panel, s_props["position"])
             else: # it's a panel
                 panel = tree.interface.new_panel(s_props["name"], description=s_props.get("description"), default_closed=s_props.get("default_closed"))
-    
+
         for socket, (panel, index) in interface_parent_me.items():
             tree.interface.move_to_parent(
                                     socket,
                                     tree.interface.items_tree.get(panel),
                                     index,
                                     )
-        
+
         # BUG this was screwing up the order of things
         # so I want to fix it and re-enable it
         if True:
@@ -1031,7 +1034,7 @@ def do_import(data, context, search_multi_files=False, filepath='', skip_existin
             interface_sockets.sort(key=lambda a : a[1])
             for (socket, position) in interface_sockets:
                 tree.interface.move(socket, position)
-        
+
     # Now go and do nodes and links
     for tree_name, tree_data in data.items():
         if tree_name in skip_trees:
@@ -1041,7 +1044,7 @@ def do_import(data, context, search_multi_files=False, filepath='', skip_existin
         tree_info = tree_data[0]
         nodes = tree_data[2]
         links = tree_data[3]
-        
+
         parent_me = []
 
         tree = bpy.data.node_groups.get(tree_info["name"])
@@ -1051,9 +1054,9 @@ def do_import(data, context, search_multi_files=False, filepath='', skip_existin
         trees.append(tree)
 
         tree_sock_id_map=tree_sock_id_maps[tree.name]
-        
+
         interface_parent_me = {}
-        
+
 #        from mantis.utilities import prRed, prWhite, prOrange, prGreen
         for name, propslist in nodes.items():
             bl_idname = propslist["bl_idname"]
@@ -1089,7 +1092,7 @@ def do_import(data, context, search_multi_files=False, filepath='', skip_existin
                                 "SchemaIncomingConnection",]:
                 n.update()
 
-            
+
             if sub_tree := propslist.get("node_tree"):
                 # now that I am doing multi-file exports, this is tricky
                 # we need to see if the tree exists and if not, recurse
@@ -1127,13 +1130,13 @@ def do_import(data, context, search_multi_files=False, filepath='', skip_existin
                          "sockets",
                          "inputs",
                          "outputs",
-                         "warning_propagation", 
+                         "warning_propagation",
                          "socket_idname"]:
                     continue
                 # will throw AttributeError if read-only
                 # will throw TypeError if wrong type...
                 if n.bl_idname == "NodeFrame" and p in ["width, height, location"]:
-                    continue 
+                    continue
                 if version  < (4,4,0) and p == 'location_absolute':
                     continue
                 if p == "parent" and v is not None:
@@ -1144,7 +1147,7 @@ def do_import(data, context, search_multi_files=False, filepath='', skip_existin
                 except Exception as e:
                     prRed (p)
                     raise e
-                
+
 
         for l in links:
             from_socket_name = l[6]
@@ -1168,16 +1171,16 @@ def do_import(data, context, search_multi_files=False, filepath='', skip_existin
                     raise RuntimeError
                 else:
                     prRed(f"Failed to add link in {tree.name}: {name1}:{from_socket_name}, {name2}:{to_socket_name}")
-            
+
             # if at this point it doesn't work... we need to fix
         for name, p in parent_me:
             if (n := tree.nodes.get(name)) and (p := tree.nodes.get(p)):
                 n.parent = p
             # otherwise the frame node is missing because it was not included in the data e.g. when grouping nodes.
-        
+
         tree.is_executing = False
         tree.do_live_update = True
-        
+
 
 def export_multi_file(trees : list,  base_tree, filepath : str, base_name :str) -> None:
     for t in trees:
@@ -1191,7 +1194,7 @@ def export_multi_file(trees : list,  base_tree, filepath : str, base_name :str) 
                         clean_name(t.name)+'.rig'))
         write_json_data(export_data, os_path.join(directory,
                         clean_name(t.name)+'.rig'))
-        
+
 
 import bpy
 
@@ -1228,7 +1231,7 @@ class MantisExportNodeTreeSaveAs(Operator, ExportHelper):
         # we need to get the dependent trees from self.tree...
         # there is no self.tree
         # how do I choose a tree?
-        
+
         base_tree=context.space_data.path[-1].node_tree
         from .utilities import all_trees_in_tree
         trees = all_trees_in_tree(base_tree)[::-1]
