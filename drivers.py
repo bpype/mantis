@@ -123,16 +123,11 @@ def CreateDrivers(drivers):
             if (dVar.type == 'SINGLE_PROP'):
                 if pose_bone:
                     stub = "pose.bones[\""+v["owner"].name+"\"]"
-                    print (v['prop'], v['owner'].name)
-                    if v["prop"] in v["owner"].keys():
-                        print('a')
-                        dVar.targets[0].data_path = stub + brackets(v["prop"])
-                    elif (hasattr( v["owner"], v["prop"] )):
-                        print('b')
+                    dVar.targets[0].data_path = stub + brackets(v["prop"])
+                    if (hasattr( v["owner"], v["prop"] )):
                         dVar.targets[0].data_path = stub + "."+ (v["prop"])
-                    else:
-                        print('c')
-                        # raise RuntimeError
+                    # else: # the property may be added later.
+                    # TODO BUG I want a guarantee that this property is already there.
 
                 else:
                     if (hasattr( v["owner"], v["prop"] )):
