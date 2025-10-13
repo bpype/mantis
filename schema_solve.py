@@ -313,7 +313,7 @@ class SchemaSolver:
         from_node = self.schema_nodes[(*self.node.ui_signature, from_ui_node.bl_idname)]
         from collections import deque
         unprepared = deque(from_node.hierarchy_dependencies)
-        self.prepare_nodes(unprepared, frame_mantis_nodes)
+        self.prepare_nodes(unprepared)
         from .utilities import cap, wrap
         get_index = from_node.evaluate_input("Index", self.index) # get the most recent link
         # getting the link at self.index just saves the trouble of killing the old links
@@ -514,22 +514,15 @@ class SchemaSolver:
                 return False
         return True
 
-    def prepare_nodes(self, unprepared, frame_nodes):
+    def prepare_nodes(self, unprepared):
         # At this point, we've already run a pretty exhaustive preperation phase to prep the schema's dependencies
         # So we should not need to add any new dependencies unless there is a bug elsewhere.
         # and in fact, I could skip this in some cases, and should investigate if profiling reveals a slowdown here.
-        from .misc_nodes import UtilityChoose, UtilityKDChoosePoint, UtilityKDChooseXForm
-        forbidden=set() # forbid some nodes - they aren't necessary to solve the schema & cause problems.
+        forbidden=set()
+        e = None
+        # forbid some nodes - they aren't necessary to solve the schema & cause problems.
         while unprepared:
             nc = unprepared.pop()
-            if isinstance(nc, (UtilityChoose, UtilityKDChoosePoint, UtilityKDChooseXForm)): 
-                can_skip=True                 # NOTE: this bug can also be fixed by adding
-                for output in nc.outputs:     # a no-op node between the choose and the output.
-                    for l in output.links:    # try that instead if this causes problems.
-                        if l.to_node in frame_nodes.values():
-                            can_skip = False; break
-                    if can_skip == False: break # don't keep looking
-                if can_skip: continue # do nothing because its links are not ready.
             if nc.node_type == 'DUMMY_SCHEMA' and not self.test_is_sub_schema(nc):
                 forbidden.add(nc) # do NOT add this as a dependency.
             if nc in forbidden: continue # trying to resolve dependencies for.
@@ -677,7 +670,7 @@ class SchemaSolver:
             if node.node_type == 'DUMMY_SCHEMA' and (schema_len_in := node.inputs.get("Schema Length")):
                 for l in schema_len_in.links:
                     unprepared.append(l.from_node)
-            self.prepare_nodes(unprepared, frame_mantis_nodes)
+            self.prepare_nodes(unprepared)
 
         # We have to prepare the nodes leading to Array Input Get
         for ui_link in array_input_get_link:
@@ -707,7 +700,7 @@ class SchemaSolver:
                 unprepared.extend(from_node.hierarchy_dependencies)
             else:
                 raise RuntimeError(" 671 there has been an error parsing the tree. Please report this as a bug.")
-            self.prepare_nodes(unprepared, frame_mantis_nodes) # prepare only the dependencies we need for this link
+            self.prepare_nodes(unprepared) # prepare only the dependencies we need for this link
             # and handle the output by the specific type
             if isinstance(to_ui_node, (SchemaConstOutput, NodeGroupOutput)):
                 self.handle_link_to_constant_output(frame_mantis_nodes, self.index, ui_link,  to_ui_node)
