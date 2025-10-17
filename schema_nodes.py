@@ -15,20 +15,20 @@ def TellClasses():
         SchemaIncomingConnection,
     ]
 
-def schema_init_sockets(nc, is_input = True, in_out='INPUT', category=''):
-    from .utilities import tree_from_nc
-    parent_tree = tree_from_nc(nc.signature, nc.base_tree)
+def schema_init_sockets(mantis_node, is_input = True, in_out='INPUT', category=''):
+    from .utilities import tree_from_mantis_node
+    parent_tree = tree_from_mantis_node(mantis_node.signature, mantis_node.base_tree)
     if is_input:
-        sockets=nc.inputs
+        sockets=mantis_node.inputs
     else:
-        sockets=nc.outputs
+        sockets=mantis_node.outputs
     if category in ['Constant', 'Array', 'Connection']:
         for item in parent_tree.interface.items_tree:
             if item.item_type == 'PANEL': continue
             if item.parent and item.parent.name == category:
                 if item.in_out == in_out:
                     sockets.init_sockets([item.name])
-    nc.init_parameters()
+    mantis_node.init_parameters()
 
 
 class SchemaNode(MantisNode):
@@ -87,7 +87,7 @@ class SchemaConstInput(SchemaNode):
         if parent_schema_node:
             # this allows us to generate the Constant Input from a normal Node Group
             # and treat the node group as a schema
-            parent_tree = parent_schema_node.prototype.node_tree
+            parent_tree = parent_schema_node.ui_node.node_tree
             sockets=self.outputs
             for item in parent_tree.interface.items_tree:
                 if item.item_type == 'PANEL': continue
@@ -109,7 +109,7 @@ class SchemaConstOutput(SchemaNode):
         if parent_schema_node:
             # this allows us to generate the Constant Input from a normal Node Group
             # and treat the node group as a schema
-            parent_tree = parent_schema_node.prototype.node_tree
+            parent_tree = parent_schema_node.ui_node.node_tree
             sockets=self.inputs
             for item in parent_tree.interface.items_tree:
                 if item.item_type == 'PANEL': continue

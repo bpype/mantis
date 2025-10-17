@@ -34,13 +34,13 @@ class MantisVisualizeNode(Node):
         return label
     
     def gen_data(self, mantis_node, mode='DEBUG_CONNECTIONS'):
-        from .utilities import get_node_prototype
+        from .utilities import get_ui_node
         if mantis_node.node_type in ['SCHEMA', 'DUMMY']:
             np=None
         elif mantis_node.ui_signature is None:
             np=None
         else:
-            np=get_node_prototype(mantis_node.ui_signature, mantis_node.base_tree)
+            np=get_ui_node(mantis_node.ui_signature, mantis_node.base_tree)
         self.use_custom_color = True
         match mantis_node.node_type:
             case 'XFORM':        self.color = (1.0 ,0.5, 0.0)

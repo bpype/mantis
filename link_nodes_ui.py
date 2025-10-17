@@ -60,16 +60,16 @@ class LinkInheritNode(Node, LinkNode):
 
     def display_update(self, parsed_tree, context):
         node_tree = context.space_data.path[0].node_tree
-        nc = parsed_tree.get(get_signature_from_edited_tree(self, context))
-        if nc:
+        mantis_node = parsed_tree.get(get_signature_from_edited_tree(self, context))
+        if mantis_node:
             bone_prev, bone_next = False, False
-            if (inp := nc.inputs["Parent"]).is_connected:
+            if (inp := mantis_node.inputs["Parent"]).is_connected:
                 if  from_node := inp.links[0].from_node:
                     if from_node.__class__.__name__ in ["xFormBone"]:
                         bone_prev=True
             bone_next=True
             try:
-                xForm = nc.GetxForm()
+                xForm = mantis_node.GetxForm()
                 if xForm.__class__.__name__ not in "xFormBone":
 
                     bone_next=False
@@ -318,23 +318,23 @@ class LinkTransformationNode(Node, LinkNode):
 
     def display_update(self, parsed_tree, context):
         node_tree = context.space_data.path[0].node_tree
-        nc = parsed_tree.get(get_signature_from_edited_tree(self, context))
-        if nc:
-            if nc.evaluate_input("Map From") == "ROTATION":
+        mantis_node = parsed_tree.get(get_signature_from_edited_tree(self, context))
+        if mantis_node:
+            if mantis_node.evaluate_input("Map From") == "ROTATION":
                 self.inputs["Rotation Mode"].hide=False
             else:
                 self.inputs["Rotation Mode"].hide=True
-            if   nc.evaluate_input("Map To") == "TRANSLATION":
+            if   mantis_node.evaluate_input("Map To") == "TRANSLATION":
                     self.inputs["Rotation Order"].hide=True
                     self.inputs["Mix Mode (Translation)"].hide=False
                     self.inputs["Mix Mode (Rotation)"].hide=True
                     self.inputs["Mix Mode (Scale)"].hide=True
-            elif nc.evaluate_input("Map To") == "ROTATION":
+            elif mantis_node.evaluate_input("Map To") == "ROTATION":
                     self.inputs["Rotation Order"].hide=False
                     self.inputs["Mix Mode (Translation)"].hide=True
                     self.inputs["Mix Mode (Rotation)"].hide=False
                     self.inputs["Mix Mode (Scale)"].hide=True
-            elif nc.evaluate_input("Map To") == "SCALE":
+            elif mantis_node.evaluate_input("Map To") == "SCALE":
                     self.inputs["Rotation Order"].hide=True
                     self.inputs["Mix Mode (Translation)"].hide=True
                     self.inputs["Mix Mode (Rotation)"].hide=True
@@ -409,10 +409,10 @@ class LinkShrinkWrapNode(Node, LinkNode):
         shrink_type = self.inputs['Mode'].default_value
         if self.inputs['Mode'].is_linked:# 1% or less of cases
             node_tree = context.space_data.path[0].node_tree
-            nc = parsed_tree.get(get_signature_from_edited_tree(self, context))
+            mantis_node = parsed_tree.get(get_signature_from_edited_tree(self, context))
             shrink_is_project = False
-            if nc:
-                shrink_type = nc.evaluate_input("Mode")
+            if mantis_node:
+                shrink_type = mantis_node.evaluate_input("Mode")
         if shrink_type != "PROJECT":
             self.inputs['Project Axis'].hide=True
             self.inputs['Space'].hide=True

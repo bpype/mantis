@@ -23,11 +23,11 @@ def reset_object_data(ob):
     ob.animation_data_clear() # this is a little dangerous. TODO find a better solution since this can wipe animation the user wants to keep
     ob.modifiers.clear() # I would also like a way to copy modifiers and their settings, or bake them down. oh well
 
-def get_parent_node(node_container, type = 'XFORM'):
+def get_parent_node(mantis_node, type = 'XFORM'):
     # type variable for selecting whether to get either
     #   the parent xForm  or the inheritance node
-    node_line, socket = trace_single_line(node_container, "Relationship")
-    parent_nc = None
+    node_line, socket = trace_single_line(mantis_node, "Relationship")
+    parent_mantis_node = None
     for i in range(len(node_line)):
         # check each of the possible parent types.
         if ( (node_line[ i ].__class__.__name__ == 'LinkInherit') ):
@@ -48,8 +48,8 @@ def get_matrix(node):
     return matrix
 
 def set_object_parent(node):
-        parent_nc = get_parent_node(node, type='LINK')
-        if (parent_nc):
+        parent_mantis_node = get_parent_node(node, type='LINK')
+        if (parent_mantis_node):
             parent = None
             if node.inputs["Relationship"].is_linked:
                 trace = trace_single_line(node, "Relationship")
@@ -96,7 +96,7 @@ class xFormArmature(xFormNode):
         self.prepared = True
 
     def bTransformPass(self, bContext = None,):
-        # from .utilities import get_node_prototype
+        # from .utilities import get_ui_node
 
         import bpy
         if (not isinstance(bContext, bpy.types.Context)):
@@ -269,20 +269,20 @@ class xFormBone(xFormNode):
     def bSetParent(self, eb):
         # print (self.bObject)
         from bpy.types import EditBone
-        parent_nc = get_parent_node(self, type='LINK')
-        # print (self, parent_nc.inputs['Parent'].from_node)
+        parent_mantis_node = get_parent_node(self, type='LINK')
+        # print (self, parent_mantis_node.inputs['Parent'].from_node)
         parent=None
-        if parent_nc.inputs['Parent'].links[0].from_node.node_type == 'XFORM':
-            parent = parent_nc.inputs['Parent'].links[0].from_node.bGetObject(mode = 'EDIT')
+        if parent_mantis_node.inputs['Parent'].links[0].from_node.node_type == 'XFORM':
+            parent = parent_mantis_node.inputs['Parent'].links[0].from_node.bGetObject(mode = 'EDIT')
         else:
             raise RuntimeError(wrapRed(f"Cannot set parent for node {self}"))
 
         if isinstance(parent, EditBone):
             eb.parent = parent
 
-        eb.use_connect = parent_nc.evaluate_input("Connected")
-        eb.use_inherit_rotation = parent_nc.evaluate_input("Inherit Rotation")
-        eb.inherit_scale = parent_nc.evaluate_input("Inherit Scale")
+        eb.use_connect = parent_mantis_node.evaluate_input("Connected")
+        eb.use_inherit_rotation = parent_mantis_node.evaluate_input("Inherit Rotation")
+        eb.inherit_scale = parent_mantis_node.evaluate_input("Inherit Scale")
         # otherwise, no need to do anything.
 
     def bPrepare(self, bContext=None):
@@ -475,8 +475,8 @@ class xFormBone(xFormNode):
         pb.rotation_mode = rotation_mode
         pb.id_properties_clear()
         # these are kept around unless explicitly deleted.
-        # from .utilities import get_node_prototype
-        # np = get_node_prototype(self.signature, self.base_tree)
+        # from .utilities import get_ui_node
+        # np = get_ui_node(self.signature, self.base_tree)
         driver = None
         do_prints=False
 
@@ -648,10 +648,10 @@ class xFormBone(xFormNode):
             prRed ("Cannot get bone for %s" % self)
             raise e
 
-    def fill_parameters(self, prototype=None):
+    def fill_parameters(self, ui_node=None):
         # this is the fill_parameters that is run if it isn't a schema
         setup_custom_props(self)
-        super().fill_parameters(prototype)
+        super().fill_parameters(ui_node)
         # otherwise we will do this from the schema
         # LEGIBILITY TODO - why? explain this?
 

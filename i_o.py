@@ -150,10 +150,10 @@ def fix_custom_parameter(n, property_definition, ):
 #     armatures = set()
 #     curves    = set()
 #     for node in base_tree.parsed_tree.values():
-#         from .utilities import get_node_prototype
+#         from .utilities import get_ui_node
 #         if node.ui_signature is None:
 #             continue
-#         ui_node = get_node_prototype(node.ui_signature, node.base_tree)
+#         ui_node = get_ui_node(node.ui_signature, node.base_tree)
 #         if ui_node is None or ui_node.id_data != current_tree:
 #             continue
 #         if hasattr(node, "bGetObject"):
@@ -189,11 +189,11 @@ def scan_tree_dependencies(base_tree, curves:set, armatures:set, ):
     else:
         base_tree.update_tree(context=context)
         nodes = base_tree.parsed_tree
-    for nc in nodes.values():
-        nc.reset_execution()
-        check_and_add_root(nc, xForm_pass)
+    for mantis_node in nodes.values():
+        mantis_node.reset_execution()
+        check_and_add_root(mantis_node, xForm_pass)
     from .readtree import sort_execution
-    from .utilities import get_node_prototype
+    from .utilities import get_ui_node
     sorted_nodes, execution_failed = sort_execution(nodes, xForm_pass)
     if execution_failed:
         prRed("Error reading dependencies from tree, skipping")
@@ -201,7 +201,7 @@ def scan_tree_dependencies(base_tree, curves:set, armatures:set, ):
     for n in sorted_nodes:
         if n.ui_signature is None:
             continue # doesn't matter
-        ui_node = get_node_prototype(n.ui_signature, n.base_tree)
+        ui_node = get_ui_node(n.ui_signature, n.base_tree)
         if not ui_node:
             continue
         # we need to see if it is receiving a Curve

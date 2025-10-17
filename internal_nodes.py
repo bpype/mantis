@@ -4,22 +4,22 @@ from .base_definitions import MantisNode
 from uuid import uuid4
 
 class DummyNode(MantisNode):
-    def __init__(self, signature, base_tree, prototype = None, ui_signature=None):
+    def __init__(self, signature, base_tree, ui_node = None, ui_signature=None):
         super().__init__(signature, base_tree)
-        self.prototype = prototype
+        self.ui_node = ui_node
         self.node_type = 'DUMMY'
         self.prepared = True
         self.uuid = uuid4()
         self.solver = None
-        if prototype:
-            if prototype.bl_idname in ["MantisSchemaGroup"]:
+        if ui_node:
+            if ui_node.bl_idname in ["MantisSchemaGroup"]:
                 self.node_type = 'DUMMY_SCHEMA'
                 self.prepared = False
-            for sock in prototype.inputs:
+            for sock in ui_node.inputs:
                 if sock.identifier == "__extend__" or sock.name == "__extend__":
                     continue
                 self.inputs[sock.identifier] = NodeSocket(is_input = True, name = sock.identifier, node = self)
-            for sock in prototype.outputs:
+            for sock in ui_node.outputs:
                 if sock.identifier == "__extend__" or sock.name == "__extend__":
                     continue
                 self.outputs[sock.identifier] = NodeSocket(is_input = False, name = sock.identifier, node = self)

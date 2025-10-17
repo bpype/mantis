@@ -457,10 +457,10 @@ class UtilityMetaRigNode(Node, MantisUINode):
         self.initialized = True
     
     def display_update(self, parsed_tree, context):
-        nc = parsed_tree.get(get_signature_from_edited_tree(self, context))
-        if nc:
-            self.armature= nc.evaluate_input("Meta-Armature")
-            self.pose_bone= nc.evaluate_input("Meta-Bone")
+        mantis_node = parsed_tree.get(get_signature_from_edited_tree(self, context))
+        if mantis_node:
+            self.armature= mantis_node.evaluate_input("Meta-Armature")
+            self.pose_bone= mantis_node.evaluate_input("Meta-Bone")
         if not self.armature:
             self.inputs["Meta-Bone"].hide=True
         else:
@@ -517,9 +517,9 @@ class UtilityDriverVariableNode(Node, MantisUINode):
         if self.inputs["Variable Type"].is_linked:
             if context.space_data:
                 node_tree = context.space_data.path[0].node_tree
-                nc = parsed_tree.get(get_signature_from_edited_tree(self, context))
-                if nc:
-                    driver_type = nc.evaluate_input("Variable Type")
+                mantis_node = parsed_tree.get(get_signature_from_edited_tree(self, context))
+                if mantis_node:
+                    driver_type = mantis_node.evaluate_input("Variable Type")
         else:
             driver_type = self.inputs[0].default_value
         if driver_type == 'SINGLE_PROP':
@@ -594,9 +594,9 @@ class UtilityDriverNode(Node, MantisUINode):
     def display_update(self, parsed_tree, context):
         if not self.inputs["Driver Type"].is_linked:
             dType = self.inputs["Driver Type"].default_value
-        nc = parsed_tree.get(get_signature_from_edited_tree(self, context))
-        if nc:
-            dType = nc.evaluate_input("Driver Type")
+        mantis_node = parsed_tree.get(get_signature_from_edited_tree(self, context))
+        if mantis_node:
+            dType = mantis_node.evaluate_input("Driver Type")
         if dType == 'SCRIPTED':
             self.inputs["Expression"].hide = False
         else:
@@ -692,14 +692,14 @@ class UtilityCatStringsNode(Node, MantisUINode):
         
     def display_update(self, parsed_tree, context):
         if context.space_data:
-            nc = parsed_tree.get(get_signature_from_edited_tree(self, context))
+            mantis_node = parsed_tree.get(get_signature_from_edited_tree(self, context))
             self.inputs['String_1'].display_text = ""
             self.inputs['String_2'].display_text = ""
             self.outputs['OutputString'].display_text = ""
-            if nc:
+            if mantis_node:
                 try:
-                    self.inputs['String_1'].display_text = a = nc.evaluate_input("String_1")
-                    self.inputs['String_2'].display_text = b = nc.evaluate_input("String_2")
+                    self.inputs['String_1'].display_text = a = mantis_node.evaluate_input("String_1")
+                    self.inputs['String_2'].display_text = b = mantis_node.evaluate_input("String_2")
                     # cat the strings here, since the node may not have run yet.
                     self.outputs['OutputString'].display_text = a+b
                 except KeyError:
@@ -746,9 +746,9 @@ class InputExistingGeometryObjectNode(Node, MantisUINode):
         self.initialized = True
     
     def display_update(self, parsed_tree, context):
-        nc = parsed_tree.get(get_signature_from_edited_tree(self, context))
-        if nc: # this is done here so I don't have to define yet another custom socket.
-            self.object_reference = bpy.data.objects.get(nc.evaluate_input("Name"))
+        mantis_node = parsed_tree.get(get_signature_from_edited_tree(self, context))
+        if mantis_node: # this is done here so I don't have to define yet another custom socket.
+            self.object_reference = bpy.data.objects.get(mantis_node.evaluate_input("Name"))
     
 # TODO: maybe I should hold a data reference here, too.
 #       but it is complicated by the fact that Mantis does not distinguish b/tw geo types
@@ -980,12 +980,12 @@ class UtilityKeyframe(Node, MantisUINode):
 
     # def display_update(self, parsed_tree, context):
     #     if context.space_data:
-    #         nc = parsed_tree.get(get_signature_from_edited_tree(self, context))
-    #         if nc.evaluate_input("Interpolation") in ["CONSTANT", "LINEAR"]:
+    #         mantis_node = parsed_tree.get(get_signature_from_edited_tree(self, context))
+    #         if mantis_node.evaluate_input("Interpolation") in ["CONSTANT", "LINEAR"]:
     #             for inp in self.inputs[1:6]:
     #                 inp.hide = True
     #         else:
-    #             if nc.evaluate_input("Left Handle Type") in ["FREE", "ALIGNED"]:
+    #             if mantis_node.evaluate_input("Left Handle Type") in ["FREE", "ALIGNED"]:
 
     #             for inp in self.inputs[1:6]:
     #                 inp.hide = False
@@ -1109,8 +1109,8 @@ class UtilityTransformationMatrix(Node, MantisUINode):
         operation = self.inputs['Operation'].default_value
         if self.inputs['Operation'].is_linked:
             if context.space_data:
-                nc = parsed_tree.get(get_signature_from_edited_tree(self, context))
-                operation = nc.evaluate_input("Operation")
+                mantis_node = parsed_tree.get(get_signature_from_edited_tree(self, context))
+                operation = mantis_node.evaluate_input("Operation")
         if operation in ["ROTATE_AXIS_ANGLE", "SCALE"]:
             self.inputs["Vector"].hide = False
             self.inputs["W"].hide = False
@@ -1298,9 +1298,9 @@ class UtilityChoose(Node, MantisUINode):
         # if both inputs are the same color, then use that color for the result
         if self.inputs['Condition'].is_linked:
             from .base_definitions import get_signature_from_edited_tree
-            nc = parsed_tree.get(get_signature_from_edited_tree(self, context))
-            if nc:
-                condition = nc.evaluate_input('Condition')
+            mantis_node = parsed_tree.get(get_signature_from_edited_tree(self, context))
+            if mantis_node:
+                condition = mantis_node.evaluate_input('Condition')
         else:
             condition = self.inputs['Condition'].default_value
         if condition == True:

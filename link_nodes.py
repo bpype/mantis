@@ -37,7 +37,7 @@ def TellClasses():
             ]
 
 # set the name if it is available, otherwise just use the constraint's nice name
-set_constraint_name = lambda nc : nc.evaluate_input("Name") if nc.evaluate_input("Name") else nc.__class__.__name__
+set_constraint_name = lambda mantis_node : mantis_node.evaluate_input("Name") if mantis_node.evaluate_input("Name") else mantis_node.__class__.__name__
 
 
 class MantisLinkNode(MantisNode):
@@ -84,9 +84,9 @@ class MantisLinkNode(MantisNode):
                 else:
                     c.space_object=xf
 
-    def GetxForm(nc, output_name="Output Relationship"):
+    def GetxForm(mantis_node, output_name="Output Relationship"):
         break_condition= lambda node : node.node_type=='XFORM'
-        xforms = trace_line_up_branching(nc, output_name, break_condition)
+        xforms = trace_line_up_branching(mantis_node, output_name, break_condition)
         return_me=[]
         for xf in xforms:
             if xf.node_type != 'XFORM':

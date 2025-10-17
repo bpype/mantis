@@ -26,12 +26,12 @@ def TellClasses():
 # object instance probably can't use the deformer but it doesn't hurt to try.
 deformable_types= (xFormGeometryObject, InputExistingGeometryObject, xFormObjectInstance)
 
-def trace_xForm_back(nc, socket):
-    if (trace := trace_single_line(nc, socket)[0] ) :
+def trace_xForm_back(mantis_node, socket):
+    if (trace := trace_single_line(mantis_node, socket)[0] ) :
         for i in range(len(trace)): # have to look in reverse, actually
             if ( isinstance(trace[ i ], deformable_types ) ):
                 return trace[ i ].bGetObject()
-        raise GraphError(wrapRed(f"No other object found for {nc}."))
+        raise GraphError(wrapRed(f"No other object found for {mantis_node}."))
 
 class MantisDeformerNode(MantisNode):
     def __init__(self, signature : tuple,
@@ -52,9 +52,9 @@ class MantisDeformerNode(MantisNode):
         else:
             return super().evaluate_input(input_name, index)
     
-    def GetxForm(nc, output_name="Deformer"):
+    def GetxForm(mantis_node, output_name="Deformer"):
         break_condition= lambda node : node.__class__ in deformable_types
-        xforms = trace_line_up_branching(nc, output_name, break_condition)
+        xforms = trace_line_up_branching(mantis_node, output_name, break_condition)
         return_me=[]
         for xf in xforms:
             if xf.node_type != 'XFORM':

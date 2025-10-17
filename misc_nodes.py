@@ -309,8 +309,8 @@ class InputThemeBoneColorSets(SimpleInputNode):
 
     def fill_parameters(self, ui_node=None):
         if not ui_node:
-            from .utilities import get_node_prototype
-            ui_node = get_node_prototype(self.ui_signature, self.base_tree)
+            from .utilities import get_ui_node
+            ui_node = get_ui_node(self.ui_signature, self.base_tree)
         for i in range(20):
             self.parameters[f"Color {str(i).zfill(2)}"] = ui_node.outputs[i].default_value
         return super().fill_parameters(ui_node)
@@ -322,8 +322,8 @@ class InputColorSetPallete(SimpleInputNode):
 
     def fill_parameters(self, ui_node=None):
         if not ui_node:
-            from .utilities import get_node_prototype
-            ui_node = get_node_prototype(self.ui_signature, self.base_tree)
+            from .utilities import get_ui_node
+            ui_node = get_ui_node(self.ui_signature, self.base_tree)
         from .base_definitions import MantisSocketTemplate
         outputs = []
         for o in ui_node.outputs:
@@ -812,7 +812,7 @@ class UtilityBoneProperties(SimpleInputNode):
         self.outputs.init_sockets(outputs)
         self.init_parameters()
 
-    def fill_parameters(self, prototype=None):
+    def fill_parameters(self, ui_node=None):
         return
 
 # TODO this should probably be moved to Links
@@ -1417,8 +1417,8 @@ class UtilityDeclareCollections(MantisNode):
 
     def fill_parameters(self, ui_node=None):
         if ui_node is None:
-            from .utilities import get_node_prototype
-            ui_node = get_node_prototype(self.ui_signature, self.base_tree)
+            from .utilities import get_ui_node
+            ui_node = get_ui_node(self.ui_signature, self.base_tree)
         from .base_definitions import MantisSocketTemplate as SockTemplate
         templates=[]
         for out in ui_node.outputs:

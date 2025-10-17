@@ -61,9 +61,9 @@ class DeformerArmatureNode(Node, DeformerNode):
     def display_update(self, parsed_tree, context):
         self.inputs["Copy Skin Weights From"].hide = True
         node_tree = context.space_data.path[0].node_tree
-        nc = parsed_tree.get(get_signature_from_edited_tree(self, context))
-        if nc:
-            self.inputs["Copy Skin Weights From"].hide = not (nc.evaluate_input("Skinning Method") == "COPY_FROM_OBJECT")
+        mantis_node = parsed_tree.get(get_signature_from_edited_tree(self, context))
+        if mantis_node:
+            self.inputs["Copy Skin Weights From"].hide = not (mantis_node.evaluate_input("Skinning Method") == "COPY_FROM_OBJECT")
                 
 
 class DeformerHook(Node, DeformerNode):

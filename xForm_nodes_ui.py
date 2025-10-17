@@ -43,15 +43,15 @@ def default_traverse(self, socket):
 
 def check_if_connected(start, end, line):
     started=False
-    for path_nc in line:
-        prWhite("    ", path_nc.signature)
-        if path_nc.signature == start.signature:
+    for path_mantis_node in line:
+        prWhite("    ", path_mantis_node.signature)
+        if path_mantis_node.signature == start.signature:
             started = True
-        elif path_nc.signature == end.signature:
+        elif path_mantis_node.signature == end.signature:
             break
         if started:
-            if path_nc.inputs.get("Connected"):
-                if path_nc.evaluate_input("Connected") == False:
+            if path_mantis_node.inputs.get("Connected"):
+                if path_mantis_node.evaluate_input("Connected") == False:
                     return False
     else:
         return False
@@ -241,18 +241,18 @@ class xFormBoneNode(Node, xFormNode):
         
     def display_update(self, parsed_tree, context):
         if context.space_data:
-            nc = parsed_tree.get(get_signature_from_edited_tree(self, context))
+            mantis_node = parsed_tree.get(get_signature_from_edited_tree(self, context))
             self.display_ik_settings = False
-            if nc and (pb := nc.bGetObject(mode='POSE')):
+            if mantis_node and (pb := mantis_node.bGetObject(mode='POSE')):
                 self.display_ik_settings = pb.is_in_ik_chain
             
             self.inputs['Name'].display_text = ""
-            if nc:
+            if mantis_node:
                 try:
-                    self.inputs['Name'].display_text = nc.evaluate_input("Name")
-                    self.display_vp_settings = nc.inputs["Custom Object"].is_connected
-                    self.display_def_settings = nc.evaluate_input("Deform")
-                    self.display_bb_settings = nc.evaluate_input("BBone Segments") > 1
+                    self.inputs['Name'].display_text = mantis_node.evaluate_input("Name")
+                    self.display_vp_settings = mantis_node.inputs["Custom Object"].is_connected
+                    self.display_def_settings = mantis_node.evaluate_input("Deform")
+                    self.display_bb_settings = mantis_node.evaluate_input("BBone Segments") > 1
                 except KeyError:
                     return # the tree isn't ready yet.
             
@@ -290,10 +290,10 @@ class xFormArmatureNode(Node, xFormNode):
     
     def display_update(self, parsed_tree, context):
         if context.space_data:
-            nc = parsed_tree.get(get_signature_from_edited_tree(self, context))
+            mantis_node = parsed_tree.get(get_signature_from_edited_tree(self, context))
             self.inputs['Name'].display_text = ""
-            if nc:
-                self.inputs['Name'].display_text = nc.evaluate_input("Name")
+            if mantis_node:
+                self.inputs['Name'].display_text = mantis_node.evaluate_input("Name")
 
 class xFormGeometryObjectNode(Node, xFormNode):
     """Represents a curve or mesh object."""
@@ -314,10 +314,10 @@ class xFormGeometryObjectNode(Node, xFormNode):
     
     def display_update(self, parsed_tree, context):
         if context.space_data:
-            nc = parsed_tree.get(get_signature_from_edited_tree(self, context))
+            mantis_node = parsed_tree.get(get_signature_from_edited_tree(self, context))
             self.inputs['Name'].display_text = ""
-            if nc:
-                self.inputs['Name'].display_text = nc.evaluate_input("Name")
+            if mantis_node:
+                self.inputs['Name'].display_text = mantis_node.evaluate_input("Name")
 
 class xFormObjectInstance(Node, xFormNode):
     """Represents an instance of an existing geometry object."""
@@ -338,10 +338,10 @@ class xFormObjectInstance(Node, xFormNode):
     
     def display_update(self, parsed_tree, context):
         if context.space_data:
-            nc = parsed_tree.get(get_signature_from_edited_tree(self, context))
+            mantis_node = parsed_tree.get(get_signature_from_edited_tree(self, context))
             self.inputs['Name'].display_text = ""
-            if nc:
-                self.inputs['Name'].display_text = nc.evaluate_input("Name")
+            if mantis_node:
+                self.inputs['Name'].display_text = mantis_node.evaluate_input("Name")
 
 from .xForm_nodes import xFormCurvePinSockets
 class xFormCurvePin(Node, xFormNode):
