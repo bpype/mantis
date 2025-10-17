@@ -100,7 +100,7 @@ def autogen_node(base_tree, ui_socket, signature, mContext):
     from .utilities import  gen_nc_input_for_data
     # nc_cls = gen_nc_input_for_data(ui_socket)
     # if (nc_cls):
-    from .internal_containers import AutoGenNode
+    from .internal_nodes import AutoGenNode
     mantis_node = AutoGenNode(signature, base_tree)
     mantis_node.mContext = mContext
     mantis_node.outputs.init_sockets([ui_socket.name])
@@ -133,7 +133,7 @@ def make_connections_to_ng_dummy(base_tree, tree_path_names, local_nc, all_nc, n
                 prRed("No available auto-generated class for input %s in %s" % (inp.name, np.name))
 
 def gen_node_containers(base_tree, current_tree, tree_path_names, all_nc, local_nc, dummy_nodes, group_nodes, schema_nodes ):
-    from .internal_containers import DummyNode
+    from .internal_nodes import DummyNode
     for ui_node in current_tree.nodes:
         # HACK I found that this isn't being set sometimes. I wonder why? It makes the most sense to do this here.
         if hasattr(ui_node, 'initialized'): ui_node.initialized=True

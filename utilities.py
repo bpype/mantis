@@ -873,7 +873,7 @@ def project_point_to_plane(point, origin, normal):
 def gen_nc_input_for_data(socket):
     # Class List #TODO deduplicate
     from . import xForm_nodes, link_nodes, misc_nodes, primitives_nodes, deformer_nodes, math_nodes, schema_nodes
-    from .internal_containers import NoOpNode
+    from .internal_nodes import NoOpNode
     classes = {}
     for module in [xForm_nodes, link_nodes, misc_nodes, primitives_nodes, deformer_nodes, math_nodes, schema_nodes]:
         for cls in module.TellClasses():
