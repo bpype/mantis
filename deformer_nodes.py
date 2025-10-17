@@ -1,4 +1,4 @@
-from .node_container_common import *
+from .node_common import *
 from .xForm_nodes import xFormGeometryObject, xFormObjectInstance
 from .misc_nodes import InputExistingGeometryObject
 from .base_definitions import MantisNode, MantisSocketTemplate

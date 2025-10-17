@@ -124,7 +124,7 @@ def make_connections_to_ng_dummy(base_tree, tree_path_names, local_nc, all_nc, n
             #  using UUID signature leads to TERRIBLE CONFUSING BUGS.
             if nc_from is None: 
                 nc_from = autogen_node(base_tree, inp, signature, nc_to.mContext)
-            from .node_container_common import get_socket_value
+            from .node_common import get_socket_value
             if nc_from: # autogen can fail and we should catch it.
                 nc_from.parameters = {inp.name:get_socket_value(inp)}
                 local_nc[signature] = nc_from; all_nc[signature] = nc_from
@@ -487,7 +487,7 @@ def execution_error_cleanup(node, exception, switch_objects = [], show_error=Fal
 def sort_execution(nodes, xForm_pass):
     execution_failed=False
     sorted_nodes = []
-    from .node_container_common import GraphError
+    from .node_common import GraphError
     # check for cycles here by keeping track of the number of times a node has been visited.
     visited={}
     check_max_len=len(nodes)**2 # seems too high but safe. In a well-ordered graph, I guess this number should be less than the number of nodes.
@@ -542,7 +542,7 @@ def execute_tree(nodes, base_tree, context, error_popups = False):
                            " Mantis probably failed to parse the tree."
     import bpy
     from time import time
-    from .node_container_common import GraphError
+    from .node_common import GraphError
     original_active = context.view_layer.objects.active
     start_execution_time = time()
     mContext = None

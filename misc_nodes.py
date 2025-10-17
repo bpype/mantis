@@ -1,4 +1,4 @@
-from .node_container_common import *
+from .node_common import *
 from .base_definitions import MantisNode, NodeSocket, FLOAT_EPSILON
 from .xForm_nodes import xFormArmature, xFormBone
 from .misc_nodes_socket_templates import *

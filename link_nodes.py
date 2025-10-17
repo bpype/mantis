@@ -1,4 +1,4 @@
-from .node_container_common import *
+from .node_common import *
 from bpy.types import Bone, NodeTree
 from .base_definitions import MantisNode, GraphError, FLOAT_EPSILON
 from .link_socket_templates import *

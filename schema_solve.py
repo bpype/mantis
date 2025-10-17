@@ -5,7 +5,7 @@ from .utilities import (prRed, prGreen, prPurple, prWhite,
 from .utilities import init_connections, init_dependencies, get_link_in_out
 from .base_definitions import (SchemaUINode, custom_props_types, \
     MantisNodeGroup, SchemaGroup, replace_types, GraphError)
-from .node_container_common import setup_custom_props_from_np
+from .node_common import setup_custom_props_from_np
 # a class that solves Schema nodes
 from bpy.types import NodeGroupInput, NodeGroupOutput
 
