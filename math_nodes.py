@@ -137,7 +137,9 @@ class MathStaticVector(MantisNode):
         if self.evaluate_input("Operation") == "MULTIPLY":
             v_result = a*b
         if self.evaluate_input("Operation") == "DIVIDE":
-            v_result = a/b
+            v_result = Vector((0,0,0)) # channel-wise division
+            for i, (axis_a, axis_b) in enumerate(zip(a,b)):
+                v_result[i] = axis_a/axis_b
         if self.evaluate_input("Operation") == "POWER":
             v_result = a**b
         # since these are unary, we need to make a copy lest we create spooky effects elsewhere.
