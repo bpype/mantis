@@ -1,6 +1,7 @@
 from .node_common import *
 from .base_definitions import MantisNode, NodeSocket
 from .xForm_socket_templates import *
+from .mantis_dataclasses import xForm_info
 
 def TellClasses():
 
@@ -48,29 +49,21 @@ def get_matrix(node):
     return matrix
 
 def set_object_parent(node):
-        parent_mantis_node = get_parent_node(node, type='LINK')
-        if (parent_mantis_node):
-            parent = None
-            if node.inputs["Relationship"].is_linked:
-                trace = trace_single_line(node, "Relationship")
-                for other_node in trace[0]:
-                    if other_node is node: continue # lol
-                    if (other_node.node_type == 'XFORM'):
-                        parent = other_node; break
-                if parent is None:
-                    prWhite(f"INFO: no parent set for {node}.")
-                    return
-                prWhite(f"INFO: setting parent of {node} to {other_node}.")
-
-                if (parent.bObject) is None:
-                    raise GraphError(f"Could not get parent object from node {parent} for {node}")
-                if isinstance(parent, xFormBone):
-                    armOb= parent.bGetParentArmature()
-                    node.bObject.parent = armOb
-                    node.bObject.parent_type = 'BONE'
-                    node.bObject.parent_bone = parent.bObject
-                else:
-                    node.bObject.parent = parent.bGetObject()
+    from bpy import data
+    parent_xForm_info = get_parent_xForm_info(node)
+    if parent_xForm_info.object_type  == '':
+        return # no parent
+    elif parent_xForm_info.object_type in ['armature', 'object']:
+        parent = data.objects.get(parent_xForm_info.parent_edit_name)
+        if parent_xForm_info.parent_edit_name and parent is None:
+            raise GraphError(f"Could not get parent object for node {node}.")
+        node.bGetObject().parent = parent
+    else: # it is a bone
+        armOb = data.objects.get(parent_xForm_info.root_armature)
+        node_ob = node.bGetObject()
+        node_ob.parent = armOb; node_ob.parent_type = 'BONE'
+        # this one expects a string.
+        node_ob.parent_bone = parent_xForm_info.self_edit_name
 
 class xFormNode(MantisNode):
     def __init__(self, signature, base_tree, socket_templates=[]):
@@ -130,8 +123,6 @@ class xFormArmature(xFormNode):
                 ob.data.collections.remove(bc)
             del collections
             # end ugly/bad
-
-
         else:
             # Create the Object
             ob = bpy.data.objects.new(name, bpy.data.armatures.new(name)) #create ob
@@ -171,10 +162,23 @@ class xFormArmature(xFormNode):
             ob.data.edit_bones.remove(ob.data.edit_bones[0])
         # bContext.view_layer.objects.active = prevAct
 
+        # This will OVERWRITE the root armature since bones have to trace back to this one.
+        root_armature = ob.name
+        parent_xForm_info = get_parent_xForm_info(self)
+        my_info = xForm_info(
+            object_type='armature',
+            root_armature= ob.name,
+            parent_pose_name=parent_xForm_info.self_pose_name,
+            parent_edit_name=parent_xForm_info.self_edit_name,
+            self_pose_name=ob.name,
+            self_edit_name=ob.name,
+        )
+        self.parameters['xForm Out'] = my_info
+
         self.executed = True
 
     def bGetObject(self, mode = ''):
-        import bpy; return bpy.data.objects[self.bObject]
+        import bpy; return bpy.data.objects[self.parameters['xForm Out'].self_pose_name]
 
 bone_inputs= [
          "Name",
@@ -258,32 +262,22 @@ class xFormBone(xFormNode):
         self.set_traverse([("Relationship", "xForm Out")])
 
     def bGetParentArmature(self):
-        if (trace := trace_single_line(self, "Relationship")[0] ) :
-            for i in range(len(trace)):
-                # have to look in reverse, actually TODO
-                if ( isinstance(trace[ i ], xFormArmature ) ):
-                    return trace[ i ].bGetObject()
-        return None
-        #should do the trick...
+        parent_xForm_info = get_parent_xForm_info(self)
+        from bpy import data
+        return data.objects.get(parent_xForm_info.root_armature)
 
     def bSetParent(self, eb):
-        # print (self.bObject)
-        from bpy.types import EditBone
-        parent_mantis_node = get_parent_node(self, type='LINK')
-        # print (self, parent_mantis_node.inputs['Parent'].from_node)
-        parent=None
-        if parent_mantis_node.inputs['Parent'].links[0].from_node.node_type == 'XFORM':
-            parent = parent_mantis_node.inputs['Parent'].links[0].from_node.bGetObject(mode = 'EDIT')
-        else:
-            raise RuntimeError(wrapRed(f"Cannot set parent for node {self}"))
-
-        if isinstance(parent, EditBone):
-            eb.parent = parent
-
-        eb.use_connect = parent_mantis_node.evaluate_input("Connected")
-        eb.use_inherit_rotation = parent_mantis_node.evaluate_input("Inherit Rotation")
-        eb.inherit_scale = parent_mantis_node.evaluate_input("Inherit Scale")
-        # otherwise, no need to do anything.
+        from bpy import data
+        parent_xForm_info = get_parent_xForm_info(self)
+        parent_armature = data.objects.get( parent_xForm_info.root_armature)
+        if parent_xForm_info.self_edit_name != parent_xForm_info.root_armature:
+            parent_bone = parent_armature.data.edit_bones.get( parent_xForm_info.self_edit_name)
+            eb.parent = parent_bone
+            parent_mantis_node = get_parent_node(self, type = 'LINK') # get the link node.
+            # TODO probably need to send the parenting info or at least the signatures of intervening nodes.
+            eb.use_connect = parent_mantis_node.evaluate_input("Connected")
+            eb.use_inherit_rotation = parent_mantis_node.evaluate_input("Inherit Rotation")
+            eb.inherit_scale = parent_mantis_node.evaluate_input("Inherit Scale")
 
     def bPrepare(self, bContext=None):
         self.parameters['Matrix'] = get_matrix(self)
@@ -362,6 +356,18 @@ class xFormBone(xFormNode):
         eb.tail_radius           = self.evaluate_input("Envelope Tail Radius")
 
         print( wrapGreen("Created Bone: ") + wrapOrange(eb.name) + wrapGreen(" in ") + wrapWhite(self.bGetParentArmature().name))
+
+        parent_xForm_info = get_parent_xForm_info(self)
+        my_info = xForm_info(
+            object_type='bone',
+            root_armature= xF.name,
+            parent_pose_name=parent_xForm_info.self_pose_name,
+            parent_edit_name=parent_xForm_info.self_edit_name,
+            self_pose_name=eb.name,
+            self_edit_name=eb.name,
+        )
+        self.parameters['xForm Out'] = my_info
+
         self.executed = True
 
     def set_bone_color(self, b, inherit_color, bContext):
@@ -723,6 +729,19 @@ class xFormGeometryObject(xFormNode):
         except: # I guess it isn't ready yet. we'll do it later
             pass # (This can happen when solving schema.)
         self.bObject.matrix_world = matrix
+
+        parent_xForm_info = get_parent_xForm_info(self)
+        root_armature = parent_xForm_info.root_armature
+        my_info = xForm_info(
+            object_type='object',
+            root_armature= root_armature,
+            parent_pose_name=parent_xForm_info.self_edit_name,
+            parent_edit_name=parent_xForm_info.self_pose_name,
+            self_pose_name=self.bObject.name,
+            self_edit_name=self.bObject.name,
+        )
+        self.parameters['xForm Out'] = my_info
+
         self.prepared = True
 
     def bTransformPass(self, bContext = None,):
@@ -795,6 +814,19 @@ class xFormObjectInstance(xFormNode):
         self.parameters['Matrix'] = matrix
         set_object_parent(self)
         self.bObject.matrix_world = matrix
+
+        parent_xForm_info = get_parent_xForm_info(self)
+        root_armature = parent_xForm_info.root_armature
+        my_info = xForm_info(
+            object_type='object',
+            root_armature= root_armature,
+            parent_pose_name=parent_xForm_info.self_edit_name,
+            parent_edit_name=parent_xForm_info.self_pose_name,
+            self_pose_name=self.bObject.name,
+            self_edit_name=self.bObject.name,
+        )
+        self.parameters['xForm Out'] = my_info
+
         self.prepared = True
 
     def bTransformPass(self, bContext = None,):
@@ -944,6 +976,19 @@ class xFormCurvePin(xFormNode):
         self.parameters['Matrix'] = ob.matrix_world.copy()
         ob.parent=curve
         print( wrapGreen("Created Curve Pin: ") + wrapOrange(self.bObject.name) )
+
+        parent_xForm_info = get_parent_xForm_info(self)
+        root_armature = parent_xForm_info.root_armature
+        my_info = xForm_info(
+            object_type='object',
+            root_armature= root_armature,
+            parent_pose_name=curve.name,
+            parent_edit_name=curve.name,
+            self_pose_name=self.bObject.name,
+            self_edit_name=self.bObject.name,
+        )
+        self.parameters['xForm Out'] = my_info
+
         self.prepared = True; self.executed = True
 
     def bFinalize(self, bContext = None):

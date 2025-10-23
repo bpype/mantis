@@ -48,6 +48,10 @@ class MantisLinkNode(MantisNode):
         self.node_type = 'LINK'
         self.prepared = True; self.bObject=[]
 
+    def bTransformPass(self, bContext=None):
+        parent_xForm_info = get_parent_xForm_info(self, 'Input Relationship')
+        self.parameters['Output Relationship'] = parent_xForm_info
+
     def evaluate_input(self, input_name, index=0):
         # should catch 'Target', 'Pole Target' and ArmatureConstraint targets, too
         if ('Target' in input_name) and input_name not in  ["Target Space", "Use Target Z"]:
@@ -115,6 +119,10 @@ class LinkInherit(MantisLinkNode):
         super().__init__(signature, base_tree, LinkInheritSockets)
         self.init_parameters()
         self.set_traverse([('Parent', 'Inheritance')])
+
+    def bTransformPass(self, bContext=None):
+        parent_xForm_info = get_parent_xForm_info(self, 'Parent')
+        self.parameters['Inheritance'] = parent_xForm_info
         self.executed = True
 
     def GetxForm(self):
