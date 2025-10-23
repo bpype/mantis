@@ -775,6 +775,12 @@ class MantisNode:
             self.inputs[a].set_traverse_target(self.outputs[b])
             self.outputs[b].set_traverse_target(self.inputs[a])
 
+    def clear_traverse(self, inputs = [str], outputs = [str]) -> None:
+        for inp in inputs:
+            self.inputs[inp].set_traverse(None)
+        for out in outputs:
+            self.inputs[out].set_traverse(None)
+
     def flush_links(self) -> None:
         for inp in self.inputs.values():
             inp.flush_links()
@@ -1082,7 +1088,8 @@ class NodeSocket:
     
     def set_traverse_target(self, traverse_target):
         self.traverse_target = traverse_target
-        self.can_traverse = True
+        if traverse_target: self.can_traverse = True
+        else: self.can_traverse = False
     
     def flush_links(self):
         """ Removes dead links from this socket."""
