@@ -1,8 +1,6 @@
 from .utilities import prRed, prGreen, prPurple, prWhite, prOrange, \
                         wrapRed, wrapGreen, wrapPurple, wrapWhite, wrapOrange
 
-    
-
 
 def grp_node_reroute_common(mantis_node, to_mantis_node, all_mantis_nodes):
     # we need to do this: go  to the to-node
@@ -536,7 +534,7 @@ def sort_execution(nodes, xForm_pass):
                         xForm_pass.appendleft(conn)
     return sorted_nodes, execution_failed
 
-def execute_tree(nodes, base_tree, context, error_popups = False):
+def execute_tree(nodes, base_tree, context, error_popups = False, profile=False):
     assert nodes is not None, "Failed to parse tree."
     assert len(nodes) > 0, "No parsed nodes for execution."\
                            " Mantis probably failed to parse the tree."
@@ -559,14 +557,22 @@ def execute_tree(nodes, base_tree, context, error_popups = False):
     switch_me = [] # switch the mode on these objects
     active = None # only need it for switching modes
     select_me = []
+    profiler = None
+    if profile:
+        from .dev_helpers.profile_nodes import NodeProfiler
+        profiler = NodeProfiler()
+        profiler.new_session(mContext.execution_id)
+        sort_key = 'total'
     try:
         sorted_nodes, execution_failed = sort_execution(nodes, xForm_pass)
         for n in sorted_nodes:
             try:
                 if not n.prepared:
-                    n.bPrepare(context)
+                    if profiler: profiler.record(n, "bPrepare", context)
+                    else: n.bPrepare(context)
                 if not n.executed:
-                    n.bTransformPass(context)
+                    if profiler: profiler.record(n, "bTransformPass", context)
+                    else: n.bTransformPass(context)
                 if (n.__class__.__name__ == "xFormArmature" ):
                     ob = n.bGetObject()
                     switch_me.append(ob)
@@ -585,10 +591,11 @@ def execute_tree(nodes, base_tree, context, error_popups = False):
 
         for n in sorted_nodes:
             try:
-                if not n.prepared:
-                    n.bPrepare(context)
+                if profiler: profiler.record(n, "bPrepare", context)
+                else: n.bPrepare(context)
                 if not n.executed:
-                    n.bRelationshipPass(context)
+                    if profiler: profiler.record(n, "bRelationshipPass", context)
+                    else: n.bRelationshipPass(context)
             except Exception as e:
                 e = execution_error_cleanup(n, e, show_error=error_popups)
                 if error_popups == False:
@@ -606,7 +613,8 @@ def execute_tree(nodes, base_tree, context, error_popups = False):
 
         for n in sorted_nodes:
             try:
-                n.bFinalize(context)
+                if profiler: profiler.record(n, "bFinalize", context)
+                else: n.bFinalize(context)
             except Exception as e:
                 e = execution_error_cleanup(n, e, show_error=error_popups)
                 if error_popups == False:
@@ -621,7 +629,8 @@ def execute_tree(nodes, base_tree, context, error_popups = False):
         # finally, apply modifiers and bind stuff
         for n in sorted_nodes:
             try:
-                n.bModifierApply(context)
+                if profiler: profiler.record(n, "bModifierApply", context)
+                else: n.bModifierApply(context)
             except Exception as e:
                 e = execution_error_cleanup(n, e, show_error=error_popups)
                 if error_popups == False:
@@ -634,6 +643,13 @@ def execute_tree(nodes, base_tree, context, error_popups = False):
         tot_time = (time() - start_execution_time)
         if not execution_failed:
             prGreen(f"Executed tree of {len(sorted_nodes)} nodes in {tot_time} seconds")
+        if profiler:
+            from .dev_helpers.profile_nodes import summarize_profile
+            summarize_profile(profiler._current, pass_name='bPrepare', sort_key = sort_key)
+            summarize_profile(profiler._current, pass_name='bTransformPass', sort_key = sort_key)
+            summarize_profile(profiler._current, pass_name='bRelationshipPass', sort_key = sort_key)
+            summarize_profile(profiler._current, pass_name='bFinalize', sort_key = sort_key)
+            summarize_profile(profiler._current, pass_name='bModifierApply', sort_key = sort_key)
         if (original_active):
             context.view_layer.objects.active = original_active
             original_active.select_set(True)

@@ -160,7 +160,7 @@ class MantisTree(NodeTree):
         #    - Non-hierarchy links should be ignored in the circle-check and so the links should be marked valid in such a circle
         #    - hierarchy-links should be marked invalid and prevent the tree from executing.
 
-    def execute_tree(self,context, error_popups = False):
+    def execute_tree(self,context, error_popups = False, profile=False):
         self.prevent_next_exec = False
         if not self.hash:
             return
@@ -171,7 +171,7 @@ class MantisTree(NodeTree):
         from . import readtree
         try:
             context.scene.render.use_lock_interface = True
-            readtree.execute_tree(self.parsed_tree, self, context, error_popups)
+            readtree.execute_tree(self.parsed_tree, self, context, error_popups, profile=profile)
         except RecursionError as e:
             prRed("Recursion error while parsing tree.")
         finally:
