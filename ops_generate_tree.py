@@ -59,25 +59,26 @@ def get_pretty_name(name):
 
 
 constraint_link_map={
-    'COPY_LOCATION'   : "LinkCopyLocation",
-    'COPY_ROTATION'   : "LinkCopyRotation",
-    'COPY_SCALE'      : "LinkCopyScale",
-    'COPY_TRANSFORMS' : "LinkCopyTransforms",
-    'LIMIT_DISTANCE'  : "LinkLimitDistance",
-    'LIMIT_LOCATION'  : "LinkLimitLocation",
-    'LIMIT_ROTATION'  : "LinkLimitRotation",
-    'LIMIT_SCALE'     : "LinkLimitScale",
-    'DAMPED_TRACK'    : "LinkDampedTrack",
-    'LOCKED_TRACK'    : "LinkLockedTrack",
-    'STRETCH_TO'      : "LinkStretchTo",
-    'TRACK_TO'        : "LinkTrackTo",
-    'CHILD_OF'        : "LinkInheritConstraint",
-    'IK'              : "LinkInverseKinematics",
-    'ARMATURE'        : "LinkArmature",
-    'SPLINE_IK'       : "LinkSplineIK",
-    'TRANSFORM'       : "LinkTransformation",
-    'FLOOR'           : "LinkFloor",
-    'SHRINKWRAP'      : "LinkShrinkWrap"
+    'COPY_LOCATION'     : "LinkCopyLocation",
+    'COPY_ROTATION'     : "LinkCopyRotation",
+    'COPY_SCALE'        : "LinkCopyScale",
+    'COPY_TRANSFORMS'   : "LinkCopyTransforms",
+    'LIMIT_DISTANCE'    : "LinkLimitDistance",
+    'LIMIT_LOCATION'    : "LinkLimitLocation",
+    'LIMIT_ROTATION'    : "LinkLimitRotation",
+    'LIMIT_SCALE'       : "LinkLimitScale",
+    'DAMPED_TRACK'      : "LinkDampedTrack",
+    'LOCKED_TRACK'      : "LinkLockedTrack",
+    'STRETCH_TO'        : "LinkStretchTo",
+    'TRACK_TO'          : "LinkTrackTo",
+    'CHILD_OF'          : "LinkInheritConstraint",
+    'IK'                : "LinkInverseKinematics",
+    'ARMATURE'          : "LinkArmature",
+    'SPLINE_IK'         : "LinkSplineIK",
+    'TRANSFORM'         : "LinkTransformation",
+    'FLOOR'             : "LinkFloor",
+    'SHRINKWRAP'        : "LinkShrinkWrap",
+    'GEOMETRY_ATTRIBUTE': "LinkGeometryAttribute"
     }
 
 def create_relationship_node_for_constraint(node_tree, c):
