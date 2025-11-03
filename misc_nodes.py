@@ -21,6 +21,7 @@ def TellClasses():
              InputExistingGeometryData,
              InputThemeBoneColorSets,
              InputColorSetPallete,
+             UtilityCustomProperty,
              UtilityDeclareCollections,
              UtilityCollectionJoin,
              UtilityCollectionHierarchy,
@@ -297,7 +298,7 @@ class InputThemeBoneColorSets(SimpleInputNode):
 
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree)
-        from .base_definitions import MantisSocketTemplate
+        from .mantis_dataclasses import MantisSocketTemplate
         outputs = []
         for i in range(20):
             outputs.append (MantisSocketTemplate(
@@ -324,7 +325,7 @@ class InputColorSetPallete(SimpleInputNode):
         if not ui_node:
             from .utilities import get_ui_node
             ui_node = get_ui_node(self.ui_signature, self.base_tree)
-        from .base_definitions import MantisSocketTemplate
+        from .mantis_dataclasses import MantisSocketTemplate
         outputs = []
         for o in ui_node.outputs:
             outputs.append (MantisSocketTemplate( name = o.name,))
@@ -333,6 +334,53 @@ class InputColorSetPallete(SimpleInputNode):
         for o in ui_node.outputs:
             self.parameters[o.name] = o.default_value
         return super().fill_parameters(ui_node)
+
+
+class UtilityCustomProperty(MantisNode):
+    def __init__(self, signature, base_tree):
+        super().__init__(signature, base_tree, UtilityCustomPropertySockets)
+        self.init_parameters()
+        self.node_type = "UTILITY"
+    # this should output a dataclass containing custom prop info
+    # then the xForm will use it to assign custom properties
+
+    def bPrepare(self, bContext=None):
+        from .mantis_dataclasses import custom_prop_template
+        # it's kind of silly to do it this way, but whatever 
+        name = self.evaluate_input("Name")
+        assert name, "The custom property must have a name."
+        prop_type = self.evaluate_input("Type")
+        kwargs = {
+            "name"        : name,
+            "prop_type"   : prop_type,
+            "description" : self.evaluate_input("Description"),
+        }
+        match prop_type:
+            case 'BOOL':
+                kwargs['default_value_bool'] = self.evaluate_input("Default (Bool)")
+            case 'INT':
+                kwargs['default_value_int'] = self.evaluate_input("Default (Int)")
+                kwargs['min'] = self.evaluate_input("Min (Int)")
+                kwargs['soft_min'] = self.evaluate_input("Soft Min (Int)")
+                kwargs['max'] = self.evaluate_input("Max (Int)")
+                kwargs['soft_max'] = self.evaluate_input("Soft Max (Int)")
+            case 'FLOAT':
+                kwargs['default_value_float'] = self.evaluate_input("Default (Float)")
+                kwargs['min'] = self.evaluate_input("Min (Float)")
+                kwargs['soft_min'] = self.evaluate_input("Soft Min (Float)")
+                kwargs['max'] = self.evaluate_input("Max (Float)")
+                kwargs['soft_max'] = self.evaluate_input("Soft Max (Float)")
+            case 'VECTOR':
+                kwargs['default_value_vector'] = self.evaluate_input("Default (Vector)")
+                kwargs['min'] = self.evaluate_input("Min (Float)")
+                kwargs['soft_min'] = self.evaluate_input("Soft Min (Float)")
+                kwargs['max'] = self.evaluate_input("Max (Float)")
+                kwargs['soft_max'] = self.evaluate_input("Soft Max (Float)")
+            case 'STRING':
+                kwargs['default_value_string'] = self.evaluate_input("Default (String)")
+        my_data = custom_prop_template( **kwargs)
+        self.parameters['Custom Property'] = my_data
+        self.prepared = True; self.executed = True
 
 class UtilityMatrixFromCurve(MantisNode):
     '''Get a matrix from a curve'''
@@ -930,7 +978,7 @@ class UtilityKeyframe(MantisNode):
         self.outputs.init_sockets(outputs)
         self.init_parameters( additional_parameters=additional_parameters)
         self.node_type = "DRIVER" # MUST be run in Pose mode
-        setup_custom_props(self)
+        setup_custom_property_inputs_outputs(self)
 
     def bPrepare(self, bContext = None,):
         key = self.parameters["Keyframe"]
@@ -958,7 +1006,7 @@ class UtilityFCurve(MantisNode):
         self.outputs.init_sockets(outputs)
         self.init_parameters()
         self.node_type = "UTILITY"
-        setup_custom_props(self)
+        setup_custom_property_inputs_outputs(self)
         self.prepared = True
 
     def reset_execution(self):
@@ -1009,7 +1057,7 @@ class UtilityDriver(MantisNode):
         self.outputs.init_sockets(outputs)
         self.init_parameters(additional_parameters=additional_parameters)
         self.node_type = "DRIVER" # MUST be run in Pose mode
-        setup_custom_props(self)
+        setup_custom_property_inputs_outputs(self)
         self.prepared = True
 
     def reset_execution(self):
@@ -1419,7 +1467,6 @@ class UtilityDeclareCollections(MantisNode):
         if ui_node is None:
             from .utilities import get_ui_node
             ui_node = get_ui_node(self.ui_signature, self.base_tree)
-        from .base_definitions import MantisSocketTemplate as SockTemplate
         templates=[]
         for out in ui_node.outputs:
             if not (out.name in self.outputs.keys()) :

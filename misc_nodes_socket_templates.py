@@ -1,4 +1,4 @@
-from .base_definitions import MantisSocketTemplate as SockTemplate
+from .mantis_dataclasses import MantisSocketTemplate as SockTemplate
 from dataclasses import replace
 
 SplineIndexTemplate = SockTemplate(name="Spline Index",
@@ -129,3 +129,50 @@ CollectionHierarchySockets = [
     CollectionDeclarationOutput,
 ]
 
+
+UtilityCustomPropertySockets = [
+    Name := SockTemplate(name='Name', is_input=True,
+        bl_idname="StringSocket", category='general'),
+    
+    CustomPropType := SockTemplate(name='Type', is_input=True,
+        bl_idname="EnumCustomPropTypeSocket", category='general'),
+    # Subtype - add this later
+
+    # float properties
+    DefaultFloatValue := SockTemplate(name='Default (Float)', is_input=True,
+        bl_idname="FloatSocket",  category='float'),
+    Min := SockTemplate(name='Min (Float)', is_input=True,
+        bl_idname="FloatSocket", category='float'),
+    Max := SockTemplate(name='Max (Float)', is_input=True,
+        bl_idname="FloatSocket", category='float'),
+    SoftMin := SockTemplate(name='Soft Min (Float)', is_input=True,
+        bl_idname="FloatSocket", category='float'),
+    SoftMax := SockTemplate(name='Soft Max (Float)', is_input=True,
+        bl_idname="FloatSocket", category='float'),
+    
+    # bool properties
+    DefaultVectorValue := SockTemplate(name='Default (Bool)', is_input=True,
+        bl_idname="BooleanSocket", hide=True, category='bool'),
+    # int properties
+    DefaultIntValue := SockTemplate(name='Default (Int)', is_input=True,
+        bl_idname="IntSocket", hide=True, category='int'),
+    IntMin := SockTemplate(name='Min (Int)', is_input=True,
+        bl_idname="IntSocket", hide=True, category='int'),
+    IntMax := SockTemplate(name='Max (Int)', is_input=True,
+        bl_idname="IntSocket", hide=True, category='int'),
+    IntSoftMin := SockTemplate(name='Soft Min (Int)', is_input=True,
+        bl_idname="IntSocket", hide=True, category='int'),
+    IntSoftMax := SockTemplate(name='Soft Max (Int)', is_input=True,
+        bl_idname="IntSocket", hide=True, category='int'),
+    # vector properties
+    DefaultVectorValue := SockTemplate(name='Default (Vector)', is_input=True,
+        bl_idname="VectorSocket", hide=True, category='vector'),
+    # String Properties
+    DefaultStringValue := SockTemplate(name='Default (String)', is_input=True,
+        bl_idname="StringSocket", hide=True, category='string'),
+    # general:
+    Description := SockTemplate(name='Description', is_input=True,
+        bl_idname="StringSocket", category='general'),
+    PropertyDeclaration := SockTemplate(name='Custom Property',
+        is_input=False, bl_idname="CustomPropSocket", category='general'),
+]

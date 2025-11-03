@@ -1,7 +1,8 @@
 from .node_common import *
 from .xForm_nodes import xFormGeometryObject, xFormObjectInstance
 from .misc_nodes import InputExistingGeometryObject
-from .base_definitions import MantisNode, MantisSocketTemplate
+from .base_definitions import MantisNode
+from .mantis_dataclasses import MantisSocketTemplate
 from .utilities import (prRed, prGreen, prPurple, prWhite, prOrange,
                         wrapRed, wrapGreen, wrapPurple, wrapWhite,
                         wrapOrange,)
@@ -514,7 +515,7 @@ class DeformerMorphTargetDeform(MantisDeformerNode):
         self.node_type = "LINK"
         self.prepared = True
         self.executed = True
-        setup_custom_props(self)
+        setup_custom_property_inputs_outputs(self)
     
     # bpy.data.node_groups["Morph Deform.045"].nodes["Named Attribute.020"].data_type = 'FLOAT_VECTOR'
     # bpy.context.object.add_rest_position_attribute = True

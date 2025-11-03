@@ -24,6 +24,7 @@ def TellClasses():
              InputExistingGeometryDataNode,
              InputThemeBoneColorSets,
              InputColorSetPallete,
+             UtilityCustomProperty,
              UtilityDeclareCollections,
              UtilityCollectionJoin,
              UtilityCollectionHierarchy,
@@ -807,6 +808,48 @@ def socket_data_from_collection_paths(root_data, root_name, path, socket_data):
             socket_data = socket_data_from_collection_paths(value, key, path.copy(), socket_data)
         path.pop()
     return socket_data
+
+class UtilityCustomProperty(Node, MantisUINode):
+    """A declaration of a custom property."""
+    bl_idname = "UtilityCustomProperty"
+    bl_label  = "Custom Property"
+    bl_icon   = "NODE"
+    initialized : bpy.props.BoolProperty(default = False)
+    mantis_node_class_name=bl_idname
+    def init(self, context):
+        self.init_sockets(UtilityCustomPropertySockets)
+        self.initialized = True
+    
+    def display_update(self, parsed_tree, context):
+        mantis_node = parsed_tree.get(get_signature_from_edited_tree(self, context))
+        prop_type = self.inputs['Type'].default_value
+        if mantis_node: # this is done here so I don't have to define yet another custom socket.
+            prop_type = mantis_node.evaluate_input("Type")
+        visible_categories = ['general']
+        match prop_type:
+            case 'STRING': visible_categories.append('string')
+            case 'BOOL': visible_categories.append('bool')
+            case 'INT': visible_categories.append('int')
+            case 'FLOAT': visible_categories.append('float')
+            case 'VECTOR': visible_categories.append('vector')
+        for i, socket_template in enumerate(UtilityCustomPropertySockets):
+            if socket_template.is_input == False: continue
+            if socket_template.category in visible_categories:
+                self.inputs[i].hide = False
+            else:
+                self.inputs[i].hide = True
+        if prop_type == "VECTOR":
+            for i in range (4): # keep the min/max open
+                self.inputs[i+3].hide=False
+    
+
+    def draw_label(self): # this will prefer a user-set label, or return the evaluated name
+        if self.label:
+            return self.label
+        if self.inputs['Name'].display_text:
+            return self.inputs['Name'].display_text
+        return self.name
+
 
 class UtilityDeclareCollections(Node, MantisUINode):
     """A utility used to declare bone collections."""

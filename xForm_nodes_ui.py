@@ -66,6 +66,71 @@ def main_draw_label(self): # this will prefer a user-set label, or return the ev
     return self.name
 
 
+def custom_prop_display_update(self, mantis_node = None):
+    custom_props = {}
+    type_map = {
+        'BOOL'   : 'ParameterBoolSocket',
+        'INT'    : 'ParameterIntSocket',
+        'FLOAT'  : 'ParameterFloatSocket',
+        'VECTOR' : 'ParameterVectorSocket',
+        'STRING' : 'ParameterStringSocket',
+    }
+    cant_read=0
+    if not mantis_node:
+        links = [link for link in self.inputs['Custom Properties'].links]
+        links.sort(key=lambda a : -a.multi_input_sort_id)
+        for link in links:
+            if link.from_node.bl_idname == 'UtilityCustomProperty':
+                if (link.from_node.inputs['Name'].is_linked or 
+                            link.from_node.inputs['Type'].is_linked):
+                    cant_read+=1 # we can't eval this without the Mantis data
+                    continue # but we need to count it
+                else:
+                    custom_props[link.from_node.inputs['Name'].default_value] = \
+                        type_map[link.from_node.inputs['Type'].default_value]
+            else:
+                cant_read+=1
+        for name, type in custom_props.items():
+            if self.outputs.get(name): continue # already there
+            else:
+                self.outputs.new(type, name)
+    else:
+        from .misc_nodes import UtilityCustomProperty
+        from .mantis_dataclasses import custom_prop_template
+        mantis_node.inputs['Custom Properties'].flush_links() # clean/sort the links
+        
+        if len(mantis_node.inputs['Custom Properties'].links) != len(self.inputs['Custom Properties'].links):
+            return # there is a problem somewhere
+        for i, link in enumerate(mantis_node.inputs['Custom Properties'].links):
+            from .node_common import trace_single_line
+            node_line, _last_socket = trace_single_line(mantis_node, 'Custom Properties', i)
+            if not node_line[-1].prepared:
+                return
+            custom_prop_data = mantis_node.evaluate_input('Custom Property', i)
+            if isinstance(node_line[-1], UtilityCustomProperty) and \
+                    not isinstance(custom_prop_data, custom_prop_template):
+                return
+            elif not isinstance(custom_prop_data, custom_prop_template):
+                continue # wrong connection
+            name = custom_prop_data.name
+            type = custom_prop_data.prop_type
+            custom_props[name] = type_map[type]
+    from .utilities import get_socket_maps, do_relink
+    _socket_map_in, socket_map_out = get_socket_maps(self)
+    for name, type in custom_props.items():
+        if socket_map_out.get(name) is None:
+            socket_map_out[name] = None # initialize the new ones
+    # remove and replace sockets
+    if cant_read == 0:
+        remove_me = self.outputs[1:]
+        while remove_me:
+            remove_socket = remove_me.pop()
+            self.outputs.remove(remove_socket)
+        for name, type in custom_props.items():
+            socket = self.outputs.new(type, name)
+            do_relink(self, socket, socket_map_out, in_out='OUTPUT')
+
+
 # I had chat gpt flip these so they may be a little innacurate
 # always visible
 main_names = {
@@ -175,7 +240,7 @@ class xFormBoneNode(Node, xFormNode):
         for name, sock_type in ik_names.items():
             s = self.inputs.new(sock_type, name)
             s.hide = True
-
+        
         for name, sock_type in display_names.items():
             if name == 'Bone Collection': # HACK because I am not using Socket Templates yet
                 s = self.inputs.new(sock_type, name, use_multi_input=True)
@@ -201,6 +266,8 @@ class xFormBoneNode(Node, xFormNode):
             self.inputs.new(sock_type, name)
         # could probably simplify this further with iter_tools.chain() but meh
 
+        self.inputs.new("CustomPropSocket", "Custom Properties", use_multi_input=True)
+
         self.socket_count = len(self.inputs)
         #
         self.outputs.new('xFormSocket', "xForm Out")
@@ -225,29 +292,24 @@ class xFormBoneNode(Node, xFormNode):
         #
         self.initialized=True
     
-    def draw_buttons(self, context, layout):
-        # return
-        layout.operator("mantis.add_custom_property", text='+Add Custom Parameter')
-        # layout.label(text="Edit Parameter ... not implemented")
-        if (len(self.inputs) > self.socket_count):
-            layout.operator("mantis.edit_custom_property", text=' Edit Custom Parameter')
-            layout.operator("mantis.remove_custom_property", text='-Remove Custom Parameter')
-        else:
-            layout.label(text="")
-    
     def draw_label(self): # this will prefer a user-set label, or return the evaluated name
         return main_draw_label(self)
 
         
     def display_update(self, parsed_tree, context):
+        # let's setup the outputs for the custom properties:
+        # we'll start by trying to do it without the special mantis data
+        if self.id_data.mantis_version[1] < 13: return #or the old custom properties will get wiped.
+        custom_prop_display_update(self)
         if context.space_data:
             mantis_node = parsed_tree.get(get_signature_from_edited_tree(self, context))
+            if mantis_node and mantis_node.prepared:
+                custom_prop_display_update(self, mantis_node)
             self.display_ik_settings = False
             if mantis_node and (pb := mantis_node.bGetObject(mode='POSE')):
                 self.display_ik_settings = pb.is_in_ik_chain
-            
             self.inputs['Name'].display_text = ""
-            if mantis_node:
+            if mantis_node and mantis_node.prepared:
                 try:
                     self.inputs['Name'].display_text = mantis_node.evaluate_input("Name")
                     self.display_vp_settings = mantis_node.inputs["Custom Object"].is_connected
@@ -271,6 +333,15 @@ class xFormBoneNode(Node, xFormNode):
                 if name in ['BBone Segments']: continue
                 self.inputs[name].hide = not self.display_bb_settings
 
+def object_displaty_update(self, parsed_tree, context):
+    custom_prop_display_update(self)
+    if context.space_data:
+        mantis_node = parsed_tree.get(get_signature_from_edited_tree(self, context))
+        self.inputs['Name'].display_text = ""
+        if mantis_node and mantis_node.prepared:
+            self.inputs['Name'].display_text = mantis_node.evaluate_input("Name")
+            custom_prop_display_update(self, mantis_node)
+
 class xFormArmatureNode(Node, xFormNode):
     '''A node representing an Armature object node'''
     bl_idname = 'xFormArmatureNode'
@@ -289,11 +360,7 @@ class xFormArmatureNode(Node, xFormNode):
         return main_draw_label(self)
     
     def display_update(self, parsed_tree, context):
-        if context.space_data:
-            mantis_node = parsed_tree.get(get_signature_from_edited_tree(self, context))
-            self.inputs['Name'].display_text = ""
-            if mantis_node:
-                self.inputs['Name'].display_text = mantis_node.evaluate_input("Name")
+        object_displaty_update(self, parsed_tree, context)
 
 class xFormGeometryObjectNode(Node, xFormNode):
     """Represents a curve or mesh object."""
@@ -313,11 +380,7 @@ class xFormGeometryObjectNode(Node, xFormNode):
         return main_draw_label(self)
     
     def display_update(self, parsed_tree, context):
-        if context.space_data:
-            mantis_node = parsed_tree.get(get_signature_from_edited_tree(self, context))
-            self.inputs['Name'].display_text = ""
-            if mantis_node:
-                self.inputs['Name'].display_text = mantis_node.evaluate_input("Name")
+        object_displaty_update(self, parsed_tree, context)
 
 class xFormObjectInstance(Node, xFormNode):
     """Represents an instance of an existing geometry object."""
@@ -337,11 +400,7 @@ class xFormObjectInstance(Node, xFormNode):
         return main_draw_label(self)
     
     def display_update(self, parsed_tree, context):
-        if context.space_data:
-            mantis_node = parsed_tree.get(get_signature_from_edited_tree(self, context))
-            self.inputs['Name'].display_text = ""
-            if mantis_node:
-                self.inputs['Name'].display_text = mantis_node.evaluate_input("Name")
+        object_displaty_update(self, parsed_tree, context)
 
 from .xForm_nodes import xFormCurvePinSockets
 class xFormCurvePin(Node, xFormNode):

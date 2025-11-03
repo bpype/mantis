@@ -11,6 +11,7 @@ from .utilities import (prRed, prGreen, prPurple, prWhite,
                               wrapOrange,)
 
 from .utilities import get_socket_maps, relink_socket_map, do_relink
+from .mantis_dataclasses import MantisSocketTemplate
 
 FLOAT_EPSILON=0.0001 # used to check against floating point inaccuracy
 
@@ -202,24 +203,6 @@ class SchemaTree(NodeTree):
         if (bpy.app.version >= (4,4,0)):
             fix_reroute_colors(self)
 
-
-from dataclasses import dataclass, field
-from typing import Any
-
-@dataclass
-class MantisSocketTemplate():
-    name             : str = field(default="")
-    bl_idname        : str = field(default="")
-    traverse_target  : str = field(default="")
-    identifier       : str = field(default="")
-    display_shape    : str = field(default="") # for arrays
-    category         : str = field(default="") # for use in display update
-    blender_property : str | tuple[str] = field(default="") # for props_sockets -> evaluate sockets
-    is_input         : bool = field(default=False)
-    hide             : bool = field(default=False)
-    use_multi_input  : bool = field(default=False)
-    default_value    : Any = field(default=None)
-    
 
 
 #TODO: do a better job explaining how MantisNode and MantisUINode relate.
@@ -643,7 +626,8 @@ replace_types = ["NodeGroupInput", "NodeGroupOutput", "SchemaIncomingConnection"
 
 # anything that gets properties added in the graph... this is a clumsy approach but I need to watch for this
 #   in schema generation and this is the easiest way to do it for now.
-custom_props_types = ["LinkArmature", "UtilityKeyframe", "UtilityFCurve", "UtilityDriver", "xFormBone"]
+custom_props_types = ["LinkArmature", "UtilityKeyframe", "UtilityFCurve", "UtilityDriver", "xFormBone",
+                      "xFormArmature", "xFormGeometryObject", "xFormObjectInstance", "xFormCurvePin",]
 
 # filters for determining if a link is a hierarchy link or a non-hierarchy (cyclic) link.
 from_name_filter = ["Driver",]
@@ -699,6 +683,8 @@ class MantisExecutionContext():
         self.execution_id = base_tree.execution_id
         self.execution_failed=False
         self.b_objects={} # objects created by Mantis during execution
+
+from typing import Any
 
 class MantisNode:
     """

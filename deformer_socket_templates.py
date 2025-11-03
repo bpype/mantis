@@ -1,4 +1,4 @@
-from .base_definitions import MantisSocketTemplate as SockTemplate
+from .mantis_dataclasses import MantisSocketTemplate as SockTemplate
 from dataclasses import replace
 
 from .misc_nodes_socket_templates import SplineIndexTemplate

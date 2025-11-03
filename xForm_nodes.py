@@ -20,6 +20,7 @@ def TellClasses():
 
 def reset_object_data(ob):
     # moving this to a common function so I can figure out the details later
+    ob.id_properties_clear() # we must remove the custom properties so we can make them again.
     ob.constraints.clear()
     ob.animation_data_clear() # this is a little dangerous. TODO find a better solution since this can wipe animation the user wants to keep
     ob.modifiers.clear() # I would also like a way to copy modifiers and their settings, or bake them down. oh well
@@ -75,6 +76,52 @@ class xFormNode(MantisNode):
     def reset_execution(self):
         super().reset_execution()
         self.prepared=False
+    
+    def setup_custom_props(self, ob, input):
+        from .mantis_dataclasses import custom_prop_template
+        # detect custom inputs
+        for i, l in enumerate(self.inputs[input].links):
+            # we need to trace back all inputs
+            custom_prop_data = self.evaluate_input(input, i)
+            if not isinstance(custom_prop_data, custom_prop_template): continue
+            from .drivers import MantisDriver
+            name = custom_prop_data.name
+            if name in ob.keys():
+                raise RuntimeError("Error: cannot create a custom property with "
+                                   "the same name as an existing property.")
+            prop_type = custom_prop_data.prop_type
+            match prop_type:
+                case 'BOOL':
+                    value = custom_prop_data.default_value_bool
+                case 'INT':
+                    value = custom_prop_data.default_value_int
+                case 'FLOAT':
+                    value = custom_prop_data.default_value_float
+                case 'VECTOR':
+                    value = custom_prop_data.default_value_vector
+                case 'STRING':
+                    value = custom_prop_data.default_value_string
+            if (value is None):
+                raise RuntimeError("Could not set value of custom parameter")
+                # it creates a more confusing error later sometimes, better to catch it here.
+            ob[name] = value
+            ui_data = ob.id_properties_ui(name)
+            ui_data.update(
+                default=value,
+                description=custom_prop_data.description)
+            #if a number, set the min/max values. it may overflow on the C side
+            if type(value) in [float, int]:
+                for prop_name in ['min', 'max', 'soft_min', 'soft_max', ]:
+                    prop_value = getattr(custom_prop_data, prop_name)
+                    if type(value) == int: prop_value = int(prop_value)
+                    # DO: figure out the right way to prevent an oveflow
+                    try: # we have to do this as a keyword argument like this
+                        ui_data.update( **{prop_name:prop_value} )
+                    except OverflowError: #this occurs when the value is inf
+                        prRed(f"invalid value {prop_value} for custom prop {prop_name}"
+                                f" of type {type(value)} in {self}. It will remain unset.")
+            ob.property_overridable_library_set(f"[\"{name}\"]", True)
+            pass
 
 class xFormArmature(xFormNode):
     '''A node representing an armature object'''
@@ -83,6 +130,7 @@ class xFormArmature(xFormNode):
         super().__init__(signature, base_tree, xFormArmatureSockets)
         self.init_parameters()
         self.set_traverse([("Relationship", "xForm Out")])
+        setup_custom_property_inputs_outputs(self)
 
     def bPrepare(self, bContext=None):
         self.parameters['Matrix'] = get_matrix(self)
@@ -128,6 +176,9 @@ class xFormArmature(xFormNode):
             ob = bpy.data.objects.new(name, bpy.data.armatures.new(name)) #create ob
             if (ob.name != name):
                 raise RuntimeError("Could not create xForm object", name)
+        
+        # it seems this data sticks around even if the object was deleted, so clear it here.
+        ob.id_properties_clear()
 
         self.bObject = ob.name
         ob.matrix_world = matrix.copy()
@@ -176,6 +227,11 @@ class xFormArmature(xFormNode):
         self.parameters['xForm Out'] = my_info
 
         self.executed = True
+    
+    def bFinalize(self, bContext = None):
+        # custom properties
+        self.setup_custom_props(self.bGetObject(), "Custom Properties")
+        finish_drivers(self)
 
     def bGetObject(self, mode = ''):
         import bpy; return bpy.data.objects[self.parameters['xForm Out'].self_pose_name]
@@ -244,6 +300,7 @@ bone_inputs= [
          "Lock Location",
          "Lock Rotation",
          "Lock Scale",
+         "Custom Properties",
 ]
 class xFormBone(xFormNode):
     '''A node representing a bone in an armature'''
@@ -260,6 +317,7 @@ class xFormBone(xFormNode):
         # currently it is waiting on BBone and refactoring/cleanup.
         self.init_parameters()
         self.set_traverse([("Relationship", "xForm Out")])
+        setup_custom_property_inputs_outputs(self)
 
     def bGetParentArmature(self):
         parent_xForm_info = get_parent_xForm_info(self)
@@ -462,18 +520,6 @@ class xFormBone(xFormNode):
 
 
         import bpy
-        from .drivers import MantisDriver
-        # prevAct = bContext.view_layer.objects.active
-        # bContext.view_layer.objects.active = ob
-        # bpy.ops.object.mode_set(mode='OBJECT')
-        # bContext.view_layer.objects.active = prevAct
-        #
-        #get relationship
-        # ensure we have a pose bone...
-        # set the ik parameters
-        #
-        #
-        # Don't need to bother about whatever that was
 
         pb = self.bGetParentArmature().pose.bones[self.bObject]
         rotation_mode = self.evaluate_input("Rotation Order")
@@ -486,58 +532,8 @@ class xFormBone(xFormNode):
         driver = None
         do_prints=False
 
-        # detect custom inputs
-        for i, inp in enumerate(self.inputs.values()):
-            custom_prop=False
-            for s_template in self.socket_templates:
-                if s_template.name == inp.name:
-                    break
-            else:
-                custom_prop=True
-            if custom_prop == False: continue
-            name = inp.name
-            value = self.evaluate_input(inp.name)
-            # This may be driven, so let's do this:
-            if (isinstance(value, tuple)):
-                raise RuntimeError(f"The custom property type is not supported: {self}")
-            if (isinstance(value, MantisDriver)):
-                # the value should be the default for its socket...
-                type_val_map = {
-                    str:"",
-                    bool:False,
-                    int:0,
-                    float:0.0,
-                    bpy.types.bpy_prop_array:(0,0,0),
-                    }
-                driver = value
-                value = type_val_map[type(self.parameters[inp.name])]
-            if (value is None):
-                raise RuntimeError("Could not set value of custom parameter")
-                # it creates a more confusing error later sometimes, better to catch it here.
-
-            pb[name] = value
-            ui_data = pb.id_properties_ui(name)
-            description = ''
-            if hasattr(inp, 'description'):
-                description = inp.description
-                # i am assuming there was a reason I was not already taking inp.description
-                # So guard it a little here just to be safe and not change things too much.
-            ui_data.update(
-                default=value,
-                description=description)
-
-            #if a number, set the min/max values. it may overflow on the C side
-            if type(value) in [float, int]:
-                for prop_name in ['min', 'max', 'soft_min', 'soft_max', ]:
-                    prop_value = getattr(inp, prop_name)
-                    if type(value) == int: prop_value = int(prop_value)
-                    # DO: figure out the right way to prevent an oveflow
-                    try: # we have to do this as a keyword argument like this
-                        ui_data.update( **{prop_name:prop_value} )
-                    except OverflowError: #this occurs when the value is inf
-                        prRed(f"invalid value {prop_value} for custom prop {prop_name}"
-                             f" of type {type(value)} in {self}. It will remain unset.")
-            pb.property_overridable_library_set(f"[\"{name}\"]", True)
+        # custom properties
+        self.setup_custom_props(pb, "Custom Properties")
 
         if (pb.is_in_ik_chain):
             # this  props_socket thing wasn't really meant to work here but it does, neat
@@ -654,13 +650,6 @@ class xFormBone(xFormNode):
             prRed ("Cannot get bone for %s" % self)
             raise e
 
-    def fill_parameters(self, ui_node=None):
-        # this is the fill_parameters that is run if it isn't a schema
-        setup_custom_props(self)
-        super().fill_parameters(ui_node)
-        # otherwise we will do this from the schema
-        # LEGIBILITY TODO - why? explain this?
-
 class xFormGeometryObject(xFormNode):
     '''A node representing an armature object'''
     def __init__(self, signature, base_tree):
@@ -668,6 +657,7 @@ class xFormGeometryObject(xFormNode):
         self.init_parameters()
         self.set_traverse([("Relationship", "xForm Out")])
         self.has_shape_keys = False
+        setup_custom_property_inputs_outputs(self)
 
     def bPrepare(self, bContext = None,):
         import bpy
@@ -763,6 +753,8 @@ class xFormGeometryObject(xFormNode):
         matrix= get_matrix(self)
         set_object_parent(self)
         self.bObject.matrix_world = matrix
+        # custom properties
+        self.setup_custom_props(self.bGetObject(), "Custom Properties")
         for i, (driver_key, driver_item) in enumerate(self.drivers.items()):
             print (wrapGreen(i), wrapWhite(self), wrapPurple(driver_key))
             prOrange(driver_item)
@@ -781,6 +773,7 @@ class xFormObjectInstance(xFormNode):
         self.links = {} # leave this empty for now!
         self.set_traverse([("Relationship", "xForm Out")])
         self.has_shape_keys = False # Shape Keys will make a dupe so this is OK
+        setup_custom_property_inputs_outputs(self)
 
     def ui_modify_socket(self, ui_socket, socket_name=None):
         if ui_socket.name == 'As Instance':
@@ -860,6 +853,8 @@ class xFormObjectInstance(xFormNode):
         modifier.node_group = ng
         modifier["Socket_0"] = source_ob
         modifier["Socket_1"] = self.evaluate_input("As Instance")
+        # custom properties
+        self.setup_custom_props(self.bGetObject(), "Custom Properties")
         for i, (driver_key, driver_item) in enumerate(self.drivers.items()):
             print (wrapGreen(i), wrapWhite(self), wrapPurple(driver_key))
             prOrange(driver_item)
@@ -873,6 +868,7 @@ class xFormCurvePin(xFormNode):
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree,xFormCurvePinSockets)
         self.init_parameters(additional_parameters={"Matrix":None})
+        setup_custom_property_inputs_outputs(self)
 
     def prep_driver_values(self, constraint):
         from .misc_nodes import UtilityDriver, UtilitySwitch
@@ -992,6 +988,8 @@ class xFormCurvePin(xFormNode):
         self.prepared = True; self.executed = True
 
     def bFinalize(self, bContext = None):
+        # custom properties
+        self.setup_custom_props(self.bGetObject(), "Custom Properties")
         finish_drivers(self)
 
     def bGetObject(self, mode = 'POSE'):

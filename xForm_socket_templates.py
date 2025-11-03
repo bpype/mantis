@@ -1,4 +1,4 @@
-from .base_definitions import MantisSocketTemplate as SockTemplate
+from .mantis_dataclasses import MantisSocketTemplate as SockTemplate
 from .misc_nodes_socket_templates import SplineIndexTemplate
 from dataclasses import replace
 
@@ -14,6 +14,9 @@ xFormArmatureSockets=[
             blender_property='matrix_world' ),
     RelationshipInTemplate := SockTemplate(
         name="Relationship", is_input=True,  bl_idname='RelationshipSocket', ),
+    CustomPropsTemplate := SockTemplate(
+        name="Custom Properties", is_input=True,  bl_idname='CustomPropSocket',
+            use_multi_input=True, ),
     xFormOutTemplate := SockTemplate(
         name="xForm Out", is_input=False,  bl_idname='xFormSocket', ),
 ]
@@ -32,6 +35,7 @@ xFormGeometryObjectSockets=[
     HideRenderTemplate := SockTemplate(name="Hide in Render",
         is_input=True, bl_idname='BooleanSocket', default_value=False,
         blender_property='hide_render' ),
+    CustomPropsTemplate,
     xFormOutTemplate,
 ]
 
@@ -46,6 +50,7 @@ xFormGeometryObjectInstanceSockets=[
     DeformerInTemplate,
     HideTemplate,
     HideRenderTemplate,
+    CustomPropsTemplate,
     xFormOutTemplate,
 ]
 
@@ -66,6 +71,7 @@ xFormCurvePinSockets = [
     CurvePinDisplaySize := SockTemplate(
         name="Display Size", is_input=True,  bl_idname='FloatPositiveSocket',
         default_value=0.05, blender_property='empty_display_size'),
+    CustomPropsTemplate,
     xFormOutTemplate,
 ]
 
@@ -211,6 +217,7 @@ xFormBoneSockets = [
     # hide
     replace(HideTemplate, name='Hide', category='always_show',
             blender_property='hide', default_value=False,),
+    CustomPropsTemplate,
     # Output
     xFormOutTemplate,
 ]

@@ -220,7 +220,6 @@ def cleanup_4_5_0_LTS_interface_workaround(*args, **kwargs):
             interface_item.description = ''
     # that should be enough!
 
-
 def up_0_12_25_replace_floor_offset_type(*args, **kwargs):
     # add an inherit color input.
     node = kwargs['node']
@@ -243,7 +242,71 @@ def up_0_12_25_replace_floor_offset_type(*args, **kwargs):
         prRed(f"Error updating version in node: {node.id_data.name}::{node.name}; see error:")
         print(e)
 
+def get_absolute_location(node): # us9ng this for version compatibility
+    location = node.location.copy() # FUTURE: deprecate old blenders and use absolute_location
+    while(node.parent):
+        node = node.parent
+        location+= node.location
+    return location
+    
 
+def up_0_13_0_new_custom_prop_node(*args, **kwargs):
+    tree, node = kwargs['node_tree'], kwargs['node']
+    current_major_version = tree.mantis_version[0]
+    if  current_major_version > 0: return# major version must be 0
+    current_minor_version = tree.mantis_version[1]
+    if current_minor_version >= 13: return# minor version must be 12 or less
+    remove_me, prop_nodes = [], []
+    from .xForm_nodes_ui import xFormBoneNode
+    if isinstance(node, xFormBoneNode):
+        for custom_input in node.inputs:
+            if 'Parameter' not in custom_input.bl_idname:
+                continue
+            custom_prop_node = tree.nodes.new('UtilityCustomProperty')
+            prop_type = None
+            if custom_input.bl_idname == 'ParameterBoolSocket':
+                prop_type = 'BOOL'
+                custom_prop_node.inputs['Default (Bool)'].default_value = getattr(custom_input, "default_value")
+            elif custom_input.bl_idname == 'ParameterIntSocket':
+                prop_type = 'INT'
+                custom_prop_node.inputs['Default (Int)'].default_value = int( getattr(custom_input, "default_value") )
+                custom_prop_node.inputs['Min (Int)'].default_value = int( getattr(custom_input, "min") )
+                custom_prop_node.inputs['Max (Int)'].default_value = int( getattr(custom_input, "max") )
+                custom_prop_node.inputs['Soft Min (Int)'].default_value = int( getattr(custom_input, "soft_min") )
+                custom_prop_node.inputs['Soft Max (Int)'].default_value = int( getattr(custom_input, "soft_max") )
+            elif custom_input.bl_idname == 'ParameterFloatSocket':
+                prop_type = 'FLOAT'
+                custom_prop_node.inputs['Default (Float)'].default_value = getattr(custom_input, "default_value")
+                custom_prop_node.inputs['Min (Float)'].default_value = getattr(custom_input, "min")
+                custom_prop_node.inputs['Max (Float)'].default_value = getattr(custom_input, "max")
+                custom_prop_node.inputs['Soft Min (Float)'].default_value = getattr(custom_input, "soft_min")
+                custom_prop_node.inputs['Soft Max (Float)'].default_value = getattr(custom_input, "soft_max")
+            elif custom_input.bl_idname == 'ParameterVectorSocket':
+                prop_type = 'VECTOR'
+                custom_prop_node.inputs['Default (Vector)'].default_value = getattr(custom_input, "default_value")
+                custom_prop_node.inputs['Min (Float)'].default_value = getattr(custom_input, "min")
+                custom_prop_node.inputs['Max (Float)'].default_value = getattr(custom_input, "max")
+                custom_prop_node.inputs['Soft Min (Float)'].default_value = getattr(custom_input, "soft_min")
+                custom_prop_node.inputs['Soft Max (Float)'].default_value = getattr(custom_input, "soft_max")
+            elif custom_input.bl_idname == 'ParameterStringSocket':
+                prop_type = 'STRING'
+                custom_prop_node.inputs['Default (String)'].default_value = getattr(custom_input, "default_value")
+            custom_prop_node.inputs['Name'].default_value = custom_input.name
+            custom_prop_node.inputs['Type'].default_value = prop_type
+            prop_nodes.append(custom_prop_node)
+            remove_me.append(custom_input)
+        while remove_me:
+            custom_input = remove_me.pop()
+            node.inputs.remove(custom_input)
+        new_input = node.inputs.new("CustomPropSocket", "Custom Properties", use_multi_input=True)
+        from mathutils import Vector
+        for i, prop_node in enumerate(prop_nodes):
+            tree.links.new(input=prop_node.outputs[0], output=new_input)
+            prop_node.location = get_absolute_location(node)
+            prop_node.location = prop_node.location - Vector((180, -260*i))
+            prop_node.select = False # it is annoying to select them all by default
+    else: # just need to add the socket.
+        new_input = node.inputs.new("CustomPropSocket", "Custom Properties", use_multi_input=True)
 
 versioning_tasks = [
     # node bl_idname    task                required keyword arguments
@@ -253,6 +316,7 @@ versioning_tasks = [
     (['MantisTree', 'SchemaTree'], cleanup_4_5_0_LTS_interface_workaround, ['tree']),
     (['InputWidget'], up_0_12_13_add_widget_scale, ['node']),
     (['LinkFloor'], up_0_12_25_replace_floor_offset_type, ['node']),
+    (['XFORM'], up_0_13_0_new_custom_prop_node, ['node', 'node_tree']),
 ]
 
 

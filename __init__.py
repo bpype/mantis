@@ -17,8 +17,8 @@ from .ops_generate_tree import GenerateMantisTree
 from .utilities import prRed
 
 MANTIS_VERSION_MAJOR=0
-MANTIS_VERSION_MINOR=12
-MANTIS_VERSION_SUB=28
+MANTIS_VERSION_MINOR=13
+MANTIS_VERSION_SUB=0
 
 classLists = [module.TellClasses() for module in [
  link_nodes_ui,
@@ -120,6 +120,7 @@ xForm_category = [
         NodeItem("xFormCurvePin"),
     ]
 driver_category = [
+        NodeItem("UtilityCustomProperty"),
         NodeItem("LinkDrivenParameter"),
         NodeItem("UtilityFCurve"),
         NodeItem("UtilityBoneProperties"),
@@ -268,13 +269,17 @@ def execute_handler(scene):
 
 from .versioning import versioning_tasks
 def node_version_update(node, do_once):
+    from .xForm_nodes_ui import xFormNode
     for bl_idname, task, required_kwargs in versioning_tasks:
         arg_map = {}
         if 'node' in required_kwargs:
             arg_map['node']=node
         if 'node_tree' in required_kwargs:
             arg_map['node_tree']=node.id_data
-        if ('ALL' in bl_idname) or node.bl_idname in bl_idname:
+        # we'll match all, or categories, or specific bl_idname as needed.
+        if ('ALL' in bl_idname) or \
+                ('XFORM' in bl_idname) and isinstance(node, xFormNode) or\
+                node.bl_idname in bl_idname:
             if do_once:
                 print (f"Updating tree {node.id_data.name} to "
                        f"{MANTIS_VERSION_MAJOR}.{MANTIS_VERSION_MINOR}.{MANTIS_VERSION_SUB}")

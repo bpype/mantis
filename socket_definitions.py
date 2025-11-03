@@ -10,6 +10,8 @@ no_default_value= [
             'xFormSocket',
             'GeometrySocket',
             'GenericRotationSocket',
+            'EnumCustomPropTypeSocket', 
+            'CustomPropSocket',
             'FCurveSocket',
             'DriverSocket',
             'DriverVariableSocket',
@@ -185,6 +187,8 @@ def TellClasses() -> List[MantisSocket]:
              BoneCollectionSocket,
              EnumArrayGetOptions,
 
+             EnumCustomPropTypeSocket,
+             CustomPropSocket,
              xFormParameterSocket,
              ParameterBoolSocket,
              ParameterIntSocket,
@@ -1131,11 +1135,60 @@ class EnumArrayGetOptions(MantisSocket):
 #####################################################################################
 
 
+eCustomPropType = (
+        ('BOOL'   , "Boolean", "Boolean", 0),
+        ('INT'    , "Int"    , "Integer", 1),
+        ('FLOAT'  , "Float"  , "Floating Point Number", 2),
+        ('VECTOR' , "Vector" , "Vector", 3),
+        ('STRING' , "String" , "String", 4),
+    )
+
+class EnumCustomPropTypeSocket(MantisSocket):
+    """Custom Property Type"""
+    bl_idname = 'EnumCustomPropTypeSocket'
+    bl_label = "Property Type"
+    color_simple = cString
+
+    default_value: bpy.props.EnumProperty(
+        items=eCustomPropType,
+        description="Custom Property Type",
+        default = 'BOOL',
+        update = update_socket,)
+
+    color : bpy.props.FloatVectorProperty(default=cString, size=4)
+    input : bpy.props.BoolProperty(default =False,)
+
+    def draw(self, context, layout, node, text):
+        ChooseDraw(self, context, layout, node, text)
+    def draw_color(self, context, node):
+        return self.color
+    @classmethod
+    def draw_color_simple(self):
+        return self.color_simple
+# what is this one again?
+
+class CustomPropSocket(MantisSocket):
+    '''Custom Property'''
+    bl_idname = 'CustomPropSocket'
+    bl_label = "Custom Property"
+    color_simple = cString
+    color : bpy.props.FloatVectorProperty(default=cString, size=4)
+    input : bpy.props.BoolProperty(default =False,)
+
+    def init(self):
+        self.display_shape = 'CIRCLE_DOT'
+    def draw(self, context, layout, node, text):
+        ChooseDraw(self, context, layout, node, text)
+    def draw_color(self, context, node):
+        return self.color
+    @classmethod
+    def draw_color_simple(self):
+        return self.color_simple
 
 class xFormParameterSocket(MantisSocket):
     '''xFrom Parameter'''
     bl_idname = 'xFormParameterSocket'
-    bl_label = "sForm Parameter"
+    bl_label = "xForm Parameter"
     color_simple = cxForm
     color : bpy.props.FloatVectorProperty(default=cxForm, size=4)
     input : bpy.props.BoolProperty(default =False,)

@@ -1046,6 +1046,33 @@ class ImportFromComponentLibrary(Operator):
     def execute(self, context):
         return {"FINISHED"}
 
+from os import environ
+if environ.get("DOERROR"): # this should only be available to devs
+    class TestMantisVersioning(Operator):
+        """Utility Operator for testing Mantis Versioning"""
+        bl_idname = "mantis.test_versioning"
+        bl_label = "Test Mantis Versioning"
+        bl_options = {'REGISTER', 'UNDO'}
+
+        tree_invoked : bpy.props.StringProperty(options ={'HIDDEN'})
+        node_invoked : bpy.props.StringProperty(options ={'HIDDEN'})
+
+        @classmethod
+        def poll(cls, context):
+            return (mantis_tree_poll_op(context))
+        
+        def invoke(self, context, event):
+            self.tree_invoked = bpy.context.space_data.path[-1].node_tree.name
+            self.node_invoked = bpy.context.space_data.path[-1].node_tree.nodes.active.name
+            return self.execute(context)
+
+        def execute(self, context):
+            tree = bpy.data.node_groups[self.tree_invoked]
+            node = tree.nodes[self.node_invoked]
+            from .versioning import up_0_13_0_new_custom_prop_node
+            print ("testing...")
+            up_0_13_0_new_custom_prop_node(node=node, tree=tree)
+            return {"FINISHED"}
 
 # this has to be down here for some reason. what a pain
 classes = [
@@ -1085,6 +1112,8 @@ classes = [
         ]
 if (bpy.app.version >= (4, 4, 0)):
     classes.append(B4_4_0_Workaround_NodeTree_Interface_Update)
+if environ.get("DOERROR"):
+    classes.append(TestMantisVersioning)
 
 def TellClasses():
     return classes
