@@ -27,12 +27,15 @@ if bpy_version == (4,5,0): # THere is a bug that requires the socket type to inh
     from bpy.types import NodeSocketGeometry # so we will just inherit from NodeSocketGeometry
     class MantisSocket(NodeSocketGeometry, NodeSocket): # even though that is kinda silly
         is_valid_interface_type=False
+        category : bpy.props.StringProperty()
         @property # making this a classmethod is apparently not gonna work
         def interface_type(self):
             return NodeSocketGeometry.bl_idname
+        
 else:
     class MantisSocket(NodeSocket):
         is_valid_interface_type=False
+        category : bpy.props.StringProperty()
         @property
         def interface_type(self):
             # this is stupid but it is the fastest way to implement this
@@ -2539,7 +2542,6 @@ class EnumDriverType(MantisSocket):
 # Enum for kf handle type
 # enum for interpolation type
 # eventually gonna make it to the fancy stuff
-
 
 class FloatSocket(MantisSocket):
     """Float Input socket"""

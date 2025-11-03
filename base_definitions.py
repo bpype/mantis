@@ -262,7 +262,7 @@ class MantisUINode:
             socket.hide= template.hide
             if template.category:
                 # a custom property for the UI functions to use.
-                socket['category'] = template.category
+                socket.category = template.category
             if template.default_value is not None:
                 socket.default_value = template.default_value
                 # this can throw a TypeError - it is the caller's

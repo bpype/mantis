@@ -48,6 +48,7 @@ class MantisDriver(dict):
     pass
 
 def CreateDrivers(drivers):
+    from bpy.app import version
     def brackets(s):
         return "[\""+s+"\"]"
     from bpy.types import Object, Key
@@ -65,6 +66,8 @@ def CreateDrivers(drivers):
             fc.modifiers.remove(fc.modifiers[0])
         except IndexError: #haven't seen this happen, but should handle
             pass # perhaps this has been fixed for 3.0?
+        if version >= (5,0,0): # and now it initializes with keys. p
+            fc.keyframe_points.clear()
         drv.type = driver["type"]
         if (expr := driver.get("expression")) and isinstance(expr, str):
             drv.expression = expr
