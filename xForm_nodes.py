@@ -380,11 +380,14 @@ class xFormBone(xFormNode):
                 hierarchy = collection_list.split(">")
                 col_parent = None
                 for bCol in hierarchy:
+                    if bCol is None: continue # I think this
+                    if bCol == '': continue
                     if ( col := d.collections_all.get(bCol) ) is None:
                         col = d.collections.new(bCol)
                     col.parent = col_parent
                     col_parent = col
-                d.collections_all.get(hierarchy[-1]).assign(eb)
+                if hierarchy[-1]: # will be "" or None if the box is empty
+                    d.collections_all.get(hierarchy[-1]).assign(eb)
 
         if (eb.name != name):
             prRed(f"Expected bone of name: {name}, got {eb.name} instead.")
