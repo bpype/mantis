@@ -110,6 +110,7 @@ link_relationship_category = [
         NodeItem("linkInherit"),
         NodeItem("LinkInheritConstraint"),
         NodeItem("LinkArmature"),
+        NodeItem("LinkGeometryAttribute"),
     ]
 deformer_category=[NodeItem(cls.bl_idname) for cls in deformer_nodes_ui.TellClasses()]
 xForm_category = [

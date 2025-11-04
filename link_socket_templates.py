@@ -463,6 +463,37 @@ LinkShrinkWrapSockets = [
     OutputRelationshipTemplate,
 ]
 
+LinkGeometryAttributeSockets = [
+    InputRelationshipTemplate,
+    TargetTemplate, # IMPORTANT TO DO: targets should be an array
+    # and the constraints are made  ONLY if the target is valid...
+    # for BONE targets, maybe auto-magically build a mesh for the user.
+    # this is a little bit too hard to do for now. Users can just make a schema.
+    OffsetTargetTransformTemplate:= SockTemplate(name="Offset target transform", is_input=True,
+            bl_idname="BooleanSocket", blender_property='apply_target_transform'),
+    AttributeTemplate:= SockTemplate(name="Attribute", bl_idname="ParameterStringSocket", is_input=True,
+                 default_value="position", blender_property='attribute_name'),
+    DataTypeTemplate := SockTemplate(name="Data Type",
+            bl_idname="EnumGeometryAttributeDataTypeSocket", is_input=True,
+            blender_property='data_type'),
+    DomainTemplate := SockTemplate(name="Domain",
+            bl_idname="EnumGeometryAttributeDomainSocket", is_input=True,
+            blender_property='domain'),
+    SampleIndex := SockTemplate(name="Sample Index", bl_idname='UnsignedIntSocket',
+        is_input=True, default_value=0,blender_property='sample_index'),
+    EnabledLocationTemplate:= SockTemplate(name="Enabled Location", is_input=True,
+            bl_idname="BooleanSocket", blender_property='mix_loc'),
+    EnabledRotationTemplate:= SockTemplate(name="Enabled Rotation", is_input=True,
+            bl_idname="BooleanSocket", blender_property='mix_rot'),
+    EnabledScaleTemplate:= SockTemplate(name="Enabled Scale", is_input=True,
+            bl_idname="BooleanSocket", blender_property='mix_scl'),
+    SockTemplate(name='Mix Mode',  bl_idname='EnumMixModeGeometryAttribute', is_input=True,
+                         default_value='REPLACE', blender_property='mix_mode'),
+    InfluenceTemplate,
+    EnableTemplate,
+    OutputRelationshipTemplate,
+]
+
 # Remove this socket because of Blender changes.
 if (app.version >= (4, 5, 0)):
     LinkSplineIKSockets.pop(9)

@@ -30,6 +30,7 @@ def TellClasses():
              LinkSplineIKNode,
              LinkFloorNode,
              LinkShrinkWrapNode,
+             LinkGeometryAttribute,
              LinkTransformationNode,
            ]
 
@@ -433,6 +434,34 @@ class LinkShrinkWrapNode(Node, LinkNode):
             self.inputs['Align Normal Axis'].hide=False
         # TODO: this stuff should be handled by input tags
         # once I get that working.
+
+class LinkGeometryAttribute(Node, LinkNode):
+    """A node representing Blender's Geometry Attribute Constraint"""
+    bl_idname = "LinkGeometryAttribute"
+    bl_label = "Geometry Attribute"
+    bl_icon = "CON_GEOMETRYATTRIBUTE"
+    initialized : bpy.props.BoolProperty(default = False)
+    mantis_node_class_name=bl_idname
+
+    def init(self, context):
+        self.init_sockets(LinkGeometryAttributeSockets)
+        self.use_custom_color = True
+        self.color = trackingColor
+        self.initialized = True
+
+    def display_update(self, parsed_tree, context):
+        pass
+        # vast majority of the time user doesn't link this.
+        data_type = self.inputs['Data Type'].default_value
+        if self.inputs['Data Type'].is_linked:# 1% or less of cases
+            node_tree = context.space_data.path[0].node_tree
+            nc = parsed_tree.get(get_signature_from_edited_tree(self, context))
+            if nc:
+                data_type = nc.evaluate_input("Data Type")
+        not_matrix_mode = data_type != 'FLOAT4X4'
+        self.inputs['Enabled Location'].hide=not_matrix_mode
+        self.inputs['Enabled Rotation'].hide=not_matrix_mode
+        self.inputs['Enabled Scale'].hide=not_matrix_mode
 
 # DRIVERS!!
 class LinkDrivenParameterNode(Node, LinkNode):

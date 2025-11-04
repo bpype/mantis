@@ -32,6 +32,7 @@ def TellClasses():
              # stuff that snaps or limits a bone
              LinkFloor,
              LinkShrinkWrap,
+             LinkGeometryAttribute,
              # Drivers
              LinkDrivenParameter,
             ]
@@ -908,5 +909,26 @@ class LinkShrinkWrap(MantisLinkNode):
             print (props_sockets.keys())
             self.bObject.append(c)
             # self.set_custom_space() # this needs to be overridden for me TODO
+            evaluate_sockets(self, c, props_sockets)
+        self.executed = True
+
+
+class LinkGeometryAttribute(MantisLinkNode):
+    '''A node representing a geometry attribute relationship.'''
+    def __init__(self, signature, base_tree,):
+        super().__init__(signature, base_tree, LinkGeometryAttributeSockets)
+        self.init_parameters(additional_parameters={"Name":None })
+        self.set_traverse([("Input Relationship", "Output Relationship")])
+
+    def bRelationshipPass(self, bContext = None,):
+        prepare_parameters(self)
+        for xf in self.GetxForm():
+            print
+            c = xf.bGetObject().constraints.new('GEOMETRY_ATTRIBUTE')
+            self.get_target_and_subtarget(c)
+            if constraint_name := self.evaluate_input("Name"):
+                c.name = constraint_name
+            props_sockets = self.gen_property_socket_map()
+            self.bObject.append(c)
             evaluate_sockets(self, c, props_sockets)
         self.executed = True

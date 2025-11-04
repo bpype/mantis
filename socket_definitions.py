@@ -246,6 +246,10 @@ def TellClasses() -> List[MantisSocket]:
              EnumShrinkwrapFaceCullSocket,
              EnumShrinkwrapProjectAxisSocket,
              EnumShrinkwrapModeSocket,
+             # Geometry Attribute
+             EnumGeometryAttributeDataTypeSocket,
+             EnumGeometryAttributeDomainSocket,
+             EnumMixModeGeometryAttribute,
              # Deformers
              EnumSkinning,
              MorphTargetSocket,
@@ -2447,6 +2451,89 @@ class EnumShrinkwrapModeSocket(MantisSocket):
     def draw_color_simple(self):
         return self.color_simple
 
+
+eDataTypeMode = (
+       ('VECTOR', "Vector", "Vector", 0), 
+       ('QUATERNION', "Quaternion", "", 1), 
+       ('FLOAT4X4', "4x4 Matrix", "", 2), )
+
+class EnumGeometryAttributeDataTypeSocket(MantisSocket):
+    '''Shrinkwrap Mode Socket'''
+    bl_idname = 'EnumGeometryAttributeDataTypeSocket'
+    bl_label = "Datatype"
+    default_value: bpy.props.EnumProperty(
+        items=eDataTypeMode,
+        description="Select the data type of the attribute",
+        default = 'VECTOR',
+        update = update_socket,)
+    color_simple = cString
+    color : bpy.props.FloatVectorProperty(default=cString, size=4)
+    input : bpy.props.BoolProperty(default =False,)
+    def draw(self, context, layout, node, text):
+        ChooseDraw(self, context, layout, node, text, use_enum=False)
+    def draw_color(self, context, node):
+        return self.color
+    @classmethod
+    def draw_color_simple(self):
+        return self.color_simple
+
+eDomaineMode = (
+    ('POINT', "Point", "Point", 0), 
+    ('EDGE', "Edge", "Edge", 1), 
+    ('FACE', "Face", "Face", 2), 
+    ('FACE_CORNER', "Face Corner", "Face Corner", 3), 
+    ('SPLINE', "Spline", "Spline", 4), 
+    ('INSTANCE', "Instance", "Instance", 5), )
+
+class EnumGeometryAttributeDomainSocket(MantisSocket):
+    '''Shrinkwrap Mode Socket'''
+    bl_idname = 'EnumGeometryAttributeDomainSocket'
+    bl_label = "Domain"
+    default_value: bpy.props.EnumProperty(
+        items=eDomaineMode,
+        description="Select the data type of the attribute",
+        default = 'POINT',
+        update = update_socket,)
+    color_simple = cString
+    color : bpy.props.FloatVectorProperty(default=cString, size=4)
+    input : bpy.props.BoolProperty(default =False,)
+    def draw(self, context, layout, node, text):
+        ChooseDraw(self, context, layout, node, text, use_enum=False)
+    def draw_color(self, context, node):
+        return self.color
+    @classmethod
+    def draw_color_simple(self):
+        return self.color_simple
+
+eMix_geometryattribute =(
+        ('REPLACE', "Replace (Aligned)", "Fully inherit scale"),
+        ('BEFORE_SPLIT', "Before (Split Channels)", "Fully inherit scale"),
+        ('AFTER_SPLIT', "After (Split Channels)", "Fully inherit scale"),
+        ('BEFORE_FULL', "Before (Full)", "Fully inherit scale"),
+        ('AFTER_FULL', "After (Full)", "Fully inherit scale"),)
+
+class EnumMixModeGeometryAttribute(MantisSocket):
+    '''Custom node socket type'''
+    bl_idname = 'EnumMixModeGeometryAttribute'
+    bl_label = "Rotation Mix"
+
+    default_value: bpy.props.EnumProperty(
+        items=eMix_geometryattribute,
+        name="Mix Mode",
+        description="Mix mode",
+        default = 'REPLACE', #{'REPLACE'},
+        #options = {'ENUM_FLAG'}, # this sux
+        update = update_socket,)
+    color_simple = cString
+    color : bpy.props.FloatVectorProperty(default=cString, size=4)
+    input : bpy.props.BoolProperty(default =False,)
+    def draw(self, context, layout, node, text):
+        ChooseDraw(self, context, layout, node, text)
+    def draw_color(self, context, node):
+        return self.color
+    @classmethod
+    def draw_color_simple(self):
+        return self.color_simple
 
 eSkinningMethod = (('EXISTING_GROUPS', "Use Existing Groups", "Use the existing vertex groups, or create empty groups if not found.",),
                    ('AUTOMATIC_HEAT', "Automatic (Heat)", "Use Blender's heatmap automatic skinning",),
