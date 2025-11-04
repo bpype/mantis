@@ -36,7 +36,7 @@ def TellClasses():
 
 from mathutils import Color # these colors were sampled from Blender's UI
 # TODO: maybe read the relevant colors from the Theme
-linkColor = Color((0.028034, 0.093164, 0.070379)).from_scene_linear_to_srgb()
+linkTransformColor = Color((0.028034, 0.093164, 0.070379)).from_scene_linear_to_srgb()
 inheritColor = Color((0.083213, 0.131242, 0.116497)).from_scene_linear_to_srgb()
 trackingColor = Color((0.033114, 0.049013, 0.131248)).from_scene_linear_to_srgb()
 ikColor = Color((0.131117, 0.131248, 0.006971)).from_scene_linear_to_srgb()
@@ -117,7 +117,7 @@ class LinkCopyLocationNode(Node, LinkNode):
     def init(self, context):
         self.init_sockets(LinkCopyLocationSockets)
         self.use_custom_color = True
-        self.color = linkColor
+        self.color = linkTransformColor
         self.initialized = True
 
 
@@ -132,7 +132,7 @@ class LinkCopyRotationNode(Node, LinkNode):
     def init(self, context):
         self.init_sockets(LinkCopyRotationSockets)
         self.use_custom_color = True
-        self.color = linkColor
+        self.color = linkTransformColor
         self.initialized = True
 
 
@@ -148,7 +148,7 @@ class LinkCopyScaleNode(Node, LinkNode):
     def init(self, context):
         self.init_sockets(LinkCopyScaleSockets)
         self.use_custom_color = True
-        self.color = linkColor
+        self.color = linkTransformColor
         self.initialized = True
 
 
@@ -184,7 +184,7 @@ class LinkCopyTransformNode(Node, LinkNode):
     def init(self, context):
         self.init_sockets(LinkCopyTransformsSockets)
         self.use_custom_color = True
-        self.color = linkColor
+        self.color = linkTransformColor
         self.initialized = True
 
 
@@ -257,7 +257,7 @@ class LinkLimitLocationNode(Node, LinkNode):
         self.init_sockets(LinkLimitLocationScaleSockets)
         self.initialized = True
         self.use_custom_color = True
-        self.color = linkColor
+        self.color = linkTransformColor
 
 class LinkLimitScaleNode(Node, LinkNode):
     '''A node representing Limit Scale'''
@@ -271,7 +271,7 @@ class LinkLimitScaleNode(Node, LinkNode):
         self.init_sockets(LinkLimitLocationScaleSockets)
         self.initialized = True
         self.use_custom_color = True
-        self.color = linkColor
+        self.color = linkTransformColor
 
 class LinkLimitRotationNode(Node, LinkNode):
     '''A node representing Limit Rotation'''
@@ -286,7 +286,7 @@ class LinkLimitRotationNode(Node, LinkNode):
         self.initialized = True
         # color
         self.use_custom_color = True
-        self.color = linkColor
+        self.color = linkTransformColor
 
 class LinkLimitDistanceNode(Node, LinkNode):
     '''A node representing Limit Distance'''
@@ -299,7 +299,7 @@ class LinkLimitDistanceNode(Node, LinkNode):
     def init(self, context):
         self.init_sockets(LinkLimitDistanceSockets)
         self.use_custom_color = True
-        self.color = linkColor
+        self.color = linkTransformColor
         self.initialized = True
 
 
@@ -314,7 +314,7 @@ class LinkTransformationNode(Node, LinkNode):
     def init(self, context):
         self.init_sockets(LinkTransformationSockets)
         self.use_custom_color = True
-        self.color = linkColor
+        self.color = linkTransformColor
         self.initialized = True
 
     def display_update(self, parsed_tree, context):
@@ -388,7 +388,7 @@ class LinkFloorNode(Node, LinkNode):
     def init(self, context):
         self.init_sockets(LinkFloorSockets)
         self.use_custom_color = True
-        self.color = linkColor
+        self.color = linkTransformColor
         self.initialized = True
 
 class LinkShrinkWrapNode(Node, LinkNode):
@@ -446,19 +446,16 @@ class LinkGeometryAttribute(Node, LinkNode):
     def init(self, context):
         self.init_sockets(LinkGeometryAttributeSockets)
         self.use_custom_color = True
-        self.color = trackingColor
+        self.color = linkTransformColor
         self.initialized = True
 
     def display_update(self, parsed_tree, context):
-        pass
-        # vast majority of the time user doesn't link this.
         data_type = self.inputs['Data Type'].default_value
-        if self.inputs['Data Type'].is_linked:# 1% or less of cases
+        if self.inputs['Data Type'].is_linked:
             node_tree = context.space_data.path[0].node_tree
-            nc = parsed_tree.get(get_signature_from_edited_tree(self, context))
-            if nc:
-                data_type = nc.evaluate_input("Data Type")
-        not_matrix_mode = data_type != 'FLOAT4X4'
+            mantis_node = parsed_tree.get(get_signature_from_edited_tree(self, context))
+            if mantis_node: data_type = mantis_node.evaluate_input("Data Type")
+        not_matrix_mode = (data_type != 'FLOAT4X4')
         self.inputs['Enabled Location'].hide=not_matrix_mode
         self.inputs['Enabled Rotation'].hide=not_matrix_mode
         self.inputs['Enabled Scale'].hide=not_matrix_mode
@@ -475,7 +472,7 @@ class LinkDrivenParameterNode(Node, LinkNode):
     def init(self, context):
         self.init_sockets(LinkDrivenParameterSockets)
         self.use_custom_color = True
-        self.color = linkColor
+        self.color = linkTransformColor
         self.initialized = True
 
 # Set up the class property that ties the UI classes to the Mantis classes.

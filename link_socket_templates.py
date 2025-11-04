@@ -465,10 +465,7 @@ LinkShrinkWrapSockets = [
 
 LinkGeometryAttributeSockets = [
     InputRelationshipTemplate,
-    TargetTemplate, # IMPORTANT TO DO: targets should be an array
-    # and the constraints are made  ONLY if the target is valid...
-    # for BONE targets, maybe auto-magically build a mesh for the user.
-    # this is a little bit too hard to do for now. Users can just make a schema.
+    TargetTemplate,
     OffsetTargetTransformTemplate:= SockTemplate(name="Offset target transform", is_input=True,
             bl_idname="BooleanSocket", blender_property='apply_target_transform'),
     AttributeTemplate:= SockTemplate(name="Attribute", bl_idname="ParameterStringSocket", is_input=True,
