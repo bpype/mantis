@@ -145,9 +145,7 @@ def get_socket_maps(node, force=False):
                     keep_sockets.append(other_socket)
                 map[sock.identifier]= keep_sockets
             elif hasattr(sock, "default_value"):
-                if getattr(sock, "default_value") is not None:
-                    val = getattr(sock, "default_value")
-                elif sock.bl_idname == "EnumCurveSocket" and sock.get("default_value") is None:
+                if sock.bl_idname == "EnumCurveSocket" and sock.get("default_value") is None:
                     # HACK I need to add this special case because during file-load,
                     #  this value is None and should not be altered until it is set once.
                     continue
