@@ -439,7 +439,10 @@ class LinkGeometryAttribute(Node, LinkNode):
     """A node representing Blender's Geometry Attribute Constraint"""
     bl_idname = "LinkGeometryAttribute"
     bl_label = "Geometry Attribute"
-    bl_icon = "CON_GEOMETRYATTRIBUTE"
+    if bpy.app.version >= (5,0,0):
+        bl_icon = "CON_GEOMETRYATTRIBUTE"
+    else:
+        bl_icon = "ERROR"
     initialized : bpy.props.BoolProperty(default = False)
     mantis_node_class_name=bl_idname
 
@@ -448,8 +451,24 @@ class LinkGeometryAttribute(Node, LinkNode):
         self.use_custom_color = True
         self.color = linkTransformColor
         self.initialized = True
+    
+    def draw_label(self):
+        if bpy.app.version < (5,0,0):
+            return "ERROR: ONLY SUPPORTED IN Blender 5.0 OR NEWER"
+        elif self.label: 
+            return self.label
+        return self.bl_label
+    
+    def update(self):
+        if bpy.app.version < (5,0,0):
+            self.color = Color((1.0, 0.15, 0.15,)).from_scene_linear_to_srgb()
+        elif self.color != linkTransformColor:
+            self.color = linkTransformColor
+
 
     def display_update(self, parsed_tree, context):
+        if bpy.app.version < (5,0,0):
+            return
         data_type = self.inputs['Data Type'].default_value
         if self.inputs['Data Type'].is_linked:
             node_tree = context.space_data.path[0].node_tree

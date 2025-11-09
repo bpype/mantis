@@ -83,7 +83,7 @@ def hash_tree(tree):
 
 MANTIS_VERSION_MAJOR=0
 MANTIS_VERSION_MINOR=13
-MANTIS_VERSION_SUB=0
+MANTIS_VERSION_SUB=1
 
 class MantisTree(NodeTree):
     '''A custom node tree type that will show up in the editor type list'''
@@ -574,6 +574,9 @@ class MantisNodeGroup(Node, MantisUINode):
 
 
 class GraphError(Exception):
+    pass
+
+class BlenderVersionError(Exception):
     pass
 
 def get_signature_from_edited_tree(node, context):

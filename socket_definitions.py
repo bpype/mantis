@@ -1490,7 +1490,7 @@ class EnumMetaRigSocket(MantisSocket):
     '''Custom node socket type'''
     bl_idname = 'EnumMetaRigSocket'
     bl_label = "Meta Rig"
-
+    color_simple = cString
 
     search_prop:PointerProperty(type=bpy.types.Object, poll=poll_is_armature, update=update_metarig_armature)
 
@@ -1505,9 +1505,8 @@ class EnumMetaRigSocket(MantisSocket):
                 self.search_prop=ob
 
     default_value  : StringProperty(name = "", get=get_default_value, set=set_default_value)
-
-    color_simple = cString
     color : bpy.props.FloatVectorProperty(default=cString, size=4)
+    
     def draw(self, context, layout, node, text):
         if self.is_output:
             layout.label(text=self.name)
@@ -1526,9 +1525,44 @@ class EnumMetaRigSocket(MantisSocket):
     def draw_color_simple(self):
         return self.color_simple
 
-class EnumArmature(EnumMetaRigSocket):
+# I donno why but I can't just subclass the above. hmm.so this is a duplicate
+class EnumArmature(MantisSocket):
     bl_idname = "EnumArmature"
     bl_label = "Armature"
+    color_simple = cString
+
+    search_prop:PointerProperty(type=bpy.types.Object, poll=poll_is_armature, update=update_metarig_armature)
+
+    def get_default_value(self):
+        if self.search_prop:
+            return self.search_prop.name
+        return ""
+
+    def set_default_value(self, value):
+        if ob:= bpy.data.objects.get(value):
+            if ob.type == 'ARMATURE':
+                self.search_prop=ob
+
+    default_value  : StringProperty(name = "", get=get_default_value, set=set_default_value)
+    color : bpy.props.FloatVectorProperty(default=cString, size=4)
+    
+    def draw(self, context, layout, node, text):
+        if self.is_output:
+            layout.label(text=self.name)
+        elif not (self.is_linked):
+            layout.prop_search(data=self, property="search_prop", search_data=bpy.data, search_property="objects", text="", icon="OUTLINER_OB_ARMATURE", results_are_suggestions=True)
+        elif hasattr(self.node, "armature"):
+            layout.label(text=self.node.armature)
+            # TODO: we should actually use the parsed tree to query this info directly, since this socket may belong to a node group in/out
+            # which doesn't have this parameter. whatever.
+        else:
+            layout.label(text=self.name)
+
+    def draw_color(self, context, node):
+        return self.color
+    @classmethod
+    def draw_color_simple(self):
+        return self.color_simple
 
 def poll_is_curve(self, obj):
     return obj.type == "CURVE"
@@ -1613,10 +1647,45 @@ class EnumMetaBoneSocket(MantisSocket):
     def draw_color_simple(self):
         return self.color_simple
 
-class EnumExistingBoneSocket(EnumMetaBoneSocket):
+# I don't know why but I can't subclass the above and I had to duplicate it here
+class EnumExistingBoneSocket(MantisSocket): 
     '''Socket to Get a Bone from an object'''
     bl_idname = 'EnumExistingBoneSocket'
     bl_label = "Bone"
+    color_simple = cString
+
+    # this armature property is set by the parent node.
+    armature:PointerProperty(type=bpy.types.Object)
+    bone:StringProperty()
+
+    def populate_bones_list(self, context):
+        # just gonna hardcode the value
+        if (meta_rig := self.armature):
+            retList = []; i = -1
+            retList.append( ('NONE', '', '', 'NONE', i:=i+1 ) )
+            for b in meta_rig.data.bones:
+                retList.append( (b.name, b.name, "Bone to copy matrix from", "BONE_DATA", i:=i+1 ) )
+            return(retList)
+        return None
+
+    default_value  : StringProperty(name = "", update=update_metarig_posebone)
+
+    color : bpy.props.FloatVectorProperty(default=cString, size=4)
+    def draw(self, context, layout, node, text):
+        if not (self.is_linked):
+            if self.armature is None:
+                layout.prop(self, "default_value", text="", icon="BONE_DATA",)
+            else:
+                SearchPBDraw(self, context, layout, node, text="")
+        else:
+            layout.label(text=self.node.pose_bone)
+
+    def draw_color(self, context, node):
+        return self.color
+    @classmethod
+    def draw_color_simple(self):
+        return self.color_simple
+
 
 # TODO: make it so that this makes an item for "missing" widgets
 # for when a widget is moved or deleted

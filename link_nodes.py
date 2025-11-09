@@ -921,6 +921,10 @@ class LinkGeometryAttribute(MantisLinkNode):
         self.set_traverse([("Input Relationship", "Output Relationship")])
 
     def bRelationshipPass(self, bContext = None,):
+        from bpy.app import version
+        from .base_definitions import BlenderVersionError
+        if version < (5,0,0):
+            raise BlenderVersionError("Geometry Attribute Constraint is supported only in Blender 5.0 or greater.")
         prepare_parameters(self)
         for xf in self.GetxForm():
             print

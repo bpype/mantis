@@ -851,7 +851,7 @@ def do_generate_armature(armOb, context, node_tree, parent_node=None):
                 mr_node = node_tree.nodes.new("UtilityMetaRig")
                 meta_rig_nodes[mr_node_name] = mr_node
                 mr_node.inputs[0].search_prop=armOb
-                mr_node.inputs[1].search_prop=armOb
+                mr_node.inputs[1].armature=armOb
                 mr_node.inputs[1].bone=bone.name
                 mr_node.inputs[1].default_value=bone.name
             node_tree.links.new(input=mr_node.outputs[0], output=bone_node.inputs["Matrix"])
