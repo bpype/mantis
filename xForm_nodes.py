@@ -55,7 +55,7 @@ def set_object_parent(node):
     if parent_xForm_info.object_type  == '':
         return # no parent
     elif parent_xForm_info.object_type in ['armature', 'object']:
-        parent = data.objects.get(parent_xForm_info.parent_edit_name)
+        parent = data.objects.get(parent_xForm_info.self_edit_name)
         if parent_xForm_info.parent_edit_name and parent is None:
             raise GraphError(f"Could not get parent object for node {node}.")
         node.bGetObject().parent = parent
