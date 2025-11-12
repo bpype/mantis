@@ -17,6 +17,11 @@ def node_context_menu_draw(self, context):
     layout.operator("mantis.select_nodes_of_type")
     layout.operator("mantis.import_from_component_library")
     # layout.menu('NODE_MT_context_menu_mantis')
+    if context.active_object.type in ["EMPTY", "MESH", "CURVE"]: # this is currently too slow to show to the user otherwise :/
+        operator_settings = layout.operator(
+            "mantis.generate_tree", text="Add active selected object to tree",
+            icon='NODE', emboss=False,)
+        operator_settings.clear_tree = False
 
 # Function to append submenu to node add menu
 def node_add_menu_draw(self, context):
@@ -120,3 +125,4 @@ class MantisActiveTreePanel(Panel):
         layout.operator("mantis.execute_node_tree")
         layout.operator("mantis.force_display_update", text='Force Display Update')
         layout.operator("mantis.import_from_component_library")
+        

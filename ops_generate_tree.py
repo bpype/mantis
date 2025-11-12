@@ -15,6 +15,7 @@ def mantis_poll_op(context):
 def create_inheritance_node(pb, parent_name, bone_inherit_node, node_tree):
     from bpy.types import PoseBone
     parent_node = node_tree.nodes.new("linkInherit")
+    parent_node.select = True # for sorting
     parent_bone_node = node_tree.nodes.get(parent_name)
     if not parent_bone_node:
         raise RuntimeError("Can't Find parent node!!")
@@ -83,7 +84,9 @@ constraint_link_map={
 
 def create_relationship_node_for_constraint(node_tree, c):
     if cls_name := constraint_link_map.get(c.type):
-        return node_tree.nodes.new(cls_name)
+        n =  node_tree.nodes.new(cls_name)
+        n.select = True # for sorting
+        return n
     else:
         prRed ("Not yet implemented: %s" % c.type)
         return None
@@ -228,8 +231,10 @@ def fill_parameters(node, c, context):
             node.inputs["XZ Scale Mode"].default_value = c.xz_scale_mode
         case 'TRANSFORM':
             # I can't be arsed to do all this work..
-            from .link_nodes import transformation_props_sockets as props
-            for prop, (sock_name, _unused) in props.items():
+            # from .link_nodes import transformation_props_sockets as props
+            from .link_socket_templates import LinkTransformationSockets
+            for template in LinkTransformationSockets:
+                prop = template.blender_property; socket_name = template.name
                 if "from" in prop:
                     if prop in ["map_from"] or "to" in prop:
                        pass
@@ -258,15 +263,11 @@ def fill_parameters(node, c, context):
                     elif c.map_from == 'SCALE':
                         if "scale" not in prop:
                             continue
-                node.inputs[sock_name].default_value = getattr(c, prop)
+                node.inputs[socket_name].default_value = getattr(c, prop)
                 if prop in "mute":
-                    node.inputs[sock_name].default_value = not getattr(c, prop)
+                    node.inputs[socket_name].default_value = not getattr(c, prop)
         case _:
             print (f"Not yet implemented: {c.type}")
-
-
-
-
 
 def walk_edit_bone(armOb, bone):
     # this is a simplified version of the node-tree walking code
@@ -384,6 +385,7 @@ def setup_vp_settings(bone_node, pb, do_after, node_tree):
                 break
         else: # we make it now
             shape_n = node_tree.nodes.new("InputExistingGeometryObject")
+            shape_n.select = True # for sorting
             shape_n.name = shape_ob.name
             shape_n.label = shape_ob.name
             shape_n.inputs["Name"].default_value = shape_ob.name
@@ -488,6 +490,7 @@ def create_driver(in_node_name, out_node_name, armOb, finished_drivers, switches
             else:
                 # make and connect the switch node
                 switch_node = node_tree.nodes.new("UtilitySwitch"); switches.append(switch_node)
+                switch_node.select = True # for sorting
                 # node_tree.links.new(bone_node.outputs["xForm Out"], switch_node.inputs[0])
                 try:
                     node_tree.links.new(bone_node.outputs[p_string], switch_node.inputs[0])
@@ -598,6 +601,7 @@ def create_driver(in_node_name, out_node_name, armOb, finished_drivers, switches
                             break # found it!
                     else:
                         var_node = node_tree.nodes.new("UtilityDriverVariable"); driver_vars.append(var_node)
+                        var_node.select = True # for sorting
                         prRed("Creating Node: %s" % var_node.name)
                         for key, value in var_data.items():
                             try:
@@ -651,6 +655,7 @@ def create_driver(in_node_name, out_node_name, armOb, finished_drivers, switches
                     break
                 else:
                     fCurve_node = node_tree.nodes.new("UtilityFCurve")
+                    fCurve_node.select = True # for sorting
                     # fc_ob = fCurve_node.fake_fcurve_ob
                     # node_fc = fc_ob.animation_data.action.fcurves[0]
                     # fcurves.append(fCurve_node)
@@ -664,6 +669,7 @@ def create_driver(in_node_name, out_node_name, armOb, finished_drivers, switches
                     for num_keys, (k, v) in enumerate(keys.items()):
                         fCurve_node.inputs.new("KeyframeSocket", "Keyframe."+str(num_keys).zfill(3))
                         kf_node = node_tree.nodes.new("UtilityKeyframe")
+                        kf_node.select = True # for sorting
                         kf_node.inputs[0].default_value = v['co_ui'][0]
                         kf_node.inputs[1].default_value = v['co_ui'][1]
                         node_tree.links.new(kf_node.outputs[0], fCurve_node.inputs[num_keys])
@@ -673,6 +679,7 @@ def create_driver(in_node_name, out_node_name, armOb, finished_drivers, switches
                 driver_node = None
                 # checc for it...
                 driver_node = node_tree.nodes.new("UtilityDriver")
+                driver_node.select = True # for sorting
                 driver_node.inputs["Driver Type"].default_value = fc.driver.type
                 driver_node.inputs["Expression"].default_value = fc.driver.expression.replace ('var', 'a')
                 # HACK, fix the above with a more robust solution
@@ -739,12 +746,28 @@ def set_parent_from_node(pb, bone_inherit_node, node_tree):
                 parent = create_inheritance_node(pb, bone.parent.name, bone_inherit_node, node_tree)
         return parent
 
-def do_generate_geom(ob, node_tree, parent_node=None):
+
+def do_generate_graph( context, node_tree, include_links_and_deforms=True, generate_children=False):
+    active_object = context.active_object
+    for n in node_tree.nodes: n.select=False
+    # clear selection so that the sorting code works, it operates on selection
+    # the other functions are responsible for setting selection properly.
+    if active_object.select_get() == False:
+        return
+    elif active_object.type in ["MESH", "CURVE", "EMPTY"]:
+        do_generate_geom(active_object, node_tree, do_deformers = include_links_and_deforms, generate_children=generate_children)
+    elif active_object.type == 'ARMATURE':
+        do_generate_armature(active_object, context, node_tree, bones_only= not include_links_and_deforms, generate_children=generate_children)
+
+
+def do_generate_geom(ob, node_tree, parent_node=None, do_deformers=False, generate_children= False):
     ob_node = node_tree.nodes.new("xFormGeometryObject")
+    ob_node.select = True # for sorting
     ob_node.name = ob.name; ob_node.label = ob.name
     ob_node.inputs["Name"].default_value=ob.name+"_MANTIS"
     if ob.data:
         geometry_node = node_tree.nodes.new("InputExistingGeometryData")
+        geometry_node.select = True # for sorting
         geometry_node.inputs[0].default_value=ob.data.name
         node_tree.links.new(input=geometry_node.outputs[0], output=ob_node.inputs["Geometry"])
     matrix_of = node_tree.nodes.new("UtilityMatrixFromXForm")
@@ -756,46 +779,48 @@ def do_generate_geom(ob, node_tree, parent_node=None):
 
     # Generate Deformers
     prev_def_node = None
-    for m in ob.modifiers:
-        if m.type == "ARMATURE":
-            def_node = node_tree.nodes.new("DeformerArmature")
-            def_node.inputs["Blend Vertex Group"].default_value = m.vertex_group
-            def_node.inputs["Invert Vertex Group"].default_value = m.invert_vertex_group
-            def_node.inputs["Preserve Volume"].default_value = m.use_deform_preserve_volume
-            def_node.inputs["Use Multi Modifier"].default_value = m.use_multi_modifier
-            def_node.inputs["Use Envelopes"].default_value = m.use_bone_envelopes
-            def_node.inputs["Use Vertex Groups"].default_value = m.use_vertex_groups
-            # def_node.inputs["Copy Skin Weights From"]
-            def_node.inputs["Skinning Method"].default_value="EXISTING_GROUPS"
-            def_ob = node_tree.nodes.get(m.object.name)
-            # get the deformer's target object...
-            if def_ob:
-                node_tree.links.new(input=def_ob.outputs["xForm Out"], output=def_node.inputs["Armature Object"])
-            if prev_def_node:
-                node_tree.links.new(input=prev_def_node.outputs["Deformer"], inputs=def_node.inputs["Deformer"])
-            prev_def_node = def_node
+    if do_deformers:
+        for m in ob.modifiers:
+            if m.type == "ARMATURE":
+                def_node = node_tree.nodes.new("DeformerArmature")
+                def_node.select = True # for sorting
+                def_node.inputs["Blend Vertex Group"].default_value = m.vertex_group
+                def_node.inputs["Invert Vertex Group"].default_value = m.invert_vertex_group
+                def_node.inputs["Preserve Volume"].default_value = m.use_deform_preserve_volume
+                def_node.inputs["Use Multi Modifier"].default_value = m.use_multi_modifier
+                def_node.inputs["Use Envelopes"].default_value = m.use_bone_envelopes
+                def_node.inputs["Use Vertex Groups"].default_value = m.use_vertex_groups
+                # def_node.inputs["Copy Skin Weights From"]
+                def_node.inputs["Skinning Method"].default_value="EXISTING_GROUPS"
+                def_ob = node_tree.nodes.get(m.object.name)
+                # get the deformer's target object...
+                if def_ob:
+                    node_tree.links.new(input=def_ob.outputs["xForm Out"], output=def_node.inputs["Armature Object"])
+                if prev_def_node:
+                    node_tree.links.new(input=prev_def_node.outputs["Deformer"], inputs=def_node.inputs["Deformer"])
+                prev_def_node = def_node
 
-    if prev_def_node:
-        node_tree.links.new(input=prev_def_node.outputs["Deformer"], output=ob_node.inputs["Deformer"])
+        if prev_def_node:
+            node_tree.links.new(input=prev_def_node.outputs["Deformer"], output=ob_node.inputs["Deformer"])
 
     if parent_node:
         node_tree.links.new(input=parent_node.outputs["Inheritance"], output=ob_node.inputs["Relationship"])
+    # NOTE: there should be constraints here, too!
+
+    # copied from below with minor modification # TODO de-dupe me
+    if generate_children:
+        for child in ob.children:
+            its_parent = create_inheritance_node(None, ob.name, {}, node_tree)
+            if child.type in ["MESH", "CURVE", "EMPTY"]:
+                do_generate_geom(child, node_tree, parent_node=its_parent, do_deformers=do_deformers, generate_children=True)
+            if child.type in ["ARMATURE"]:
+                do_generate_armature(armOb, context, node_tree, parent_node=its_parent, bones_only=not do_deformers, generate_children=True)
 
 
-    # not doing this
-    # matrix_node = node_tree.nodes.new("InputMatrix")
-    # matrix_node.first_row=ob.matrix_world[0:3]
-    # matrix_node.second_row=ob.matrix_world[4:7]
-    # matrix_node.third_row=ob.matrix_world[8:11]
-    # matrix_node.fourth_row=ob.matrix_world[12:15]
-    # node_tree.links.new(input=matrix_node.outputs[0], output=ob_node.inputs["Matrix"])
 
 
-
-
-
-
-def do_generate_armature(armOb, context, node_tree, parent_node=None):
+def do_generate_armature(armOb, context, node_tree, parent_node=None,
+                        bones_only=False, generate_children=False):
         from time import time
         start = time()
 
@@ -803,19 +828,17 @@ def do_generate_armature(armOb, context, node_tree, parent_node=None):
         bone_inherit_node = {}
         do_after = set()
 
-
         armature = node_tree.nodes.new("xFormArmatureNode")
+        armature.select = True # for sorting
         mr_node_name = armOb.name
         if not (mr_node:= meta_rig_nodes.get(mr_node_name)):
             mr_node = node_tree.nodes.new("UtilityMetaRig")
+            mr_node.select = True # for sorting
             meta_rig_nodes[mr_node_name] = mr_node
             mr_node.inputs[0].search_prop=armOb
         node_tree.links.new(input=mr_node.outputs[0], output=armature.inputs["Matrix"])
         if parent_node:
             node_tree.links.new()
-
-
-
 
         bones = []
         for root in armOb.data.bones:
@@ -831,13 +854,12 @@ def do_generate_armature(armOb, context, node_tree, parent_node=None):
         if parent_node:
             node_tree.links.new(input=parent_node.outputs["Inheritance"], output=armature.inputs["Relationship"])
 
-
-
         # for bone_path in lines:
         for bone in bones:
             prGreen(time() - milestone); milestone=time()
             # first go through the bone path and find relevant information
             bone_node = node_tree.nodes.new("xFormBoneNode")
+            bone_node.select = True # for sorting
             bone_node.inputs["Name"].default_value = bone.name
             bone_node.name, bone_node.label = bone.name, bone.name
             matrix = bone.matrix_local.copy()
@@ -865,6 +887,7 @@ def do_generate_armature(armOb, context, node_tree, parent_node=None):
             else: # This is a root
                 if (parent_list := bone_inherit_node.get(armOb.name)) is None:
                     parent = node_tree.nodes.new("linkInherit")
+                    parent.select = True # for sorting
                     bone_inherit_node[armOb.name] = [parent]
                     node_tree.links.new(armature.outputs["xForm Out"], parent.inputs['Parent'])
                     parent.inputs["Inherit Rotation"].default_value = True
@@ -902,12 +925,14 @@ def do_generate_armature(armOb, context, node_tree, parent_node=None):
 
             # prRed("BBone Implementation is not complete, expect errors and missing features for now")
 
-
-            #
             for c in pb.constraints:
                 # prWhite("constraint %s for %s" % (c.name, pb.name), time() - milestone); milestone=time()
                 # make relationship nodes and set up links...
                 if ( c_node := create_relationship_node_for_constraint(node_tree, c)):
+                    # HACK but this code is all ugly hacky crap anyway so this is good enough
+                    if bones_only == True:
+                        continue
+                    
                     c_node.label = c.name
                     # this node definitely has a parent inherit node.
                     c_node.location = parent.location; c_node.location.x += 200
@@ -958,6 +983,7 @@ def do_generate_armature(armOb, context, node_tree, parent_node=None):
             if task in ['Object Target']:
                 in_node  = node_tree.nodes[ in_node_name ]
                 out_node= node_tree.nodes.new("InputExistingGeometryObject")
+                out_node.select = True # for sorting
                 out_node.inputs["Name"].default_value=out_node_name
                 node_tree.links.new(out_node.outputs["Object"], in_node.inputs["Target"])
             if task in ['Target', 'Pole Target']:
@@ -989,35 +1015,29 @@ def do_generate_armature(armOb, context, node_tree, parent_node=None):
             # annoyingly, Rigify uses f-modifiers to setup its fcurves
             # I do not intend to support fcurve modifiers in Mantis at this time
 
-
-        for child in armOb.children:
-            its_parent = None
-            parent_name = armOb.name
-            if child.parent_type == "BONE":
-                parent_name = child.parent_bone
-            if not (possible_parent_nodes := bone_inherit_node.get(parent_name)):
-                its_parent = create_inheritance_node(child, parent_name, bone_inherit_node, node_tree)
-            else:
-                for ppn in possible_parent_nodes: # check if it has the right connected, inherit scale, inherit rotation
-                    if ppn.inputs["Connected"].default_value  != False: continue
-                    if ppn.inputs["Inherit Scale"].default_value != "FULL": continue
-                    if ppn.inputs["Inherit Rotation"].default_value != True: continue
-                    its_parent = ppn; break
+        if generate_children:
+            for child in armOb.children:
+                its_parent = None
+                parent_name = armOb.name
+                if child.parent_type == "BONE":
+                    parent_name = child.parent_bone
+                if not (possible_parent_nodes := bone_inherit_node.get(parent_name)):
+                    its_parent = create_inheritance_node(child, parent_name, bone_inherit_node, node_tree)
                 else:
-                    its_parent = create_inheritance_node(pb, parent_name, bone_inherit_node, node_tree)
+                    for ppn in possible_parent_nodes: # check if it has the right connected, inherit scale, inherit rotation
+                        if ppn.inputs["Connected"].default_value  != False: continue
+                        if ppn.inputs["Inherit Scale"].default_value != "FULL": continue
+                        if ppn.inputs["Inherit Rotation"].default_value != True: continue
+                        its_parent = ppn; break
+                    else:
+                        its_parent = create_inheritance_node(pb, parent_name, bone_inherit_node, node_tree)
 
-            if child.type in ["MESH", "CURVE", "EMPTY"]:
-                do_generate_geom(child, node_tree, its_parent)
-            if child.type in ["ARMATURE"]:
-                do_generate_armature(armOb, context, node_tree, parent_node=its_parent)
-
-        for node in node_tree.nodes:
-            node.select = False
+                if child.type in ["MESH", "CURVE", "EMPTY"]:
+                    do_generate_geom(child, node_tree, its_parent)
+                if child.type in ["ARMATURE"]:
+                    do_generate_armature(armOb, context, node_tree, parent_node=its_parent)
 
         prGreen("Finished generating %d nodes in %f seconds." % (len(node_tree.nodes), time() - start))
-
-
-
 
         return armature
 
@@ -1027,10 +1047,20 @@ class GenerateMantisTree(Operator):
     """Generate Mantis Tree From Selected"""
     bl_idname = "mantis.generate_tree"
     bl_label = "Generate Mantis Tree from Selected"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    clear_tree : bpy.props.BoolProperty(default=False, name="Clear Tree?")
+    include_links_and_deforms : bpy.props.BoolProperty(default=False, name="Include Links, Deformers, and Drivers?")
+    generate_children : bpy.props.BoolProperty(default=False, name="Generate Object's Children, too? Warning: This may be slow.")
 
     @classmethod
     def poll(cls, context):
         return (mantis_poll_op(context))
+
+    # show the props dialog so the user can get the info they want
+    def invoke(self, context, event):
+        wm = context.window_manager
+        return wm.invoke_props_dialog(self)
 
     def execute(self, context):
         space = context.space_data
@@ -1039,8 +1069,8 @@ class GenerateMantisTree(Operator):
 
         do_profile=False
 
-        #This will generate it in the current node tree and OVERWRITE!
-        node_tree.nodes.clear() # is this wise?
+        if self.clear_tree:
+            node_tree.nodes.clear() # is this wise?
 
         import cProfile
         from os import environ
@@ -1051,18 +1081,27 @@ class GenerateMantisTree(Operator):
         node_tree.is_exporting = True
         try:
             if do_profile:
-                cProfile.runctx("do_generate_armature(context.active_object, context, node_tree)", None, locals())
+                import pstats, io
+                from pstats import SortKey
+                with cProfile.Profile() as pr:
+                    do_generate_graph(context, node_tree, include_links_and_deforms =  self.include_links_and_deforms, generate_children=self.generate_children)
+                    s = io.StringIO()
+                    sortby = SortKey.TIME
+                    # sortby = SortKey.CUMULATIVE
+                    ps = pstats.Stats(pr, stream=s).strip_dirs().sort_stats(sortby)
+                    ps.print_stats(20) # print the top 20
+                    print(s.getvalue())
             else:
-                do_generate_armature(context.active_object, context, node_tree)
+                do_generate_graph(context, node_tree, include_links_and_deforms =  self.include_links_and_deforms, generate_children=self.generate_children)
             from .utilities import SugiyamaGraph
-            for n in node_tree.nodes:
-                n.select = True # Sugiyama sorting requires selection.
-            SugiyamaGraph(node_tree, 16)
-        except ImportError: # if for some reason Sugiyama isn't available
-            pass
+            try: # the graph gen code has selected the nodes to sort.
+                SugiyamaGraph(node_tree, 16)
+            except ImportError: # if for some reason Sugiyama isn't available
+                pass
         finally:
             node_tree.do_live_update = True
             node_tree.is_exporting = False
             node_tree.prevent_next_exec = True
 
         return {"FINISHED"}
+
