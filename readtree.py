@@ -667,8 +667,9 @@ def execute_tree(nodes, base_tree, context, error_popups = False, profile=False)
 
         for n in sorted_nodes:
             try:
-                if profiler: profiler.record(n, "bPrepare", context)
-                else: n.bPrepare(context)
+                if not n.prepared:
+                    if profiler: profiler.record(n, "bPrepare", context)
+                    else: n.bPrepare(context)
                 if not n.executed:
                     if profiler: profiler.record(n, "bRelationshipPass", context)
                     else: n.bRelationshipPass(context)
