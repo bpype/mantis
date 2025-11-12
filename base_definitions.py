@@ -83,7 +83,7 @@ def hash_tree(tree):
 
 MANTIS_VERSION_MAJOR=0
 MANTIS_VERSION_MINOR=13
-MANTIS_VERSION_SUB=2
+MANTIS_VERSION_SUB=3
 
 class MantisTree(NodeTree):
     '''A custom node tree type that will show up in the editor type list'''
