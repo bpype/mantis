@@ -366,7 +366,7 @@ def get_socket_data(socket, ignore_if_default=False):
     if socket.bl_idname == "EnumMetaBoneSocket":
         socket_data["bone"] = socket.bone
     if socket.bl_idname in ["EnumMetaBoneSocket", "EnumMetaRigSocket", "EnumCurveSocket"]:
-        if sp := socket.get("search_prop"): # may be None
+        if hasattr(socket, "search_prop") and (sp := socket.search_prop): # may be None
             socket_data["search_prop"] = sp.name # this is an object.
     #
     if hasattr(socket, "default_value"):
