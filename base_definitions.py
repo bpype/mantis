@@ -154,14 +154,16 @@ class MantisTree(NodeTree):
         if self.is_exporting:
             return
         self.is_executing = True
-        current_tree = bpy.context.space_data.path[-1].node_tree
-        for node in current_tree.nodes:
-            if hasattr(node, "display_update"):
-                try:
-                    node.display_update(self.parsed_tree, context)
-                except Exception as e:
-                    print("Node \"%s\" failed to update display with error: %s" %(wrapGreen(node.name), wrapRed(e)))
-        self.is_executing = False
+        try:
+            current_tree = bpy.context.space_data.path[-1].node_tree
+            for node in current_tree.nodes:
+                if hasattr(node, "display_update"):
+                    try:
+                        node.display_update(self.parsed_tree, context)
+                    except Exception as e:
+                        print("Node \"%s\" failed to update display with error: %s" %(wrapGreen(node.name), wrapRed(e)))
+        finally:
+            self.is_executing = False
 
         # TODO: deal with invalid links properly.
         #    - Non-hierarchy links should be ignored in the circle-check and so the links should be marked valid in such a circle
