@@ -313,7 +313,11 @@ def relink_socket_map_add_socket(node, socket_collection, item,  in_out=None,):
             if val_type is Vector: default_value = item.default_vector
             if val_type is str: default_value = item.default_string
             if val_type is bpy_prop_array: default_value = item.default_bool_vector
-            s.default_value = default_value
+            if not s.is_property_readonly("default_value"):
+                s.default_value = default_value
+            else: # TODO: make this work with color sets.
+                raise Warning("WARN: Not yet implemented: default values for color sets.")
+                
 
     if read_schema_type(item) == 'Array': s.display_shape = 'SQUARE_DOT'
     elif node.bl_idname in ['MantisSchemaGroup'] and read_schema_type(item) == 'Constant':
