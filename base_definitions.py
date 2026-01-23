@@ -990,6 +990,14 @@ class DummyLink:
 def detect_hierarchy_link(from_node, from_socket, to_node, to_socket,):
     if to_node.node_type in ['DUMMY_SCHEMA', 'SCHEMA']:
         return False #TODO: find out if filtering SCHEMA types is wise
+    if from_socket in from_name_filter and to_socket in ["Array"]:
+        # SPECIAL CASE: arrays essentially extend the non-hierarchy edge
+        #       so if the connection to the array isn't hierarchy, the array node
+        #       in the middle gets disconnected and never executes.
+        #       SO we need to make all the edges until the end hierarchy.
+        #       TODO: test the graph for cycles and tag the "last" edge in the cycle
+        #             is the general solution but that is toooooo slow in Python
+        return True
     if (from_socket in from_name_filter) or (to_socket in to_name_filter):
         return False
     # if from_node.__class__.__name__ in ["UtilityCombineVector", "UtilityCombineThreeBool"]:
