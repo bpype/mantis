@@ -145,11 +145,18 @@ def get_socket_maps(node, force=False):
                     keep_sockets.append(other_socket)
                 map[sock.identifier]= keep_sockets
             elif hasattr(sock, "default_value"):
-                if sock.bl_idname == "EnumCurveSocket" and sock.get("default_value") is None:
+                # NOTE: Blender 5.0 and greater have removed sock.get("attr").
+                #    I hope getattr does exactly the same thing, but I worry about changes.
+                #    If I remember correctly, I used this particular syntax because the behaviour
+                #    of sock.get("attr") vs. getattr(sock, "attr") was affected by the file load time
+                #    and the former could retrieve the data while the latter lost it.
+                #    However, since, IIRC, this only happened in the first case with curves
+                #    I feel confident it will work everywhere else.
+                if sock.bl_idname == "EnumCurveSocket" and getattr(sock, "default_value") is None:
                     # HACK I need to add this special case because during file-load,
                     #  this value is None and should not be altered until it is set once.
                     continue
-                elif "Enum" in sock.bl_idname and isinstance(sock.get("default_value"), int):
+                elif "Enum" in sock.bl_idname and isinstance(getattr(sock, "default_value"), int):
                     continue # for string enum properties that have not yet initialized (at startup)
                 elif (val := sock.default_value) is not None:
                     pass
