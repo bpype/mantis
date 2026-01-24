@@ -899,7 +899,7 @@ class UtilityDriverVariable(MantisNode):
                 if self.inputs['Property'].is_linked:
                     trace = trace_single_line(self, input_name)
                     # CANNOT UNDERSTATE HOW CRITICAL THIS CHECK IS
-                    if trace[0][-1].node_type == 'XFORM':
+                    if trace[0][-1].node_type == 'XFORM' or isinstance(trace[0][-1], UtilityBoneProperties):
                         return trace[1].name # the name of the socket
             return self.parameters["Property"]
         return super().evaluate_input(input_name)
