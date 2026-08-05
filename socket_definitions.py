@@ -1308,6 +1308,7 @@ class CustomPropSocket(MantisSocket):
     bl_idname = 'CustomPropSocket'
     bl_label = "Custom Property"
     color_simple = cString
+    is_valid_interface_type=True
     color : bpy.props.FloatVectorProperty(default=cString, size=4)
     input : bpy.props.BoolProperty(default =False,)
 
