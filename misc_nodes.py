@@ -1081,6 +1081,7 @@ class UtilityDriver(MantisNode):
                 "CONSTANT",]
         for inp in list(self.inputs.keys() )[3:]:
             if (new_var := self.evaluate_input(inp)):
+                new_var = dict(new_var) # shared with other consumers -- never rename in place
                 new_var["name"] = inp
                 my_vars.append(new_var)
             else:
