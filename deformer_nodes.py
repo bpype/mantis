@@ -355,11 +355,14 @@ class DeformerHook(MantisDeformerNode):
         from .drivers import CreateDrivers
         axes='XYZ'
         for i in range(3):
+            suffix = "" if i == 0 else f"_{i:03d}" # explicit names -- 5.2 no longer uniquifies duplicates
             var = var_template.copy()
+            var["name"]="a"+suffix
             var["channel"]="SCALE_"+axes[i]
             driver["vars"].append(var)
             if isinstance(hook, (Bone, PoseBone)):
                 var1=var1_template.copy()
+                var1['name']="b"+suffix
                 var1['channel']="SCALE_"+axes[i]
                 driver['vars'].append(var1)
         CreateDrivers([driver])
