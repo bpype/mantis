@@ -574,7 +574,7 @@ class xFormBone(xFormNode):
             for attr_name in props_sockets.keys():
                 try:
                     setattr(pb, attr_name, 0) # just clear it
-                except ValueError:
+                except (ValueError, TypeError): # Blender 5.2 raises TypeError for scalar -> vector
                     setattr(pb, attr_name, (1.0,1.0,1.0)) # scale needs to be set to 1
 
 
