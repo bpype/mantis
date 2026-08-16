@@ -433,6 +433,9 @@ def register():
 
 def unregister():
     bpy.types.NODE_MT_context_menu.remove(node_context_menu_draw)
+    bpy.types.NODE_MT_add.remove(node_add_menu_draw)
+    bpy.types.VIEW3D_MT_armature_add.remove(armature_add_menu_draw)
+    bpy.types.TOPBAR_MT_file_import.remove(import_menu_draw)
     for tree in bpy.data.node_groups: # ensure it doesn't try to update while quitting.
         if tree.bl_idname in ['MantisTree, SchemaTree']:
             tree.is_exporting=True; tree.is_executing=True
