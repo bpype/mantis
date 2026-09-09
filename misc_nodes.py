@@ -1379,6 +1379,7 @@ class InputWidget(MantisNode):
                 from .geometry_node_graphgen import gen_simple_flip_modifier
                 ng = gen_simple_flip_modifier()
             flip_modifier.node_group = ng
+            # this changed at some point in Blender's versions ehhh
             flip_modifier["Socket_2"]=axes_flipped[0]
             flip_modifier["Socket_3"]=axes_flipped[1]
             flip_modifier["Socket_4"]=axes_flipped[2]

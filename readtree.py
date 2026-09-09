@@ -485,8 +485,6 @@ def parse_tree(base_tree, error_popups=False):
     kept_mantis_node = {}
     while (all_mantis_nodes):
         mantis_node = all_mantis_nodes.pop()
-        if mantis_node in array_nodes:
-            continue
         if mantis_node.node_type in ["DUMMY", 'SCHEMA', 'DUMMY_SCHEMA']:
             continue # screen out the ui_node schema nodes, group in/out, and group placeholders
         # cleanup autogen nodes
@@ -536,8 +534,6 @@ def execution_error_cleanup(node, exception, switch_objects = [], show_error=Fal
             base_tree = node.base_tree
             tree = base_tree
             try:
-                pass
-                space = context.space_data
                 for name in ui_sig[1:]:
                     for n in tree.nodes: n.select = False
                     n = tree.nodes[name]
@@ -558,56 +554,33 @@ def execution_error_cleanup(node, exception, switch_objects = [], show_error=Fal
     prRed(f"Error: {exception} in node {ui_sig}")
     return exception
 
-def sort_execution(nodes, xForm_pass):
-    execution_failed=False
-    sorted_nodes = []
+def sort_execution(nodes):
     from .node_common import GraphError
-    # check for cycles here by keeping track of the number of times a node has been visited.
-    visited={}
-    check_max_len=len(nodes)**2 # seems too high but safe. In a well-ordered graph, I guess this number should be less than the number of nodes.
-    max_iterations = len(nodes)**2
-    i = 0
+    from collections import deque
+    xForm_pass = deque()
+    execution_failed = False
+    sorted_nodes = []
+    # initialize the hierarchy dependency count. We'll use this to ensure there
+    # are no cycles (using Kahn's algorithm).
+    for mantis_node in nodes.values():
+        mantis_node.unmet_hierarchy_dependency_count = len(mantis_node.hierarchy_dependencies)
+        if mantis_node.unmet_hierarchy_dependency_count == 0 :
+            xForm_pass.append(mantis_node)
+    
+    processed_count = 0
     while(xForm_pass):
-        if execution_failed: break
-        if i >= max_iterations:
-            execution_failed = True
-            raise GraphError("There is probably a cycle somewhere in the graph. "
-                                "Or a connection missing in a Group/Schema Input")
-        i+=1
         n = xForm_pass.pop()
-        if visited.get(n.signature) is not None:
-            visited[n.signature]+=1
-        else:
-            visited[n.signature]=0
-        if visited[n.signature] > check_max_len:
-            execution_failed = True
-            raise GraphError("There is a probably a cycle in the graph somewhere. "
-                                "Or a connection missing in a Group/Schema Input")
-            # we're trying to solve the halting problem at this point.. don't do that.
-            # TODO find a better way! there are algo's for this but they will require using a different solving algo, too
-        if n.execution_prepared:
-            continue
-        if n.node_type not in ['XFORM', 'UTILITY']:
-            for dep in n.hierarchy_dependencies:
-                if not dep.execution_prepared:
-                    xForm_pass.appendleft(n) # hold it
-                    break
-            else:
-                n.execution_prepared=True
-                sorted_nodes.append(n)
-                for conn in n.hierarchy_connections:
-                    if  not conn.execution_prepared:
-                        xForm_pass.appendleft(conn)
-        else:
-            for dep in n.hierarchy_dependencies:
-                if not dep.execution_prepared:
-                    break
-            else:
-                n.execution_prepared=True
-                sorted_nodes.append(n)
-                for conn in n.hierarchy_connections:
-                    if  not conn.execution_prepared:
-                        xForm_pass.appendleft(conn)
+        # if n.execution_prepared: continue
+        n.execution_prepared = True
+        sorted_nodes.append(n)
+        processed_count+=1
+        for child in n.hierarchy_connections:
+            child.unmet_hierarchy_dependency_count-= 1
+            if child.unmet_hierarchy_dependency_count == 0:
+                xForm_pass.append(child)
+    if processed_count < len(nodes):
+        execution_failed = True
+        raise GraphError("detected a cycle in the tree")
     return sorted_nodes, execution_failed
 
 def execute_tree(nodes, base_tree, context, error_popups = False, profile=False):
@@ -616,18 +589,14 @@ def execute_tree(nodes, base_tree, context, error_popups = False, profile=False)
                            " Mantis probably failed to parse the tree."
     import bpy
     from time import time
-    from .node_common import GraphError
     original_active = context.view_layer.objects.active
     start_execution_time = time()
     mContext = None
-    from collections import deque
-    xForm_pass = deque()
     for mantis_node in nodes.values():
         if not mContext: # just grab one of these. this is a silly way to do this.
             mContext = mantis_node.mContext
             mContext.b_objects = {} # clear the objects and recreate them
         mantis_node.reset_execution()
-        check_and_add_root(mantis_node, xForm_pass)
     mContext.execution_failed = False
 
     select_me, switch_me = [], [] # switch the mode on these objects
@@ -640,7 +609,7 @@ def execute_tree(nodes, base_tree, context, error_popups = False, profile=False)
         profiler.new_session(mContext.execution_id)
         sort_key = 'total'
     try:
-        sorted_nodes, execution_failed = sort_execution(nodes, xForm_pass)
+        sorted_nodes, execution_failed = sort_execution(nodes)
         for n in sorted_nodes:
             try:
                 if not n.prepared:

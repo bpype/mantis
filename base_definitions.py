@@ -714,9 +714,10 @@ class MantisNode:
         self.node_type='UNINITIALIZED'
         self.hierarchy_connections, self.connections = [], []
         self.hierarchy_dependencies, self.dependencies = [], []
+        self.unmet_hierarchy_dependency_count = float("inf") # we will set this when filling the dependencies lists
         self.prepared, self.executed = False, False
         self.execution_prepared = False
-        # the above is for tracking prep state in execution, so that I can avoid preparing nodes
+        # execution_prepared is for tracking prep state in execution, so that I can avoid preparing nodes
         #  again without changing the readtree code much.
         self.socket_templates = socket_templates
         self.mContext = None # for now I am gonna set this at runtime
