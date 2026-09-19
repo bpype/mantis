@@ -211,7 +211,6 @@ class SchemaTree(NodeTree):
             fix_reroute_colors(self)
 
 
-
 #TODO: do a better job explaining how MantisNode and MantisUINode relate.
 
 class MantisUINode:
@@ -220,6 +219,10 @@ class MantisUINode:
         MantisUINode objects will spawn one or more MantisNode objects when the graph is evaluated.
         The MantisNode objects will pull the data from the UI node and use it to generate the graph.
     """
+    # blender stuff, I'll need to split this into a mixin class later
+    bl_icon = 'NODE'
+    initialized : bpy.props.BoolProperty(default = False)
+    #
     mantis_node_library=''
     mantis_node_class_name=''
     mantis_class=None
@@ -268,8 +271,12 @@ class MantisUINode:
             )
             socket.hide= template.hide
             if template.category:
+                from . import DOERROR
                 # a custom property for the UI functions to use.
-                socket.category = template.category
+                if hasattr(socket, "category"):
+                    socket.category = template.category
+                elif DOERROR:
+                    print (f"WARN: socket type {socket.bl_idname} has no category attribute")
             if template.default_value is not None:
                 socket.default_value = template.default_value
                 # this can throw a TypeError - it is the caller's
@@ -301,7 +308,6 @@ class DeformerNode(MantisUINode):
     @classmethod
     def poll(cls, ntree):
         return (ntree.bl_idname in ['MantisTree', 'SchemaTree'])
-
 
 def poll_node_tree(self, object):
     forbid = []
@@ -1120,6 +1126,7 @@ class MantisNodeSocketCollection(dict):
             if isinstance(socket, str):
                 self[socket] = NodeSocket(is_input=self.is_input, name=socket, node=self.node)
             elif isinstance(socket, MantisSocketTemplate):
+                if socket.ui_only == True: continue # used in UI but not in generation
                 if socket.is_input != self.is_input: continue
                 self[socket.name] = NodeSocket(is_input=self.is_input, name=socket.name, node=self.node)
             else:

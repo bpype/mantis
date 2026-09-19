@@ -102,7 +102,7 @@ xFormBoneSockets = [
         blender_property=('lock_ik_x', 'lock_ik_y', 'lock_ik_z'),),
     IKStiffness := SockTemplate(
         name="IK Stiffness", is_input=True,  bl_idname='BooleanThreeTupleSocket',
-        default_value=(0, 0, 0), category='IK',
+        default_value=(False, False, False), category='IK',
         blender_property=('ik_stiffness_x', 'ik_stiffness_y', 'ik_stiffness_z')),
     IKLimit := SockTemplate(
         name="Limit IK", is_input=True,  bl_idname='BooleanThreeTupleSocket',
@@ -134,10 +134,10 @@ xFormBoneSockets = [
     CustomObjectScaleTemplate := SockTemplate(name="Custom Object Scale",
             is_input=True, bl_idname='VectorScaleSocket',
             category='Display', default_value=(1.0,1.0,1.0),),
-    CustomObjectScaleTemplate := SockTemplate(name="Custom Object Translation",
+    CustomObjectTranslationTemplate := SockTemplate(name="Custom Object Translation",
             is_input=True, bl_idname='VectorSocket',
             category='Display', default_value=(0.0,0.0,0.0),),
-    CustomObjectScaleTemplate := SockTemplate(name="Custom Object Rotation",
+    CustomObjectRotationTemplate := SockTemplate(name="Custom Object Rotation",
             is_input=True, bl_idname='VectorEulerSocket',
             category='Display', default_value=(0.0,0.0,0.0),),
     CustomColor := SockTemplate(name="Color",
@@ -151,7 +151,8 @@ xFormBoneSockets = [
         category='Deform', blender_property='use_deform', default_value=False,),
     EnvelopeDistanceTemplate := SockTemplate( name='Envelope Distance',
             bl_idname='FloatPositiveSocket', category='Deform',
-            blender_property='envelope_distance', default_value=0,),
+            blender_property='envelope_distance', default_value=0,
+            is_input=True,),
     EnvelopeWeightTemplate := replace(EnvelopeDistanceTemplate,
             name='Envelope Weight', bl_idname = 'FloatFactorSocket',
             blender_property='envelope_weight', default_value=1.0,),
@@ -168,8 +169,8 @@ xFormBoneSockets = [
         blender_property='bbone_segments', default_value=1 ),
     BBoneXSizeTemplate := replace(BBoneSegmentsTemplate, name='BBone X Size',
         bl_idname='FloatSocket', blender_property='bbone_x', default_value=0.0025, ),
-    BBoneYSizeTemplate := replace(BBoneXSizeTemplate, name='BBone Z Size',
-        blender_property='bbone_y', ),
+    BBoneZSizeTemplate := replace(BBoneXSizeTemplate, name='BBone Z Size',
+        blender_property='bbone_z', ),
     BBoneHQDeformation := replace(BBoneSegmentsTemplate, name='BBone HQ Deformation',
         bl_idname='BooleanSocket', blender_property='', default_value=None ),
     BBoneXCurveInTemplate := replace( BBoneXSizeTemplate, name="BBone X Curve-In",
@@ -184,37 +185,38 @@ xFormBoneSockets = [
     replace(BBoneXCurveInTemplate, name="BBone Roll-In", blender_property='bbone_rollin', ), # CURRENTLY UNIMPLEMENTED
     replace(BBoneXCurveInTemplate, name="BBone Roll-Out", blender_property='bbone_rollout', ), # CURRENTLY UNIMPLEMENTED
     replace(BBoneXCurveInTemplate, name="BBone Inherit End Roll",
-            bl_idname='BooleanSocket',), # CURRENTLY UNIMPLEMENTED
+            bl_idname='BooleanSocket', default_value=False,), # CURRENTLY UNIMPLEMENTED
     replace(BBoneXCurveInTemplate, name="BBone Scale-In",
-            bl_idname='VectorSocket',), # CURRENTLY DOESN'T WORK
+            bl_idname='VectorSocket', default_value=(0.0,0.0,0.0),), # CURRENTLY DOESN'T WORK
     replace(BBoneXCurveInTemplate, name="BBone Scale-Out",
-            bl_idname='VectorSocket',), # CURRENTLY DOESN'T WORK
+            bl_idname='VectorSocket', default_value=(0.0,0.0,0.0)), # CURRENTLY DOESN'T WORK
     replace(BBoneXCurveInTemplate, name="BBone Ease-In",), # CURRENTLY DOESN'T WORK
     replace(BBoneXCurveInTemplate, name="BBone Ease-Out",), # CURRENTLY DOESN'T WORK
     replace(BBoneXCurveInTemplate, name="BBone Easing",
-            bl_idname='BooleanSocket',), # CURRENTLY DOESN'T WORK
+            bl_idname='BooleanSocket', default_value=False,), # CURRENTLY DOESN'T WORK
     replace(BBoneXCurveInTemplate, name="BBone Start Handle Type",
             bl_idname="EnumBBoneHandleType",
-            blender_property='bbone_handle_type_start',),
+            blender_property='bbone_handle_type_start', default_value=None, ),
     replace(BBoneXCurveInTemplate, name="BBone Custom Start Handle",
             bl_idname="StringSocket",
-            blender_property='bbone_custom_handle_start',),
+            blender_property='bbone_custom_handle_start', default_value=None, ),
     replace(BBoneXCurveInTemplate, name="BBone Start Handle Scale",
             bl_idname="BooleanThreeTupleSocket",
-            blender_property='bbone_handle_use_scale_start',),
+            blender_property='bbone_handle_use_scale_start', default_value=None, ),
     replace(BBoneXCurveInTemplate, name="BBone Start Handle Ease",
-            bl_idname='BooleanSocket',),# CURRENTLY DOESN'T WORK),
+            bl_idname='BooleanSocket', default_value=False),# CURRENTLY DOESN'T WORK),
     replace(BBoneXCurveInTemplate, name="BBone End Handle Type",
             bl_idname="EnumBBoneHandleType",
-            blender_property='bbone_handle_type_end',),
+            blender_property='bbone_handle_type_end', default_value=None, ),
     replace(BBoneXCurveInTemplate, name="BBone Custom End Handle",
             bl_idname="StringSocket",
-            blender_property='bbone_custom_handle_end',),
+            blender_property='bbone_custom_handle_end', default_value=None, ),
     replace(BBoneXCurveInTemplate, name="BBone End Handle Scale",
             bl_idname="BooleanThreeTupleSocket",
-            blender_property='bbone_handle_use_scale_end',),
+            blender_property='bbone_handle_use_scale_end',
+            default_value= (False, False, False)),
     replace(BBoneXCurveInTemplate, name="BBone End Handle Ease",
-            bl_idname='BooleanSocket',),# CURRENTLY DOESN'T WORK),
+            bl_idname='BooleanSocket', default_value=False),# CURRENTLY DOESN'T WORK),
     # locks
     LockLocationTemplate := SockTemplate(name="Lock Location",
         is_input=True, bl_idname='BooleanThreeTupleSocket', category = 'lock',

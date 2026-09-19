@@ -1,5 +1,6 @@
 from .node_common import *
-from .base_definitions import MantisNode, NodeSocket
+from .base_definitions import MantisNode
+from .math_nodes_socket_templates import *
 
 def TellClasses():
     return [
@@ -53,19 +54,8 @@ class MathStaticInt(MantisNode):
     '''A node representing an armature object'''
 
     def __init__(self, signature, base_tree):
-        super().__init__(signature, base_tree)
-        inputs = [
-          "Operation",
-          "Int A",
-          "Int B",
-        ]
-        outputs = [
-          "Result Int",
-        ]
-        additional_parameters = {}
-        self.inputs.init_sockets(inputs)
-        self.outputs.init_sockets(outputs)
-        self.init_parameters(additional_parameters=additional_parameters)
+        super().__init__(signature, base_tree, StaticIntSockets)
+        self.init_parameters()
         self.node_type = "UTILITY"
 
     def bPrepare(self, bContext = None,):
@@ -78,19 +68,8 @@ class MathStaticFloat(MantisNode):
     '''A node representing an armature object'''
 
     def __init__(self, signature, base_tree):
-        super().__init__(signature, base_tree)
-        inputs = [
-          "Operation",
-          "Float A",
-          "Float B",
-        ]
-        outputs = [
-          "Result Float",
-        ]
-        additional_parameters = {}
-        self.inputs.init_sockets(inputs)
-        self.outputs.init_sockets(outputs)
-        self.init_parameters(additional_parameters=additional_parameters)
+        super().__init__(signature, base_tree, StaticFloatSockets)
+        self.init_parameters()
         self.node_type = "UTILITY"
 
     def bPrepare(self, bContext = None,):
@@ -103,21 +82,8 @@ class MathStaticVector(MantisNode):
     '''A node representing an armature object'''
 
     def __init__(self, signature, base_tree):
-        super().__init__(signature, base_tree)
-        inputs = [
-          "Operation",
-          "Vector A",
-          "Vector B",
-          "Scalar A",
-        ]
-        outputs = [
-          "Result Vector",
-          "Result Float",
-        ]
-        additional_parameters = {}
-        self.inputs.init_sockets(inputs)
-        self.outputs.init_sockets(outputs)
-        self.init_parameters(additional_parameters=additional_parameters)
+        super().__init__(signature, base_tree, StaticVectorSockets)
+        self.init_parameters()
         self.node_type = "UTILITY"
 
     def bPrepare(self, bContext = None,):

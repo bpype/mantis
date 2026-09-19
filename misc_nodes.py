@@ -214,83 +214,62 @@ class InputFloat(SimpleInputNode):
     '''A node representing float input'''
 
     def __init__(self, signature, base_tree):
-        super().__init__(signature, base_tree)
-        outputs = ["Float Input"]
-        self.outputs.init_sockets(outputs)
+        super().__init__(signature, base_tree, InputFloatSockets)
         self.init_parameters()
 
 class InputIntNode(SimpleInputNode):
     '''A node representing integer input'''
 
     def __init__(self, signature, base_tree):
-        super().__init__(signature, base_tree)
-        outputs = ["Integer"]
-        self.outputs.init_sockets(outputs)
+        super().__init__(signature, base_tree, InputIntSockets)
         self.init_parameters()
 
 class InputVector(SimpleInputNode):
     '''A node representing vector input'''
 
     def __init__(self, signature, base_tree):
-        super().__init__(signature, base_tree)
-        outputs = [""]
-        self.outputs.init_sockets(outputs)
+        super().__init__(signature, base_tree, InputVectorSockets)
         self.init_parameters()
 
 class InputBoolean(SimpleInputNode):
     '''A node representing boolean input'''
 
     def __init__(self, signature, base_tree):
-        super().__init__(signature, base_tree)
-        outputs = [""]
-        self.outputs.init_sockets(outputs)
+        super().__init__(signature, base_tree, InputBooleanSockets)
         self.init_parameters()
 
 class InputBooleanThreeTuple(SimpleInputNode):
     '''A node representing a tuple of three booleans'''
     def __init__(self, signature, base_tree):
-        super().__init__(signature, base_tree)
-        outputs = [""]
-        self.outputs.init_sockets(outputs)
+        super().__init__(signature, base_tree, InputBooleanThreeTupleSockets)
         self.init_parameters()
 
 class InputRotationOrder(SimpleInputNode):
     '''A node representing string input for rotation order'''
 
     def __init__(self, signature, base_tree):
-        super().__init__(signature, base_tree)
-        outputs = [""]
-        self.outputs.init_sockets(outputs)
+        super().__init__(signature, base_tree, InputRotationOrderSockets)
         self.init_parameters()
 
 class InputTransformSpace(SimpleInputNode):
     '''A node representing string input for transform space'''
 
     def __init__(self, signature, base_tree):
-        super().__init__(signature, base_tree)
-        outputs = [""]
-        self.outputs.init_sockets(outputs)
+        super().__init__(signature, base_tree, InputTransformSpaceSockets)
         self.init_parameters()
-
-    def evaluate_input(self, input_name):
-        return self.parameters[""]
 
 class InputString(SimpleInputNode):
     '''A node representing string input'''
 
     def __init__(self, signature, base_tree):
-        super().__init__(signature, base_tree)
-        outputs = [""]
-        self.outputs.init_sockets(outputs)
+        super().__init__(signature, base_tree, InputStringSockets)
         self.init_parameters()
 
 class InputMatrix(SimpleInputNode):
     '''A node representing axis-angle quaternion input'''
 
     def __init__(self, signature, base_tree):
-        super().__init__(signature, base_tree)
-        outputs  = ["Matrix",]
-        self.outputs.init_sockets(outputs)
+        super().__init__(signature, base_tree, InputMatrixSockets)
         self.init_parameters()
 
 class InputThemeBoneColorSets(SimpleInputNode):
@@ -554,16 +533,7 @@ class UtilityMatricesFromCurve(MantisNode):
 
 class UtilityNumberOfCurveSegments(MantisNode):
     def __init__(self, signature, base_tree):
-        super().__init__(signature, base_tree)
-        inputs = [
-          "Curve"            ,
-          "Spline Index"     ,
-        ]
-        outputs = [
-          "Number of Segments" ,
-        ]
-        self.inputs.init_sockets(inputs)
-        self.outputs.init_sockets(outputs)
+        super().__init__(signature, base_tree, NumberOfCurveSegmentsSockets)
         self.init_parameters()
         self.node_type = "UTILITY"
 
@@ -704,19 +674,7 @@ class UtilityGetNearestFactorOnCurve(MantisNode):
 
 class UtilityKDChoosePoint(MantisNode):
     def __init__(self, signature, base_tree):
-        super().__init__(signature, base_tree)
-        inputs = [
-          "Reference Point"  ,
-          "Points"           ,
-          "Number to Find"   ,
-        ]
-        outputs = [
-          "Result Point"     ,
-          "Result Index"     ,
-          "Result Distance"  ,
-        ]
-        self.inputs.init_sockets(inputs)
-        self.outputs.init_sockets(outputs)
+        super().__init__(signature, base_tree, KDChoosePointSockets)
         self.init_parameters()
         self.node_type = "UTILITY"
         self.rerouted=[]
@@ -742,20 +700,7 @@ class UtilityKDChoosePoint(MantisNode):
 
 class UtilityKDChooseXForm(MantisNode):
     def __init__(self, signature, base_tree):
-        super().__init__(signature, base_tree)
-        inputs = [
-          "Reference Point"      ,
-          "xForm Nodes"          ,
-          "Get Point Head/Tail"  ,
-          "Number to Find"       ,
-        ]
-        outputs = [
-          "Result xForm"     ,
-          "Result Index"     ,
-          "Result Distance"  ,
-        ]
-        self.inputs.init_sockets(inputs)
-        self.outputs.init_sockets(outputs)
+        super().__init__(signature, base_tree, KDChooseXFormSockets)
         self.init_parameters()
         self.node_type = "UTILITY"
         self.rerouted=[]
@@ -794,16 +739,7 @@ class UtilityMetaRig(MantisNode):
     '''A node representing an armature object'''
 
     def __init__(self, signature, base_tree):
-        super().__init__(signature, base_tree)
-        inputs = [
-          "Meta-Armature" ,
-          "Meta-Bone"     ,
-        ]
-        outputs = [
-          "Matrix" ,
-        ]
-        self.inputs.init_sockets(inputs)
-        self.outputs.init_sockets(outputs)
+        super().__init__(signature, base_tree, MetaRigSockets)
         self.init_parameters()
         self.node_type = "UTILITY"
 
@@ -845,19 +781,7 @@ class UtilityBoneProperties(SimpleInputNode):
     '''A node representing a bone's gettable properties'''
 
     def __init__(self, signature, base_tree):
-        super().__init__(signature, base_tree)
-        outputs = [
-            "matrix"        ,
-            "matrix_local"  ,
-            "matrix_basis"  ,
-            "head"          ,
-            "tail"          ,
-            "length"        ,
-            "rotation"      ,
-            "location"      ,
-            "scale"         ,
-        ]
-        self.outputs.init_sockets(outputs)
+        super().__init__(signature, base_tree, BonePropertiesSockets)
         self.init_parameters()
 
     def fill_parameters(self, ui_node=None):
@@ -868,21 +792,7 @@ class UtilityDriverVariable(MantisNode):
     '''A node representing an armature object'''
 
     def __init__(self, signature, base_tree):
-        super().__init__(signature, base_tree)
-        inputs = [
-            "Variable Type"   ,
-            "Property"       ,
-            "Property Index" ,
-            "Evaluation Space",
-            "Rotation Mode"   ,
-            "xForm 1"         ,
-            "xForm 2"         ,
-        ]
-        outputs = [
-          "Driver Variable",
-        ]
-        self.inputs.init_sockets(inputs)
-        self.outputs.init_sockets(outputs)
+        super().__init__(signature, base_tree, DriverVariableSockets)
         self.init_parameters()
         self.node_type = "DRIVER" # MUST be run in Pose mode
         self.prepared = True
@@ -965,18 +875,11 @@ class UtilityKeyframe(MantisNode):
     '''A node representing a keyframe for a F-Curve'''
 
     def __init__(self, signature, base_tree):
-        super().__init__(signature, base_tree)
-        inputs = [
-          "Frame"   ,
-          "Value"   ,
-        ]
-        outputs = [
-          "Keyframe" ,
-        ]
+        super().__init__(signature, base_tree, KeyframeSockets)
         additional_parameters = {"Keyframe":{}}
-        self.inputs.init_sockets(inputs)
-        self.outputs.init_sockets(outputs)
         self.init_parameters( additional_parameters=additional_parameters)
+        # I think both of these are wrong.
+        # TODO: try UTILITY type and remove setup_custom_property stuff
         self.node_type = "DRIVER" # MUST be run in Pose mode
         setup_custom_property_inputs_outputs(self)
 
@@ -995,15 +898,7 @@ class UtilityFCurve(MantisNode):
     '''A node representing an armature object'''
 
     def __init__(self, signature, base_tree):
-        super().__init__(signature, base_tree)
-        inputs = [
-            "Extrapolation Mode",
-        ]
-        outputs = [
-          "fCurve",
-        ]
-        self.inputs.init_sockets(inputs)
-        self.outputs.init_sockets(outputs)
+        super().__init__(signature, base_tree, FCurveSockets)
         self.init_parameters()
         self.node_type = "UTILITY"
         setup_custom_property_inputs_outputs(self)
@@ -1040,21 +935,11 @@ class UtilityDriver(MantisNode):
     '''A node representing an armature object'''
 
     def __init__(self, signature, base_tree):
-        super().__init__(signature, base_tree)
-        inputs = [
-          "Driver Type"   ,
-          "Expression"    ,
-          "fCurve"        ,
-        ]
-        outputs = [
-          "Driver",
-        ]
+        super().__init__(signature, base_tree, DriverSockets)
         from .drivers import MantisDriver
         additional_parameters = {
           "Driver":MantisDriver(),
         }
-        self.inputs.init_sockets(inputs)
-        self.outputs.init_sockets(outputs)
         self.init_parameters(additional_parameters=additional_parameters)
         self.node_type = "DRIVER" # MUST be run in Pose mode
         setup_custom_property_inputs_outputs(self)
@@ -1105,21 +990,11 @@ class UtilitySwitch(MantisNode):
     '''A node representing an armature object'''
 
     def __init__(self, signature, base_tree):
-        super().__init__(signature, base_tree)
-        inputs = {
-          "Parameter"            ,
-          "Parameter Index"      ,
-          "Invert Switch"        ,
-        }
-        outputs = [
-          "Driver",
-        ]
+        super().__init__(signature, base_tree, SwitchSockets)
         from .drivers import MantisDriver
         additional_parameters = {
           "Driver":MantisDriver(),
         }
-        self.inputs.init_sockets(inputs)
-        self.outputs.init_sockets(outputs)
         self.init_parameters(additional_parameters=additional_parameters)
         self.node_type = "DRIVER" # MUST be run in Pose mode
         self.prepared = True
@@ -1191,17 +1066,7 @@ class UtilityCombineThreeBool(MantisNode):
     '''A node for combining three booleans into a boolean three-tuple'''
 
     def __init__(self, signature, base_tree):
-        super().__init__(signature, base_tree)
-        inputs = [
-          "X"   ,
-          "Y"   ,
-          "Z"   ,
-        ]
-        outputs = [
-          "Three-Bool",
-        ]
-        self.inputs.init_sockets(inputs)
-        self.outputs.init_sockets(outputs)
+        super().__init__(signature, base_tree, CombineThreeBoolSockets)
         self.init_parameters()
         self.node_type = "UTILITY"
 
@@ -1225,18 +1090,7 @@ class UtilityCombineVector(MantisNode):
     '''A node for combining three floats into a vector'''
 
     def __init__(self, signature, base_tree):
-        super().__init__(signature, base_tree)
-        super().__init__(signature, base_tree)
-        inputs = [
-          "X"   ,
-          "Y"   ,
-          "Z"   ,
-        ]
-        outputs = [
-          "Vector",
-        ]
-        self.inputs.init_sockets(inputs)
-        self.outputs.init_sockets(outputs)
+        super().__init__(signature, base_tree, CombineVectorSockets)
         self.init_parameters()
         self.node_type = "UTILITY"
 
@@ -1260,17 +1114,7 @@ class UtilitySeparateVector(MantisNode):
     '''A node for separating a vector into three floats'''
 
     def __init__(self, signature, base_tree):
-        super().__init__(signature, base_tree)
-        inputs = [
-          "Vector"
-        ]
-        outputs = [
-          "X"   ,
-          "Y"   ,
-          "Z"   ,
-        ]
-        self.inputs.init_sockets(inputs)
-        self.outputs.init_sockets(outputs)
+        super().__init__(signature, base_tree, SeparateVectorSockets)
         self.init_parameters()
         self.node_type = "UTILITY"
 
@@ -1284,16 +1128,7 @@ class UtilityCatStrings(MantisNode):
     '''A node representing an armature object'''
 
     def __init__(self, signature, base_tree):
-        super().__init__(signature, base_tree)
-        inputs = [
-          "String_1"   ,
-          "String_2"   ,
-        ]
-        outputs = [
-          "OutputString" ,
-        ]
-        self.inputs.init_sockets(inputs)
-        self.outputs.init_sockets(outputs)
+        super().__init__(signature, base_tree, CatStringsSockets)
         self.init_parameters()
         self.node_type = "UTILITY"
 
@@ -1393,15 +1228,7 @@ class InputExistingGeometryObject(MantisNode):
     '''A node representing an existing object'''
 
     def __init__(self, signature, base_tree):
-        super().__init__(signature, base_tree)
-        inputs = [
-          "Name"  ,
-        ]
-        outputs = [
-          "Object" ,
-        ]
-        self.inputs.init_sockets(inputs)
-        self.outputs.init_sockets(outputs)
+        super().__init__(signature, base_tree, InputExistingGeometryObjectSockets)
         self.init_parameters()
         self.node_type = "XFORM"
 
@@ -1426,15 +1253,7 @@ class InputExistingGeometryData(MantisNode):
     '''A node representing existing object data'''
 
     def __init__(self, signature, base_tree):
-        super().__init__(signature, base_tree)
-        inputs = [
-          "Name"  ,
-        ]
-        outputs = [
-          "Geometry" ,
-        ]
-        self.inputs.init_sockets(inputs)
-        self.outputs.init_sockets(outputs)
+        super().__init__(signature, base_tree, InputExistingGeometrySockets)
         self.init_parameters()
         self.node_type = "UTILITY"
         self.prepared = True; self.executed = True
@@ -1457,6 +1276,8 @@ class InputExistingGeometryData(MantisNode):
 class UtilityDeclareCollections(MantisNode):
     '''A node to help manage bone collections'''
     def __init__(self, signature, base_tree):
+        # NOTE this one does not use socket template because it is special.
+        # The user creates all the sockets for this one.
         super().__init__(signature, base_tree)
         self.node_type = "UTILITY"
         self.prepared, self.executed = True, True
@@ -1537,15 +1358,7 @@ class UtilityCollectionHierarchy(MantisNode):
 class UtilityGeometryOfXForm(MantisNode):
     '''A node representing existing object data'''
     def __init__(self, signature, base_tree):
-        super().__init__(signature, base_tree)
-        inputs = [
-          "xForm"  ,
-        ]
-        outputs = [
-          "Geometry" ,
-        ]
-        self.inputs.init_sockets(inputs)
-        self.outputs.init_sockets(outputs)
+        super().__init__(signature, base_tree, GeometryOfXFormSockets)
         self.init_parameters()
         self.node_type = "UTILITY"
         self.prepared = True
@@ -1571,15 +1384,7 @@ class UtilityGeometryOfXForm(MantisNode):
 class UtilityNameOfXForm(MantisNode):
     '''A node representing existing object data'''
     def __init__(self, signature, base_tree):
-        super().__init__(signature, base_tree)
-        inputs = [
-          "xForm"  ,
-        ]
-        outputs = [
-          "Name" ,
-        ]
-        self.inputs.init_sockets(inputs)
-        self.outputs.init_sockets(outputs)
+        super().__init__(signature, base_tree, NameOfXFormSockets)
         self.init_parameters()
         self.node_type = "UTILITY"
 
@@ -1596,15 +1401,7 @@ class UtilityGetBoneLength(MantisNode):
     '''A node to get the length of a bone matrix'''
 
     def __init__(self, signature, base_tree):
-        super().__init__(signature, base_tree)
-        inputs = [
-          "Bone Matrix" ,
-        ]
-        outputs = [
-          "Bone Length" ,
-        ]
-        self.inputs.init_sockets(inputs)
-        self.outputs.init_sockets(outputs)
+        super().__init__(signature, base_tree, GetBoneLengthSockets)
         self.init_parameters()
         self.node_type = "UTILITY"
 
@@ -1620,16 +1417,7 @@ class UtilityPointFromBoneMatrix(MantisNode):
     '''A node representing an armature object'''
 
     def __init__(self, signature, base_tree):
-        super().__init__(signature, base_tree)
-        inputs = [
-          "Bone Matrix"   ,
-          "Head/Tail"     ,
-        ]
-        outputs = [
-          "Point"     ,
-        ]
-        self.inputs.init_sockets(inputs)
-        self.outputs.init_sockets(outputs)
+        super().__init__(signature, base_tree, PointFromBoneMatrixSockets)
         self.init_parameters()
         self.node_type = "UTILITY"
 
@@ -1646,16 +1434,7 @@ class UtilitySetBoneLength(MantisNode):
     '''Sets the length of a Bone's matrix'''
 
     def __init__(self, signature, base_tree):
-        super().__init__(signature, base_tree)
-        inputs = [
-          "Bone Matrix"   ,
-          "Length"        ,
-        ]
-        outputs = [
-          "Bone Matrix"   ,
-        ]
-        self.inputs.init_sockets(inputs)
-        self.outputs.init_sockets(outputs)
+        super().__init__(signature, base_tree, SetBoneLengthSockets)
         self.init_parameters()
         self.node_type = "UTILITY"
 
@@ -1675,16 +1454,7 @@ class UtilityMatrixSetLocation(MantisNode):
     '''Sets the location of a matrix'''
 
     def __init__(self, signature, base_tree):
-        super().__init__(signature, base_tree)
-        inputs = [
-          "Matrix"        ,
-          "Location"      ,
-        ]
-        outputs = [
-          "Matrix"        ,
-        ]
-        self.inputs.init_sockets(inputs)
-        self.outputs.init_sockets(outputs)
+        super().__init__(signature, base_tree, MatrixSetLocationSockets)
         self.init_parameters()
         self.node_type = "UTILITY"
 
@@ -1701,15 +1471,7 @@ class UtilityMatrixSetLocation(MantisNode):
 class UtilityMatrixGetLocation(MantisNode):
     '''Gets the location of a matrix'''
     def __init__(self, signature, base_tree):
-        super().__init__(signature, base_tree)
-        inputs = [
-          "Matrix"        ,
-        ]
-        outputs = [
-          "Location"    ,
-        ]
-        self.inputs.init_sockets(inputs)
-        self.outputs.init_sockets(outputs)
+        super().__init__(signature, base_tree, MatrixGetLocationSockets)
         self.init_parameters()
         self.node_type = "UTILITY"
 
@@ -1722,16 +1484,8 @@ class UtilityMatrixGetLocation(MantisNode):
 class UtilityMatrixFromXForm(MantisNode):
     """Returns the matrix of the given xForm node."""
     def __init__(self, signature, base_tree):
-        super().__init__(signature, base_tree)
-        inputs = [
-          "xForm"        ,
-        ]
-        outputs = [
-          "Matrix"       ,
-        ]
+        super().__init__(signature, base_tree, MatrixFromXFormSockets)
         self.node_type = "UTILITY"
-        self.inputs.init_sockets(inputs)
-        self.outputs.init_sockets(outputs)
         self.init_parameters()
 
     def GetxForm(self):
@@ -1757,17 +1511,7 @@ class UtilityMatrixFromXForm(MantisNode):
 class UtilityAxesFromMatrix(MantisNode):
     """Returns the axes of the given matrix."""
     def __init__(self, signature, base_tree):
-        super().__init__(signature, base_tree)
-        inputs = [
-          "Matrix"       ,
-        ]
-        outputs = [
-          "X Axis"      ,
-          "Y Axis"      ,
-          "Z Axis"      ,
-        ]
-        self.inputs.init_sockets(inputs)
-        self.outputs.init_sockets(outputs)
+        super().__init__(signature, base_tree, AxesFromMatrixSockets)
         self.init_parameters()
         self.node_type = "UTILITY"
 
@@ -1782,15 +1526,7 @@ class UtilityAxesFromMatrix(MantisNode):
 
 class UtilityBoneMatrixHeadTailFlip(MantisNode):
     def __init__(self, signature, base_tree):
-        super().__init__(signature, base_tree)
-        inputs = [
-          "Bone Matrix"     ,
-        ]
-        outputs = [
-          "Bone Matrix"     ,
-        ]
-        self.inputs.init_sockets(inputs)
-        self.outputs.init_sockets(outputs)
+        super().__init__(signature, base_tree, BoneMatrixHeadTailFlipSockets)
         self.init_parameters()
         self.node_type = "UTILITY"
 
@@ -1811,16 +1547,7 @@ class UtilityBoneMatrixHeadTailFlip(MantisNode):
 
 class UtilityMatrixTransform(MantisNode):
     def __init__(self, signature, base_tree):
-        super().__init__(signature, base_tree)
-        inputs = [
-          "Matrix 1"   ,
-          "Matrix 2"   ,
-        ]
-        outputs = [
-          "Out Matrix"    ,
-        ]
-        self.inputs.init_sockets(inputs)
-        self.outputs.init_sockets(outputs)
+        super().__init__(signature, base_tree, MatrixTransformSockets)
         self.init_parameters()
         self.node_type = "UTILITY"
 
@@ -1913,17 +1640,7 @@ class UtilityMatrixAlignRoll(MantisNode):
 
 class UtilityTransformationMatrix(MantisNode):
     def __init__(self, signature, base_tree):
-        super().__init__(signature, base_tree)
-        inputs = [
-          "Operation"   ,
-          "Vector"      ,
-          "W"           ,
-        ]
-        outputs = [
-          "Matrix"    ,
-        ]
-        self.inputs.init_sockets(inputs)
-        self.outputs.init_sockets(outputs)
+        super().__init__(signature, base_tree, TransformationMatrixSockets)
         self.init_parameters()
         self.node_type = "UTILITY"
 
@@ -1945,22 +1662,12 @@ class UtilityTransformationMatrix(MantisNode):
 
 class UtilityIntToString(MantisNode):
     def __init__(self, signature, base_tree):
-        super().__init__(signature, base_tree)
-        inputs = [
-          "Number"         ,
-          "Zero Padding"   ,
-        ]
-        outputs = [
-          "String"         ,
-        ]
-        self.inputs.init_sockets(inputs)
-        self.outputs.init_sockets(outputs)
+        super().__init__(signature, base_tree, IntToStringSockets)
         self.init_parameters()
         self.node_type = "UTILITY"
 
     def bPrepare(self, bContext = None,):
         number = self.evaluate_input("Number")
-
         zeroes = self.evaluate_input("Zero Padding")
         # I'm casting to int because I want to support any number, even though the node asks for int.
         self.parameters["String"] = str(int(number)).zfill(int(zeroes))
@@ -1968,17 +1675,7 @@ class UtilityIntToString(MantisNode):
 
 class UtilityArrayGet(MantisNode):
     def __init__(self, signature, base_tree):
-        super().__init__(signature, base_tree)
-        inputs = [
-          "Index"           ,
-          "OoB Behaviour"   ,
-          "Array"           ,
-        ]
-        outputs = [
-          "Output"          ,
-        ]
-        self.inputs.init_sockets(inputs)
-        self.outputs.init_sockets(outputs)
+        super().__init__(signature, base_tree, ArrayGetSockets)
         self.init_parameters()
         self.node_type = "UTILITY"
         self.rerouted=[]
@@ -2006,15 +1703,7 @@ class UtilityArrayGet(MantisNode):
 
 class UtilityArrayLength(MantisNode):
     def __init__(self, signature, base_tree):
-        super().__init__(signature, base_tree)
-        inputs = [
-          "Array"           ,
-        ]
-        outputs = [
-          "Length"          ,
-        ]
-        self.inputs.init_sockets(inputs)
-        self.outputs.init_sockets(outputs)
+        super().__init__(signature, base_tree, UtilityArrayLengthSockets)
         self.init_parameters()
         self.node_type = "UTILITY"
 
@@ -2024,16 +1713,7 @@ class UtilityArrayLength(MantisNode):
 
 class UtilitySetBoneMatrixTail(MantisNode):
     def __init__(self, signature, base_tree):
-        super().__init__(signature, base_tree)
-        inputs = {
-          "Matrix"        ,
-          "Tail Location" ,
-        }
-        outputs = [
-          "Result"       ,
-        ]
-        self.inputs.init_sockets(inputs)
-        self.outputs.init_sockets(outputs)
+        super().__init__(signature, base_tree, SetBoneMatrixTailSockets)
         self.init_parameters()
         self.node_type = "UTILITY"
 
@@ -2044,26 +1724,6 @@ class UtilitySetBoneMatrixTail(MantisNode):
         #just do this for now lol
         self.parameters["Result"] = matrix_from_head_tail(matrix.translation, self.evaluate_input("Tail Location"))
         self.prepared = True; self.executed = True
-
-class UtilityPrint(MantisNode):
-    def __init__(self, signature, base_tree):
-        super().__init__(signature, base_tree)
-        inputs = [
-          "Input"         ,
-        ]
-        self.inputs.init_sockets(inputs)
-        self.init_parameters()
-        self.node_type = "UTILITY"
-
-    def bPrepare(self, bContext = None,):
-        if my_input := self.evaluate_input("Input"):
-            print("Preparation phase: ", wrapWhite(self), wrapGreen(my_input))
-        self.prepared = True
-
-    def bTransformPass(self, bContext = None,):
-        if my_input := self.evaluate_input("Input"):
-            print("Execution phase: ", wrapWhite(self), wrapGreen(my_input))
-        self.executed = True
 
 class UtilityCompare(MantisNode):
     def __init__(self, signature, base_tree):
@@ -2100,17 +1760,7 @@ class UtilityCompare(MantisNode):
 
 class UtilityChoose(MantisNode):
     def __init__(self, signature, base_tree):
-        super().__init__(signature, base_tree)
-        inputs = [
-          "Condition"   ,
-          "A"           ,
-          "B"           ,
-        ]
-        outputs = [
-          "Result"      ,
-        ]
-        self.inputs.init_sockets(inputs)
-        self.outputs.init_sockets(outputs)
+        super().__init__(signature, base_tree, ChooseSockets)
         self.init_parameters()
         self.node_type = "UTILITY"
 
@@ -2138,3 +1788,19 @@ class UtilityChoose(MantisNode):
             else:
                 raise GraphError(f"Choose Node {self} has incorrect types.")
         self.prepared = True; self.executed = True
+
+class UtilityPrint(MantisNode):
+    def __init__(self, signature, base_tree):
+        super().__init__(signature, base_tree, PrintSockets)
+        self.init_parameters()
+        self.node_type = "UTILITY"
+
+    def bPrepare(self, bContext = None,):
+        if my_input := self.evaluate_input("Input"):
+            print("Preparation phase: ", wrapWhite(self), wrapGreen(my_input))
+        self.prepared = True
+
+    def bTransformPass(self, bContext = None,):
+        if my_input := self.evaluate_input("Input"):
+            print("Execution phase: ", wrapWhite(self), wrapGreen(my_input))
+        self.executed = True

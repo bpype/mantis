@@ -7,16 +7,15 @@ from .utilities import (prRed, prGreen, prPurple, prWhite,
                               wrapOrange,)
 from .base_definitions import get_signature_from_edited_tree
 
+from .math_nodes_socket_templates import *
 
 def TellClasses():
     return [
      MathStaticInt,
      MathStaticFloatNode,
      MathStaticVectorNode,
-        ]
+    ]
 
-
-        
 
 class MathStaticInt(Node, MantisUINode):
     """A node that performs mathematical operations on float numbers as a preprocess step before generating the rig."""
@@ -28,12 +27,8 @@ class MathStaticInt(Node, MantisUINode):
 
 
     def init(self, context):
-        self.inputs.new("MathFloatOperation", "Operation")
-        self.inputs.new("IntSocket", "Int A")
-        self.inputs.new("IntSocket", "Int B")
-        self.outputs.new("IntSocket", "Result Int")
+        self.init_sockets(StaticIntSockets)
         self.initialized = True
-    
 
     def display_update(self, parsed_tree, context):
         if context.space_data:
@@ -45,7 +40,6 @@ class MathStaticInt(Node, MantisUINode):
             else:
                 self.inputs["Int B"].hide = False
 
-# do... make the operations now
 class MathStaticFloatNode(Node, MantisUINode):
     """A node that performs mathematical operations on float numbers as a preprocess step before generating the rig."""
     bl_idname = "MathStaticFloat"
@@ -54,14 +48,9 @@ class MathStaticFloatNode(Node, MantisUINode):
     initialized : bpy.props.BoolProperty(default = False)
     mantis_node_class_name=bl_idname
 
-
     def init(self, context):
-        self.inputs.new("MathFloatOperation", "Operation")
-        self.inputs.new("FloatSocket", "Float A")
-        self.inputs.new("FloatSocket", "Float B")
-        self.outputs.new("FloatSocket", "Result Float")
+        self.init_sockets(StaticFloatSockets)
         self.initialized = True
-    
 
     def display_update(self, parsed_tree, context):
         if context.space_data:
@@ -82,12 +71,7 @@ class MathStaticVectorNode(Node, MantisUINode):
     mantis_node_class_name=bl_idname
     
     def init(self, context):
-        self.inputs.new("MathVectorOperation", "Operation")
-        self.inputs.new("VectorSocket", "Vector A")
-        self.inputs.new("VectorSocket", "Vector B")
-        h = self.inputs.new("FloatSocket", "Scalar A"); h.hide=True
-        self.outputs.new("VectorSocket", "Result Vector")
-        h = self.outputs.new("FloatSocket", "Result Float"); h.hide=True
+        self.init_sockets(StaticVectorSockets)
         self.initialized = True
 
     def display_update(self, parsed_tree, context):

@@ -1,6 +1,8 @@
 from .node_common import *
 from math import pi, tau
-from .base_definitions import MantisNode, NodeSocket
+from .base_definitions import MantisNode
+
+from .schema_nodes_socket_templates import *
 
 def TellClasses():
     return [
@@ -47,12 +49,7 @@ class SchemaNode(MantisNode):
 
 class SchemaIndex(SchemaNode):
     def __init__(self, signature, base_tree):
-        super().__init__(signature, base_tree)
-        outputs = [
-          "Index",
-          "Schema Length",
-        ]
-        self.outputs.init_sockets(outputs)
+        super().__init__(signature, base_tree, SchemaIndexSockets)
         self.init_parameters()
 
 class SchemaArrayInput(SchemaNode):
@@ -63,12 +60,7 @@ class SchemaArrayInput(SchemaNode):
 
 class SchemaArrayInputGet(SchemaNode):
     def __init__(self, signature, base_tree):
-        super().__init__(signature, base_tree)
-        inputs = [
-            "OoB Behaviour" ,
-            "Index"         ,
-        ]
-        self.inputs.init_sockets(inputs)
+        super().__init__(signature, base_tree, SchemaArrayInputGetSockets)
         schema_init_sockets(self, is_input=False, in_out='INPUT', category='Array')
 
 class SchemaArrayInputAll(SchemaNode):

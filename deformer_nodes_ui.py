@@ -11,13 +11,13 @@ from .utilities import (prRed, prGreen, prPurple, prWhite, prOrange,
 def TellClasses():
     return [
              DeformerArmatureNode,
-             DeformerHook,
+             DeformerHook, #
              DeformerMorphTargetDeform,
              DeformerMorphTarget,
-             DeformerSurfaceDeform,
-             DeformerMeshDeform,
-             DeformerLatticeDeform,
-             DeformerSmoothCorrectiveDeform,
+             DeformerSurfaceDeform, # 
+             DeformerMeshDeform, #
+             DeformerLatticeDeform, #
+             DeformerSmoothCorrectiveDeform, #
            ]
 
 
@@ -37,25 +37,7 @@ class DeformerArmatureNode(Node, DeformerNode):
     mantis_node_class_name=bl_idname
 
     def init(self, context):
-        # self.inputs.new ("RelationshipSocket", "Input Relationship")
-        self.inputs.new('xFormSocket', "Armature Object")
-        self.inputs.new('StringSocket', "Blend Vertex Group")
-        # self.inputs.new('StringSocket', "Preserve Volume Vertex Group") #TODO figure out the right UX for automatic dual-quat blending
-        self.inputs.new('BooleanSocket', "Invert Vertex Group")
-        
-        self.inputs.new('BooleanSocket', "Preserve Volume")
-        # TODO: make the above controlled by a vertex group instead.
-        self.inputs.new('BooleanSocket', "Use Multi Modifier")# might just set this auto
-        self.inputs.new('BooleanSocket', "Use Envelopes")
-        self.inputs.new('BooleanSocket', "Use Vertex Groups")
-        
-        self.inputs.new("DeformerSocket", "Deformer")
-
-        s = self.inputs.new("xFormSocket", "Copy Skin Weights From")
-        s.hide = True
-        self.inputs.new("EnumSkinning", "Skinning Method")
-        
-        self.outputs.new('DeformerSocket', "Deformer")
+        self.init_sockets(DeformArmatureSockets)
         self.initialized = True
     
     def display_update(self, parsed_tree, context):
@@ -138,13 +120,9 @@ class DeformerMorphTargetDeform(Node, DeformerNode):
 
     def init(self, context):
         self.id_data.do_live_update = False
-        self.inputs.new('DeformerSocket', 'Deformer', )
-        self.inputs.new('BooleanSocket', 'Use Shape Key', )
-        s = self.inputs.new('BooleanSocket', 'Use Offset', )
-        s.default_value = True
-        self.inputs.new('WildcardSocket', '', identifier='__extend__')
-        self.outputs.new('DeformerSocket', "Deformer")
+        self.init_sockets(MorphTargetDeformSockets)
         self.update_morph_deformer()
+        self.id_data.do_live_update = True
 
     def update_morph_deformer(self, force=False):
         self.initialized = False
@@ -197,7 +175,8 @@ class DeformerMorphTargetDeform(Node, DeformerNode):
                 self.inputs["Use Shape Key"].default_value = False
 
 
-# TODO: there is no reason for this to be a separate node!
+# NOTE: in the past I considered jamming this into the above node
+#       as a dynamic node thing. Worth considering later, but it's fine.
 class DeformerMorphTarget(Node, DeformerNode):
     '''A node representing a single Morph Target'''
     bl_idname = 'DeformerMorphTarget'
@@ -208,11 +187,7 @@ class DeformerMorphTarget(Node, DeformerNode):
     mantis_node_class_name=bl_idname
 
     def init(self, context):
-        self.inputs.new('xFormSocket', "Relative to")
-        self.inputs.new('xFormSocket', "Object")
-        self.inputs.new('StringSocket', "Vertex Group")
-        self.outputs.new('MorphTargetSocket', "Morph Target")
-
+        self.init_sockets(MorphTargetSockets)
         self.initialized = True
 
 

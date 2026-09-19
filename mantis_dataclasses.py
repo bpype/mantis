@@ -14,7 +14,9 @@ class MantisSocketTemplate():
     is_input         : bool = field(default=False)
     hide             : bool = field(default=False)
     use_multi_input  : bool = field(default=False)
+    ui_only          : bool = field(default=False)
     default_value    : Any = field(default=None)
+    # TODO: add versioning fields for Mantis, Blender version min/max
 
 @dataclass
 class xForm_info():

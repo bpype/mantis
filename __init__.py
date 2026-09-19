@@ -51,6 +51,10 @@ if environ.get("ENABLEVIS"):
     from .visualize import MantisVisualizeNode, MantisVisualizeOutput, MantisVisualizeTree
     classes.extend([MantisVisualizeTree, MantisVisualizeNode, MantisVisualizeOutput, ])
 
+DOERROR = False
+if environ.get("DOERROR"):
+    DOERROR = True
+
 import nodeitems_utils
 from nodeitems_utils import NodeCategory, NodeItem
 

@@ -81,30 +81,11 @@ class DeformerArmature(MantisDeformerNode):
     '''A node representing an armature deformer'''
 
     def __init__(self, signature, base_tree):
-        super().__init__(signature, base_tree)
-        inputs = [
-            "Input Relationship",
-            "Armature Object",
-            "Blend Vertex Group",
-            "Invert Vertex Group",
-            "Preserve Volume",
-            "Use Multi Modifier",
-            "Use Envelopes",
-            "Use Vertex Groups",
-            "Skinning Method",
-            "Deformer",
-            "Copy Skin Weights From"
-        ]
-        outputs = [
-          "Deformer"
-        ]
-        self.outputs.init_sockets(outputs)
-        self.inputs.init_sockets(inputs)
+        super().__init__(signature, base_tree, DeformArmatureSockets)
         self.init_parameters(additional_parameters={"Name":None})
         self.set_traverse([("Deformer", "Deformer")])
         self.node_type = "LINK"
         self.prepared = True
-
 
     def GetxForm(self, socket="Deformer"):
         if socket == "Deformer":
@@ -445,22 +426,8 @@ class DeformerHook(MantisDeformerNode):
 class DeformerMorphTarget(MantisDeformerNode):
     '''A node representing an armature deformer'''
     def __init__(self, signature, base_tree):
-        super().__init__(signature, base_tree)
-        inputs = [
-            "Relative to",
-            "Object",
-            "Deformer",
-            "Vertex Group",
-        ]
-        outputs = [
-          "Deformer",
-          "Morph Target",
-        ]
-        # now set up the traverse target...
-        self.outputs.init_sockets(outputs)
-        self.inputs.init_sockets(inputs)
+        super().__init__(signature, base_tree, MorphTargetSockets)
         self.init_parameters(additional_parameters={"Name":None})
-        self.set_traverse([("Deformer", "Deformer")])
         self.node_type = "LINK"
         self.prepared = True
     

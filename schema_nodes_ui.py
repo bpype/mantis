@@ -10,6 +10,7 @@ from bpy.props import BoolProperty
 from .utilities import (get_socket_maps, relink_socket_map,
                         do_relink, read_schema_type)
 
+from .schema_nodes_socket_templates import *
 
 def TellClasses():
     return [
@@ -39,8 +40,7 @@ class SchemaIndex(Node, SchemaUINode):
     mantis_node_class_name=bl_idname
     
     def init(self, context):
-        self.outputs.new("IntSocket", "Index")
-        self.outputs.new("IntSocket", "Schema Length")
+        self.init_sockets(SchemaIndexSockets)
         self.initialized = True
 
 class SchemaArrayInput(Node, SchemaUINode):
@@ -118,8 +118,7 @@ class SchemaArrayInputGet(Node, SchemaUINode):
     mantis_node_class_name=bl_idname
 
     def init(self, context):
-        self.inputs.new('EnumArrayGetOptions', 'OoB Behaviour')
-        self.inputs.new("IntSocket", "Index")
+        self.init_sockets(SchemaArrayInputGetSockets)
         self.update()
 
     def update(self):

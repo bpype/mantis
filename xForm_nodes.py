@@ -236,85 +236,15 @@ class xFormArmature(xFormNode):
     def bGetObject(self, mode = ''):
         import bpy; return bpy.data.objects[self.parameters['xForm Out'].self_pose_name]
 
-bone_inputs= [
-         "Name",
-         "Rotation Order",
-         "Matrix",
-         "Relationship",
-         # IK settings
-         "IK Stretch",
-         "Lock IK",
-         "IK Stiffness",
-         "Limit IK",
-         "X Min",
-         "X Max",
-         "Y Min",
-         "Y Max",
-         "Z Min",
-         "Z Max",
-         # Visual stuff
-         "Bone Collection",
-         "Hide",
-         "Custom Object",
-         "Custom Object xForm Override",
-         "Custom Object Scale to Bone Length",
-         "Custom Object Wireframe",
-         "Custom Object Scale",
-         "Custom Object Translation",
-         "Custom Object Rotation",
-         "Color",
-         "Inherit Color",
-         # Deform Stuff
-         "Deform",
-         "Envelope Distance",
-         "Envelope Weight",
-         "Envelope Multiply",
-         "Envelope Head Radius",
-         "Envelope Tail Radius",
-         # BBone stuff:
-         "BBone Segments",
-         "BBone X Size",
-         "BBone Z Size",
-         "BBone HQ Deformation",
-         "BBone X Curve-In",
-         "BBone Z Curve-In",
-         "BBone X Curve-Out",
-         "BBone Z Curve-Out",
-         "BBone Roll-In",
-         "BBone Roll-Out",
-         "BBone Inherit End Roll",
-         "BBone Scale-In",
-         "BBone Scale-Out",
-         "BBone Ease-In",
-         "BBone Ease-Out",
-         "BBone Easing",
-         "BBone Start Handle Type",
-         "BBone Custom Start Handle",
-         "BBone Start Handle Scale",
-         "BBone Start Handle Ease",
-         "BBone End Handle Type",
-         "BBone Custom End Handle",
-         "BBone End Handle Scale",
-         "BBone End Handle Ease",
-         # locks
-         "Lock Location",
-         "Lock Rotation",
-         "Lock Scale",
-         "Custom Properties",
-]
 class xFormBone(xFormNode):
     '''A node representing a bone in an armature'''
     # DO: make a way to identify which armature this belongs to
     def __init__(self, signature, base_tree):
-        super().__init__(signature, base_tree)
-        outputs = [
-         "xForm Out",
-        ]
-        self.inputs.init_sockets(bone_inputs)
-        self.outputs.init_sockets(outputs)
-        self.socket_templates=xFormBoneSockets
+        super().__init__(signature, base_tree, xFormBoneSockets)
         # TODO: implement socket templates completely for Bone
         # currently it is waiting on BBone and refactoring/cleanup.
+        # the socket templates are being used now but not for mantis node execution.
+        # because of edit/pose/objcet bone this will be a bit complex
         self.init_parameters()
         self.set_traverse([("Relationship", "xForm Out")])
         setup_custom_property_inputs_outputs(self)
@@ -595,6 +525,7 @@ class xFormBone(xFormNode):
         evaluate_sockets(self, pb, props_sockets)
 
         # this could probably be moved to bTransformPass
+        # TODO VERSIONING: newer (5.0+ ?) Blenders need to use PoseBone for this
         props_sockets = {
             'hide'      : ("Hide", False),
             'show_wire' : ("Custom Object Wireframe", False),
