@@ -1,6 +1,5 @@
 from dataclasses import dataclass, field
-from typing import List, Any
-
+from typing import List, Any, Tuple
 
 @dataclass
 class MantisSocketTemplate():
@@ -45,3 +44,38 @@ class custom_prop_template():
     soft_min : float|int = field(default=1)
     soft_max : float|int = field(default=1)
     description : str = field(default="")
+
+@dataclass
+class MantisBoneTransform():
+    matrix    : Any = field(default=[1,0,0,0,
+                                     0,1,0,0,
+                                     0,0,1,0,
+                                     0,0,0,1,]),
+    # I would like to have an intelligent way of handling
+    #  object- vs. world- space matrices
+    matrix_space  : str = field(default="OBJECT")
+    length    : float = field(default=1.0),
+
+@dataclass
+class MantisBBoneTransform():
+    num_bbone_segmetns: int = field(default=1)
+    # Offsets & Curve Handles
+    bbone_curveinx: float = field(default=0.0)
+    bbone_curveiny: float = field(default=0.0)
+    bbone_curveoutx: float = field(default=0.0)
+    bbone_curveouty: float = field(default=0.0)
+    # Easing
+    bbone_easein: float = field(default=1.0)
+    bbone_easeout: float = field(default=1.0)
+    # Roll
+    bbone_rollin: float = field(default=0.0)
+    bbone_rollout: float = field(default=0.0)
+    # Scale Vectors
+    bbone_scalein: Tuple[float, float, float] = field(
+        default_factory=lambda: (1.0, 1.0, 1.0) )
+    bbone_scaleout: Tuple[float, float, float] = field(
+        default_factory=lambda: (1.0, 1.0, 1.0) )
+    # Custom Handles
+    use_bbone_custom_handles: bool = field(default=False)
+    bbone_custom_handle_start: str = field(default=None)
+    bbone_custom_handle_end: str = field(default=None)
