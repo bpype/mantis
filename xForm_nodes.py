@@ -519,7 +519,10 @@ class xFormBone(xFormNode):
             'custom_shape_scale_xyz'      : ("Custom Object Scale",  (0.0,0.0,0.0) ),
             'custom_shape_translation'    : ("Custom Object Translation",  (0.0,0.0,0.0) ),
             'custom_shape_rotation_euler' : ("Custom Object Rotation",  (0.0,0.0,0.0) ),
-            'use_custom_shape_bone_size'  : ("Custom Object Scale to Bone Length",  True,)
+            'use_custom_shape_bone_size'  : ("Custom Object Scale to Bone Length",  True,),
+            # in 5.0.0 and newer I have to do pose bone also. Irritating.
+            # it doesn't hurt to do it in all versions.
+            'hide'                        : ("Hide", False),
         }
 
         evaluate_sockets(self, pb, props_sockets)

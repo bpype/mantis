@@ -8,6 +8,8 @@ from collections.abc import Callable
 # the x_containers files import * from this file
 # so all the top-level imports are carried over
 
+from bpy.app import version as bpy_version
+
 
 #TODO: refactor the socket definitions so this becomes unnecessary.
 def get_socket_value(node_socket):
@@ -288,7 +290,10 @@ def finish_driver(mantis_node, b_object, driver_item, prop):
             driver["owner"] = sub_props[-1]
         elif mantis_node.node_type in ['XFORM',] and mantis_node.__class__.__name__ in ['xFormBone']:
             # TODO: I really shouldn't have to hardcode this. Look into better solutions.
-            if prop in ['hide', 'show_wire']: # we need to get the bone, not the pose bone.
+            # NOTE: VERSIONING in Blender 5.0 we have to use pose bone for this, too.
+            if bpy_version <= (5,0,0) and prop  == 'hide': # older blendders, we need the bone
+                bone_col = mantis_node.bGetParentArmature().data.bones
+            if prop  == 'show_wire': # TODO check if the bug that forced the above affects this
                 bone_col = mantis_node.bGetParentArmature().data.bones
             else:
                 bone_col = mantis_node.bGetParentArmature().pose.bones
