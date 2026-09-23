@@ -35,10 +35,7 @@ class DeformerArmatureNode(Node, DeformerNode):
     bl_icon = 'MOD_ARMATURE'
     initialized : bpy.props.BoolProperty(default = False)
     mantis_node_class_name=bl_idname
-
-    def init(self, context):
-        self.init_sockets(DeformArmatureSockets)
-        self.initialized = True
+    socket_templates = DeformArmatureSockets
     
     def display_update(self, parsed_tree, context):
         self.inputs["Copy Skin Weights From"].hide = True
@@ -55,10 +52,7 @@ class DeformerHook(Node, DeformerNode):
     bl_icon = 'HOOK'
     initialized : bpy.props.BoolProperty(default = False)
     mantis_node_class_name=bl_idname
-
-    def init(self, context):
-        self.init_sockets(HookSockets)
-        self.initialized = True
+    socket_templates = HookSockets
     
     def display_update(self, parsed_tree, context):
         curve_sockets = [
@@ -81,6 +75,7 @@ class DeformerHook(Node, DeformerNode):
 from .utilities import get_socket_maps, relink_socket_map
 
 # TODO this should probably not be in this file but intstead in Utilities or something
+# NOTE this is a re-implementation that I had to do here.
 def simple_do_relink(node, map, in_out='INPUT'):
     from bpy.types import NodeSocket
     for key, val in map.items():
@@ -116,13 +111,14 @@ class DeformerMorphTargetDeform(Node, DeformerNode):
     initialized : bpy.props.BoolProperty(default = False)
     num_targets : bpy.props.IntProperty(default = 0)
     mantis_node_class_name=bl_idname
-
+    socket_templates = MorphTargetDeformSockets
 
     def init(self, context):
+        live_updates = self.id_data.do_live_update
         self.id_data.do_live_update = False
         self.init_sockets(MorphTargetDeformSockets)
         self.update_morph_deformer()
-        self.id_data.do_live_update = True
+        self.id_data.do_live_update = live_updates
 
     def update_morph_deformer(self, force=False):
         self.initialized = False
@@ -185,11 +181,7 @@ class DeformerMorphTarget(Node, DeformerNode):
     initialized : bpy.props.BoolProperty(default = False)
     num_targets : bpy.props.IntProperty(default = 0)
     mantis_node_class_name=bl_idname
-
-    def init(self, context):
-        self.init_sockets(MorphTargetSockets)
-        self.initialized = True
-
+    socket_templates = MorphTargetSockets
 
 class DeformerSurfaceDeform(Node, DeformerNode):
     '''A node representing a Surface Deform modifier'''
@@ -199,10 +191,7 @@ class DeformerSurfaceDeform(Node, DeformerNode):
     initialized : bpy.props.BoolProperty(default = False)
     num_targets : bpy.props.IntProperty(default = 0)
     mantis_node_class_name=bl_idname
-
-    def init(self, context):
-        self.init_sockets(SurfaceDeformSockets)
-        self.initialized = True
+    socket_templates = SurfaceDeformSockets
 
 class DeformerMeshDeform(Node, DeformerNode):
     '''A node representing a Mesh Deform modifier'''
@@ -212,10 +201,7 @@ class DeformerMeshDeform(Node, DeformerNode):
     initialized : bpy.props.BoolProperty(default = False)
     num_targets : bpy.props.IntProperty(default = 0)
     mantis_node_class_name=bl_idname
-
-    def init(self, context):
-        self.init_sockets(MeshDeformSockets)
-        self.initialized = True
+    socket_templates = MeshDeformSockets
 
 class DeformerLatticeDeform(Node, DeformerNode):
     '''A node representing a Lattice Deformer'''
@@ -225,10 +211,7 @@ class DeformerLatticeDeform(Node, DeformerNode):
     initialized : bpy.props.BoolProperty(default = False)
     num_targets : bpy.props.IntProperty(default = 0)
     mantis_node_class_name=bl_idname
-
-    def init(self, context):
-        self.init_sockets(LatticeDeformSockets)
-        self.initialized = True
+    socket_templates = LatticeDeformSockets
 
 class DeformerSmoothCorrectiveDeform(Node, DeformerNode):
     '''A node representing a Corrective Smooth Deformer'''
@@ -238,20 +221,13 @@ class DeformerSmoothCorrectiveDeform(Node, DeformerNode):
     initialized : bpy.props.BoolProperty(default = False)
     num_targets : bpy.props.IntProperty(default = 0)
     mantis_node_class_name=bl_idname
-
-    def init(self, context):
-        self.init_sockets(SmoothDeformSockets)
-        self.initialized = True
+    socket_templates = SmoothDeformSockets
 
     def display_update(self, parsed_tree, context):
         use_corrective_smooth = self.inputs["Use Corrective Smooth"]
         if ( use_corrective_smooth.is_linked or 
              use_corrective_smooth.default_value == False): # this is inverted
-                    self.inputs['Corrective Smooth Scale'].hide = False
+                self.inputs['Corrective Smooth Scale'].hide = False
         else:
-                    self.inputs['Corrective Smooth Scale'].hide = True
+                self.inputs['Corrective Smooth Scale'].hide = True
 
-
-# Set up the class property that ties the UI classes to the Mantis classes.
-for cls in TellClasses():
-    cls.set_mantis_class()

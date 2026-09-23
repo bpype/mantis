@@ -25,3 +25,13 @@ LatticeSockets = [
             is_input=True, default_value='KEY_BSPLINE'),
     GeometryOutput := SockTemplate(name="Lattice Geometry", bl_idname="GeometrySocket")
 ]
+
+CirclePrimitiveSockets = [
+    replace(Name, default_value='Circle',),
+    Radius :=SockTemplate(name = "Radius", bl_idname="FloatPositiveSocket",
+            is_input=True, default_value=1.0),
+    # TODO: this should be an UnsignedIntSocket
+    NumberOfPoints :=SockTemplate(name = "Number of Points", bl_idname="IntSocket",
+            is_input=True, default_value=32),
+    GeometryOutput := SockTemplate(name="Circle", bl_idname="GeometrySocket"),
+]

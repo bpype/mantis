@@ -215,6 +215,15 @@ class SchemaTree(NodeTree):
 
 #TODO: do a better job explaining how MantisNode and MantisUINode relate.
 
+# TODO: I want to avoid doing any kind of class mutation at runtime
+#       so in the future I will try to do this directly rather than
+#       running this function once for each class while registering
+#       however this is not very important for UI classes since they
+#       are not a performance bottleneck.
+def mantis_class_from_library(library, class_name):
+    from importlib import import_module
+    return getattr(import_module(library, package=mantis_root), class_name)
+
 class MantisUINode:
     """
         This class contains the common user-interface features of Mantis nodes.
@@ -225,23 +234,17 @@ class MantisUINode:
     bl_icon = 'NODE'
     initialized : bpy.props.BoolProperty(default = False)
     #
-    mantis_node_library=''
     mantis_node_class_name=''
     mantis_class=None
+    socket_templates=None
+
     @classmethod
     def poll(cls, ntree):
         return (ntree.bl_idname in ['MantisTree', 'SchemaTree'])
 
-    @classmethod
-    def set_mantis_class(self):
-        from importlib import import_module
-        # do not catch errors, they should cause a failure.
-        try:
-            module = import_module(self.mantis_node_library, package=mantis_root)
-            self.mantis_class=getattr(module, self.mantis_node_class_name)
-        except Exception as e:
-            print(self)
-            raise e
+    def init(self, context):
+        self.init_sockets(self.socket_templates)
+        self.initialized = True
 
     def insert_link(self, link):
         if (bpy.app.version >= (4, 4, 0)):
@@ -286,30 +289,59 @@ class MantisUINode:
             if template.use_multi_input: # this is an array
                 socket.display_shape = 'SQUARE_DOT'
 
+# NOTE
+# MantisUINode has no proper mantis libraryclass on its own, so:
+# register()'s are in SUBclasses; they have to run AFTER library is defined
+
 class SchemaUINode(MantisUINode):
-    mantis_node_library='.schema_nodes'
     is_updating:BoolProperty(default=False)
     @classmethod
-    def poll(cls, ntree):
-        return (ntree.bl_idname in ['SchemaTree'])
+    def register(cls):
+        cls.mantis_class = mantis_class_from_library('.schema_nodes', cls.mantis_node_class_name)
 
 class LinkNode(MantisUINode):
     mantis_node_library='.link_nodes'
+    category_color=[0.5,0.5,0.5]
     @classmethod
-    def poll(cls, ntree):
-        return (ntree.bl_idname in ['MantisTree', 'SchemaTree'])
+    def register(cls):
+        cls.mantis_class = mantis_class_from_library('.link_nodes', cls.mantis_node_class_name)
+    def init(self, context):
+        super().init(context)
+        self.use_custom_color = True
+        self.color = self.category_color
 
 class xFormNode(MantisUINode):
-    mantis_node_library='.xForm_nodes'
     @classmethod
-    def poll(cls, ntree):
-        return (ntree.bl_idname in ['MantisTree', 'SchemaTree'])
+    def register(cls):
+        print (cls.__name__, cls.mantis_node_class_name)
+        cls.mantis_class = mantis_class_from_library('.xForm_nodes', cls.mantis_node_class_name)
+    def init(self, context):
+        super().init(context)
+        from mathutils import Color
+        xFormColor = Color((0.093172, 0.047735, 0.028036)).from_scene_linear_to_srgb()
+        self.use_custom_color = True
+        self.color = xFormColor # must not have alpha
 
 class DeformerNode(MantisUINode):
-    mantis_node_library='.deformer_nodes'
     @classmethod
-    def poll(cls, ntree):
-        return (ntree.bl_idname in ['MantisTree', 'SchemaTree'])
+    def register(cls):
+        cls.mantis_class = mantis_class_from_library('.deformer_nodes', cls.mantis_node_class_name)
+
+class GeometryPrimitiveNode(MantisUINode):
+    @classmethod
+    def register(cls):
+        cls.mantis_class = mantis_class_from_library('.primitives_nodes', cls.mantis_node_class_name)
+
+class MantisMiscNode(MantisUINode):
+    @classmethod
+    def register(cls):
+        cls.mantis_class = mantis_class_from_library('.misc_nodes', cls.mantis_node_class_name)
+
+class MantisMathUINode(MantisUINode):
+    @classmethod
+    def register(cls):
+        cls.mantis_class = mantis_class_from_library('.math_nodes', cls.mantis_node_class_name)
+
 
 def poll_node_tree(self, object):
     forbid = []

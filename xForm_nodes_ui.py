@@ -26,22 +26,6 @@ def default_traverse(self, socket):
         return self.outputs["xForm Out"]
     return None
 
-# Representing an Empty or non-armature-Object
-# class xFormNullNode(Node, xFormNode):
-#     '''A node representing a Null node'''
-#     bl_idname = 'xFormNullNode'
-#     bl_label = "Null"
-#     bl_icon = 'EMPTY_AXIS'
-
-#     # === Optional Functions ===
-#     def init(self, context):
-#         self.inputs.new('StringSocket', "Name")
-#         self.inputs.new('RelationshipSocket', "Relationship")
-#         self.inputs.new('RotationOrderSocket', "Rotation Order")
-#         self.inputs.new('MatrixSocket', "Matrix")
-#         self.outputs.new('xFormSocket', "xForm Out")
-
-
 def check_if_connected(start, end, line):
     started=False
     for path_mantis_node in line:
@@ -132,9 +116,6 @@ def custom_prop_display_update(self, mantis_node = None):
             do_relink(self, socket, socket_map_out, in_out='OUTPUT')
 
 
-from mathutils import Color
-xFormColor = Color((0.093172, 0.047735, 0.028036)).from_scene_linear_to_srgb()
-
 class xFormBoneNode(Node, xFormNode):
     '''A node representing a Bone'''
     bl_idname = 'xFormBoneNode'
@@ -145,17 +126,9 @@ class xFormBoneNode(Node, xFormNode):
     display_vp_settings : bpy.props.BoolProperty(default=False)
     display_def_settings : bpy.props.BoolProperty(default=False)
     display_bb_settings : bpy.props.BoolProperty(default=False)
-    socket_count : bpy.props.IntProperty()
     initialized : bpy.props.BoolProperty(default = False)
     mantis_node_class_name=bl_idname[:-4]
     socket_templates = xFormBoneSockets
-    
-    def init(self, context):
-        self.init_sockets(self.__class__.socket_templates)
-        self.socket_count = len(self.inputs)
-        self.use_custom_color = True
-        self.color = xFormColor
-        self.initialized=True
     
     def draw_label(self): # this will prefer a user-set label, or return the evaluated name
         return main_draw_label(self)
@@ -213,12 +186,7 @@ class xFormArmatureNode(Node, xFormNode):
     bl_icon = 'OUTLINER_OB_ARMATURE'
     initialized : bpy.props.BoolProperty(default = False)
     mantis_node_class_name=bl_idname[:-4]
-
-    def init(self, context):
-        self.init_sockets(xFormArmatureSockets)
-        self.use_custom_color = True
-        self.color = xFormColor
-        self.initialized=True
+    socket_templates = xFormArmatureSockets
 
     def draw_label(self): # this will prefer a user-set label, or return the evaluated name
         return main_draw_label(self)
@@ -233,12 +201,7 @@ class xFormGeometryObjectNode(Node, xFormNode):
     bl_icon = "EMPTY_AXIS"
     initialized : bpy.props.BoolProperty(default = False)
     mantis_node_class_name=bl_idname
-    
-    def init(self, context):
-        self.init_sockets(xFormGeometryObjectSockets)
-        self.use_custom_color = True
-        self.color = xFormColor
-        self.initialized=True
+    socket_templates = xFormGeometryObjectSockets
 
     def draw_label(self): # this will prefer a user-set label, or return the evaluated name
         return main_draw_label(self)
@@ -253,12 +216,7 @@ class xFormObjectInstance(Node, xFormNode):
     bl_icon = "EMPTY_AXIS"
     initialized : bpy.props.BoolProperty(default = False)
     mantis_node_class_name=bl_idname
-    
-    def init(self, context):
-        self.init_sockets(xFormGeometryObjectInstanceSockets)
-        self.use_custom_color = True
-        self.color = xFormColor
-        self.initialized=True
+    socket_templates = xFormGeometryObjectInstanceSockets
 
     def draw_label(self): # this will prefer a user-set label, or return the evaluated name
         return main_draw_label(self)
@@ -266,7 +224,6 @@ class xFormObjectInstance(Node, xFormNode):
     def display_update(self, parsed_tree, context):
         object_displaty_update(self, parsed_tree, context)
 
-from .xForm_nodes import xFormCurvePinSockets
 class xFormCurvePin(Node, xFormNode):
     """"A node representing a curve pin"""
     bl_idname = "xFormCurvePin"
@@ -274,12 +231,7 @@ class xFormCurvePin(Node, xFormNode):
     bl_icon = "FORCE_CURVE"
     initialized : bpy.props.BoolProperty(default = False)
     mantis_node_class_name=bl_idname
-    
-    def init(self, context):
-        self.init_sockets(xFormCurvePinSockets)
-        self.use_custom_color = True
-        self.color = xFormColor
-        self.initialized = True
+    socket_templates = xFormCurvePinSockets
 
 class xFormGetBone(Node, xFormNode):
     """"A node representing an existing bone"""
@@ -289,12 +241,7 @@ class xFormGetBone(Node, xFormNode):
     initialized : bpy.props.BoolProperty(default = False)
     armature : bpy.props.StringProperty(default="")
     mantis_node_class_name=bl_idname
-    
-    def init(self, context):
-        self.init_sockets(xFormGetBoneSockets)
-        self.use_custom_color = True
-        self.color = xFormColor
-        self.initialized = True
+    socket_templates = xFormGetBoneSockets
 
     def display_update(self, parsed_tree, context):
         if context.space_data:
@@ -302,6 +249,3 @@ class xFormGetBone(Node, xFormNode):
             if mantis_node:
                 # need this parent armature to use the bone picker.
                 self.inputs["Bone"].armature = mantis_node.bGetParentArmature()
-
-for cls in TellClasses():
-    cls.set_mantis_class()

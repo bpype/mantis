@@ -38,10 +38,7 @@ class SchemaIndex(Node, SchemaUINode):
     bl_icon = 'GIZMO'
     initialized : bpy.props.BoolProperty(default = False)
     mantis_node_class_name=bl_idname
-    
-    def init(self, context):
-        self.init_sockets(SchemaIndexSockets)
-        self.initialized = True
+    socket_templates = SchemaIndexSockets
 
 class SchemaArrayInput(Node, SchemaUINode):
     '''Array Inputs'''
@@ -116,6 +113,7 @@ class SchemaArrayInputGet(Node, SchemaUINode):
     bl_icon = 'GIZMO'
     initialized : bpy.props.BoolProperty(default = False)
     mantis_node_class_name=bl_idname
+    socket_templates = SchemaArrayInputGetSockets
 
     def init(self, context):
         self.init_sockets(SchemaArrayInputGetSockets)
@@ -322,7 +320,3 @@ class SchemaIncomingConnection(Node, SchemaUINode):
             self.outputs.new('WildcardSocket', '', identifier='__extend__')
         self.initialized = True
         self.is_updating = False
-
-
-for cls in TellClasses():
-    cls.set_mantis_class()

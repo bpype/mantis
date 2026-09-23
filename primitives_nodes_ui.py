@@ -1,6 +1,7 @@
 import bpy
 from bpy.types import Node
-from .base_definitions import MantisUINode
+from .base_definitions import GeometryPrimitiveNode
+from .primitives_sockets import *
 
 def TellClasses():
     return [
@@ -11,36 +12,21 @@ def TellClasses():
 def default_traverse(self,socket):
     return None
 
-
-class GeometryCirclePrimitive(Node, MantisUINode):
+class GeometryCirclePrimitive(Node, GeometryPrimitiveNode):
     '''A node representing a circle primitive'''
     bl_idname = 'GeometryCirclePrimitive'
     bl_label = "Circle Primitive"
     bl_icon = 'NODE'
     initialized : bpy.props.BoolProperty(default = False)
     mantis_node_class_name="CirclePrimitive"
-
-    def init(self, context):
-        self.inputs.new('StringSocket', "Name")
-        self.inputs.new('FloatPositiveSocket', "Radius")
-        self.inputs.new('IntSocket', "Number of Points")
-        self.outputs.new('GeometrySocket', "Circle")
-        self.initialized = True
+    socket_templates = CirclePrimitiveSockets
 
 from .primitives_sockets import LatticeSockets
-class GeometryLattice(Node, MantisUINode):
+class GeometryLattice(Node, GeometryPrimitiveNode):
     '''A node representing a lattice geometry'''
     bl_idname = "GeometryLattice"
     bl_label = "Lattice"
     bl_icon = "NODE"
     initialized : bpy.props.BoolProperty(default = False)
     mantis_node_class_name=bl_idname
-    
-    def init(self, context):
-        self.init_sockets(LatticeSockets)
-        self.initialized = True
-
-
-for cls in TellClasses():
-    cls.mantis_node_library='.primitives_nodes'
-    cls.set_mantis_class()
+    socket_templates = LatticeSockets

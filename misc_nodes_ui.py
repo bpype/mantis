@@ -1,6 +1,6 @@
 import bpy
 from bpy.types import Node
-from .base_definitions import MantisUINode, get_signature_from_edited_tree
+from .base_definitions import MantisMiscNode, get_signature_from_edited_tree
 from .misc_nodes_socket_templates import *
 
 from .utilities import (prRed, prGreen, prPurple, prWhite,
@@ -92,87 +92,73 @@ def socket_data_from_collection_paths(root_data, root_name, path, socket_data):
         path.pop()
     return socket_data
 
-class InputFloatNode(Node, MantisUINode):
+#################################################
+# Base Classes for the Misc Nodes
+#################################################
+
+class SimpleInputNode(MantisMiscNode):
+    def init(self, context):
+        super().init(context)
+        for s in self.outputs:
+            s.input=True # give it the property that makes it draw correctly
+
+class InputFloatNode(Node, SimpleInputNode):
     '''A node representing inheritance'''
     bl_idname = 'InputFloatNode'
     bl_label = "Float"
     mantis_node_class_name=bl_idname[:-4]
+    socket_templates=InputFloatSockets
 
-    def init(self, context):
-        self.init_sockets(InputFloatSockets)
-        self.initialized = True
-
-class InputIntNode(Node, MantisUINode):
+class InputIntNode(Node, SimpleInputNode):
     '''A node representing inheritance'''
     bl_idname = 'InputIntNode'
     bl_label = "Integer"
     mantis_node_class_name=bl_idname
-
-    def init(self, context):
-        self.init_sockets(InputIntSockets)
-        self.initialized = True
+    socket_templates=InputIntSockets
     
-class InputVectorNode(Node, MantisUINode):
+class InputVectorNode(Node, SimpleInputNode):
     '''A node representing inheritance'''
     bl_idname = 'InputVectorNode'
     bl_label = "Vector"
     mantis_node_class_name=bl_idname[:-4]
+    socket_templates=InputVectorSockets
 
-    def init(self, context):
-        self.init_sockets(InputVectorSockets)
-        self.initialized = True
-
-class InputBooleanNode(Node, MantisUINode):
+class InputBooleanNode(Node, SimpleInputNode):
     '''A node representing inheritance'''
     bl_idname = 'InputBooleanNode'
     bl_label = "Boolean"
     mantis_node_class_name=bl_idname[:-4]
+    socket_templates=InputBooleanSockets
 
-    def init(self, context):
-        self.init_sockets(InputBooleanSockets)
-        self.initialized = True
-
-class InputBooleanThreeTupleNode(Node, MantisUINode):
+class InputBooleanThreeTupleNode(Node, SimpleInputNode):
     '''A node representing inheritance'''
     bl_idname = 'InputBooleanThreeTupleNode'
     bl_label = "Boolean Vector"
     mantis_node_class_name=bl_idname[:-4]
+    socket_templates=InputBooleanThreeTupleSockets
 
-    def init(self, context):
-        self.init_sockets(InputBooleanThreeTupleSockets)
-        self.initialized = True
-
-class InputRotationOrderNode(Node, MantisUINode):
+class InputRotationOrderNode(Node, SimpleInputNode):
     '''A node representing inheritance'''
     bl_idname = 'InputRotationOrderNode'
     bl_label = "Rotation Order"
     mantis_node_class_name=bl_idname[:-4]
+    socket_templates=InputRotationOrderSockets
 
-    def init(self, context):
-        self.init_sockets(InputRotationOrderSockets)
-        self.initialized = True
-
-class InputTransformSpaceNode(Node, MantisUINode):
+class InputTransformSpaceNode(Node, SimpleInputNode):
     '''A node representing inheritance'''
     bl_idname = 'InputTransformSpaceNode'
     bl_label = "Transform Space"
     mantis_node_class_name=bl_idname[:-4]
+    socket_templates=InputTransformSpaceSockets
 
-    def init(self, context):
-        self.init_sockets(InputTransformSpaceSockets)
-        self.initialized = True
-
-class InputStringNode(Node, MantisUINode):
+class InputStringNode(Node, SimpleInputNode):
     '''A node representing inheritance'''
     bl_idname = 'InputStringNode'
     bl_label = "String"
     mantis_node_class_name=bl_idname[:-4]
+    socket_templates=InputStringSockets
 
-    def init(self, context):
-        self.init_sockets(InputStringSockets)
-        self.initialized = True
-
-class InputMatrixNode(Node, MantisUINode):
+class InputMatrixNode(Node, SimpleInputNode):
     '''A node representing inheritance'''
     bl_idname = 'InputMatrixNode'
     bl_label = "Matrix"
@@ -203,7 +189,7 @@ class InputMatrixNode(Node, MantisUINode):
         mat_sock = self.outputs[0]
         mat_sock.default_value = self.set_matrix()
 
-class InputThemeBoneColorSets(Node, MantisUINode):
+class InputThemeBoneColorSets(Node, MantisMiscNode):
     """Displays the theme's colors."""
     bl_idname = "InputThemeBoneColorSets"
     bl_label = "Theme Colors"
@@ -217,7 +203,7 @@ class InputThemeBoneColorSets(Node, MantisUINode):
             s.color_index=i
         self.initialized = True
 
-class InputColorSetPallete(Node, MantisUINode):
+class InputColorSetPallete(Node, MantisMiscNode):
     """Displays the theme's colors."""
     bl_idname = "InputColorSetPallete"
     bl_label = "Color Pallete"
@@ -233,64 +219,46 @@ class InputColorSetPallete(Node, MantisUINode):
         ops_props.tree_invoked = self.id_data.name
         ops_props.node_invoked = self.name
 
-class UtilityMatrixFromCurve(Node, MantisUINode):
+class UtilityMatrixFromCurve(Node, MantisMiscNode):
     """Gets a matrix from a curve."""
     bl_idname = "UtilityMatrixFromCurve"
     bl_label = "Matrix from Curve"
     mantis_node_class_name=bl_idname
-    
-    def init(self, context):
-        self.init_sockets(MatrixFromCurveSockets)
-        self.initialized = True
+    socket_templates=MatrixFromCurveSockets
 
-class UtilityPointFromCurve(Node, MantisUINode):
+class UtilityPointFromCurve(Node, MantisMiscNode):
     """Gets a point from a curve."""
     bl_idname = "UtilityPointFromCurve"
     bl_label = "Point from Curve"
     mantis_node_class_name=bl_idname
-    
-    def init(self, context):
-        self.init_sockets(PointFromCurveSockets)
-        self.initialized = True
+    socket_templates=PointFromCurveSockets
 
-class UtilityNumberOfCurveSegments(Node, MantisUINode):
+class UtilityNumberOfCurveSegments(Node, MantisMiscNode):
     """Tells the number of segments in a curve."""
     bl_idname = "UtilityNumberOfCurveSegments"
     bl_label = "Number of Curve Segments"
     mantis_node_class_name=bl_idname
+    socket_templates=NumberOfCurveSegmentsSockets
     
-    def init(self, context):
-        self.init_sockets(NumberOfCurveSegmentsSockets)
-        self.initialized = True
-    
-class UtilityNumberOfSplines(Node, MantisUINode):
+class UtilityNumberOfSplines(Node, MantisMiscNode):
     """Tells the number of splines in a curve."""
     bl_idname = "UtilityNumberOfSplines"
     bl_label = "Number of Splines"
     mantis_node_class_name=bl_idname
-    
-    def init(self, context):
-        self.init_sockets(NumberOfSplinesSockets)
-        self.initialized = True
+    socket_templates=NumberOfSplinesSockets
 
-class UtilityMatrixFromCurveSegment(Node, MantisUINode):
+class UtilityMatrixFromCurveSegment(Node, MantisMiscNode):
     """Gets a matrix from a curve segment."""
     bl_idname = "UtilityMatrixFromCurveSegment"
     bl_label = "Matrix from Curve Segment"
     mantis_node_class_name=bl_idname
-    
-    def init(self, context):
-        self.init_sockets(MatrixFromCurveSegmentSockets)
-        self.initialized = True
+    socket_templates=MatrixFromCurveSegmentSockets
 
-class UtilityGetCurvePoint(Node, MantisUINode):
+class UtilityGetCurvePoint(Node, MantisMiscNode):
     bl_idname = 'UtilityGetCurvePoint'
     bl_label = "Control Point from Curve"
     mantis_node_class_name=bl_idname
-
-    def init(self, context):
-        self.init_sockets(GetCurvePointSockets)
-        self.initialized = True
+    socket_templates=GetCurvePointSockets
 
     def display_update(self, parsed_tree, context):
         self.outputs["Point"].hide=False
@@ -313,15 +281,12 @@ class UtilityGetCurvePoint(Node, MantisUINode):
                 self.outputs["Left Handle"].hide=False
                 self.outputs["Right Handle"].hide=False
     
-class UtilityMatricesFromCurve(Node, MantisUINode):
+class UtilityMatricesFromCurve(Node, MantisMiscNode):
     """Gets a matrix from a curve."""
     bl_idname = "UtilityMatricesFromCurve"
     bl_label = "Matrices from Curve"
     mantis_node_class_name=bl_idname
-    
-    def init(self, context):
-        self.init_sockets(MatricesFromCurveSockets)
-        self.initialized = True
+    socket_templates=MatricesFromCurveSockets
 
 def display_update_choose_nearest(self, parsed_tree, context):
     number_of_points = self.inputs['Number to Find'].default_value
@@ -336,52 +301,40 @@ def display_update_choose_nearest(self, parsed_tree, context):
     else:
         self.outputs.display_shape = 'CIRCLE'
 
-class UtilityGetNearestFactorOnCurve(Node, MantisUINode):
+class UtilityGetNearestFactorOnCurve(Node, MantisMiscNode):
     bl_idname = 'UtilityGetNearestFactorOnCurve'
     bl_label = "Get Factor on Curve at Point"
     mantis_node_class_name=bl_idname
+    socket_templates=GetNearestFactorOnCurveSockets
 
-    def init(self, context):
-        self.init_sockets(GetNearestFactorOnCurveSockets)
-        self.initialized = True
-
-class UtilityKDChoosePoint(Node, MantisUINode):
+class UtilityKDChoosePoint(Node, MantisMiscNode):
     """Chooses the nearest point with a KD Tree."""
     bl_idname = "UtilityKDChoosePoint"
     bl_label = "Choose Nearest Point"
     mantis_node_class_name=bl_idname
-    
-    def init(self, context):
-        self.init_sockets(KDChoosePointSockets)
-        self.initialized = True
+    socket_templates=KDChoosePointSockets
     
     def display_update(self, parsed_tree, context):
         display_update_choose_nearest(self, parsed_tree, context)
 
-class UtilityKDChooseXForm(Node, MantisUINode):
+class UtilityKDChooseXForm(Node, MantisMiscNode):
     """Chooses the nearest xForm with a KD Tree."""
     bl_idname = "UtilityKDChooseXForm"
     bl_label = "Choose Nearest xForm"
     mantis_node_class_name=bl_idname
-    
-    def init(self, context):
-        self.init_sockets(KDChooseXFormSockets)
-        self.initialized = True
+    socket_templates=KDChooseXFormSockets
     
     def display_update(self, parsed_tree, context):
         display_update_choose_nearest(self, parsed_tree, context)
 
-class UtilityMetaRigNode(Node, MantisUINode):
+class UtilityMetaRigNode(Node, MantisMiscNode):
     """Gets a matrix from a meta-rig bone."""
     bl_idname = "UtilityMetaRig"
     bl_label = "Meta-Rig"
     armature:bpy.props.StringProperty()
     pose_bone:bpy.props.StringProperty()
     mantis_node_class_name=bl_idname
-    
-    def init(self, context):
-        self.init_sockets(MetaRigSockets)
-        self.initialized = True
+    socket_templates=MetaRigSockets
     
     def display_update(self, parsed_tree, context):
         mantis_node = parsed_tree.get(get_signature_from_edited_tree(self, context))
@@ -397,28 +350,22 @@ class UtilityMetaRigNode(Node, MantisUINode):
         if self.inputs["Meta-Bone"].is_linked:
             self.inputs["Meta-Bone"].search_prop = None
 
-class UtilityBonePropertiesNode(Node, MantisUINode):
+class UtilityBonePropertiesNode(Node, MantisMiscNode):
     """Provides as sockets strings identifying bone transform properties."""
     bl_idname = "UtilityBoneProperties"
     bl_label = "Bone Properties"
     initialized : bpy.props.BoolProperty(default = False)
     mantis_node_class_name=bl_idname
-    
-    def init(self, context):
-        self.init_sockets(BonePropertiesSockets)
-        self.initialized = True
+    socket_templates=BonePropertiesSockets
         
 
-class UtilityDriverVariableNode(Node, MantisUINode):
+class UtilityDriverVariableNode(Node, MantisMiscNode):
     """Creates a variable for use in a driver."""
     bl_idname = "UtilityDriverVariable"
     bl_label = "Driver Variable"
     mantis_node_class_name=bl_idname
-    
-    def init(self, context):
-        self.init_sockets(DriverVariableSockets)
-        self.initialized = True
-    
+    socket_templates=DriverVariableSockets
+
     def display_update(self, parsed_tree, context):
         if self.inputs["Variable Type"].is_linked:
             if context.space_data:
@@ -461,17 +408,13 @@ class UtilityDriverVariableNode(Node, MantisUINode):
 # TODO: make a way to edit the fCurve directly.
 # I had a working version of this in the past, but it required doing sinful things like
 # keeping track of the RAM address of the window.
-class UtilityFCurveNode(Node, MantisUINode):
+class UtilityFCurveNode(Node, MantisMiscNode):
     """Creates an fCurve for use with a driver."""
     bl_idname = "UtilityFCurve"
     bl_label = "fCurve"
-    
-    use_kf_nodes   : bpy.props.BoolProperty(default=True)
     mantis_node_class_name=bl_idname
-    
-    def init(self, context):
-        self.init_sockets(FCurveSockets)
-        self.initialized = True
+    socket_templates=FCurveSockets
+    use_kf_nodes   : bpy.props.BoolProperty(default=True)
             
     def draw_buttons(self, context, layout):
         layout.operator( 'mantis.fcurve_node_add_kf' )
@@ -479,16 +422,13 @@ class UtilityFCurveNode(Node, MantisUINode):
             layout.operator( 'mantis.fcurve_node_remove_kf' )
 
 
-class UtilityDriverNode(Node, MantisUINode):
+class UtilityDriverNode(Node, MantisMiscNode):
     """Represents a Driver relationship"""
     bl_idname = "UtilityDriver"
     bl_label = "Driver"
     mantis_node_class_name=bl_idname
+    socket_templates=DriverSockets
     
-    def init(self, context):
-        self.init_sockets(DriverSockets)
-        self.initialized = True
-        
     def display_update(self, parsed_tree, context):
         if not self.inputs["Driver Type"].is_linked:
             dType = self.inputs["Driver Type"].default_value
@@ -506,54 +446,40 @@ class UtilityDriverNode(Node, MantisUINode):
         if (len(self.inputs) > 3):
             layout.operator( 'mantis.driver_node_remove_variable' )
 
-class UtilitySwitchNode(Node, MantisUINode):
+class UtilitySwitchNode(Node, MantisMiscNode):
     """Represents a switch relationship between one driver property and one or more driven properties."""
     bl_idname = "UtilitySwitch"
     bl_label = "Switch"
     mantis_node_class_name=bl_idname
-    
-    def init(self, context):
-        self.init_sockets(SwitchSockets)
-        self.initialized = True
+    socket_templates=SwitchSockets
 
-class UtilityCombineThreeBoolNode(Node, MantisUINode):
+class UtilityCombineThreeBoolNode(Node, MantisMiscNode):
     """Combines three booleans into a three-bool."""
     bl_idname = "UtilityCombineThreeBool"
     bl_label = "CombineThreeBool"
     mantis_node_class_name=bl_idname
-    
-    def init(self, context):
-        self.init_sockets(CombineThreeBoolSockets)
-        self.initialized = True
+    socket_templates=CombineThreeBoolSockets
 
-class UtilityCombineVectorNode(Node, MantisUINode):
+class UtilityCombineVectorNode(Node, MantisMiscNode):
     """Combines three floats into a vector."""
     bl_idname = "UtilityCombineVector"
     bl_label = "CombineVector"
     mantis_node_class_name=bl_idname
-    
-    def init(self, context):
-        self.init_sockets(CombineVectorSockets)
+    socket_templates=CombineVectorSockets
         
-class UtilitySeparateVector(Node, MantisUINode):
+class UtilitySeparateVector(Node, MantisMiscNode):
     """Separates a vector into three floats"""
     bl_idname = "UtilitySeparateVector"
     bl_label = "Separate Vector"
     mantis_node_class_name=bl_idname
-    
-    def init(self, context):
-        self.init_sockets(SeparateVectorSockets)
-        self.initialized = True
+    socket_templates=SeparateVectorSockets
         
-class UtilityCatStringsNode(Node, MantisUINode):
+class UtilityCatStringsNode(Node, MantisMiscNode):
     """Combines multiple strings into one."""
     bl_idname = "UtilityCatStrings"
     bl_label = "Join Strings"
     mantis_node_class_name=bl_idname
-    
-    def init(self, context):
-        self.init_sockets(CatStringsSockets)
-        self.initialized = True
+    socket_templates=CatStringsSockets
 
     def draw_label(self): # this will prefer a user-set label, or return the evaluated name
         if self.label:
@@ -578,27 +504,21 @@ class UtilityCatStringsNode(Node, MantisUINode):
                     return # the tree isn't ready yet.
                 
 
-class InputWidget(Node, MantisUINode):
+class InputWidget(Node, MantisMiscNode):
     """Fetches a Widget from the Widget Library."""
     bl_idname = "InputWidget"
     bl_label = "Widget"
     mantis_node_class_name=bl_idname
+    socket_templates=InputWidgetSockets
     
-    def init(self, context):
-        self.init_sockets(InputWidgetSockets)
-        self.initialized = True
-    
-class InputExistingGeometryObjectNode(Node, MantisUINode):
+class InputExistingGeometryObjectNode(Node, MantisMiscNode):
     """Represents an existing geometry object from within the scene."""
     bl_idname = "InputExistingGeometryObject"
     bl_label = "Existing Object"
     mantis_node_class_name=bl_idname
     # We want Mantis to import widgets and stuff, so we hold a reference to the object
-    object_reference : bpy.props.PointerProperty(type=bpy.types.Object,) 
-    
-    def init(self, context):
-        self.init_sockets(InputExistingGeometryObjectSockets)
-        self.initialized = True
+    object_reference : bpy.props.PointerProperty(type=bpy.types.Object,)
+    socket_templates=InputExistingGeometryObjectSockets
     
     def display_update(self, parsed_tree, context):
         mantis_node = parsed_tree.get(get_signature_from_edited_tree(self, context))
@@ -607,25 +527,20 @@ class InputExistingGeometryObjectNode(Node, MantisUINode):
     
 # TODO: maybe I should hold a data reference here, too.
 #       but it is complicated by the fact that Mantis does not distinguish b/tw geo types
-class InputExistingGeometryDataNode(Node, MantisUINode):
+class InputExistingGeometryDataNode(Node, MantisMiscNode):
     """Represents a mesh or curve datablock from the scene."""
     bl_idname = "InputExistingGeometryData"
     bl_label = "Existing Geometry"
     mantis_node_class_name=bl_idname
-    
-    def init(self, context):
-        self.init_sockets(InputExistingGeometrySockets)
-        self.initialized = True
+    socket_templates=InputExistingGeometrySockets
 
-class UtilityCustomProperty(Node, MantisUINode):
+class UtilityCustomProperty(Node, MantisMiscNode):
     """A declaration of a custom property."""
     bl_idname = "UtilityCustomProperty"
     bl_label  = "Custom Property"
     bl_icon   = "NODE"
     mantis_node_class_name=bl_idname
-    def init(self, context):
-        self.init_sockets(UtilityCustomPropertySockets)
-        self.initialized = True
+    socket_templates=UtilityCustomPropertySockets
     
     def display_update(self, parsed_tree, context):
         mantis_node = parsed_tree.get(get_signature_from_edited_tree(self, context))
@@ -656,7 +571,7 @@ class UtilityCustomProperty(Node, MantisUINode):
             return self.inputs['Name'].display_text
         return self.name
 
-class UtilityDeclareCollections(Node, MantisUINode):
+class UtilityDeclareCollections(Node, MantisMiscNode):
     """A utility used to declare bone collections."""
     bl_idname = "UtilityDeclareCollections"
     bl_label  = "Collections"
@@ -707,89 +622,66 @@ class UtilityDeclareCollections(Node, MantisUINode):
         op_props.socket_invoked = '' # this isn't reset between invocations
         # so we have to make sure to unset it when running it from the node
 
-class UtilityCollectionJoin(Node, MantisUINode):
+class UtilityCollectionJoin(Node, MantisMiscNode):
     """A utility used to join bone collection declarations."""
     bl_idname = "UtilityCollectionJoin"
     bl_label  = "Join Collection Declarations"
     bl_icon   = "NODE"
     mantis_node_class_name=bl_idname
-    def init(self, context):
-        self.init_sockets(CollectionJoinSockets)
-        self.initialized = True
+    socket_templates=CollectionJoinSockets
 
-class UtilityCollectionHierarchy(Node, MantisUINode):
+class UtilityCollectionHierarchy(Node, MantisMiscNode):
     """A utility used to declare bone collection hierarchies."""
     bl_idname = "UtilityCollectionHierarchy"
     bl_label  = "Collection Child Declaration"
     bl_icon   = "NODE"
     mantis_node_class_name=bl_idname
-    def init(self, context):
-        self.init_sockets(CollectionHierarchySockets)
-        self.initialized = True
+    socket_templates=CollectionHierarchySockets
         
-class UtilityGeometryOfXForm(Node, MantisUINode):
+class UtilityGeometryOfXForm(Node, MantisMiscNode):
     """Retrieves a mesh or curve datablock from an xForm."""
     bl_idname = "UtilityGeometryOfXForm"
     bl_label = "Geometry of xForm"
     mantis_node_class_name=bl_idname
-    
-    def init(self, context):
-        self.init_sockets(GeometryOfXFormSockets)
-        self.initialized = True
+    socket_templates=GeometryOfXFormSockets
 
-
-class UtilityNameOfXForm(Node, MantisUINode):
+class UtilityNameOfXForm(Node, MantisMiscNode):
     """Retrieves the name of a xForm."""
     bl_idname = "UtilityNameOfXForm"
     bl_label = "Name of xForm"
     mantis_node_class_name=bl_idname
-    
-    def init(self, context):
-        self.init_sockets(NameOfXFormSockets)
-        self.initialized = True
+    socket_templates=NameOfXFormSockets
 
-class UtilityGetBoneLength(Node, MantisUINode):
+class UtilityGetBoneLength(Node, MantisMiscNode):
     """Returns the length of the bone from its matrix."""
     bl_idname = "UtilityGetBoneLength"
     bl_label = "Get Bone Length"
     mantis_node_class_name=bl_idname
-    
-    def init(self, context):
-        self.init_sockets(GetBoneLengthSockets)
-        self.initialized = True
+    socket_templates=GetBoneLengthSockets
 
 # TODO: make it work with BBones!
-class UtilityPointFromBoneMatrix(Node, MantisUINode):
+class UtilityPointFromBoneMatrix(Node, MantisMiscNode):
     """Returns a point representing the location along a bone, given a matrix representing that bone's shape."""
     bl_idname = "UtilityPointFromBoneMatrix"
     bl_label = "Point from Bone Matrix"
     mantis_node_class_name=bl_idname
-    
-    def init(self, context):
-        self.init_sockets(PointFromBoneMatrixSockets)
-        self.initialized = True
+    socket_templates=PointFromBoneMatrixSockets
 
-class UtilitySetBoneLength(Node, MantisUINode):
+class UtilitySetBoneLength(Node, MantisMiscNode):
     """Sets the length of a bone matrix."""
     bl_idname = "UtilitySetBoneLength"
     bl_label = "Set Bone Matrix Length"
     mantis_node_class_name=bl_idname
-    
-    def init(self, context):
-        self.init_sockets(SetBoneLengthSockets)
-        self.initialized = True
+    socket_templates=SetBoneLengthSockets
 
 # TODO: more keyframe types should be supported in the future.
 # Some of the code that can do this is commented out here until I can implement it properly.
-class UtilityKeyframe(Node, MantisUINode):
+class UtilityKeyframe(Node, MantisMiscNode):
     """A keyframe for a FCurve"""
     bl_idname = "UtilityKeyframe"
     bl_label = "KeyFrame"
     mantis_node_class_name=bl_idname
-    
-    def init(self, context):
-        self.init_sockets(KeyframeSockets)
-        self.initialized = True
+    socket_templates=KeyframeSockets
 
     # TODO: I'll implement this when I finish adding the extra features to the Keyframe node
     # def display_update(self, parsed_tree, context):
@@ -805,89 +697,61 @@ class UtilityKeyframe(Node, MantisUINode):
     #                 inp.hide = False
 
 
-class UtilityBoneMatrixHeadTailFlip(Node, MantisUINode):
+class UtilityBoneMatrixHeadTailFlip(Node, MantisMiscNode):
     """Flips a bone matrix so that the head is where the tail was and visa versa."""
     bl_idname = "UtilityBoneMatrixHeadTailFlip"
     bl_label = "Flip Head/Tail"
     mantis_node_class_name=bl_idname
-    
-    def init(self, context):
-        self.init_sockets(BoneMatrixHeadTailFlipSockets)
-        self.initialized = True
+    socket_templates=BoneMatrixHeadTailFlipSockets
 
-class UtilityMatrixTransform(Node, MantisUINode):
+class UtilityMatrixTransform(Node, MantisMiscNode):
     """Transforms a matrix by another."""
     bl_idname = "UtilityMatrixTransform"
     bl_label = "Multiply Matrices"
     mantis_node_class_name=bl_idname
-    
-    def init(self, context):
-        self.init_sockets(MatrixTransformSockets)
-        self.initialized = True
+    socket_templates=MatrixTransformSockets
 
-class UtilityMatrixInvert(Node, MantisUINode):
+class UtilityMatrixInvert(Node, MantisMiscNode):
     """Inverts an invertable matrix, otherwise throws an error."""
     bl_idname = "UtilityMatrixInvert"
     bl_label = "Invert Matrix"
     mantis_node_class_name=bl_idname
-    
-    def init(self, context):
-        self.init_sockets(MatrixInvertSockets)
-        self.initialized = True
+    socket_templates=MatrixInvertSockets
 
-class UtilityMatrixCompose(Node, MantisUINode):
+class UtilityMatrixCompose(Node, MantisMiscNode):
     """Inverts an invertable matrix, otherwise throws an error."""
     bl_idname = "UtilityMatrixCompose"
     bl_label = "Compose Matrix"
     mantis_node_class_name=bl_idname
-    
-    def init(self, context):
-        self.init_sockets(MatrixComposeSockets)
-        self.initialized = True
+    socket_templates=MatrixComposeSockets
 
-class UtilityMatrixAlignRoll(Node, MantisUINode):
+class UtilityMatrixAlignRoll(Node, MantisMiscNode):
     """Aligns the Z axis of a matrix to point in a direction."""
     bl_idname = "UtilityMatrixAlignRoll"
     bl_label = "Align Matrix Roll"
     mantis_node_class_name=bl_idname
-    
-    def init(self, context):
-        self.init_sockets(MatrixAlignRollSockets)
-        self.initialized = True
+    socket_templates=MatrixAlignRollSockets
 
-class UtilityMatrixSetLocation(Node, MantisUINode):
+class UtilityMatrixSetLocation(Node, MantisMiscNode):
     """Sets a matrix's location."""
     bl_idname = "UtilityMatrixSetLocation"
     bl_label = "Set Matrix Location"
     mantis_node_class_name=bl_idname
-    
-    def init(self, context):
-        self.init_sockets(MatrixSetLocationSockets)
-        self.initialized = True
+    socket_templates=MatrixSetLocationSockets
 
-class UtilityMatrixGetLocation(Node, MantisUINode):
+class UtilityMatrixGetLocation(Node, MantisMiscNode):
     """Gets a matrix's location."""
     bl_idname = "UtilityMatrixGetLocation"
     bl_label = "Get Matrix Location"
     mantis_node_class_name=bl_idname
-    
-    def init(self, context):
-        self.init_sockets(MatrixGetLocationSockets)
-        self.initialized = True
+    socket_templates=MatrixGetLocationSockets
 
-class UtilityTransformationMatrix(Node, MantisUINode):
+class UtilityTransformationMatrix(Node, MantisMiscNode):
     """Constructs a matrix representing a transformation"""
     bl_idname = "UtilityTransformationMatrix"
     bl_label = "Transformation Matrix"
     mantis_node_class_name=bl_idname
-    
-    def init(self, context):
-        # first input is a transformation type - translation, rotation, or scale
-        #                         rotation is an especially annoying feature because it can take multiple types
-        #   so Euler, axis/angle, quaternion, matrix...
-        #   for now I am only going to implement axis-angle
-        self.init_sockets(TransformationMatrixSockets)
-        self.initialized = True
+    socket_templates=TransformationMatrixSockets
 
     def display_update(self, parsed_tree, context):
         operation = self.inputs['Operation'].default_value
@@ -910,58 +774,41 @@ class UtilityTransformationMatrix(Node, MantisUINode):
 # So instead, we need to avoid calculating the roll for now.
 # but I want to make that its own node and add roll-recalc to this node, too.
 
-class UtilitySetBoneMatrixTail(Node, MantisUINode):
+class UtilitySetBoneMatrixTail(Node, MantisMiscNode):
     """Constructs a matrix representing a transformation"""
     bl_idname = "UtilitySetBoneMatrixTail"
     bl_label = "Set Bone Matrix Tail"
     mantis_node_class_name=bl_idname
-    
-    def init(self, context):
-        self.init_sockets(SetBoneMatrixTailSockets)
-        self.initialized = True
+    socket_templates=SetBoneMatrixTailSockets
 
-
-class UtilityMatrixFromXForm(Node, MantisUINode):
+class UtilityMatrixFromXForm(Node, MantisMiscNode):
     """Returns the matrix of the given xForm node."""
     bl_idname = "UtilityMatrixFromXForm"
     bl_label = "Matrix of xForm"
     mantis_node_class_name=bl_idname
-    
-    def init(self, context):
-        self.init_sockets(MatrixFromXFormSockets)
-        self.initialized = True
+    socket_templates=MatrixFromXFormSockets
 
-class UtilityAxesFromMatrix(Node, MantisUINode):
+class UtilityAxesFromMatrix(Node, MantisMiscNode):
     """Returns the axes of the matrix."""
     bl_idname = "UtilityAxesFromMatrix"
     bl_label = "Axes of Matrix"
     mantis_node_class_name=bl_idname
-    
-    def init(self, context):
-        self.init_sockets(AxesFromMatrixSockets)
-        self.initialized = True
+    socket_templates=AxesFromMatrixSockets
 
-class UtilityIntToString(Node, MantisUINode):
+class UtilityIntToString(Node, MantisMiscNode):
     """Converts a number to a string"""
     bl_idname = "UtilityIntToString"
     bl_label = "Number String"
     mantis_node_class_name=bl_idname
-    
-    def init(self, context):
-        self.init_sockets(IntToStringSockets)
-        self.initialized = True
+    socket_templates=IntToStringSockets
 
-
-class UtilityArrayGet(Node, MantisUINode):
+class UtilityArrayGet(Node, MantisMiscNode):
     """Gets a value from an array at a specified index."""
     bl_idname = "UtilityArrayGet"
     bl_label  = "Array Get"
     bl_icon   = "NODE"
     mantis_node_class_name=bl_idname
-    
-    def init(self, context):
-        self.init_sockets(ArrayGetSockets)
-        self.initialized = True
+    socket_templates=ArrayGetSockets
     
     def update(self):
         wildcard_color = (0.0,0.0,0.0,0.0)
@@ -977,16 +824,13 @@ class UtilityArrayGet(Node, MantisUINode):
                 self.inputs['Array'].color = from_socket.color
                 self.outputs['Output'].color = from_socket.color
 
-class UtilityArrayLength(Node, MantisUINode):
+class UtilityArrayLength(Node, MantisMiscNode):
     """Gets The length of an array."""
     bl_idname = "UtilityArrayLength"
     bl_label  = "Array Length"
     bl_icon   = "NODE"
     mantis_node_class_name=bl_idname
-    
-    def init(self, context):
-        s = self.init_sockets(UtilityArrayLengthSockets)
-        self.initialized = True
+    socket_templates=UtilityArrayLengthSockets
     
     def update(self):
         wildcard_color = (0.0,0.0,0.0,0.0)
@@ -1001,15 +845,12 @@ class UtilityArrayLength(Node, MantisUINode):
                 self.inputs['Array'].color = from_socket.color
 
 
-class UtilityCompare(Node, MantisUINode):
+class UtilityCompare(Node, MantisMiscNode):
     """Compares two inputs and produces a boolean output"""
     bl_idname = "UtilityCompare"
     bl_label = "Compare"
     mantis_node_class_name=bl_idname
-    
-    def init(self, context):
-        self.init_sockets(CompareSockets)
-        self.initialized = True
+    socket_templates=CompareSockets
     
     def update(self):
         wildcard_color = (0.0,0.0,0.0,0.0)
@@ -1029,15 +870,12 @@ class UtilityCompare(Node, MantisUINode):
             if hasattr(link.from_socket, "color"):
                 self.inputs['B'].color = link.from_socket.color
 
-class UtilityChoose(Node, MantisUINode):
+class UtilityChoose(Node, MantisMiscNode):
     """Chooses an output"""
     bl_idname = "UtilityChoose"
     bl_label = "Choose"
     mantis_node_class_name=bl_idname
-    
-    def init(self, context):
-        self.init_sockets(ChooseSockets)
-        self.initialized = True
+    socket_templates=ChooseSockets
     
     def display_update(self, parsed_tree, context):
         wildcard_color = (0.0,0.0,0.0,0.0)
@@ -1071,18 +909,10 @@ class UtilityChoose(Node, MantisUINode):
                 self.inputs['B'].color = link.from_socket.color
 
 
-class UtilityPrint(Node, MantisUINode):
+class UtilityPrint(Node, MantisMiscNode):
     """A utility used to print arbitrary values."""
     bl_idname = "UtilityPrint"
     bl_label  = "Print"
     bl_icon   = "NODE"
     mantis_node_class_name=bl_idname
-    
-    def init(self, context):
-        self.init_sockets(PrintSockets)
-        self.initialized = True
-
-# Set up the class property that ties the UI classes to the Mantis classes.
-for cls in TellClasses():
-    cls.mantis_node_library='.misc_nodes'
-    cls.set_mantis_class()
+    socket_templates=PrintSockets

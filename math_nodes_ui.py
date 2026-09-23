@@ -1,5 +1,5 @@
 import bpy
-from .base_definitions import MantisUINode
+from .base_definitions import MantisMathUINode
 from bpy.types import Node
 from .utilities import (prRed, prGreen, prPurple, prWhite,
                               prOrange,
@@ -16,19 +16,14 @@ def TellClasses():
      MathStaticVectorNode,
     ]
 
-
-class MathStaticInt(Node, MantisUINode):
+class MathStaticInt(Node, MantisMathUINode):
     """A node that performs mathematical operations on float numbers as a preprocess step before generating the rig."""
     bl_idname = "MathStaticInt"
     bl_label = "Static Int Math"
     bl_icon = "NODE"
     initialized : bpy.props.BoolProperty(default = False)
     mantis_node_class_name=bl_idname
-
-
-    def init(self, context):
-        self.init_sockets(StaticIntSockets)
-        self.initialized = True
+    socket_templates = StaticIntSockets
 
     def display_update(self, parsed_tree, context):
         if context.space_data:
@@ -40,17 +35,14 @@ class MathStaticInt(Node, MantisUINode):
             else:
                 self.inputs["Int B"].hide = False
 
-class MathStaticFloatNode(Node, MantisUINode):
+class MathStaticFloatNode(Node, MantisMathUINode):
     """A node that performs mathematical operations on float numbers as a preprocess step before generating the rig."""
     bl_idname = "MathStaticFloat"
     bl_label = "Static Float Math"
     bl_icon = "NODE"
     initialized : bpy.props.BoolProperty(default = False)
     mantis_node_class_name=bl_idname
-
-    def init(self, context):
-        self.init_sockets(StaticFloatSockets)
-        self.initialized = True
+    socket_templates = StaticFloatSockets
 
     def display_update(self, parsed_tree, context):
         if context.space_data:
@@ -62,17 +54,14 @@ class MathStaticFloatNode(Node, MantisUINode):
             else:
                 self.inputs["Float B"].hide = False
 
-class MathStaticVectorNode(Node, MantisUINode):
+class MathStaticVectorNode(Node, MantisMathUINode):
     """Performs a vector math operation as a preprocess before executing the tree."""
     bl_idname = "MathStaticVector"
     bl_label = "Static Vector Math"
     bl_icon = "NODE"
     initialized : bpy.props.BoolProperty(default = False)
     mantis_node_class_name=bl_idname
-    
-    def init(self, context):
-        self.init_sockets(StaticVectorSockets)
-        self.initialized = True
+    socket_templates = StaticVectorSockets
 
     def display_update(self, parsed_tree, context):
         if context.space_data:
@@ -100,8 +89,3 @@ class MathStaticVectorNode(Node, MantisUINode):
             else:
                 self.inputs["Vector B"].hide = False
                 self.inputs["Scalar A"].hide = True
-
-# Set up the class property that ties the UI classes to the Mantis classes.
-for cls in TellClasses():
-    cls.mantis_node_library='.math_nodes'
-    cls.set_mantis_class()
