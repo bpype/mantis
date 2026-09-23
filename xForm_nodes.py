@@ -948,7 +948,8 @@ class xFormGetBone(xFormNode):
     
     def bGetParentArmature(self):
         from bpy import data
-        return data.objects.get(self.evaluate_input("Parent Armature"))
+        # the below function may return None, but data.objects.get expects a string
+        return data.objects.get(self.evaluate_input("Parent Armature") or "")
 
     def bGetObject(self, mode = 'POSE'):
         bone = None
