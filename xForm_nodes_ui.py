@@ -126,7 +126,6 @@ class xFormBoneNode(Node, xFormNode):
     display_vp_settings : bpy.props.BoolProperty(default=False)
     display_def_settings : bpy.props.BoolProperty(default=False)
     display_bb_settings : bpy.props.BoolProperty(default=False)
-    initialized : bpy.props.BoolProperty(default = False)
     mantis_node_class_name=bl_idname[:-4]
     socket_templates = xFormBoneSockets
     
@@ -184,7 +183,6 @@ class xFormArmatureNode(Node, xFormNode):
     bl_idname = 'xFormArmatureNode'
     bl_label = "Armature"
     bl_icon = 'OUTLINER_OB_ARMATURE'
-    initialized : bpy.props.BoolProperty(default = False)
     mantis_node_class_name=bl_idname[:-4]
     socket_templates = xFormArmatureSockets
 
@@ -199,7 +197,6 @@ class xFormGeometryObjectNode(Node, xFormNode):
     bl_idname = "xFormGeometryObject"
     bl_label = "Geometry Object"
     bl_icon = "EMPTY_AXIS"
-    initialized : bpy.props.BoolProperty(default = False)
     mantis_node_class_name=bl_idname
     socket_templates = xFormGeometryObjectSockets
 
@@ -214,7 +211,6 @@ class xFormObjectInstance(Node, xFormNode):
     bl_idname = "xFormObjectInstance"
     bl_label = "Object Instance"
     bl_icon = "EMPTY_AXIS"
-    initialized : bpy.props.BoolProperty(default = False)
     mantis_node_class_name=bl_idname
     socket_templates = xFormGeometryObjectInstanceSockets
 
@@ -229,7 +225,6 @@ class xFormCurvePin(Node, xFormNode):
     bl_idname = "xFormCurvePin"
     bl_label = "Curve Pin"
     bl_icon = "FORCE_CURVE"
-    initialized : bpy.props.BoolProperty(default = False)
     mantis_node_class_name=bl_idname
     socket_templates = xFormCurvePinSockets
 
@@ -238,7 +233,6 @@ class xFormGetBone(Node, xFormNode):
     bl_idname = "xFormGetBone"
     bl_label = "Existing Bone"
     bl_icon = "BONE_DATA"
-    initialized : bpy.props.BoolProperty(default = False)
     armature : bpy.props.StringProperty(default="")
     mantis_node_class_name=bl_idname
     socket_templates = xFormGetBoneSockets

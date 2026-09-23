@@ -17,7 +17,6 @@ class GeometryCirclePrimitive(Node, GeometryPrimitiveNode):
     bl_idname = 'GeometryCirclePrimitive'
     bl_label = "Circle Primitive"
     bl_icon = 'NODE'
-    initialized : bpy.props.BoolProperty(default = False)
     mantis_node_class_name="CirclePrimitive"
     socket_templates = CirclePrimitiveSockets
 
@@ -27,6 +26,5 @@ class GeometryLattice(Node, GeometryPrimitiveNode):
     bl_idname = "GeometryLattice"
     bl_label = "Lattice"
     bl_icon = "NODE"
-    initialized : bpy.props.BoolProperty(default = False)
     mantis_node_class_name=bl_idname
     socket_templates = LatticeSockets

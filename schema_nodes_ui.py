@@ -36,7 +36,6 @@ class SchemaIndex(Node, SchemaUINode):
     bl_idname = 'SchemaIndex'
     bl_label = "Index"
     bl_icon = 'GIZMO'
-    initialized : bpy.props.BoolProperty(default = False)
     mantis_node_class_name=bl_idname
     socket_templates = SchemaIndexSockets
 
@@ -45,7 +44,6 @@ class SchemaArrayInput(Node, SchemaUINode):
     bl_idname = 'SchemaArrayInput'
     bl_label = "Array Input at Current Index"
     bl_icon = 'GIZMO'
-    initialized : bpy.props.BoolProperty(default = False)
     mantis_node_class_name=bl_idname
 
     def init(self, context):
@@ -78,7 +76,6 @@ class SchemaArrayInputAll(Node, SchemaUINode):
     bl_idname = 'SchemaArrayInputAll'
     bl_label = "Get entire Array Input"
     bl_icon = 'GIZMO'
-    initialized : bpy.props.BoolProperty(default = False)
     mantis_node_class_name=bl_idname
 
     def init(self, context):
@@ -111,7 +108,6 @@ class SchemaArrayInputGet(Node, SchemaUINode):
     bl_idname = 'SchemaArrayInputGet'
     bl_label = "Array Input at Index"
     bl_icon = 'GIZMO'
-    initialized : bpy.props.BoolProperty(default = False)
     mantis_node_class_name=bl_idname
     socket_templates = SchemaArrayInputGetSockets
 
@@ -146,7 +142,6 @@ class SchemaArrayOutput(Node, SchemaUINode):
     bl_idname = 'SchemaArrayOutput'
     bl_label = "Array Output"
     bl_icon = 'GIZMO'
-    initialized : bpy.props.BoolProperty(default = False)
     mantis_node_class_name=bl_idname
 
     def init(self, context):
@@ -181,7 +176,6 @@ class SchemaConstInput(Node, SchemaUINode):
     bl_idname = 'SchemaConstInput'
     bl_label = "Constant Input"
     bl_icon = 'GIZMO'
-    initialized : bpy.props.BoolProperty(default = False)
     mantis_node_class_name=bl_idname
     
     def init(self, context):
@@ -216,7 +210,6 @@ class SchemaConstOutput(Node, SchemaUINode):
     bl_idname = 'SchemaConstOutput'
     bl_label = "Constant Output"
     bl_icon = 'GIZMO'
-    initialized : bpy.props.BoolProperty(default = False)
     mantis_node_class_name=bl_idname
     
     def init(self, context):
@@ -256,7 +249,6 @@ class SchemaOutgoingConnection(Node, SchemaUINode):
     bl_idname = 'SchemaOutgoingConnection'
     bl_label = "Outgoing Connection"
     bl_icon = 'GIZMO'
-    initialized : bpy.props.BoolProperty(default = False)
     mantis_node_class_name=bl_idname
     
     def init(self, context):
@@ -293,7 +285,6 @@ class SchemaIncomingConnection(Node, SchemaUINode):
     bl_idname = 'SchemaIncomingConnection'
     bl_label = "Incoming Connection"
     bl_icon = 'GIZMO'
-    initialized : bpy.props.BoolProperty(default = False)
     mantis_node_class_name=bl_idname
 
     def init(self, context):

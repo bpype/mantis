@@ -33,7 +33,6 @@ class DeformerArmatureNode(Node, DeformerNode):
     bl_idname = 'DeformerArmature'
     bl_label = "Armature Deform"
     bl_icon = 'MOD_ARMATURE'
-    initialized : bpy.props.BoolProperty(default = False)
     mantis_node_class_name=bl_idname
     socket_templates = DeformArmatureSockets
     
@@ -50,7 +49,6 @@ class DeformerHook(Node, DeformerNode):
     bl_idname = 'DeformerHook'
     bl_label = "Hook Deform"
     bl_icon = 'HOOK'
-    initialized : bpy.props.BoolProperty(default = False)
     mantis_node_class_name=bl_idname
     socket_templates = HookSockets
     
@@ -108,7 +106,6 @@ class DeformerMorphTargetDeform(Node, DeformerNode):
     bl_idname = 'DeformerMorphTargetDeform'
     bl_label = "Morph Deform"
     bl_icon = 'MOD_ARMATURE'
-    initialized : bpy.props.BoolProperty(default = False)
     num_targets : bpy.props.IntProperty(default = 0)
     mantis_node_class_name=bl_idname
     socket_templates = MorphTargetDeformSockets
@@ -178,7 +175,6 @@ class DeformerMorphTarget(Node, DeformerNode):
     bl_idname = 'DeformerMorphTarget'
     bl_label = "Morph Target"
     bl_icon = 'SHAPEKEY_DATA'
-    initialized : bpy.props.BoolProperty(default = False)
     num_targets : bpy.props.IntProperty(default = 0)
     mantis_node_class_name=bl_idname
     socket_templates = MorphTargetSockets
@@ -188,7 +184,6 @@ class DeformerSurfaceDeform(Node, DeformerNode):
     bl_idname = 'DeformerSurfaceDeform'
     bl_label = "Surface Deform"
     bl_icon = 'MOD_SOFT'
-    initialized : bpy.props.BoolProperty(default = False)
     num_targets : bpy.props.IntProperty(default = 0)
     mantis_node_class_name=bl_idname
     socket_templates = SurfaceDeformSockets
@@ -198,7 +193,6 @@ class DeformerMeshDeform(Node, DeformerNode):
     bl_idname = 'DeformerMeshDeform'
     bl_label = "Mesh Deform"
     bl_icon = 'MOD_SOFT'
-    initialized : bpy.props.BoolProperty(default = False)
     num_targets : bpy.props.IntProperty(default = 0)
     mantis_node_class_name=bl_idname
     socket_templates = MeshDeformSockets
@@ -208,7 +202,6 @@ class DeformerLatticeDeform(Node, DeformerNode):
     bl_idname = 'DeformerLatticeDeform'
     bl_label = "Lattice Deform"
     bl_icon = 'MOD_LATTICE'
-    initialized : bpy.props.BoolProperty(default = False)
     num_targets : bpy.props.IntProperty(default = 0)
     mantis_node_class_name=bl_idname
     socket_templates = LatticeDeformSockets
@@ -218,7 +211,6 @@ class DeformerSmoothCorrectiveDeform(Node, DeformerNode):
     bl_idname = 'DeformerSmoothCorrectiveDeform'
     bl_label = "Smooth Deform"
     bl_icon = 'MOD_SMOOTH'
-    initialized : bpy.props.BoolProperty(default = False)
     num_targets : bpy.props.IntProperty(default = 0)
     mantis_node_class_name=bl_idname
     socket_templates = SmoothDeformSockets

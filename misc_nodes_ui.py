@@ -194,7 +194,6 @@ class InputThemeBoneColorSets(Node, MantisMiscNode):
     bl_idname = "InputThemeBoneColorSets"
     bl_label = "Theme Colors"
     bl_width_min=280
-    initialized : bpy.props.BoolProperty(default = False)
     mantis_node_class_name=bl_idname
     
     def init(self, context):
@@ -208,7 +207,6 @@ class InputColorSetPallete(Node, MantisMiscNode):
     bl_idname = "InputColorSetPallete"
     bl_label = "Color Pallete"
     bl_width_min=280
-    initialized : bpy.props.BoolProperty(default = False)
     mantis_node_class_name=bl_idname
     
     def init(self, context):
@@ -354,7 +352,6 @@ class UtilityBonePropertiesNode(Node, MantisMiscNode):
     """Provides as sockets strings identifying bone transform properties."""
     bl_idname = "UtilityBoneProperties"
     bl_label = "Bone Properties"
-    initialized : bpy.props.BoolProperty(default = False)
     mantis_node_class_name=bl_idname
     socket_templates=BonePropertiesSockets
         
@@ -577,7 +574,6 @@ class UtilityDeclareCollections(Node, MantisMiscNode):
     bl_label  = "Collections"
     bl_icon   = "NODE"
     bl_width_min = 320
-    initialized : bpy.props.BoolProperty(default = False)
     mantis_node_class_name=bl_idname
     # Here is the layout of the data:
     # nested dicts of key:dict ( key = name, dict = children)

@@ -21,7 +21,6 @@ class MathStaticInt(Node, MantisMathUINode):
     bl_idname = "MathStaticInt"
     bl_label = "Static Int Math"
     bl_icon = "NODE"
-    initialized : bpy.props.BoolProperty(default = False)
     mantis_node_class_name=bl_idname
     socket_templates = StaticIntSockets
 
@@ -40,7 +39,6 @@ class MathStaticFloatNode(Node, MantisMathUINode):
     bl_idname = "MathStaticFloat"
     bl_label = "Static Float Math"
     bl_icon = "NODE"
-    initialized : bpy.props.BoolProperty(default = False)
     mantis_node_class_name=bl_idname
     socket_templates = StaticFloatSockets
 
@@ -59,7 +57,6 @@ class MathStaticVectorNode(Node, MantisMathUINode):
     bl_idname = "MathStaticVector"
     bl_label = "Static Vector Math"
     bl_icon = "NODE"
-    initialized : bpy.props.BoolProperty(default = False)
     mantis_node_class_name=bl_idname
     socket_templates = StaticVectorSockets
 
