@@ -275,13 +275,14 @@ def execute_handler(scene):
 
 from .versioning import versioning_tasks
 def node_version_update(node, do_once):
+    print("AAAAA")
     from .xForm_nodes_ui import xFormNode
     for bl_idname, task, required_kwargs in versioning_tasks:
         arg_map = {}
         if 'node' in required_kwargs:
             arg_map['node']=node
-        if 'node_tree' in required_kwargs:
-            arg_map['node_tree']=node.id_data
+        if 'tree' in required_kwargs or 'node_tree' in required_kwargs:
+            arg_map['tree']=node.id_data; arg_map['node_tree']=node.id_data
         # we'll match all, or categories, or specific bl_idname as needed.
         if ('ALL' in bl_idname) or \
                 ('XFORM' in bl_idname) and isinstance(node, xFormNode) or\
@@ -293,6 +294,7 @@ def node_version_update(node, do_once):
 
 def do_version_update(node_tree):
     # set updating status for dynamic nodes to prevent bugs in socket remapping
+    print("BBBBB")
     do_once = True
     for node in node_tree.nodes:
         if hasattr(node, 'is_updating'):
@@ -320,11 +322,14 @@ def do_version_update(node_tree):
 
 @persistent
 def version_update_handler(filename):
+    print ("CCCCC")
     for node_tree in bpy.data.node_groups: # ensure it can update again after file load.
         if node_tree.bl_idname in ["MantisTree", "SchemaTree"]:
                 node_tree.is_exporting=False; node_tree.is_executing=False
     for node_tree in bpy.data.node_groups:
         if node_tree.bl_idname in ["MantisTree", "SchemaTree"]:
+            print (node_tree.mantis_version[0], node_tree.mantis_version[1], node_tree.mantis_version[2])
+            print ("DDDDD")
             if (node_tree.mantis_version[0] < MANTIS_VERSION_MAJOR) or \
                (node_tree.mantis_version[1] < MANTIS_VERSION_MINOR) or \
                (node_tree.mantis_version[2] < MANTIS_VERSION_SUB):

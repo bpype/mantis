@@ -412,12 +412,6 @@ class UtilityFCurveNode(Node, MantisMiscNode):
     mantis_node_class_name=bl_idname
     socket_templates=FCurveSockets
     use_kf_nodes   : bpy.props.BoolProperty(default=True)
-            
-    def draw_buttons(self, context, layout):
-        layout.operator( 'mantis.fcurve_node_add_kf' )
-        if (len(self.inputs) > 1):
-            layout.operator( 'mantis.fcurve_node_remove_kf' )
-
 
 class UtilityDriverNode(Node, MantisMiscNode):
     """Represents a Driver relationship"""

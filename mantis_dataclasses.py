@@ -16,7 +16,10 @@ class MantisSocketTemplate():
     use_multi_input  : bool = field(default=False)
     ui_only          : bool = field(default=False)
     default_value    : Any = field(default=None)
-    # TODO: add versioning fields for Mantis, Blender version min/max
+    # this is a hint for the props_sockets system for complex situations
+    #  where multiple blender objects own the properties, like e.g. bone/posebone
+    prop_owner_group : str = field(default="")
+    # do? add versioning fields for Mantis, Blender version min/max
 
 @dataclass
 class xForm_info():

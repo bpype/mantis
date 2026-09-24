@@ -83,7 +83,7 @@ def hash_tree(tree):
 
 MANTIS_VERSION_MAJOR=0
 MANTIS_VERSION_MINOR=13
-MANTIS_VERSION_SUB=4
+MANTIS_VERSION_SUB=5
 
 class MantisTree(NodeTree):
     '''A custom node tree type that will show up in the editor type list'''
@@ -104,7 +104,7 @@ class MantisTree(NodeTree):
     execution_id:StringProperty(default='')
     # prev_execution_id:StringProperty(default='')
     mantis_version:IntVectorProperty(default=[
-        MANTIS_VERSION_MAJOR, MANTIS_VERSION_MINOR, MANTIS_VERSION_SUB])
+        MANTIS_VERSION_MAJOR, MANTIS_VERSION_MINOR-1, MANTIS_VERSION_SUB-1])
     # this prevents the node group from executing on the next depsgraph update
     # because I don't always have control over when the dg upadte happens.
     prevent_next_exec:BoolProperty(default=False)
@@ -1093,10 +1093,6 @@ class NodeLink:
             init_dependencies(to_node)
 
 class NodeSocket:
-    # @property # this is a read-only property.
-    # def is_linked(self):
-    #     return bool(self.links)
-
     def __init__(self, is_input = False,
                  node = None, name = None,
                  traverse_target = None):
@@ -1145,7 +1141,6 @@ class NodeSocket:
     @property
     def is_connected(self):
         return len(self.links)>0
-
 
     def __repr__(self):
         return self.node.__repr__() + "::" + self.name

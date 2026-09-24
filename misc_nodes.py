@@ -803,7 +803,8 @@ class UtilityDriverVariable(MantisNode):
         self.parameters["Driver Variable"] = None
         self.prepared=True
 
-    def evaluate_input(self, input_name):
+    # NOTE _index for interface consistency
+    def evaluate_input(self, input_name, _index=0):
         if input_name == 'Property':
             if self.inputs.get('Property'):
                 if self.inputs['Property'].is_linked:
@@ -908,28 +909,18 @@ class UtilityFCurve(MantisNode):
         super().reset_execution()
         self.prepared=True
 
-    def evaluate_input(self, input_name):
-        return super().evaluate_input(input_name)
-
     def bTransformPass(self, bContext = None,):
         prepare_parameters(self)
         extrap_mode = self.evaluate_input("Extrapolation Mode")
-        keys = [] # ugly but whatever
-        #['amplitude', 'back', 'bl_rna', 'co', 'co_ui', 'easing', 'handle_left', 'handle_left_type', 'handle_right', 'handle_right_type',
-        # 'interpolation', 'period', 'rna_type', 'select_control_point', 'select_left_handle', 'select_right_handle', 'type']
-        for k in self.inputs.keys():
-            if k == 'Extrapolation Mode' : continue
-            # print (self.inputs[k])
-            if (key := self.evaluate_input(k)) is None:
-                prOrange(f"WARN: No keyframe connected to {self}:{k}. Skipping Link.")
-            else:
-                keys.append(key)
+        keys = []
+        for i in range(len(self.inputs['Keyframes'].links)):
+            keys.append( self.evaluate_input('Keyframes', i) )
         if len(keys) <1:
             prOrange(f"WARN: no keys in fCurve {self}.")
         keys.append(extrap_mode)
         self.parameters["fCurve"] = keys
         self.executed = True
-#TODO make the fCurve data a data class instead of a dict
+#TODO make the keyframe, fCurve data classes instead of dicts!
 
 class UtilityDriver(MantisNode):
     '''A node representing an armature object'''
@@ -999,7 +990,8 @@ class UtilitySwitch(MantisNode):
         self.node_type = "DRIVER" # MUST be run in Pose mode
         self.prepared = True
 
-    def evaluate_input(self, input_name):
+    # NOTE: _index for interface consistency
+    def evaluate_input(self, input_name, _index=0):
         if input_name == 'Parameter':
             if self.inputs['Parameter'].is_connected:
                 trace = trace_single_line(self, input_name)

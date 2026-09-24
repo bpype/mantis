@@ -168,6 +168,8 @@ DriverVariableSockets = [
 FCurveSockets = [
     ExtrapolationMode := ST( name="Extrapolation Mode",
         bl_idname="eFCrvExtrapolationMode", is_input=True),
+    Keyframes := ST(name='Keyframes', bl_idname="KeyframeSocket", is_input=True,
+        use_multi_input=True,),
     fCurveOutput := ST(name="fCurve", bl_idname="FCurveSocket", is_input=False),
 ]
 

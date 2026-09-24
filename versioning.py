@@ -3,7 +3,11 @@
 
 from bpy.types import Node, NodeSocket
 from bpy.app import version as bpy_version
-from .utilities import prRed, prGreen, prPurple
+
+from .utilities import (prRed, prGreen, prPurple, prWhite,
+                              prOrange,
+                              wrapRed, wrapGreen, wrapPurple, wrapWhite,
+                              wrapOrange,)
 
 def version_upgrade_very_old(*args, **kwargs):
     node = kwargs['node']
@@ -348,9 +352,37 @@ def schema_enable_custom_interface_types(*args, **kwargs):
                 n.is_updating = False
         tree.do_live_update = True
             
-
-
-
+def update_fcurve_node_to_multi_socket(*args, **kwargs):
+    # return
+    node = kwargs['node']
+    prRed("BEANIS")
+    print (node)
+    live_updates = node.id_data.do_live_update
+    node.id_data.do_live_update = False
+    try:
+        from .utilities import get_socket_maps, do_relink
+        sockets_in, sockets_out = get_socket_maps(node,)
+        new_sockets_in = {}
+        for socket_name, links in sockets_in.items():
+            if links is None: continue
+            if 'Keyframe.' in socket_name:
+                print (socket_name, links)
+                if new_sockets_in.get('Keyframes'):
+                                                  # has to be in this order to come back alright.
+                                                  # assuming, that is, that the keys are sorted. they should be.
+                    new_sockets_in["Keyframes"] = sockets_in[socket_name] + new_sockets_in['Keyframes']
+                else:
+                    new_sockets_in["Keyframes"] = sockets_in[socket_name]
+                prWhite (new_sockets_in['Keyframes'])
+        do_relink(node, node.inputs['Keyframes'], new_sockets_in, in_out="INPUT",)
+        delete_me = []
+        for socket in node.inputs:
+            if 'Keyframe.' in socket.name:
+                delete_me.append(socket)
+        for socket in delete_me:
+            node.inputs.remove(socket)
+    finally:
+        node.id_data.do_live_update = live_updates
 
 
 
@@ -364,6 +396,7 @@ versioning_tasks = [
     (['LinkFloor'], up_0_12_25_replace_floor_offset_type, ['node']),
     (['XFORM'], up_0_13_0_new_custom_prop_node, ['node', 'node_tree']),
     (['SchemaTree'], schema_enable_custom_interface_types, ['tree']),
+    (['UtilityFCurve'], update_fcurve_node_to_multi_socket, ['node']),
 ]
 
 

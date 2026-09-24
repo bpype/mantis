@@ -177,6 +177,7 @@ def do_relink(node, socket, map, in_out='INPUT', parent_name = ''):
         tree = node.node_tree
         interface_in_out=in_out
     from bpy.types import NodeSocket, Node
+    from bpy.app import version as bpy_version
     get_string = '__extend__'
     if socket: get_string = socket.identifier
     from .base_definitions import SchemaUINode
@@ -184,6 +185,11 @@ def do_relink(node, socket, map, in_out='INPUT', parent_name = ''):
         # this happens when we are creating a new node group and need to update it from nothing.
         return
     val = map[get_string] # this will throw an error if the socket isn't there. Good!
+    # IF there are multiple  links going from one node-socket to this socket, then we have to relink
+    #  every socket but the first one before it can go in
+    # Counter for every socket starts at 0 and if it is greater than 0, add a reroute intervening
+    # then decrement the counter while relinking,
+    socket_counters = {}
     if isinstance(val, list):
         for sub_val in val:
             # this will only happen once because it assigns socket, so it is safe to do in the for loop.
@@ -210,7 +216,21 @@ def do_relink(node, socket, map, in_out='INPUT', parent_name = ''):
             if isinstance(sub_val, NodeSocket):
                 l = None
                 if in_out =='INPUT':
-                    l = node.id_data.links.new(input=sub_val, output=socket)
+                    counter_id=sub_val.node.name+"::"+sub_val.identifier
+                    if socket_counters.get(counter_id) is None:
+                        socket_counters[counter_id] = 0
+                    if socket_counters[counter_id] == 0:
+                        l = node.id_data.links.new(input=sub_val, output=socket)
+                    else:
+                        print ("i have to make a reroute node here lol")
+                        reroute = node.id_data.nodes.new('NodeReroute')
+                        # NOTE that this doesn't really do a good job of placing it. Whatever.
+                        reroute.location = node.location.lerp(sub_val.node.location, 0.25)
+                        l = node.id_data.links.new(input=sub_val, output=reroute.inputs[0])
+                        l = node.id_data.links.new(input=reroute.outputs[0], output=socket)
+                        if (bpy_version >= (4,4,0)): # correct the reroute color if possible
+                            reroute.socket_idname = socket.bl_idname
+                    socket_counters[counter_id] += 1
                 else:
                     l = node.id_data.links.new(input=socket, output=sub_val)
                 if l is None:
