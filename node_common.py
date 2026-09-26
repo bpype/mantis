@@ -293,7 +293,7 @@ def finish_driver(mantis_node, b_object, driver_item, prop):
             # NOTE: VERSIONING in Blender 5.0 we have to use pose bone for this, too.
             if bpy_version <= (5,0,0) and prop  == 'hide': # older blendders, we need the bone
                 bone_col = mantis_node.bGetParentArmature().data.bones
-            if prop  == 'show_wire': # TODO check if the bug that forced the above affects this
+            elif prop  == 'show_wire': # TODO check if the bug that forced the above affects this
                 bone_col = mantis_node.bGetParentArmature().data.bones
             else:
                 bone_col = mantis_node.bGetParentArmature().pose.bones

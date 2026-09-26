@@ -456,13 +456,6 @@ class xFormBone(xFormNode):
         if rotation_mode == "AUTO": rotation_mode = "XYZ"
         pb.rotation_mode = rotation_mode
         pb.id_properties_clear()
-        # these are kept around unless explicitly deleted.
-        # from .utilities import get_ui_node
-        # np = get_ui_node(self.signature, self.base_tree)
-        driver = None
-        do_prints=False
-
-        # custom properties
         self.setup_custom_props(pb, "Custom Properties")
 
         if (pb.is_in_ik_chain):
@@ -520,10 +513,10 @@ class xFormBone(xFormNode):
             'custom_shape_translation'    : ("Custom Object Translation",  (0.0,0.0,0.0) ),
             'custom_shape_rotation_euler' : ("Custom Object Rotation",  (0.0,0.0,0.0) ),
             'use_custom_shape_bone_size'  : ("Custom Object Scale to Bone Length",  True,),
-            # in 5.0.0 and newer I have to do pose bone also. Irritating.
-            # it doesn't hurt to do it in all versions.
-            'hide'                        : ("Hide", False),
         }
+        # in 5.0.0 and newer I have to do pose bone, this is an error in < 5.0
+        if bpy_version >=(5,0,0):
+            props_sockets['hide'] = ("Hide", False)
 
         evaluate_sockets(self, pb, props_sockets)
 
@@ -535,9 +528,6 @@ class xFormBone(xFormNode):
         }
         evaluate_sockets(self, pb.bone, props_sockets)
 
-
-        if (driver):
-            pass
         # whatever I was doing there.... was stupid. CLEAN UP TODO
         # this is the right thing to do.
         finish_drivers(self)
