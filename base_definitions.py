@@ -707,22 +707,10 @@ def can_remove_socket_for_autogen(node, socket) -> bool:
         return True # HACK because most utilities don't have socket templates yet
     return False
 
-# TODO:
-#   - get the execution context in the execution code
-#   - from there, begin to use it for stuff I can't do without it
-#   - and slowly start transferring stuff to it
-
-# The Mantis Overlay class is used to store node-tree specific information
-#  such as inputs and outputs
-# used for e.g. allowing strings to pass as $variables in node names
-class MantisOverlay():
-    def __init__( self, parent, inputs, outputs, ):
-        pass
-
 # The MantisExecutionContext class is used to store the execution-specific variables
 # that are used when executing the tree
 # Importantly, it is NOT used to store variables between solutions, these belong to the
-#   tree itself.
+#   tree class.
 class MantisExecutionContext():
     def __init__(
             self,
@@ -731,7 +719,10 @@ class MantisExecutionContext():
         self.base_tree = base_tree
         self.execution_id = base_tree.execution_id
         self.execution_failed=False
+        self.interface_nodes = {}
         self.b_objects={} # objects created by Mantis during execution
+        self.tagged_for_overlay = [] # nodes mutated by overlay system
+        self.overlay_data = [] # dict of list of Overlay objects
 
 from typing import Any
 
@@ -853,6 +844,13 @@ class MantisNode:
         change_handled=False
         if socket_name is None: socket_name = ui_socket.name
         value = ui_socket.default_value
+        # apply overlay variables here so this updates predictably
+        if (isinstance(value, str) and
+                (self.signature, ui_socket.identifier) in self.mContext.tagged_for_overlay):
+            from .readtree import node_scan_overlays
+            value = node_scan_overlays(self, ui_socket.identifier)
+        # TODO: I need to make Node Groups apply overlays downstream, but since
+        #       they don't update live anyway, no need just yet
         if socket_name == 'Enable': value = not value
         try:
             self.parameters[ui_socket.name]=value
@@ -925,6 +923,9 @@ class MantisNode:
                 # fill these because they are probably Input nodes.
                 elif hasattr(node_socket, "default_value"):
                     if (value := get_socket_value(node_socket)) is not None:
+                        if isinstance(value, str) and "$" in value:
+                            from .utilities import handle_overlay_detect
+                            value = handle_overlay_detect(self, node_socket.identifier, value)
                         self.parameters[key] = value
                     else:
                         raise RuntimeError(wrapRed("No value found for " + self.__repr__() + " when filling out node parameters for " + ui_node.name + "::"+node_socket.name))

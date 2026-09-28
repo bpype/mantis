@@ -940,93 +940,25 @@ def SugiyamaGraph(tree, iterations):
 def project_point_to_plane(point, origin, normal):
     return point - normal.dot(point- origin)*normal
 
-##################################################################################################
-# stuff I should probably refactor!!
-##################################################################################################
-
-# This is really, really stupid way to do this
-def gen_mantis_node_input_for_data(socket):
-    # Class List #TODO deduplicate
-    from . import xForm_nodes, link_nodes, misc_nodes, primitives_nodes, deformer_nodes, math_nodes, schema_nodes
-    from .internal_nodes import NoOpNode
-    classes = {}
-    for module in [xForm_nodes, link_nodes, misc_nodes, primitives_nodes, deformer_nodes, math_nodes, schema_nodes]:
-        for cls in module.TellClasses():
-            classes[cls.__name__] = cls
-    #
-    socket_class_map = {
-                        "MatrixSocket"                         : classes["InputMatrix"],
-                        "xFormSocket"                          : None,
-                        "RelationshipSocket"                   : NoOpNode,
-                        "DeformerSocket"                       : NoOpNode,
-                        "GeometrySocket"                       : classes["InputExistingGeometryData"],
-                        "EnableSocket"                         : classes["InputBoolean"],
-                        "HideSocket"                           : classes["InputBoolean"],
-                        #
-                        "DriverSocket"                         : None,
-                        "DriverVariableSocket"                 : None, 
-                        "FCurveSocket"                         : None, 
-                        "KeyframeSocket"                       : None,
-                        "BoneCollectionSocket"                 : classes["InputString"],
-                        #
-                        "xFormParameterSocket"                 : None,
-                        "ParameterBoolSocket"                  : classes["InputBoolean"],
-                        "ParameterIntSocket"                   : classes["InputFloat"],  #TODO: make an Int node for this
-                        "ParameterFloatSocket"                 : classes["InputFloat"],
-                        "ParameterVectorSocket"                : classes["InputVector"],
-                        "ParameterStringSocket"                : classes["InputString"],
-                        #
-                        "TransformSpaceSocket"                 : classes["InputTransformSpace"],
-                        "BooleanSocket"                        : classes["InputBoolean"],
-                        "BooleanThreeTupleSocket"              : classes["InputBooleanThreeTuple"],
-                        "RotationOrderSocket"                  : classes["InputRotationOrder"],
-                        "QuaternionSocket"                     : None,
-                        "QuaternionSocketAA"                   : None,
-                        "UnsignedIntSocket"                    : classes["InputFloat"],
-                        "IntSocket"                            : classes["InputFloat"],
-                        "StringSocket"                         : classes["InputString"],
-                        #
-                        "BoolUpdateParentNode"                 : classes["InputBoolean"],
-                        "IKChainLengthSocket"                  : classes["InputFloat"],
-                        "EnumInheritScale"                     : classes["InputString"],
-                        "EnumRotationMix"                      : classes["InputString"],
-                        "EnumRotationMixCopyTransforms"        : classes["InputString"],
-                        "EnumMaintainVolumeStretchTo"          : classes["InputString"],
-                        "EnumRotationStretchTo"                : classes["InputString"],
-                        "EnumTrackAxis"                        : classes["InputString"],
-                        "EnumUpAxis"                           : classes["InputString"],
-                        "EnumLockAxis"                         : classes["InputString"],
-                        "EnumLimitMode"                        : classes["InputString"],
-                        "EnumYScaleMode"                       : classes["InputString"],
-                        "EnumXZScaleMode"                      : classes["InputString"],
-                        "EnumCurveSocket"                      : classes["InputString"],
-                        "EnumMetaRigSocket"                    : classes["InputString"],
-                        # Deformers
-                        "EnumSkinning"                         : classes["InputString"],
-                        #
-                        "FloatSocket"                          : classes["InputFloat"],
-                        "FloatFactorSocket"                    : classes["InputFloat"],
-                        "FloatPositiveSocket"                  : classes["InputFloat"],
-                        "FloatAngleSocket"                     : classes["InputFloat"],
-                        "VectorSocket"                         : classes["InputVector"],
-                        "VectorEulerSocket"                    : classes["InputVector"],
-                        "VectorTranslationSocket"              : classes["InputVector"],
-                        "VectorScaleSocket"                    : classes["InputVector"],
-                        # Drivers             
-                        "EnumDriverVariableType"               : classes["InputString"],
-                        "EnumDriverVariableEvaluationSpace"    : classes["InputString"],
-                        "EnumDriverRotationMode"               : classes["InputString"],
-                        "EnumDriverType"                       : classes["InputString"],
-                        "EnumKeyframeInterpTypeSocket"         : classes["InputString"],
-                        "EnumKeyframeBezierHandleTypeSocket"   : classes["InputString"],
-                        # Math
-                        "MathFloatOperation"                   : classes["InputString"],
-                        "MathVectorOperation"                  : classes["InputString"],
-                        "MatrixTransformOperation"             : classes["InputString"],
-                        # Schema
-                        "WildcardSocket"                       : None,
-                       }
-    return socket_class_map.get(socket.bl_idname, None)
+# If a $ character is in a value, it is an overlay request
+# in the root tree, supply it immediately, otherwise tag this node
+# once we finish pulling data from the tree we handle the overlay.
+def handle_overlay_detect(node, socket_id, value) -> str:
+    mContext = node.mContext
+    root_tree = mContext.base_tree
+    root_items_tree = root_tree.interface.items_tree
+    # detect if it is in the root tree, if so, handle immediately
+    out_value = value
+    if node.signature[0] is None and len(node.signature) ==2:
+        for key, interface_item in root_items_tree.items():
+            if interface_item.item_type != "SOCKET": continue
+            if interface_item.in_out != "INPUT": continue
+            # NOTE this will need to change if overlays extend to other data types
+            if not hasattr(interface_item, "default_string"): continue
+            out_value = out_value.replace("$"+key, interface_item.default_string)
+    else: # since it is not root, we have to tag it.
+        mContext.tagged_for_overlay.append((node.signature, socket_id))
+    return out_value
 
 ####################################
 # CURVE STUFF

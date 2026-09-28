@@ -63,7 +63,7 @@ class AutoGenNode(MantisNode):
 class GroupInterface(MantisNode):
     def __init__(self, signature, base_tree, ui_node, in_out):
         super().__init__(signature, base_tree)
-        self.node_type = 'UTILITY'
+        self.node_type = 'INTERFACE'
         self.prepared, self.executed = True, True; sockets = []
         self.in_out = in_out
         # init the sockets based on in/out, then set up traversal
