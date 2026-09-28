@@ -380,6 +380,8 @@ LinkArmatureSockets=[
                  default_value=False, blender_property='use_bone_envelopes'),
     SockTemplate(name="Use Current Location", bl_idname='BooleanSocket', is_input=True,
                  default_value=False, blender_property='use_current_location'),
+    TargetsArray := replace(TargetTemplate, name='Targets', use_multi_input=True),
+    WeightsArray := replace(InfluenceTemplate, name='Weights', use_multi_input=True),
     InfluenceTemplate,
     EnableTemplate,
     OutputRelationshipTemplate,

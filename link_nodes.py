@@ -810,6 +810,10 @@ class LinkArmature(MantisLinkNode):
             num_targets = len( list(self.inputs.values())[6:] )//2
 
             props_sockets = self.gen_property_socket_map()
+            # TODO: currently this will only work if the constraint bones
+            #       are all in the same armature
+            # Mantis should intelligently provide a working armature constraint
+            # even if the user supplies targets that would not work in vanilla Blender
             targets_weights = {}
             for i in range(num_targets):
                 target = c.targets.new()

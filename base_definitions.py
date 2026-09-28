@@ -313,7 +313,6 @@ class LinkNode(MantisUINode):
 class xFormNode(MantisUINode):
     @classmethod
     def register(cls):
-        print (cls.__name__, cls.mantis_node_class_name)
         cls.mantis_class = mantis_class_from_library('.xForm_nodes', cls.mantis_node_class_name)
     def init(self, context):
         super().init(context)

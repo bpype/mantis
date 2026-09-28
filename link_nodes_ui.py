@@ -254,14 +254,6 @@ class LinkArmatureNode(Node, LinkNode):
     category_color=inheritColor
     socket_templates = LinkArmatureSockets
 
-    def draw_buttons(self, context, layout):
-        # return
-        layout.operator( 'mantis.link_armature_node_add_target' )
-        if (len(self.inputs) > 6):
-            layout.operator( 'mantis.link_armature_node_remove_target' )
-        else:
-            layout.label(text="")
-
 class LinkSplineIKNode(Node, LinkNode):
     """"A node representing Spline IK"""
     bl_idname = "LinkSplineIK"

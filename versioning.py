@@ -351,39 +351,46 @@ def schema_enable_custom_interface_types(*args, **kwargs):
             if hasattr(n, "is_updating"):
                 n.is_updating = False
         tree.do_live_update = True
-            
-def update_fcurve_node_to_multi_socket(*args, **kwargs):
-    # return
+
+
+
+# since this is basically the same operation, just do it all together
+def update_fcurve_and_armature_node_to_multi_socket(*args, **kwargs):
     node = kwargs['node']
-    prRed("BEANIS")
-    print (node)
+    prRed("BEPIS")
     live_updates = node.id_data.do_live_update
     node.id_data.do_live_update = False
+    # First we have to get the socket maps and re-init the sockets
+    from .utilities import get_socket_maps, do_relink
+    sockets_in, _sockets_out = get_socket_maps(node,)
+    node.inputs.clear(); node.outputs.clear()
+    node.init_sockets(node.socket_templates)
+    convert_keys = {'UtilityFCurve' : [ 'Keyframe', ],
+                    'LinkArmature'  : [ 'Target', 'Weight', ], }
     try:
-        from .utilities import get_socket_maps, do_relink
-        sockets_in, sockets_out = get_socket_maps(node,)
         new_sockets_in = {}
-        for socket_name, links in sockets_in.items():
-            if links is None: continue
-            if 'Keyframe.' in socket_name:
-                print (socket_name, links)
-                if new_sockets_in.get('Keyframes'):
-                                                  # has to be in this order to come back alright.
-                                                  # assuming, that is, that the keys are sorted. they should be.
-                    new_sockets_in["Keyframes"] = sockets_in[socket_name] + new_sockets_in['Keyframes']
-                else:
-                    new_sockets_in["Keyframes"] = sockets_in[socket_name]
-                prWhite (new_sockets_in['Keyframes'])
-        do_relink(node, node.inputs['Keyframes'], new_sockets_in, in_out="INPUT",)
-        delete_me = []
-        for socket in node.inputs:
-            if 'Keyframe.' in socket.name:
-                delete_me.append(socket)
-        for socket in delete_me:
-            node.inputs.remove(socket)
+        print (convert_keys[node.bl_idname])
+        for convert_key in convert_keys[node.bl_idname]:
+            for socket_name, links in sockets_in.items():
+                if links is None: continue
+                if convert_key+'.' in socket_name:
+                    print (socket_name, links)
+                    if new_sockets_in.get(convert_key+'s'):
+                                                    # has to be in this order to come back alright.
+                                                    # assuming, that is, that the keys are sorted. they should be.
+                        new_sockets_in[convert_key+'s'] = sockets_in[socket_name] + new_sockets_in[convert_key+'s']
+                    else:
+                        new_sockets_in[convert_key+'s'] = sockets_in[socket_name]
+                    prWhite (new_sockets_in[convert_key+'s'])
+            do_relink(node, node.inputs[convert_key+'s'], new_sockets_in, in_out="INPUT",)
+            delete_me = []
+            for socket in node.inputs:
+                if convert_key+'.' in socket.name:
+                    delete_me.append(socket)
+            for socket in delete_me:
+                node.inputs.remove(socket)
     finally:
         node.id_data.do_live_update = live_updates
-
 
 
 versioning_tasks = [
@@ -396,7 +403,8 @@ versioning_tasks = [
     (['LinkFloor'], up_0_12_25_replace_floor_offset_type, ['node']),
     (['XFORM'], up_0_13_0_new_custom_prop_node, ['node', 'node_tree']),
     (['SchemaTree'], schema_enable_custom_interface_types, ['tree']),
-    (['UtilityFCurve'], update_fcurve_node_to_multi_socket, ['node']),
+    (['UtilityFCurve', 'LinkArmature'],
+           update_fcurve_and_armature_node_to_multi_socket, ['node']),
 ]
 
 

@@ -167,6 +167,20 @@ def get_socket_maps(node, force=False):
                     raise RuntimeError(f"ERROR: Could not get socket data for socket of type: {sock.bl_idname}")
     return maps
 
+
+def generate_intervening_reroute(socket, other_socket,):
+    from bpy.app import version as bpy_version
+    print ("i have to make a reroute node here lol")
+    node = socket.node
+    reroute = node.id_data.nodes.new('NodeReroute')
+    # NOTE that this doesn't really do a good job of placing it. Whatever.
+    l = node.id_data.links.new(input=other_socket, output=reroute.inputs[0])
+    l = node.id_data.links.new(input=reroute.outputs[0], output=socket)
+    reroute.location = node.location.lerp(other_socket.node.location, 0.25)
+    if (bpy_version >= (4,4,0)): # correct the reroute color if possible
+        reroute.socket_idname = other_socket.bl_idname
+    return l
+
 # this function is completely overloaded with different purposes and code paths
 # TODO refactor everything that funnels into this function
 # make this stuff simpler.
@@ -177,7 +191,6 @@ def do_relink(node, socket, map, in_out='INPUT', parent_name = ''):
         tree = node.node_tree
         interface_in_out=in_out
     from bpy.types import NodeSocket, Node
-    from bpy.app import version as bpy_version
     get_string = '__extend__'
     if socket: get_string = socket.identifier
     from .base_definitions import SchemaUINode
@@ -214,32 +227,33 @@ def do_relink(node, socket, map, in_out='INPUT', parent_name = ''):
                 # then move it up and delete the other link.
                 # this also needs to modify the interface of the node tree.
             if isinstance(sub_val, NodeSocket):
+                counter_id=sub_val.node.name+"::"+sub_val.identifier
                 l = None
                 if in_out =='INPUT':
-                    counter_id=sub_val.node.name+"::"+sub_val.identifier
                     if socket_counters.get(counter_id) is None:
                         socket_counters[counter_id] = 0
                     if socket_counters[counter_id] == 0:
                         l = node.id_data.links.new(input=sub_val, output=socket)
                     else:
-                        print ("i have to make a reroute node here lol")
-                        reroute = node.id_data.nodes.new('NodeReroute')
-                        # NOTE that this doesn't really do a good job of placing it. Whatever.
-                        reroute.location = node.location.lerp(sub_val.node.location, 0.25)
-                        l = node.id_data.links.new(input=sub_val, output=reroute.inputs[0])
-                        l = node.id_data.links.new(input=reroute.outputs[0], output=socket)
-                        if (bpy_version >= (4,4,0)): # correct the reroute color if possible
-                            reroute.socket_idname = socket.bl_idname
+                        l = generate_intervening_reroute(socket, sub_val)
                     socket_counters[counter_id] += 1
                 else:
                     l = node.id_data.links.new(input=socket, output=sub_val)
                 if l is None:
                     raise RuntimeError("Could not create link")
             elif isinstance(sub_val, Node):
+                counter_id=sub_val.name+"::Output"
                 l = None
                 # this happens when it is a NodeReroute
                 if not socket.is_output:
-                    l = node.id_data.links.new(input=sub_val.outputs[0], output=socket)
+                    if socket_counters.get(counter_id) is None:
+                        socket_counters[counter_id] = 0
+                    if socket_counters[counter_id] == 0:
+                        l = node.id_data.links.new(input=sub_val.outputs[0], output=socket)
+                    else:
+                        # NOTE maybe this should make another reroute from the source to here instead
+                        l = generate_intervening_reroute(socket, sub_val.outputs[0])
+                    socket_counters[counter_id] += 1
                 else:
                     l = node.id_data.links.new(input=socket, output=sub_val.inputs[0])
                 if l is None:
