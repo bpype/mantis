@@ -42,6 +42,8 @@ prop_ignore = [ "__dict__", "__doc__", "__module__", "__weakref__",# "name",
                 "do_live_update", "is_executing", "is_exporting", "hash", "filepath",
                 "prevent_next_exec", "execution_id", "num_links", "tree_valid",
                 "interface_helper",
+                "socket_templates", # NOTE saving this may be good for versioning, but should
+                                    #      be per-class, and needs to be done elsewhere anyway
                 # node stuff
                 "mantis_node_class_name", "color", "height", "initialized", "select",
                 "show_options", "show_preview", "show_texture", "use_custom_color",
