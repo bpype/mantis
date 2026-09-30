@@ -41,7 +41,8 @@ class CirclePrimitive(PrimitiveNode):
         self.outputs.init_sockets(outputs)
         self.init_parameters(additional_parameters=additional_parameters)
 
-    def bGetObject(self):
+    # mode is unused but needed for interface consistency
+    def bGetObject(self, mode=''):
         from bpy import data
         # first try Curve, then try Mesh
         bObject = data.curves.get(self.evaluate_input("Name"))
@@ -85,8 +86,9 @@ class GeometryLattice(PrimitiveNode):
         super().reset_execution()
         self.prepared=False
         self.executed=False
-
-    def bGetObject(self):
+        
+    # mode is unused but needed for interface consistency
+    def bGetObject(self, mode=''):
         from bpy import data
         bObject = data.lattices.get(self.evaluate_input("Name"))
         return bObject
