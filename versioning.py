@@ -361,16 +361,16 @@ def update_fcurve_and_armature_node_to_multi_socket(*args, **kwargs):
     node.id_data.do_live_update = False
     # First we have to get the socket maps and re-init the sockets
     from .utilities import get_socket_maps, do_relink
+    convert_keys = {'UtilityFCurve' : [ 'Keyframe', ],
+                    'LinkArmature'  : [ 'Target', 'Weight', ], }
+    my_convert_keys = convert_keys[node.bl_idname]
     sockets_in, _sockets_out = get_socket_maps(node,)
     node.inputs.clear()
     input_templates = [st for st in node.socket_templates if st.is_input == True]
     node.init_sockets(input_templates)
-    convert_keys = {'UtilityFCurve' : [ 'Keyframe', ],
-                    'LinkArmature'  : [ 'Target', 'Weight', ], }
     try:
         new_sockets_in = {}
-        print (convert_keys[node.bl_idname])
-        for convert_key in convert_keys[node.bl_idname]:
+        for convert_key in my_convert_keys:
             for socket_name, links in sockets_in.items():
                 if links is None: continue
                 if convert_key+'.' in socket_name:
@@ -383,6 +383,14 @@ def update_fcurve_and_armature_node_to_multi_socket(*args, **kwargs):
                         new_sockets_in[convert_key+'s'] = sockets_in[socket_name]
                     prWhite (new_sockets_in[convert_key+'s'])
             do_relink(node, node.inputs[convert_key+'s'], new_sockets_in, in_out="INPUT",)
+        for socket_name, links in sockets_in.items():
+            proceed = True
+            for convert_key in my_convert_keys:
+                if convert_key in socket_name:
+                    proceed = False
+            if proceed:
+                do_relink(node, node.inputs[socket_name], sockets_in, in_out='INPUT')
+
     finally:
         node.id_data.do_live_update = live_updates
 

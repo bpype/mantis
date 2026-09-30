@@ -942,9 +942,9 @@ class MantisNode:
         return
 
     # gets targets for constraints and deformers and should handle all cases
-    def get_target_and_subtarget(self, constraint_or_deformer, input_name = "Target"):
+    def get_target_and_subtarget(self, constraint_or_deformer, input_name = "Target", index = 0,):
         from bpy.types import PoseBone, Object, SplineIKConstraint
-        subtarget = ''; target = self.evaluate_input(input_name)
+        subtarget = ''; target = self.evaluate_input(input_name, index)
         if target:
             if not hasattr(target, "bGetObject"):
                 if hasattr(constraint_or_deformer, 'name'):

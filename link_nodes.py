@@ -807,7 +807,7 @@ class LinkArmature(MantisLinkNode):
                 c.name = constraint_name
             self.bObject.append(c)
             # get number of targets
-            num_targets = len( list(self.inputs.values())[6:] )//2
+            num_targets = len( self.inputs['Targets'].links )
 
             props_sockets = self.gen_property_socket_map()
             # TODO: currently this will only work if the constraint bones
@@ -817,14 +817,12 @@ class LinkArmature(MantisLinkNode):
             targets_weights = {}
             for i in range(num_targets):
                 target = c.targets.new()
-                target_input_name = list(self.inputs.keys())[i*2+6  ]
-                weight_input_name = list(self.inputs.keys())[i*2+6+1]
-                self.get_target_and_subtarget(target, target_input_name)
-                weight_value=self.evaluate_input(weight_input_name)
+                self.get_target_and_subtarget(target, 'Targets', i)
+                weight_value=self.evaluate_input("Weights", i)
                 if not isinstance(weight_value, float):
                     weight_value=0
                 targets_weights[i]=weight_value
-                props_sockets["targets[%d].weight" % i] = (weight_input_name, 0)
+                props_sockets["targets[%d].weight" % i] = ("Weights", i)
             evaluate_sockets(self, c, props_sockets)
             for target, value in targets_weights.items():
                 c.targets[target].weight=value
