@@ -94,7 +94,6 @@ class MantisTree(NodeTree):
     tree_valid:BoolProperty(default=False)
     hash:StringProperty(default='')
     do_live_update:BoolProperty(default=True) # use this to disable updates for e.g. scripts
-    num_links:IntProperty(default=-1)
     # operator settings for re-exporting the tree.
     filepath:StringProperty(default="", subtype='FILE_PATH')
     export_all_subtrees_together:BoolProperty(default=True)
@@ -245,19 +244,6 @@ class MantisUINode:
     def init(self, context):
         self.init_sockets(self.socket_templates)
         self.initialized = True
-
-    def insert_link(self, link):
-        if (bpy.app.version >= (4, 4, 0)):
-            return # this causes a crash due to a bug.
-        context = bpy.context
-        if context.space_data:
-            node_tree = context.space_data.path[0].node_tree
-            if node_tree.do_live_update:
-                node_tree.update_tree(context)
-                if (link.to_socket.is_linked == False):
-                    node_tree.num_links+=1
-                elif (link.to_socket.is_multi_input):
-                    node_tree.num_links+=1
 
     def init_sockets(self, socket_templates : tuple[MantisSocketTemplate]):
         for template in socket_templates:
