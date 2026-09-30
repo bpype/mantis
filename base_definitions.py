@@ -47,7 +47,7 @@ def fix_reroute_colors(tree):
     if any((tree.is_executing, tree.is_exporting, tree.do_live_update==False, context.space_data is None) ):
         return
     from collections import deque
-    from .utilities import socket_seek
+    from .utilities import find_reroute_start_socket
     from .socket_definitions import MantisSocket
     reroutes_without_color = deque()
     for n in tree.nodes:
@@ -58,7 +58,7 @@ def fix_reroute_colors(tree):
             rr = reroutes_without_color.pop()
             if rr.inputs[0].is_linked:
                 link = rr.inputs[0].links[0]
-                socket = socket_seek(link, tree.links)
+                socket = find_reroute_start_socket(rr)
                 if isinstance(socket, MantisSocket):
                     rr.socket_idname = socket.bl_idname
     except Exception as e:

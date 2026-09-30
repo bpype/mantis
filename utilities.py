@@ -26,23 +26,11 @@ def prOrange(*args): print (*[wrapOrange(arg) for arg in args])
 def float_lerp(a : float, b : float, factor : float)  -> float:
     return (a * (1.0 - factor)) + (b * factor)
 
-# A fuction for getting to the end of a Reroute.
-# TODO: this seems really inefficient!
-def socket_seek(start_link, links):
-    link = start_link
-    while(link.from_socket):
-        for newlink in links:
-            if link.from_socket.node.inputs:
-                if link.from_node.bl_idname != 'NodeReroute':
-                    return link.from_socket
-                if newlink.to_socket == link.from_socket.node.inputs[0]:
-                    link=newlink; break
-        else:
-            break
-    return link.from_socket
-
-# THIS ONE is better. I don't know what I was thinking up above.
-# TODO: try and refactor to use this function instead
+# TODO: BUG may live here
+#I need to stress-test this to make sure it doesn't hang on:
+# - empty reroute nodes with no links
+# - links starting with reroute nodes with no inputs
+# - links ending with reroute nodes with no outputs
 def find_reroute_start_socket(reroute, track='BACK'):
     # "BACK" traces back through the tree
     # "FORWARD" traces forward through the tree
@@ -89,8 +77,12 @@ def clear_reroutes(links):
         else:
             kept_links.append(link)
     for start in rerouted_starts:
-        from_socket = socket_seek(start, rerouted)
-        new_link = DummyLink(from_socket=from_socket, to_socket=start.to_socket, from_mantis_node=None, to_mantis_node=None, multi_input_sort_id=start.multi_input_sort_id )
+        from_socket = find_reroute_start_socket(start.from_node)
+        new_link = DummyLink(from_socket=from_socket,
+                             to_socket=start.to_socket,
+                             from_mantis_node=None,
+                             to_mantis_node=None,
+                             multi_input_sort_id=start.multi_input_sort_id )
         kept_links.append(new_link)
     return kept_links
 
@@ -743,6 +735,12 @@ def get_link_in_out(link):
     return from_name, to_name
 
 def link_mantis_nodes(tree_path_names, link, local_mantis_nodes, from_suffix='', to_suffix=''):
+    links = clear_reroutes([link])
+    if links:
+        link = links[0]
+    else:
+        return
+
     dummy_types = ["DUMMY", "DUMMY_SCHEMA"]
     from_name, to_name = get_link_in_out(link)
     from_mantis_node = local_mantis_nodes.get( (*tree_path_names, from_name+from_suffix) )
@@ -763,6 +761,14 @@ def link_mantis_nodes(tree_path_names, link, local_mantis_nodes, from_suffix='',
             raise e
     else:
         prRed(from_mantis_node, to_mantis_node, (*tree_path_names, from_name+from_suffix), (*tree_path_names, to_name+to_suffix))
+        if to_mantis_node is None:
+            prRed( "Error: mantis node with signature "
+                    f"{(*tree_path_names, to_name+to_suffix)} " 
+                    "does not exist.")
+        if from_mantis_node is None:
+            prRed("Error: mantis node with signature "
+                  f"{(*tree_path_names, from_name+from_suffix)} " 
+                   "does not exist.")
         raise RuntimeError(wrapRed(f"Link not connected: {from_mantis_node} -> {to_mantis_node} in tree" ))
     
 def get_all_dependencies(mantis_node):
