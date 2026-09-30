@@ -357,14 +357,14 @@ def schema_enable_custom_interface_types(*args, **kwargs):
 # since this is basically the same operation, just do it all together
 def update_fcurve_and_armature_node_to_multi_socket(*args, **kwargs):
     node = kwargs['node']
-    prRed("BEPIS")
     live_updates = node.id_data.do_live_update
     node.id_data.do_live_update = False
     # First we have to get the socket maps and re-init the sockets
     from .utilities import get_socket_maps, do_relink
     sockets_in, _sockets_out = get_socket_maps(node,)
-    node.inputs.clear(); node.outputs.clear()
-    node.init_sockets(node.socket_templates)
+    node.inputs.clear()
+    input_templates = [st for st in node.socket_templates if st.is_input == True]
+    node.init_sockets(input_templates)
     convert_keys = {'UtilityFCurve' : [ 'Keyframe', ],
                     'LinkArmature'  : [ 'Target', 'Weight', ], }
     try:
@@ -383,12 +383,6 @@ def update_fcurve_and_armature_node_to_multi_socket(*args, **kwargs):
                         new_sockets_in[convert_key+'s'] = sockets_in[socket_name]
                     prWhite (new_sockets_in[convert_key+'s'])
             do_relink(node, node.inputs[convert_key+'s'], new_sockets_in, in_out="INPUT",)
-            delete_me = []
-            for socket in node.inputs:
-                if convert_key+'.' in socket.name:
-                    delete_me.append(socket)
-            for socket in delete_me:
-                node.inputs.remove(socket)
     finally:
         node.id_data.do_live_update = live_updates
 
