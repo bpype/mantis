@@ -48,7 +48,7 @@ classes.append(MantisPreferences)
 
 from os import environ
 if environ.get("ENABLEVIS"):
-    from .visualize import MantisVisualizeNode, MantisVisualizeOutput, MantisVisualizeTree
+    from .dev_helpers.visualize import MantisVisualizeNode, MantisVisualizeOutput, MantisVisualizeTree
     classes.extend([MantisVisualizeTree, MantisVisualizeNode, MantisVisualizeOutput, ])
 
 DOERROR = False

@@ -3,7 +3,7 @@
 from bpy.types import Node, NodeTree, Operator
 from bpy.props import StringProperty
 
-from .utilities import (prRed, prGreen, prPurple, prWhite,
+from ..utilities import (prRed, prGreen, prPurple, prWhite,
                               prOrange,
                               wrapRed, wrapGreen, wrapPurple, wrapWhite,
                               wrapOrange,)
@@ -34,7 +34,7 @@ class MantisVisualizeNode(Node):
         return label
 
     def gen_data(self, mantis_node, mode='DEBUG_CONNECTIONS'):
-        from .utilities import get_ui_node
+        from ..utilities import get_ui_node
         if mantis_node.node_type in ['SCHEMA', 'DUMMY']:
             np=None
         elif mantis_node.ui_signature is None:
@@ -114,7 +114,7 @@ def gen_vis_node( mantis_node,
                   links,
                   omit_simple=False,
                  ):
-    from .base_definitions import array_output_types
+    from ..base_definitions import array_output_types
     # if mantis_node.node_type == 'UTILITY' and \
     #      mantis_node.execution_prepared == True:
     #         return
@@ -133,8 +133,8 @@ def gen_vis_node( mantis_node,
 
 def visualize_tree(m_nodes, base_tree, context):
     # first create a MantisVisualizeTree
-    from .readtree import check_and_add_root
-    from .utilities import trace_all_nodes_from_root
+    from ..readtree import check_and_add_root
+    from ..utilities import trace_all_nodes_from_root
     import bpy
 
     base_tree.is_executing=True
@@ -215,7 +215,7 @@ def visualize_tree(m_nodes, base_tree, context):
             base_tree.is_executing=False
 
 
-from .ops_nodegroup import mantis_tree_poll_op
+from ..ops_nodegroup import mantis_tree_poll_op
 
 class MantisVisualizeOutput(Operator):
     """Mantis Visualize Output Operator"""
@@ -228,7 +228,7 @@ class MantisVisualizeOutput(Operator):
 
     def execute(self, context):
         from time import time
-        from .utilities import wrapGreen, prGreen
+        from ..utilities import wrapGreen, prGreen
 
         tree=context.space_data.path[0].node_tree
         tree.update_tree(context)
