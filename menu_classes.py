@@ -125,4 +125,7 @@ class MantisActiveTreePanel(Panel):
         layout.operator("mantis.execute_node_tree")
         layout.operator("mantis.force_display_update", text='Force Display Update')
         layout.operator("mantis.import_from_component_library")
-        
+        #
+        from .preferences import get_bl_addon_object
+        bl_mantis_addon = get_bl_addon_object()
+        layout.prop(bl_mantis_addon.preferences, "EnableSelectionSync", text='Sync Selection',)

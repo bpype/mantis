@@ -59,9 +59,25 @@ def widget_library_get(self):
 def widget_library_idiot_test(self, value):
     self.widget_library_path = filepath_idiot_test(value)
 
+
 class MantisPreferences(bpy.types.AddonPreferences):
     bl_idname = __package__
 
+    def callback_enable_selection_state(self, context):
+        from . import timers
+        timers.ENABLED = self.EnableSelectionSync
+        if timers.ENABLED == True:
+            bpy.app.timers.register(timers.timer_update_selection_sync)
+        else:
+            try:
+                bpy.app.timers.unregister(timers.timer_update_selection_sync)
+            except ValueError:
+                pass # It's not registered anymore. that's OK
+
+    def callback_sync_selection_poll_rate(self, context):
+        from . import timers
+        timers.SELECTION_POLL_RATE = self.SelectionSyncPollRate
+        
     # JSONprefix: bpy.props.StringProperty(
     #     name = "Prefix code file",
     #     subtype = 'FILE_PATH',
@@ -100,13 +116,26 @@ class MantisPreferences(bpy.types.AddonPreferences):
         description = "Location of .rig files to load automatically.",
         subtype = 'FILE_PATH',
         default = os.path.join(dir_path, 'auto_load_components'),)
-
+    EnableSelectionSync:bpy.props.BoolProperty(
+        name = "Enable Selection Sync",
+        description = "Sync selection of nodes and scene objects.",
+        default = True,
+        update = callback_enable_selection_state)
+    SelectionSyncPollRate:bpy.props.FloatProperty(
+        name = "Selection Sync Poll Rate",
+        description = "How often to check for changes in selection.",
+        default = 0.01,
+        update = callback_sync_selection_poll_rate)
+    
     def draw(self, context):
         layout = self.layout
         layout.label(text="Mantis Preferences")
-        layout.prop(self, "WidgetsLibraryFolder", icon='FILE_FOLDER')
+        layout.prop(self, "EnableSelectionSync")
+        layout.prop(self, "SelectionSyncPollRate")
         layout.prop(self, "WidgetDefaultCollection")
-        layout.prop(self, "ComponentsLibraryFolder", icon='FILE_FOLDER')
         layout.prop(self, "CurveDefaultCollection")
         layout.prop(self, "MetaArmatureDefaultCollection")
+        layout.label(text="Paths:")
+        layout.prop(self, "WidgetsLibraryFolder", icon='FILE_FOLDER')
+        layout.prop(self, "ComponentsLibraryFolder", icon='FILE_FOLDER')
         layout.prop(self, "ComponentsAutoLoadFolder", icon='FILE_FOLDER')

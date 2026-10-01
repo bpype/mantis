@@ -371,6 +371,18 @@ def autoload_components(filename):
             bl_addon_object.preferences.MetaArmatureDefaultCollection)):
         context.scene.collection.children.unlink(armature_collection)
 
+# This has to be done after file load because the file load clears the timers
+@persistent
+def begin_selection_sync_timer(filename):
+    # And here I will register any timers used by Mantis.
+    from .timers import timer_update_selection_sync, ENABLED, SELECTION_POLL_RATE
+    from .preferences import get_bl_addon_object
+    bl_mantis_addon = get_bl_addon_object()
+    if bl_mantis_addon and bl_mantis_addon.preferences:
+        ENABLED = bl_mantis_addon.preferences.EnableSelectionSync
+        SELECTION_POLL_RATE = bl_mantis_addon.preferences.SelectionSyncPollRate
+        bpy.app.timers.register(timer_update_selection_sync)
+
 # I'll need to do some fiddling here when it comes time to try
 #   and make rig definitions animatable.
 @persistent
@@ -425,6 +437,7 @@ def register():
     # add the handlers
     bpy.app.handlers.depsgraph_update_pre.insert(0, update_handler)
     bpy.app.handlers.depsgraph_update_post.insert(0, execute_handler)
+    bpy.app.handlers.load_post.insert(0, begin_selection_sync_timer)
     bpy.app.handlers.load_post.insert(0, autoload_components)
     bpy.app.handlers.load_post.insert(0, version_update_handler)
     bpy.app.handlers.animation_playback_pre.insert(0, on_animation_playback_pre_handler)
@@ -432,7 +445,6 @@ def register():
     bpy.app.handlers.undo_post.insert(0, on_undo_post_handler)
     # I'm adding mine in first to ensure other addons don't mess up mine
     # but I am a good citizen! so my addon won't mess up yours! probably...
-
 
 
 def unregister():
