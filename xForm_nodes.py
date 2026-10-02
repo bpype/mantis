@@ -84,7 +84,7 @@ class xFormNode(MantisNode):
             # we need to trace back all inputs
             custom_prop_data = self.evaluate_input(input, i)
             if not isinstance(custom_prop_data, custom_prop_template): continue
-            from .drivers import MantisDriver
+            from .utilities.drivers import MantisDriver
             name = custom_prop_data.name
             if name in ob.keys():
                 raise RuntimeError("Error: cannot create a custom property with "

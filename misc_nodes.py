@@ -927,7 +927,7 @@ class UtilityDriver(MantisNode):
 
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, DriverSockets)
-        from .drivers import MantisDriver
+        from .utilities.drivers import MantisDriver
         additional_parameters = {
           "Driver":MantisDriver(),
         }
@@ -938,13 +938,13 @@ class UtilityDriver(MantisNode):
 
     def reset_execution(self):
         super().reset_execution()
-        from .drivers import MantisDriver
+        from .utilities.drivers import MantisDriver
         self.parameters["Driver"]=MantisDriver()
         self.prepared=True
 
     def bRelationshipPass(self, bContext = None,):
         prepare_parameters(self)
-        from .drivers import MantisDriver
+        from .utilities.drivers import MantisDriver
         #prPurple("Executing Driver Node")
         my_vars = []
         keys = self.evaluate_input("fCurve")
@@ -982,7 +982,7 @@ class UtilitySwitch(MantisNode):
 
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, SwitchSockets)
-        from .drivers import MantisDriver
+        from .utilities.drivers import MantisDriver
         additional_parameters = {
           "Driver":MantisDriver(),
         }
@@ -1008,7 +1008,7 @@ class UtilitySwitch(MantisNode):
 
     def reset_execution(self):
         super().reset_execution()
-        from .drivers import MantisDriver
+        from .utilities.drivers import MantisDriver
         self.parameters["Driver"]=MantisDriver()
         self.prepared=True
 
@@ -1019,7 +1019,7 @@ class UtilitySwitch(MantisNode):
         if xForm : xForm = xForm.bGetObject()
         if not xForm:
             raise RuntimeError("Could not evaluate xForm for %s" % self)
-        from .drivers import MantisDriver
+        from .utilities.drivers import MantisDriver
         my_driver ={ "owner" : None,
                      "prop"  : None, # will be filled out in the node that uses the driver
                      "ind"   : -1, # same here

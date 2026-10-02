@@ -333,7 +333,7 @@ class DeformerHook(MantisDeformerNode):
         if isinstance(hook, (Bone, PoseBone)):
             driver['type']='SCRIPTED'
             driver['expression']="(((1/b)*a)+((1/b_001)*a_001)+((1/b_002)*a_002))/3"
-        from .drivers import CreateDrivers
+        from .utilities.drivers import CreateDrivers
         axes='XYZ'
         for i in range(3):
             suffix = "" if i == 0 else f"_{i:03d}" # explicit names -- 5.2 no longer uniquifies duplicates

@@ -137,7 +137,7 @@ class MantisTree(NodeTree):
         if (my_hash != self.hash) or force:
             self.hash = my_hash
             self.is_executing = True
-            from . import readtree
+            from .execution import readtree
             prGreen("Validating Tree: %s" % self.name)
             try:
                 import bpy # I am importing here so that the context passed in
@@ -184,7 +184,7 @@ class MantisTree(NodeTree):
             return
         prGreen("Executing Tree: %s" % self.name)
         self.is_executing = True
-        from . import readtree
+        from .execution import readtree
         try:
             context.scene.render.use_lock_interface = True
             readtree.execute_tree(self.parsed_tree, self, context, error_popups, profile=profile)
@@ -841,7 +841,7 @@ class MantisNode:
         # apply overlay variables here so this updates predictably
         if (isinstance(value, str) and
                 (self.signature, ui_socket.identifier) in self.mContext.tagged_for_overlay):
-            from .readtree import node_scan_overlays
+            from .execution.readtree import node_scan_overlays
             value = node_scan_overlays(self, ui_socket.identifier)
         # TODO: I need to make Node Groups apply overlays downstream, but since
         #       they don't update live anyway, no need just yet

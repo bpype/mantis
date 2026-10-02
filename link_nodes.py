@@ -777,7 +777,7 @@ class LinkDrivenParameter(MantisLinkNode):
         driver = self.evaluate_input("Value")
         try:
             for i, val in enumerate(self.parameters["Value"]):
-                from .drivers import MantisDriver
+                from .utilities.drivers import MantisDriver
                 if isinstance(val, MantisDriver):
                     driver["ind"] = i
                     val = driver

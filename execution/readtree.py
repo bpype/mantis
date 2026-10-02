@@ -1,4 +1,4 @@
-from .utilities.utilities import prRed, prGreen, prPurple, prWhite, prOrange, \
+from ..utilities.utilities import prRed, prGreen, prPurple, prWhite, prOrange, \
                         wrapRed, wrapGreen, wrapPurple, wrapWhite, wrapOrange
 
 
@@ -23,7 +23,7 @@ from .utilities.utilities import prRed, prGreen, prPurple, prWhite, prOrange, \
 # solution to hypothetical BUG could be to do traversal on the links
 # instead of the sockets.
 def grp_node_reroute_common(in_node, out_node, interface):
-    from .base_definitions import links_sort_key
+    from ..base_definitions import links_sort_key
     for in_node_input in in_node.inputs:
         i = 0
         if len(in_node_input.links)>1: # sort here to ensure correct sub_sort_id
@@ -46,7 +46,7 @@ def grp_node_reroute_common(in_node, out_node, interface):
             out_link.die()
 
 def reroute_links_grp(group, all_nodes):
-    from .internal_nodes import GroupInterface
+    from ..internal_nodes import GroupInterface
     interface = GroupInterface(
         ( *group.signature, "InputInterface"),
         group.base_tree, group.ui_node, 'INPUT',)
@@ -59,7 +59,7 @@ def reroute_links_grp(group, all_nodes):
 
 def reroute_links_grpout(group_output, all_nodes):
     if (group := all_nodes.get( ( *group_output.signature[:-1],) )):
-        from .internal_nodes import GroupInterface
+        from ..internal_nodes import GroupInterface
         interface = GroupInterface(
             ( *group.signature, "OutputInterface"),
             group.base_tree, group.ui_node, 'OUTPUT',)
@@ -72,10 +72,10 @@ def reroute_links_grpout(group_output, all_nodes):
 # FIXME I don't think these signatures are unique.
 # TODO this is a really silly and bad and also really dumb way to do this
 def insert_lazy_parents(mantis_node):
-    from .link_nodes import LinkInherit
+    from ..link_nodes import LinkInherit
     inherit_node = None
     if mantis_node.inputs["Relationship"].is_connected:
-        from .utilities.node_common import trace_single_line
+        from ..utilities.node_common import trace_single_line
         node_line, last_socket = trace_single_line(mantis_node, 'Relationship')
         # if last_socket is from a valid XFORM, it is the relationship in
         # because it was traversed from the xForm Out... so get the traverse target.
@@ -105,11 +105,11 @@ def insert_lazy_parents(mantis_node):
 #                                  DATA FROM NODES                                  #
 # *** # *** # *** # *** # *** # *** # *** # *** # *** # *** # *** # *** # *** # *** #
 
-from .base_definitions import replace_types, NodeSocket
+from ..base_definitions import replace_types, NodeSocket
 
 def autogen_node(base_tree, ui_socket, signature, mContext):
     mantis_node=None
-    from .internal_nodes import AutoGenNode
+    from ..internal_nodes import AutoGenNode
     mantis_node = AutoGenNode(signature, base_tree)
     mantis_node.mContext = mContext
     mantis_node.outputs.init_sockets([ui_socket.name])
@@ -119,7 +119,7 @@ def autogen_node(base_tree, ui_socket, signature, mContext):
 # TODO: investigate whether I can set the properties in the downstream nodes directly.
 #       I am doing this in Schema Solver and it seems to work quite efficiently.
 def make_connections_to_ng_dummy(base_tree, tree_path_names, local_mantis_nodes, all_mantis_nodes, to_mantis_node):
-    from .socket_definitions import no_default_value
+    from ..socket_definitions import no_default_value
     for inp in to_mantis_node.ui_node.inputs:
         if inp.bl_idname in no_default_value:
             continue
@@ -133,7 +133,7 @@ def make_connections_to_ng_dummy(base_tree, tree_path_names, local_mantis_nodes,
             #  using UUID signature leads to TERRIBLE CONFUSING BUGS.
             if from_mantis_node is None: 
                 from_mantis_node = autogen_node(base_tree, inp, signature, to_mantis_node.mContext)
-            from .utilities.node_common import get_socket_value
+            from ..utilities.node_common import get_socket_value
             if from_mantis_node: # autogen can fail and we should catch it.
                 from_mantis_node.parameters = {inp.name:get_socket_value(inp)}
                 local_mantis_nodes[signature] = from_mantis_node; all_mantis_nodes[signature] = from_mantis_node
@@ -142,7 +142,7 @@ def make_connections_to_ng_dummy(base_tree, tree_path_names, local_mantis_nodes,
                 prRed("No available auto-generated class for input %s in %s" % (inp.name, np.name))
 
 def gen_mantis_nodes(base_tree, current_tree, tree_path_names, mContext, all_mantis_nodes, local_mantis_nodes, dummy_nodes, group_nodes, schema_nodes ):
-    from .internal_nodes import DummyNode
+    from ..internal_nodes import DummyNode
     for ui_node in current_tree.nodes:
         # HACK I found that this isn't being set sometimes. I wonder why? It makes the most sense to do this here.
         if hasattr(ui_node, 'initialized'): ui_node.initialized=True
@@ -196,11 +196,11 @@ def data_from_tree(base_tree, tree_path, mContext, dummy_nodes, all_mantis_nodes
         current_tree = base_tree
     #
     if current_tree: # the node-group may not have a tree set - if so, ignore it.
-        from .utilities.utilities import clear_reroutes
+        from ..utilities.utilities import clear_reroutes
         links = clear_reroutes(list(current_tree.links))
         gen_mantis_nodes(base_tree, current_tree, tree_path_names, mContext, all_mantis_nodes, local_mantis_nodes, dummy_nodes, group_nodes, all_schema)
 
-        from .utilities.utilities import link_mantis_nodes
+        from ..utilities.utilities import link_mantis_nodes
         for link in links:
             link_mantis_nodes((None, *tree_path_names), link, local_mantis_nodes)
         if current_tree == base_tree:
@@ -216,7 +216,7 @@ forbidden_key_names = ["",]
 forbidden_in_key_name = ['$',]
 def node_scan_overlays(node, socket_id,):
     interface_nodes = node.mContext.interface_nodes
-    from .utilities.utilities import get_ui_node
+    from ..utilities.utilities import get_ui_node
     ui_node = get_ui_node(node.ui_signature, node.base_tree)
     # we'll assume that the overlay tag system checked if this is linked.
     # First let's check if it is a simple input node, by checking outputs that are marked "input"
@@ -296,7 +296,7 @@ def node_scan_overlays(node, socket_id,):
     node.parameters[socket_id] = result
     return result # because sometimes I need to get the result, too
 
-from .utilities.utilities import check_and_add_root, init_connections, init_dependencies, init_schema_dependencies
+from ..utilities.utilities import check_and_add_root, init_connections, init_dependencies, init_schema_dependencies
 
 def is_signature_in_other_signature(parent_signature, child_signature):
     # If the other signature is shorter, it isn't a child node
@@ -305,7 +305,7 @@ def is_signature_in_other_signature(parent_signature, child_signature):
     return parent_signature[0:] == child_signature[:len(parent_signature)]
 
 def solve_schema_to_tree(mantis_node, all_mantis_nodes, roots=[], error_popups=False):
-    from .utilities.utilities import get_ui_node
+    from ..utilities.utilities import get_ui_node
     np = get_ui_node(mantis_node.signature, mantis_node.base_tree)
     from .schema_solve import SchemaSolver
     solver = SchemaSolver(mantis_node, all_mantis_nodes.copy(), np, error_popups=error_popups)
@@ -347,7 +347,7 @@ schema_bl_idnames = [   "SchemaIndex",
                         "SchemaIncomingConnection",
                     ]
 
-from .utilities.utilities import get_all_dependencies
+from ..utilities.utilities import get_all_dependencies
 def get_schema_length_dependencies(node, all_nodes={}):
     """ Get a list of all dependencies for the given node's length or array properties.
         This function will also recursively search for dependencies in its sub-trees.
@@ -438,7 +438,7 @@ def insert_default_values_base_tree(base_tree, all_mantis_nodes):
             signature = ("MANTIS_AUTOGENERATED", "MANTIS_DEFAULT_ARMATURE",)
             autogen_mantis_node = all_mantis_nodes.get(signature)
             if autogen_mantis_node is None:
-                from .xForm_nodes import xFormArmature
+                from ..xForm_nodes import xFormArmature
                 autogen_mantis_node = xFormArmature(signature, base_tree)
                 autogen_mantis_node.parameters['Name']=base_tree.name+'_MANTIS_AUTOGEN'
                 autogen_mantis_node.mContext =  InputNode.mContext
@@ -457,7 +457,7 @@ def parse_tree(base_tree, error_popups=False):
     from uuid import uuid4
     base_tree.execution_id = uuid4().__str__() # set the unique id of this execution
 
-    from .base_definitions import MantisExecutionContext
+    from ..base_definitions import MantisExecutionContext
     mContext = MantisExecutionContext(base_tree=base_tree)
 
     import time
@@ -478,7 +478,7 @@ def parse_tree(base_tree, error_popups=False):
     from collections import deque
     unsolved_schema = deque()
 
-    from .base_definitions import array_output_types, GraphError
+    from ..base_definitions import array_output_types, GraphError
     for mantis_node in all_mantis_nodes.values():
         # TODO I still need to assign mContext here because of autogen_node
         # so I have to do a deeper refactor to ensure autogen nodes get this at creation time.
@@ -578,7 +578,7 @@ def parse_tree(base_tree, error_popups=False):
             continue # screen out the ui_node schema nodes, group in/out, and group placeholders
         # cleanup autogen nodes
         if mantis_node.signature[0] == "MANTIS_AUTOGENERATED" and len(mantis_node.inputs) == 0 and len(mantis_node.outputs) == 1:
-            from .base_definitions import can_remove_socket_for_autogen
+            from ..base_definitions import can_remove_socket_for_autogen
             output=list(mantis_node.outputs.values())[0]
             value=list(mantis_node.parameters.values())[0]
             # We can remove this node if it is safe to push it into the other node's socket.
@@ -606,7 +606,7 @@ def parse_tree(base_tree, error_popups=False):
     prWhite("Number of Nodes: %s" % (len(kept_mantis_node)))
     return kept_mantis_node
 
-from .utilities.utilities import switch_mode
+from ..utilities.utilities import switch_mode
 
 def execution_error_cleanup(node, exception, switch_objects = [], show_error=False ):
     from bpy import  context
@@ -644,7 +644,7 @@ def execution_error_cleanup(node, exception, switch_objects = [], show_error=Fal
     return exception
 
 def sort_execution(nodes):
-    from .utilities.node_common import GraphError
+    from ..utilities.node_common import GraphError
     from collections import deque
     xForm_pass = deque()
     execution_failed = False
@@ -689,7 +689,7 @@ def execute_tree(nodes, base_tree, context, error_popups = False, profile=False)
     mContext.execution_failed = False
 
     interface_nodes = {}
-    from .internal_nodes import GroupInterface
+    from ..internal_nodes import GroupInterface
     for node in nodes.values():
         if isinstance(node, GroupInterface):
             interface_nodes[node.signature] = node
@@ -709,7 +709,7 @@ def execute_tree(nodes, base_tree, context, error_popups = False, profile=False)
     select_me = []
     profiler = None
     if profile:
-        from .dev_helpers.profile_nodes import NodeProfiler
+        from ..dev_helpers.profile_nodes import NodeProfiler
         profiler = NodeProfiler()
         profiler.new_session(mContext.execution_id)
         sort_key = 'total'
@@ -794,7 +794,7 @@ def execute_tree(nodes, base_tree, context, error_popups = False, profile=False)
         if not execution_failed:
             prGreen(f"Executed tree of {len(sorted_nodes)} nodes in {tot_time} seconds")
         if profiler:
-            from .dev_helpers.profile_nodes import summarize_profile
+            from ..dev_helpers.profile_nodes import summarize_profile
             summarize_profile(profiler._current, pass_name='bPrepare', sort_key = sort_key)
             summarize_profile(profiler._current, pass_name='bTransformPass', sort_key = sort_key)
             summarize_profile(profiler._current, pass_name='bRelationshipPass', sort_key = sort_key)

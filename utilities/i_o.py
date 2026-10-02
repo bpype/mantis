@@ -194,7 +194,7 @@ def scan_tree_dependencies(base_tree, curves:set, armatures:set, ):
     for mantis_node in nodes.values():
         mantis_node.reset_execution()
         check_and_add_root(mantis_node, xForm_pass)
-    from ..readtree import sort_execution
+    from ..execution.readtree import sort_execution
     from .utilities import get_ui_node
     sorted_nodes, execution_failed = sort_execution(nodes, xForm_pass)
     if execution_failed:

@@ -39,7 +39,7 @@ def filepath_idiot_test(path):
     def do_error_popup():
             def error_popup_draw(self, context):
                 self.layout.label(text="A maximum of 1000 widget files is allowed in the Widget Library.")
-                self.layout.label(text="Make sure the WIdget Library does not scan a huge number of files/folders.")
+                self.layout.label(text="Make sure the Widget Library does not scan a huge number of files/folders.")
             from bpy import context
             context.window_manager.popup_menu(error_popup_draw, title="Error", icon='ERROR')
     try:

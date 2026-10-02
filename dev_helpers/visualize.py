@@ -133,7 +133,7 @@ def gen_vis_node( mantis_node,
 
 def visualize_tree(m_nodes, base_tree, context):
     # first create a MantisVisualizeTree
-    from ..readtree import check_and_add_root
+    from ..execution.readtree import check_and_add_root
     from ..utilities.utilities import trace_all_nodes_from_root
     import bpy
 

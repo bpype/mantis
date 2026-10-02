@@ -246,7 +246,7 @@ def evaluate_sockets(mantis_node, b_object, props_sockets,):
                             # prGreen("Doing the thing")
                             for val_index, value in enumerate(mantis_node.evaluate_input(sock)):
                                 # assume this will work, both because val should have the right number of elements, and because this should be the right data type.
-                                from ..drivers import MantisDriver
+                                from .drivers import MantisDriver
                                 if isinstance(value, MantisDriver):
                                     getattr(b_object,prop)[val_index] =  default[val_index]
                                     print("Adding driver %s to %s in %s" % (wrapPurple(prop), wrapWhite(mantis_node.signature[-1]), mantis_node))
@@ -330,5 +330,5 @@ def finish_drivers(mantis_node):
                     drivers.append(finish_driver(mantis_node, b_object, (driver_item, sub_item[1]), sub_item[0]))
             else:
                 drivers.append(finish_driver(mantis_node, b_object, driver_item, prop))
-    from ..drivers import CreateDrivers
+    from .drivers import CreateDrivers
     CreateDrivers(drivers)
