@@ -424,7 +424,8 @@ def get_node_data(ui_node):
         if propname == "parent" and value:
             value = value.name
         if not is_jsonable(value):
-            raise RuntimeError(f"Could not export...  {ui_node.name}, {propname}, {type(value)}")
+            prOrange(f"Warning: Could not export...  {ui_node.name}, {propname}, {type(value)}")
+            continue
         if value is None:
             continue
         node_props[propname] = value
