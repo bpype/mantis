@@ -1236,6 +1236,7 @@ class InputExistingGeometryObject(MantisNode):
         if ob is None and name:
             prRed(f"No object found with name {name} in {self}")
         self.bObject=ob
+        self.bRegisterObject('OBJECT', ob)
         self.prepared, self.executed = True, True
 
     def bGetObject(self, mode=''):

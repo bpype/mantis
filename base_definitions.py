@@ -16,6 +16,9 @@ from .mantis_dataclasses import MantisSocketTemplate
 FLOAT_EPSILON=0.0001 # used to check against floating point inaccuracy
 links_sort_key= lambda a : (-a.multi_input_sort_id, -a.sub_sort_id)
 
+selection_sync_node_to_object = {} # what objects a node spawns
+selection_sync_object_to_node = {} # what node an object comes from
+
 def TellClasses():
     #Why use a function to do this? Because I don't need every class to register.
     return [ MantisTree,
@@ -983,6 +986,23 @@ class MantisNode:
                 constraint_or_deformer.object = target
             if hasattr(constraint_or_deformer, "subtarget"):
                 constraint_or_deformer.subtarget = subtarget
+
+    # This function is for registering the objects a node creates in the global dict
+    # The goal is to have a global map of node <==> object and object <==> node
+    # so that we can do e.g. selection syncing, etc.
+    # NOTE: I'm not registering with mContext here, that happens elsewhere
+    #       but it is probably a good idea to refactor this together.
+    def bRegisterObject(self, ob_type, ob_value, sub_ob_value = None):
+        ui_signature = self.ui_signature
+        if selection_sync_node_to_object.get(ui_signature) is None:
+            selection_sync_node_to_object[ui_signature] = []
+        ob_name = ob_value.name
+        sub_ob_name = sub_ob_value.name if sub_ob_value else None
+        key = (ob_name, sub_ob_name)
+        if ob_type in ['OBJECT', 'BONE']:
+            selection_sync_object_to_node[key] = ui_signature
+            selection_sync_node_to_object[ui_signature].append( key )
+
 
 # PASSES DEFINED HERE!
     def bPrepare(self, bContext=None):

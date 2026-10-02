@@ -181,6 +181,7 @@ class xFormArmature(xFormNode):
         ob.id_properties_clear()
 
         self.bObject = ob.name
+        self.bRegisterObject('OBJECT', ob)
         ob.matrix_world = matrix.copy()
         ob.data.pose_position = 'REST'
         set_object_parent(self)
@@ -331,6 +332,7 @@ class xFormBone(xFormNode):
             raise RuntimeError("Could not create edit bone: ", name)
         assert (eb.name), "Bone must have a name."
         self.bObject = eb.name
+        self.bRegisterObject('BONE', xF, eb)
         # The bone should have relationships going in at this point.
 
         self.bSetParent(eb)
@@ -655,7 +657,7 @@ class xFormGeometryObject(xFormNode):
             self_edit_name=self.bObject.name,
         )
         self.parameters['xForm Out'] = my_info
-
+        self.bRegisterObject('OBJECT', self.bObject)
         self.prepared = True
 
     def bTransformPass(self, bContext = None,):
@@ -743,7 +745,7 @@ class xFormObjectInstance(xFormNode):
             self_edit_name=self.bObject.name,
         )
         self.parameters['xForm Out'] = my_info
-
+        self.bRegisterObject('OBJECT', self.bObject)
         self.prepared = True
 
     def bTransformPass(self, bContext = None,):
@@ -832,7 +834,7 @@ class xFormCurvePin(xFormNode):
             ob.empty_display_size = 0.10
 
         self.bObject = ob
-
+        self.bRegisterObject('OBJECT', self.bObject)
         reset_object_data(ob)
 
         node_line = trace_single_line(self, "Parent Curve")[0][1:] # slice excludes self
@@ -922,7 +924,6 @@ class xFormCurvePin(xFormNode):
     def bGetObject(self, mode = 'POSE'):
         return self.bObject
 
-
 # special thank-you to Natalie Cuthbert, who submitted a patch for this
 # it turned out, I already had this patch laying around
 # because I was too busy with grad school I didn't succeed in collaborating
@@ -958,4 +959,5 @@ class xFormGetBone(xFormNode):
                 case 'POSE':
                     bone = armature.pose.bones.get(self.evaluate_input("Bone"))
         assert self.bObject is not None, f"{self} failed to get the desired bone. Check if the bone name exists."
+        self.bRegisterObject('BONE', armature, bone)
         return bone

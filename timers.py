@@ -47,20 +47,19 @@ spaces = get_visible_space_data('VIEW_3D')
 for space in spaces:
     print(f"Found 3D Viewport: shading mode = {space.shading.type}")
 
-
 # TODO: now that I have this working...
 #  - Selection State should be tracked and handled on a per-object basis
 #     so Mantis should update selection state one item at a time
-#  - every object should be kept in the cache at all times.
-#  - a deselect event should check only the current tree for empty selection
-#  - but deselect should deselect anything that is tracked by Mantis
-#  - Mantis node <==> UI node relationships should be cached instead of using the
-#     tree cache, and ideally, saved in the Scene object or something
-#  - I'll probably do like a JSON or something for that, maybe a pickle
-#  - anyhow the important thing is I need a bi-directional dictionary so I can
-#     make the selection sync happen both ways
 #  - finally, I want to extend this selection sync to show active constraints and modifiers
 #     and to link up with viewport gizmo tools.
+#  - Serialize this so that it sticks around when saving/loading file
+# Eventually:
+#  - sync scene/object selection to node graph. I have the structure in place
+#     but I still have to write the selection tracking code.
+# Potential small BUG?
+#  - I am not ensuring the base/root tree is the same for the space and the nodes
+#  - because I straight up do not store that in the selection_sync dicts
+#  - easy to fix, will do it when clearing TODO's here.
 
 def timer_update_selection_sync():
     if not ENABLED: return None
@@ -73,7 +72,6 @@ def timer_update_selection_sync():
 
     selection_state_start = cached_selection_state.copy()
     selection_state = cached_selection_state.copy()
-    ui_signatures = list(cached_selection_state.keys())
     current_tree_selected_total = 0
 
     # we can't get UI context in this function so we have to checc all of them
@@ -91,8 +89,7 @@ def timer_update_selection_sync():
             active_ui_signature = (get_signature_from_space(tree_path[-1].nodes.active, space))
             for n in tree_path[-1].nodes:
                 if n.bl_idname not in WATCH_FOR_SELECTION: continue
-                ui_signatures.append( ui_signature := get_signature_from_space(n, space))
-                selection_state[ui_signature] = n.select
+                selection_state[ui_signature := get_signature_from_space(n, space)] = n.select
                 current_tree_selected_total += int(n.select)
     
     if parsed_tree is None:
@@ -103,55 +100,46 @@ def timer_update_selection_sync():
         
         from bpy import context
         view_layer = context.view_layer
-        deselect = bool(current_tree_selected_total)
+        deselect = not bool(current_tree_selected_total)
         try:
-            update_scene_selection_from_selection_sync(
-                parsed_tree, ui_signatures, active_ui_signature, view_layer,
+            update_scene_selection_from_node_graph_selection_sync(
+                active_ui_signature, view_layer,
                 selection_state, deselect)
         except Exception as e:
             prRed (e)
             return SELECTION_POLL_RATE
     return SELECTION_POLL_RATE
 
-
-# 1 get the selected nodes
-# 2 find mantis nodes that have the ui_signature of the node
-# 3 get their b-objects and select them
-def update_scene_selection_from_selection_sync(
-        parsed_tree, ui_signatures, active_ui_signature, view_layer,
+def update_scene_selection_from_node_graph_selection_sync(
+        active_ui_signature, view_layer,
         selection_state, deselect ):
-    # first check if this is a deselect event.
-    # if it is, do not change the active object!
-    # that makes the armature switch modes, it's annoying
-    deselect=False
-    if sum(selection_state.values()) == 0:
-        deselect=True
+    from .base_definitions import ( selection_sync_node_to_object,
+                                    selection_sync_object_to_node, )
     prWhite("Updating Scene Selection from Node Graph Selection")
-    for mantis_node in parsed_tree.values():
+    deselect_do_once = []
+    for ui_signature, selected in selection_state.items():
         this_one_is_active = False
-        if not hasattr(mantis_node, 'bGetObject'): continue
-        if mantis_node.node_type != 'XFORM': continue
-        if mantis_node.ui_signature in ui_signatures:
-            selected = selection_state[mantis_node.ui_signature]
-            if mantis_node.ui_signature == active_ui_signature:
-                this_one_is_active = True
-            ob = mantis_node.bGetObject()
-            if isinstance(ob, PoseBone):
-                if deselect:
-                    ob.select = False
-                    continue
-                ob.select = selected
-                if this_one_is_active: # set the active bone
-                    ob.id_data.data.bones.active = ob.bone
-                # now do its parent object...
-                if selected:
-                    if ob.id_data.select_get(view_layer=view_layer) == False:
-                        ob.id_data.select_set(True, view_layer=view_layer)
-                    if this_one_is_active:
-                        view_layer.objects.active = ob.id_data
-            elif isinstance(ob, bpy_object):
-                if ob.select_get(view_layer=view_layer) != selected:
-                    ob.select_set(selected, view_layer=view_layer)
+        if ui_signature == active_ui_signature: this_one_is_active = True
+        for object_key in selection_sync_node_to_object.get(ui_signature, []):
+            id_data = bpy.data.objects.get(object_key[0])
+            if object_key[1]: # we have a sub_value, it's a bone
+                if deselect and object_key[0] not in deselect_do_once:
+                    for pb in id_data.pose.bones:
+                        pb.select = False
+                    deselect_do_once.append(object_key[0])
+                else:
+                    ob = id_data.pose.bones[object_key[1]]
+                    ob.select = selected
+                    if this_one_is_active: # set the active bone
+                        id_data.data.bones.active = ob.bone
+                    # now do its parent object...
+                    if selected:
+                        id_data.select_set(True, view_layer=view_layer)
+                        if this_one_is_active:
+                            view_layer.objects.active = id_data
+            else: # or the sub_value is None, this is an object
+                ob = id_data
+                if deselect: selected = False
+                ob.select_set(selected, view_layer=view_layer)
                 if this_one_is_active and not deselect:
                     view_layer.objects.active = ob
-
