@@ -1,7 +1,7 @@
 import bpy
 from .base_definitions import MantisMathUINode
 from bpy.types import Node
-from .utilities import (prRed, prGreen, prPurple, prWhite,
+from .utilities.utilities import (prRed, prGreen, prPurple, prWhite,
                               prOrange,
                               wrapRed, wrapGreen, wrapPurple, wrapWhite,
                               wrapOrange,)

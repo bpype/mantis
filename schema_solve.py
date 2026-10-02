@@ -1,11 +1,11 @@
-from .utilities import (prRed, prGreen, prPurple, prWhite,
+from .utilities.utilities import (prRed, prGreen, prPurple, prWhite,
                               prOrange,
                               wrapRed, wrapGreen, wrapPurple, wrapWhite,
                               wrapOrange,)
-from .utilities import init_connections, init_dependencies, get_link_in_out
+from .utilities.utilities import init_connections, init_dependencies, get_link_in_out
 from .base_definitions import (SchemaUINode, custom_props_types, \
     MantisNodeGroup, SchemaGroup, replace_types, GraphError, links_sort_key)
-from .node_common import setup_custom_props_from_np
+from .utilities.node_common import setup_custom_props_from_np
 # a class that solves Schema nodes
 from bpy.types import NodeGroupInput, NodeGroupOutput
 
@@ -101,7 +101,7 @@ class SchemaSolver:
         """ Sort and store the links to/from the Schema group node."""
         for item in self.tree.interface.items_tree:
             if item.item_type == 'PANEL': continue
-            from .utilities import read_schema_type
+            from .utilities.utilities import read_schema_type
             parent_name = read_schema_type(item)
             # just gonna try and make the 
             match parent_name:
@@ -314,7 +314,7 @@ class SchemaSolver:
         from collections import deque
         unprepared = deque(from_node.hierarchy_dependencies)
         self.prepare_nodes(unprepared)
-        from .utilities import cap, wrap
+        from .utilities.utilities import cap, wrap
         get_index = from_node.evaluate_input("Index", self.index) # get the most recent link
         # getting the link at self.index just saves the trouble of killing the old links
         # that are left because this node is reused in each iteration of the schema
@@ -571,7 +571,7 @@ class SchemaSolver:
                                         SchemaConstOutput,
                                         SchemaOutgoingConnection,
                                         SchemaIncomingConnection,)
-        from .utilities import clear_reroutes, link_mantis_nodes
+        from .utilities.utilities import clear_reroutes, link_mantis_nodes
         from .base_definitions import array_output_types
         self.set_index_strings()
         frame_mantis_nodes = {}
@@ -660,7 +660,7 @@ class SchemaSolver:
                     {}, # just pass an empty dict, this argument is not needed in this context
                     self.all_nodes,
                     node)
-                from .utilities import init_schema_dependencies
+                from .utilities.utilities import init_schema_dependencies
                 init_schema_dependencies(node, self.all_nodes)
             else:
                 init_dependencies(node) # it is hard to overstate how important this single line of code is

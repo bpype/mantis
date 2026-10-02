@@ -1,4 +1,4 @@
-from .node_common import *
+from .utilities.node_common import *
 from bpy.types import Node
 from .base_definitions import MantisNode, MantisSocketTemplate
 from uuid import uuid4

@@ -1,4 +1,4 @@
-from .node_common import *
+from .utilities.node_common import *
 from .base_definitions import MantisNode, NodeSocket, FLOAT_EPSILON
 from .xForm_nodes import xFormArmature, xFormBone
 from .misc_nodes_socket_templates import *
@@ -93,7 +93,7 @@ def get_mesh_from_curve(curve_name : str, execution_id : str, bContext, ribbon=T
         from bpy import data
         curve = data.objects.get(curve_name)
         assert curve.type == 'CURVE', f"ERROR: object is not a curve: {curve_name}"
-        from .utilities import mesh_from_curve
+        from .utilities.utilities import mesh_from_curve
         curve_type='ribbon' if ribbon else 'wire'
         m_name = curve_name+'.'+str(hash(curve_name+'.'+curve_type+'.'+execution_id))
         if not (m := data.meshes.get(m_name)):
@@ -289,7 +289,7 @@ class InputThemeBoneColorSets(SimpleInputNode):
 
     def fill_parameters(self, ui_node=None):
         if not ui_node:
-            from .utilities import get_ui_node
+            from .utilities.utilities import get_ui_node
             ui_node = get_ui_node(self.ui_signature, self.base_tree)
         for i in range(20):
             self.parameters[f"Color {str(i).zfill(2)}"] = ui_node.outputs[i].default_value
@@ -302,7 +302,7 @@ class InputColorSetPallete(SimpleInputNode):
 
     def fill_parameters(self, ui_node=None):
         if not ui_node:
-            from .utilities import get_ui_node
+            from .utilities.utilities import get_ui_node
             ui_node = get_ui_node(self.ui_signature, self.base_tree)
         from .mantis_dataclasses import MantisSocketTemplate
         outputs = []
@@ -384,7 +384,7 @@ class UtilityMatrixFromCurve(MantisNode):
         else:
             if bContext is None: bContext = bpy.context # is this wise?
             m = get_mesh_from_curve(curve.name, self.base_tree.execution_id, bContext)
-            from .utilities import data_from_ribbon_mesh
+            from .utilities.utilities import data_from_ribbon_mesh
             #
             num_divisions = self.evaluate_input("Total Divisions")
             if num_divisions <= 0:
@@ -411,7 +411,7 @@ class UtilityMatrixFromCurve(MantisNode):
                 raise RuntimeError(f"Failed to read the curve {curve.name}.")
             normal=data[spline_index][2][0]
             # make sure the normal is perpendicular to the tail
-            from .utilities import make_perpendicular
+            from .utilities.utilities import make_perpendicular
             normal = make_perpendicular(axis, normal)
             mat = matrix_from_head_tail(head, tail, normal)
             # this is in world space... let's just convert it back
@@ -447,7 +447,7 @@ class UtilityPointFromCurve(MantisNode):
         else:
             if bContext is None: bContext = bpy.context # is this wise?
             m = get_mesh_from_curve(curve.name, self.base_tree.execution_id, bContext)
-            from .utilities import data_from_ribbon_mesh
+            from .utilities.utilities import data_from_ribbon_mesh
             #
             num_divisions = 1
             spline_index = self.evaluate_input("Spline Index")
@@ -488,7 +488,7 @@ class UtilityMatricesFromCurve(MantisNode):
         else:
             if bContext is None: bContext = bpy.context # is this wise?
             mesh = get_mesh_from_curve(curve.name, self.base_tree.execution_id, bContext)
-            from .utilities import data_from_ribbon_mesh
+            from .utilities.utilities import data_from_ribbon_mesh
             num_divisions = self.evaluate_input("Total Divisions")
             spline_index = self.evaluate_input("Spline Index")
             splines_factors = [ [] for i in range (spline_index)]
@@ -496,7 +496,7 @@ class UtilityMatricesFromCurve(MantisNode):
             splines_factors.append(factors)
             data = data_from_ribbon_mesh(mesh, splines_factors, curve.matrix_world)
             # [spline_index][points,tangents,normals][datapoint_index]
-            from .utilities import make_perpendicular
+            from .utilities.utilities import make_perpendicular
             matrices=[]
             for i in range(num_divisions):
                 if data[spline_index][1][i] < FLOAT_EPSILON: # radius is None:
@@ -577,7 +577,7 @@ class UtilityMatrixFromCurveSegment(MantisNode):
         else:
             if bContext is None: bContext = bpy.context # is this wise?
             m = get_mesh_from_curve(curve.name, self.base_tree.execution_id, bContext)
-            from .utilities import data_from_ribbon_mesh
+            from .utilities.utilities import data_from_ribbon_mesh
             # this section is dumb, but it is because the data_from_ribbon_mesh
             #  function is designed to pull data from many splines at once (for optimization)
             #  so we have to give it empty splines for each one we skip.
@@ -608,7 +608,7 @@ class UtilityMatrixFromCurveSegment(MantisNode):
             axis = (tail-head).normalized()
             normal=data[spline_index][2][segment_index]
             # make sure the normal is perpendicular to the tail
-            from .utilities import make_perpendicular
+            from .utilities.utilities import make_perpendicular
             normal = make_perpendicular(axis, normal)
             m = matrix_from_head_tail(head, tail, normal)
             m.translation = head - curve.location
@@ -663,7 +663,7 @@ class UtilityGetNearestFactorOnCurve(MantisNode):
                                     self.base_tree.execution_id,
                                     bContext, ribbon=False)
             # this is confusing but I am not re-writing these old functions
-            from .utilities import FindNearestPointOnWireMesh as nearest_point
+            from .utilities.utilities import FindNearestPointOnWireMesh as nearest_point
             spline_index = self.evaluate_input("Spline Index")
             ref_pt = self.evaluate_input("Reference Point")
             splines_points = [ [] for i in range (spline_index)]
@@ -1155,7 +1155,7 @@ class InputWidget(MantisNode):
         widgets_path = bl_mantis_addon.preferences.WidgetsLibraryFolder
         path = widgets_path+path # this guards the widgets root so the end-user
         #  can easily change the widgets directory without breaking things
-        from .utilities import get_default_collection
+        from .utilities.utilities import get_default_collection
         collection = get_default_collection(collection_type='WIDGET')
         file_name = os_path.split(path)[-1]
         obj_name = os_path.splitext(file_name)[0]
@@ -1181,7 +1181,7 @@ class InputWidget(MantisNode):
                 if len(self.bObject.modifiers) > 1 and self.bObject.modifiers[-1].name == "Simple Flip":
                     do_mirror=False
         else:
-            from .utilities import import_object_from_file
+            from .utilities.utilities import import_object_from_file
             self.bObject = import_object_from_file(path)
             if any(axes_flipped) or add_scale_modifier:
                 self.bObject = self.bObject.copy()
@@ -1193,7 +1193,7 @@ class InputWidget(MantisNode):
                 scale_modifier = self.bObject.modifiers.new("Scale Object Data", type='NODES')
             ng = data.node_groups.get("Scale Object Data")
             if ng is None:
-                from .geometry_node_graphgen import gen_scale_object_data_modifier
+                from .utilities.geometry_node_graphgen import gen_scale_object_data_modifier
                 ng = gen_scale_object_data_modifier()
             scale_modifier.node_group = ng
             scale_modifier['Socket_2']=scaling
@@ -1203,7 +1203,7 @@ class InputWidget(MantisNode):
                 flip_modifier = self.bObject.modifiers.new("Simple Flip", type="NODES")
             ng = data.node_groups.get("Simple Flip")
             if ng is None:
-                from .geometry_node_graphgen import gen_simple_flip_modifier
+                from .utilities.geometry_node_graphgen import gen_simple_flip_modifier
                 ng = gen_simple_flip_modifier()
             flip_modifier.node_group = ng
             # this changed at some point in Blender's versions ehhh
@@ -1280,7 +1280,7 @@ class UtilityDeclareCollections(MantisNode):
 
     def fill_parameters(self, ui_node=None):
         if ui_node is None:
-            from .utilities import get_ui_node
+            from .utilities.utilities import get_ui_node
             ui_node = get_ui_node(self.ui_signature, self.base_tree)
         templates=[]
         for out in ui_node.outputs:
@@ -1609,7 +1609,7 @@ class UtilityMatrixAlignRoll(MantisNode):
                                 " because the alignment vector is zero.")
         input=self.evaluate_input('Matrix').copy()
         y_axis= input.to_3x3().transposed()[1]
-        from .utilities import project_point_to_plane
+        from .utilities.utilities import project_point_to_plane
         projected=project_point_to_plane(
             align_axis.normalized(), Vector((0,0,0)), y_axis).normalized()
         # now that we have the projected vector, transform the points from
@@ -1684,7 +1684,7 @@ class UtilityArrayGet(MantisNode):
             oob   = self.evaluate_input("OoB Behaviour")
             index = self.evaluate_input("Index")
 
-            from .utilities import cap, wrap
+            from .utilities.utilities import cap, wrap
             # we must assume that the array has sent the correct number of links
             if oob == 'WRAP':
                 index = wrap(0, len(self.inputs['Array'].links), index)

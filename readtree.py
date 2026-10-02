@@ -1,4 +1,4 @@
-from .utilities import prRed, prGreen, prPurple, prWhite, prOrange, \
+from .utilities.utilities import prRed, prGreen, prPurple, prWhite, prOrange, \
                         wrapRed, wrapGreen, wrapPurple, wrapWhite, wrapOrange
 
 
@@ -75,7 +75,7 @@ def insert_lazy_parents(mantis_node):
     from .link_nodes import LinkInherit
     inherit_node = None
     if mantis_node.inputs["Relationship"].is_connected:
-        from .node_common import trace_single_line
+        from .utilities.node_common import trace_single_line
         node_line, last_socket = trace_single_line(mantis_node, 'Relationship')
         # if last_socket is from a valid XFORM, it is the relationship in
         # because it was traversed from the xForm Out... so get the traverse target.
@@ -133,7 +133,7 @@ def make_connections_to_ng_dummy(base_tree, tree_path_names, local_mantis_nodes,
             #  using UUID signature leads to TERRIBLE CONFUSING BUGS.
             if from_mantis_node is None: 
                 from_mantis_node = autogen_node(base_tree, inp, signature, to_mantis_node.mContext)
-            from .node_common import get_socket_value
+            from .utilities.node_common import get_socket_value
             if from_mantis_node: # autogen can fail and we should catch it.
                 from_mantis_node.parameters = {inp.name:get_socket_value(inp)}
                 local_mantis_nodes[signature] = from_mantis_node; all_mantis_nodes[signature] = from_mantis_node
@@ -196,11 +196,11 @@ def data_from_tree(base_tree, tree_path, mContext, dummy_nodes, all_mantis_nodes
         current_tree = base_tree
     #
     if current_tree: # the node-group may not have a tree set - if so, ignore it.
-        from .utilities import clear_reroutes
+        from .utilities.utilities import clear_reroutes
         links = clear_reroutes(list(current_tree.links))
         gen_mantis_nodes(base_tree, current_tree, tree_path_names, mContext, all_mantis_nodes, local_mantis_nodes, dummy_nodes, group_nodes, all_schema)
 
-        from .utilities import link_mantis_nodes
+        from .utilities.utilities import link_mantis_nodes
         for link in links:
             link_mantis_nodes((None, *tree_path_names), link, local_mantis_nodes)
         if current_tree == base_tree:
@@ -216,7 +216,7 @@ forbidden_key_names = ["",]
 forbidden_in_key_name = ['$',]
 def node_scan_overlays(node, socket_id,):
     interface_nodes = node.mContext.interface_nodes
-    from .utilities import get_ui_node
+    from .utilities.utilities import get_ui_node
     ui_node = get_ui_node(node.ui_signature, node.base_tree)
     # we'll assume that the overlay tag system checked if this is linked.
     # First let's check if it is a simple input node, by checking outputs that are marked "input"
@@ -296,7 +296,7 @@ def node_scan_overlays(node, socket_id,):
     node.parameters[socket_id] = result
     return result # because sometimes I need to get the result, too
 
-from .utilities import check_and_add_root, init_connections, init_dependencies, init_schema_dependencies
+from .utilities.utilities import check_and_add_root, init_connections, init_dependencies, init_schema_dependencies
 
 def is_signature_in_other_signature(parent_signature, child_signature):
     # If the other signature is shorter, it isn't a child node
@@ -305,7 +305,7 @@ def is_signature_in_other_signature(parent_signature, child_signature):
     return parent_signature[0:] == child_signature[:len(parent_signature)]
 
 def solve_schema_to_tree(mantis_node, all_mantis_nodes, roots=[], error_popups=False):
-    from .utilities import get_ui_node
+    from .utilities.utilities import get_ui_node
     np = get_ui_node(mantis_node.signature, mantis_node.base_tree)
     from .schema_solve import SchemaSolver
     solver = SchemaSolver(mantis_node, all_mantis_nodes.copy(), np, error_popups=error_popups)
@@ -347,7 +347,7 @@ schema_bl_idnames = [   "SchemaIndex",
                         "SchemaIncomingConnection",
                     ]
 
-from .utilities import get_all_dependencies
+from .utilities.utilities import get_all_dependencies
 def get_schema_length_dependencies(node, all_nodes={}):
     """ Get a list of all dependencies for the given node's length or array properties.
         This function will also recursively search for dependencies in its sub-trees.
@@ -606,7 +606,7 @@ def parse_tree(base_tree, error_popups=False):
     prWhite("Number of Nodes: %s" % (len(kept_mantis_node)))
     return kept_mantis_node
 
-from .utilities import switch_mode
+from .utilities.utilities import switch_mode
 
 def execution_error_cleanup(node, exception, switch_objects = [], show_error=False ):
     from bpy import  context
@@ -644,7 +644,7 @@ def execution_error_cleanup(node, exception, switch_objects = [], show_error=Fal
     return exception
 
 def sort_execution(nodes):
-    from .node_common import GraphError
+    from .utilities.node_common import GraphError
     from collections import deque
     xForm_pass = deque()
     execution_failed = False

@@ -1,4 +1,4 @@
-from .node_common import *
+from .utilities.node_common import *
 from .base_definitions import MantisNode, NodeSocket
 from .xForm_socket_templates import *
 from .mantis_dataclasses import xForm_info
@@ -772,7 +772,7 @@ class xFormObjectInstance(xFormNode):
         modifier = self.bObject.modifiers.new("Object Instance", type='NODES')
         ng = data.node_groups.get("Object Instance")
         if ng is None:
-            from .geometry_node_graphgen import gen_object_instance_node_group
+            from .utilities.geometry_node_graphgen import gen_object_instance_node_group
             ng = gen_object_instance_node_group()
         modifier.node_group = ng
         modifier["Socket_0"] = source_ob
@@ -853,7 +853,7 @@ class xFormCurvePin(xFormNode):
         #
         # always do this so that everything stays consistent.
         spline_index = self.evaluate_input("Spline Index")
-        from .utilities import get_extracted_spline_object
+        from .utilities.utilities import get_extracted_spline_object
         curve = get_extracted_spline_object(curve, spline_index, self.mContext)
         # Link to Scene:
         for link_me in [ob, curve]:

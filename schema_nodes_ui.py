@@ -1,13 +1,13 @@
 import bpy
 from .base_definitions import SchemaUINode
 from bpy.types import Node
-from .utilities import (prRed, prGreen, prPurple, prWhite,
+from .utilities.utilities import (prRed, prGreen, prPurple, prWhite,
                               prOrange,
                               wrapRed, wrapGreen, wrapPurple, wrapWhite,
                               wrapOrange,)
 from bpy.props import BoolProperty
 
-from .utilities import (get_socket_maps, relink_socket_map,
+from .utilities.utilities import (get_socket_maps, relink_socket_map,
                         do_relink, read_schema_type)
 
 from .schema_nodes_socket_templates import *

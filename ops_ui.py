@@ -3,7 +3,7 @@
 
 import bpy
 from bpy.types import Operator
-from .utilities import (prRed, prGreen, prPurple, prWhite,
+from .utilities.utilities import (prRed, prGreen, prPurple, prWhite,
                               prOrange,
                               wrapRed, wrapGreen, wrapPurple, wrapWhite,
                               wrapOrange,)

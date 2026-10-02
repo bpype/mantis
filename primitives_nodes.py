@@ -1,4 +1,4 @@
-from .node_common import *
+from .utilities.node_common import *
 from .base_definitions import MantisNode, NodeSocket
 
 def TellClasses():

@@ -1,7 +1,7 @@
 import bpy
 from bpy.types import NodeTree, Node, NodeSocket
 from .base_definitions import LinkNode, GraphError
-from .utilities import (prRed, prGreen, prPurple, prWhite,
+from .utilities.utilities import (prRed, prGreen, prPurple, prWhite,
                               prOrange,
                               wrapRed, wrapGreen, wrapPurple, wrapWhite,
                               wrapOrange,)

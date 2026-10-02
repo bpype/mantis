@@ -8,13 +8,13 @@ from . import ( ops_nodegroup,
                 primitives_nodes_ui,
                 deformer_nodes_ui,
                 math_nodes_ui,
-                i_o,
                 schema_nodes_ui,
                 menu_classes,
               )
 from .ops_generate_tree import GenerateMantisTree
 
-from .utilities import prRed
+from .utilities import i_o
+from .utilities.utilities import prRed
 
 from .base_definitions import (MANTIS_VERSION_MAJOR,
                                MANTIS_VERSION_MINOR,
@@ -335,8 +335,8 @@ def autoload_components(filename):
     # this should not be blocking or slow!
     print("Auto-loading components")
     from os import path as os_path
-    from .utilities import get_component_library_items, get_default_collection
-    from .i_o import do_import
+    from .utilities.utilities import get_component_library_items, get_default_collection
+    from .utilities.i_o import do_import
     from .preferences import get_bl_addon_object
     import json
     from bpy import context, data

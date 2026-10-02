@@ -83,7 +83,7 @@ class MantisAddArmature(Menu):
             components_path = bl_mantis_addon.preferences.ComponentsLibraryFolder
             # now we're clear to do the menu function
             layout = self.layout
-            from .utilities import get_component_library_items
+            from .utilities.utilities import get_component_library_items
             component_items = get_component_library_items()
             for component_item in component_items:
                 # how to "EXEC_DEFAULT" here?

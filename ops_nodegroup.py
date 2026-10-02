@@ -2,7 +2,7 @@ import bpy
 from bpy.types import Operator
 from mathutils import Vector
 
-from .utilities import (prRed, prGreen, prPurple, prWhite,
+from .utilities.utilities import (prRed, prGreen, prPurple, prWhite,
                               prOrange,
                               wrapRed, wrapGreen, wrapPurple, wrapWhite,
                               wrapOrange,)
@@ -50,7 +50,7 @@ class MantisGroupNodes(Operator):
             for path_item in context.space_data.path:
                 path_item.node_tree.is_exporting = True
 
-            from .i_o import export_to_json, do_import
+            from .utilities.i_o import export_to_json, do_import
             from random import random
             grp_name = "".join([chr(int(random()*30)+35) for i in range(20)])
             trees=[base_tree]
@@ -171,7 +171,7 @@ class MantisEditGroup(Operator):
                     active.is_updating = False
                 # call update to force the node group to check if its tree has changed
                 # now we need to loop through the tree and update all node groups of this type.
-                from .utilities import get_all_nodes_of_type
+                from .utilities.utilities import get_all_nodes_of_type
                 for g in get_all_nodes_of_type(base_tree, "MantisNodeGroup") + \
                          get_all_nodes_of_type(base_tree, "MantisSchemaGroup"):
                     if g.node_tree == active.node_tree:
@@ -273,7 +273,7 @@ class ExecuteNodeTree(Operator):
 
     def execute(self, context):
         from time import time
-        from .utilities import wrapGreen
+        from .utilities.utilities import wrapGreen
 
         tree=context.space_data.path[0].node_tree
 
@@ -494,7 +494,7 @@ class CleanUpNodeGraph(bpy.types.Operator):
 
     def execute(self, context):
         base_tree=context.space_data.path[-1].node_tree
-        from .utilities import SugiyamaGraph
+        from .utilities.utilities import SugiyamaGraph
         SugiyamaGraph(base_tree, 12)
         return {'FINISHED'}
 
@@ -992,7 +992,7 @@ class ConvertBezierCurveToNURBS(Operator):
         return (context.active_object is not None) and (context.active_object.type=='CURVE')
 
     def execute(self, context):
-        from .utilities import nurbs_copy_bez_spline
+        from .utilities.utilities import nurbs_copy_bez_spline
         curve = context.active_object
         bez=[]
         for spl in curve.data.splines:

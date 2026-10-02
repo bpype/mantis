@@ -1,6 +1,6 @@
 from bpy.types import Operator
 import bpy
-from .utilities import (prRed, prGreen, prPurple, prWhite,
+from .utilities.utilities import (prRed, prGreen, prPurple, prWhite,
                               prOrange,
                               wrapRed, wrapGreen, wrapPurple, wrapWhite,
                               wrapOrange,)
@@ -1093,7 +1093,7 @@ class GenerateMantisTree(Operator):
                     print(s.getvalue())
             else:
                 do_generate_graph(context, node_tree, include_links_and_deforms =  self.include_links_and_deforms, generate_children=self.generate_children)
-            from .utilities import SugiyamaGraph
+            from .utilities.utilities import SugiyamaGraph
             try: # the graph gen code has selected the nodes to sort.
                 SugiyamaGraph(node_tree, 16)
             except ImportError: # if for some reason Sugiyama isn't available

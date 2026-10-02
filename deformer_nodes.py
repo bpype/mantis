@@ -1,9 +1,9 @@
-from .node_common import *
+from .utilities.node_common import *
 from .xForm_nodes import xFormGeometryObject, xFormObjectInstance
 from .misc_nodes import InputExistingGeometryObject
 from .base_definitions import MantisNode
 from .mantis_dataclasses import MantisSocketTemplate
-from .utilities import (prRed, prGreen, prPurple, prWhite, prOrange,
+from .utilities.utilities import (prRed, prGreen, prPurple, prWhite, prOrange,
                         wrapRed, wrapGreen, wrapPurple, wrapWhite,
                         wrapOrange,)
 
@@ -74,7 +74,7 @@ def standard_modifier_bind(self, bContext=None, operator=None):
         # we'll only bind it if it is un-muted.
         if self.evaluate_input("Enable in Viewport") == False:
             continue
-        from .utilities import bind_modifier_operator
+        from .utilities.utilities import bind_modifier_operator
         bind_modifier_operator(d, operator)
 
 class DeformerArmature(MantisDeformerNode):
@@ -366,7 +366,7 @@ class DeformerHook(MantisDeformerNode):
             ob=xf.bGetObject()
             if ob.type == 'CURVE':
                 spline_index = self.evaluate_input("Spline Index")
-                from .utilities import get_extracted_spline_object
+                from .utilities.utilities import get_extracted_spline_object
                 ob = get_extracted_spline_object(ob, spline_index, self.mContext)
             
             reuse = False
@@ -504,7 +504,7 @@ class DeformerMorphTargetDeform(MantisDeformerNode):
             return # nothing to do here.
         
         # at this point we make the node tree
-        from .geometry_node_graphgen import gen_morph_target_nodes
+        from .utilities.geometry_node_graphgen import gen_morph_target_nodes
         m, props_sockets = gen_morph_target_nodes(
                             self.evaluate_input("Name"),
                             xf.bGetObject(),

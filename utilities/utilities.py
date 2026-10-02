@@ -56,7 +56,7 @@ def find_reroute_start_socket(reroute, track='BACK'):
 # this creates fake links that have the same interface as Blender's
 # so that I can bypass Reroutes
 def clear_reroutes(links):
-    from .base_definitions import DummyLink
+    from ..base_definitions import DummyLink
     kept_links, rerouted_starts = [], []
     rerouted = []
     all_links = links.copy()
@@ -152,7 +152,7 @@ def get_socket_maps(node, force=False):
                     continue
                 map[sock.identifier]=val
             else:
-                from .socket_definitions import no_default_value
+                from ..socket_definitions import no_default_value
                 if sock.bl_idname in no_default_value:
                     map[sock.identifier]=None
                 else:
@@ -185,7 +185,7 @@ def do_relink(node, socket, map, in_out='INPUT', parent_name = ''):
     from bpy.types import NodeSocket, Node
     get_string = '__extend__'
     if socket: get_string = socket.identifier
-    from .base_definitions import SchemaUINode
+    from ..base_definitions import SchemaUINode
     if (hasattr(node, "node_tree") or isinstance(node, SchemaUINode)) and get_string not in map.keys():
         # this happens when we are creating a new node group and need to update it from nothing.
         return
@@ -303,7 +303,7 @@ def update_interface(interface, name, in_out, sock_type, parent_name):
         if bpy_version != (4,5,0):
             socket = interface.new_socket(name=name,in_out=in_out, socket_type=sock_type, parent=interface_parent)
         else: # blender 4.5.0 LTS, have to workaround a bug!
-            from .versioning import workaround_4_5_0_interface_update
+            from ..versioning import workaround_4_5_0_interface_update
             socket = workaround_4_5_0_interface_update(tree=interface.id_data, name=name, in_out=in_out,
                                                        sock_type=sock_type, parent_name=parent_name, do_parent=True)
         if parent_name == 'Connection':
@@ -325,7 +325,7 @@ def relink_socket_map_add_socket(node, socket_collection, item,  in_out=None,):
     # have to work around a bug in 4.5.0 that prevents me from declaring custom socket types
     # I have arbitrarily chosen to use the NodeSocketGeometry type to signal that this one is affected.
     if bpy_version == (4, 5, 0) and item.bl_socket_idname == 'NodeSocketGeometry':
-        from .versioning import socket_add_workaround_for_4_5_0_LTS
+        from ..versioning import socket_add_workaround_for_4_5_0_LTS
         s = socket_add_workaround_for_4_5_0_LTS(item, socket_collection, multi)
     else:
         s = socket_collection.new(type=item.bl_socket_idname, name=item.name, identifier=item.identifier,  use_multi_input=multi)
@@ -421,7 +421,7 @@ def bind_modifier_operator(modifier, operator):
             operator(modifier=modifier.name)
 
 def get_default_collection(collection_type='WIDGET'):
-    from .preferences import get_bl_addon_object
+    from ..preferences import get_bl_addon_object
     from bpy import data, context
     mantis_addon = get_bl_addon_object(raise_error=True)
     match collection_type:
@@ -599,7 +599,7 @@ def import_curve_data_to_object(curve_name, curve_data):
 
 def get_component_library_items(path='ADD_ARMATURE'):
     from os import path as os_path
-    from .preferences import get_bl_addon_object
+    from ..preferences import get_bl_addon_object
     bl_mantis_addon = get_bl_addon_object()
     return_value=[]
     if bl_mantis_addon:
@@ -651,7 +651,7 @@ def init_dependencies(mantis_node):
 
 def schema_dependency_handle_item(schema, all_mantis_nodes, item,):
     hierarchy = True
-    from .base_definitions import from_name_filter, to_name_filter
+    from ..base_definitions import from_name_filter, to_name_filter
     if item.in_out == 'INPUT':
         dependencies = schema.dependencies
         hierarchy_dependencies = schema.hierarchy_dependencies
@@ -725,7 +725,7 @@ def check_and_add_root(n, roots, include_non_hierarchy=False):
     roots.append(n)
 
 def get_link_in_out(link):
-    from .base_definitions import replace_types
+    from ..base_definitions import replace_types
     from_name, to_name = link.from_socket.node.name, link.to_socket.node.name
     # catch special bl_idnames and bunch the connections up
     if link.from_socket.node.bl_idname in replace_types:
@@ -772,7 +772,7 @@ def link_mantis_nodes(tree_path_names, link, local_mantis_nodes, from_suffix='',
         raise RuntimeError(wrapRed(f"Link not connected: {from_mantis_node} -> {to_mantis_node} in tree" ))
     
 def get_all_dependencies(mantis_node):
-    from .base_definitions import GraphError
+    from ..base_definitions import GraphError
     """ find all dependencies for a mantis node"""
     nodes = []
     check_nodes = [mantis_node]
@@ -801,7 +801,7 @@ def get_all_nodes_of_type(base_tree, bl_idname):
     return nodes
 
 def trace_all_nodes_from_root(root, nodes):
-    from .base_definitions import GraphError
+    from ..base_definitions import GraphError
     """ find all dependencies for a mantis node"""
     nodes.add(root); check_nodes = [root]
     nodes_checked = set()
@@ -971,7 +971,7 @@ def handle_overlay_detect(node, socket_id, value) -> str:
 ####################################
 
 def make_perpendicular(v1, v2):
-    from .base_definitions import FLOAT_EPSILON
+    from ..base_definitions import FLOAT_EPSILON
     if (v1.length_squared < FLOAT_EPSILON) or (v2.length_squared < FLOAT_EPSILON):
         raise RuntimeError("Cannot generate perpendicular vetor for zero-length vector")
     projected = (v2.dot(v1) / v1.dot(v1)) * v1
@@ -1042,7 +1042,7 @@ def bind_extracted_spline_to_curve(new_ob, curve):
     # now, weirdly enough - we can't use parenting very easily because Blender
     # defines the parent on a curve relative to the evaluated path animation
     # Setting the inverse matrix is too much work. Use Copy Transforms instead.
-    from .xForm_nodes import reset_object_data
+    from ..xForm_nodes import reset_object_data
     reset_object_data(new_ob)
     c = new_ob.constraints.new("COPY_TRANSFORMS"); c.target=curve
     new_ob.parent=curve
@@ -1105,7 +1105,7 @@ def RibbonMeshEdgeLengths(m, ribbon):
     return lengths
 
 def EnsureCurveIsRibbon(crv, defaultRadius = 0.1):
-    from .base_definitions import FLOAT_EPSILON
+    from ..base_definitions import FLOAT_EPSILON
     crvRadius = 0
     crv.data.offset = 0
     if (crv.data.bevel_depth < FLOAT_EPSILON):

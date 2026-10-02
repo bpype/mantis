@@ -1,7 +1,7 @@
 import bpy
 from .base_definitions import xFormNode
 from bpy.types import Node
-from .utilities import (prRed, prGreen, prPurple, prWhite,
+from .utilities.utilities import (prRed, prGreen, prPurple, prWhite,
                               prOrange,
                               wrapRed, wrapGreen, wrapPurple, wrapWhite,
                               wrapOrange,)
@@ -87,7 +87,7 @@ def custom_prop_display_update(self, mantis_node = None):
         if len(mantis_node.inputs['Custom Properties'].links) != len(self.inputs['Custom Properties'].links):
             return # there is a problem somewhere
         for i, link in enumerate(mantis_node.inputs['Custom Properties'].links):
-            from .node_common import trace_single_line
+            from .utilities.node_common import trace_single_line
             node_line, _last_socket = trace_single_line(mantis_node, 'Custom Properties', i)
             if not node_line[-1].prepared:
                 return
@@ -100,7 +100,7 @@ def custom_prop_display_update(self, mantis_node = None):
             name = custom_prop_data.name
             type = custom_prop_data.prop_type
             custom_props[name] = type_map[type]
-    from .utilities import get_socket_maps, do_relink
+    from .utilities.utilities import get_socket_maps, do_relink
     _socket_map_in, socket_map_out = get_socket_maps(self)
     for name, type in custom_props.items():
         if socket_map_out.get(name) is None:

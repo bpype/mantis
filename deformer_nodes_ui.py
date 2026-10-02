@@ -3,7 +3,7 @@ from bpy.types import NodeTree, Node, NodeSocket
 from .base_definitions import MantisUINode, DeformerNode, get_signature_from_edited_tree
 from.deformer_socket_templates import *
 
-from .utilities import (prRed, prGreen, prPurple, prWhite, prOrange,
+from .utilities.utilities import (prRed, prGreen, prPurple, prWhite, prOrange,
                         wrapRed, wrapGreen, wrapPurple, wrapWhite,
                         wrapOrange,)
 
@@ -70,7 +70,7 @@ class DeformerHook(Node, DeformerNode):
             socket.hide=not is_curve_hook
 
 
-from .utilities import get_socket_maps, relink_socket_map
+from .utilities.utilities import get_socket_maps, relink_socket_map
 
 # TODO this should probably not be in this file but intstead in Utilities or something
 # NOTE this is a re-implementation that I had to do here.

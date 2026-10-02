@@ -1,4 +1,4 @@
-from .node_common import *
+from .utilities.node_common import *
 from math import pi, tau
 from .base_definitions import MantisNode
 
@@ -18,7 +18,7 @@ def TellClasses():
     ]
 
 def schema_init_sockets(mantis_node, is_input = True, in_out='INPUT', category=''):
-    from .utilities import tree_from_mantis_node, read_schema_type
+    from .utilities.utilities import tree_from_mantis_node, read_schema_type
     parent_tree = tree_from_mantis_node(mantis_node.signature, mantis_node.base_tree)
     if is_input:
         sockets=mantis_node.inputs

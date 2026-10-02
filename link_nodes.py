@@ -1,4 +1,4 @@
-from .node_common import *
+from .utilities.node_common import *
 from bpy.types import Bone, NodeTree
 from .base_definitions import MantisNode, GraphError, FLOAT_EPSILON
 from .link_socket_templates import *
@@ -559,7 +559,7 @@ class LinkInverseKinematics(MantisLinkNode):
     # not very efficient but it's OK
     def set_pole_angle(self, constraint, angle: float) -> None:
         from math import pi
-        from .utilities import wrap
+        from .utilities.utilities import wrap
         constraint.pole_angle = wrap(-pi, pi, angle)
 
     def calc_pole_angle_pre(self, c, ik_bone):
@@ -592,7 +592,7 @@ class LinkInverseKinematics(MantisLinkNode):
         # this is the X-Axis of the bone's rest-pose, added to its bone
         knee_location = base_ik_bone.bone.matrix_local.col[0].xyz+start_effector
         ik_axis = (end_effector-start_effector).normalized()
-        from .utilities import project_point_to_plane
+        from .utilities.utilities import project_point_to_plane
         pole_planar_projection = project_point_to_plane(pole_location, start_effector, ik_axis)
         # this planar projection is necessary because the IK axis is different than the base_bone's y axis
         planar_projection = project_point_to_plane(knee_location, start_effector, ik_axis)
@@ -852,7 +852,7 @@ class LinkSplineIK(MantisLinkNode):
             for other_node in node_line: # trace and get the input
                 if other_node.node_type == 'XFORM':
                     proto_curve = other_node.bGetObject(); break
-            from .utilities import get_extracted_spline_object
+            from .utilities.utilities import get_extracted_spline_object
             curve = get_extracted_spline_object(proto_curve, spline_index, self.mContext)
             # link it to the view layer
             if (curve.name not in bContext.view_layer.active_layer_collection.collection.objects):

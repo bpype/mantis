@@ -3,7 +3,7 @@ from bpy.types import Node
 from .base_definitions import MantisMiscNode, get_signature_from_edited_tree
 from .misc_nodes_socket_templates import *
 
-from .utilities import (prRed, prGreen, prPurple, prWhite,
+from .utilities.utilities import (prRed, prGreen, prPurple, prWhite,
                               prOrange,
                               wrapRed, wrapGreen, wrapPurple, wrapWhite,
                               wrapOrange,)
@@ -578,7 +578,7 @@ class UtilityDeclareCollections(Node, MantisMiscNode):
     collection_declarations : bpy.props.StringProperty(default="")
 
     def update_interface(self):
-        from .utilities import get_socket_maps, do_relink
+        from .utilities.utilities import get_socket_maps, do_relink
         # we need to do dynamic stuff here like with interfaces
         socket_map_out = get_socket_maps(self)[1]
         self.outputs.clear()

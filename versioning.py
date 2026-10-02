@@ -4,7 +4,7 @@
 from bpy.types import Node, NodeSocket
 from bpy.app import version as bpy_version
 
-from .utilities import (prRed, prGreen, prPurple, prWhite,
+from .utilities.utilities import (prRed, prGreen, prPurple, prWhite,
                               prOrange,
                               wrapRed, wrapGreen, wrapPurple, wrapWhite,
                               wrapOrange,)
@@ -78,12 +78,12 @@ def version_upgrade_very_old(*args, **kwargs):
                 node.inputs.move(len(node.inputs)-1, index)
         socket_map = None
         if rename_jobs:
-            from .utilities import get_socket_maps
+            from .utilities.utilities import get_socket_maps
             socket_maps = get_socket_maps(node)
         for socket, socket_index, new_bl_idname, new_name, multi in rename_jobs:
             old_id = socket.identifier
             print (f"Renaming socket {socket.identifier} to {new_name} in node {node.name}")
-            from .utilities import do_relink
+            from .utilities.utilities import do_relink
             if socket.is_output:
                 index = 1
                 in_out = "OUTPUT"
@@ -121,7 +121,7 @@ def version_upgrade_bone_0_12_0_from_older(*args, **kwargs):
         collection_input_is_array = node.inputs['Bone Collection'].is_multi_input
         if not collection_input_is_array: # it must be made into an array!
             prPurple(f"Updating \"Bone Collection\" Socket in {node.name}")
-            from .utilities import get_socket_maps
+            from .utilities.utilities import get_socket_maps
             socket_maps = get_socket_maps(node)
             socket_map = socket_maps[0]
             for i, socket in enumerate(node.inputs):
@@ -233,7 +233,7 @@ def up_0_12_25_replace_floor_offset_type(*args, **kwargs):
     if  current_major_version > 0: return# major version must be 0
     if current_minor_version > 12: return# minor version must be 12 or less
     if current_minor_version == 12 and current_sub_version > 24: return 
-    from .utilities import get_socket_maps, do_relink
+    from .utilities.utilities import get_socket_maps, do_relink
     socket_maps = get_socket_maps(node)
     prPurple(f"Fixing \"Offset\" socket in {node.name}")
     try:
@@ -360,7 +360,7 @@ def update_fcurve_and_armature_node_to_multi_socket(*args, **kwargs):
     live_updates = node.id_data.do_live_update
     node.id_data.do_live_update = False
     # First we have to get the socket maps and re-init the sockets
-    from .utilities import get_socket_maps, do_relink
+    from .utilities.utilities import get_socket_maps, do_relink
     convert_keys = {'UtilityFCurve' : [ 'Keyframe', ],
                     'LinkArmature'  : [ 'Target', 'Weight', ], }
     my_convert_keys = convert_keys[node.bl_idname]

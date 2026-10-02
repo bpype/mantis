@@ -194,7 +194,7 @@ def scan_tree_dependencies(base_tree, curves:set, armatures:set, ):
     for mantis_node in nodes.values():
         mantis_node.reset_execution()
         check_and_add_root(mantis_node, xForm_pass)
-    from .readtree import sort_execution
+    from ..readtree import sort_execution
     from .utilities import get_ui_node
     sorted_nodes, execution_failed = sort_execution(nodes, xForm_pass)
     if execution_failed:
@@ -400,7 +400,7 @@ def get_socket_data(socket, ignore_if_default=False):
 def get_node_data(ui_node):
     # if this is a node-group, force it to update its interface, because it may be messed up.
     # can remove this HACK when I have stronger guarentees about node-group's keeping the interface
-    from .base_definitions import node_group_update
+    from ..base_definitions import node_group_update
     if hasattr(ui_node, "node_tree"):
         ui_node.is_updating = True
         try: # HERE BE DANGER
@@ -482,7 +482,7 @@ def get_interface_data(tree, tree_in_out):
             # we need to get the socket class from the bl_idname
             bl_socket_idname = sock.bl_socket_idname
             # try and import it
-            from . import socket_definitions
+            from .. import socket_definitions
             # some mistakes in versioning makes it possible for older trees to have
             # standard Blender types instead of Mantis types
             if bl_socket_idname == 'NodeSocketFloat':
@@ -1006,7 +1006,7 @@ def do_import(data, context, search_multi_files=False, filepath='', skip_existin
                 if bpy.app.version != (4,5,0):
                     sock = tree.interface.new_socket(s_props["name"], in_out=s_props["in_out"], socket_type=socket_type)
                 else: # blender 4.5.0 LTS, have to workaround a bug!
-                    from .versioning import workaround_4_5_0_interface_update
+                    from ..versioning import workaround_4_5_0_interface_update
                     sock = workaround_4_5_0_interface_update(tree=tree, name=s_props["name"], in_out=s_props["in_out"],
                                                             sock_type=socket_type, parent_name=s_props.get("parent", ''))
 
@@ -1115,7 +1115,7 @@ def do_import(data, context, search_multi_files=False, filepath='', skip_existin
                         raise RuntimeError(f"Tree {sub_tree} not available to import.")
 
                 n.node_tree = grp_tree
-                from .base_definitions import node_group_update
+                from ..base_definitions import node_group_update
                 n.is_updating = True
                 try:
                     node_group_update(n, force = True)
