@@ -534,10 +534,11 @@ class UtilityCustomProperty(Node, MantisMiscNode):
     socket_templates=UtilityCustomPropertySockets
     
     def display_update(self, parsed_tree, context):
-        mantis_node = parsed_tree.get(get_signature_from_edited_tree(self, context))
         prop_type = self.inputs['Type'].default_value
-        if mantis_node: # this is done here so I don't have to define yet another custom socket.
-            prop_type = mantis_node.evaluate_input("Type")
+        if context: # I need to be able to call this without context in versioing.
+            if mantis_node := parsed_tree.get(get_signature_from_edited_tree(self, context)):
+                # this is done here so I don't have to define yet another custom socket.
+                prop_type = mantis_node.evaluate_input("Type")
         visible_categories = ['general']
         match prop_type:
             case 'STRING': visible_categories.append('string')

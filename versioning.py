@@ -7,7 +7,8 @@ from bpy.app import version as bpy_version
 from .utilities.utilities import (prRed, prGreen, prPurple, prWhite,
                               prOrange,
                               wrapRed, wrapGreen, wrapPurple, wrapWhite,
-                              wrapOrange,)
+                              wrapOrange,
+                              get_socket_maps, do_relink, )
 
 def version_upgrade_very_old(*args, **kwargs):
     node = kwargs['node']
@@ -78,12 +79,10 @@ def version_upgrade_very_old(*args, **kwargs):
                 node.inputs.move(len(node.inputs)-1, index)
         socket_map = None
         if rename_jobs:
-            from .utilities.utilities import get_socket_maps
             socket_maps = get_socket_maps(node)
         for socket, socket_index, new_bl_idname, new_name, multi in rename_jobs:
             old_id = socket.identifier
             print (f"Renaming socket {socket.identifier} to {new_name} in node {node.name}")
-            from .utilities.utilities import do_relink
             if socket.is_output:
                 index = 1
                 in_out = "OUTPUT"
@@ -178,7 +177,6 @@ def up_0_12_1_add_inherit_color(*args, **kwargs):
         print(e)
 
 def up_0_12_13_add_widget_scale(*args, **kwargs):
-    # add an inherit color input.
     node = kwargs['node']
     current_major_version = node.id_data.mantis_version[0]
     current_minor_version = node.id_data.mantis_version[1]
@@ -198,34 +196,8 @@ def up_0_12_13_add_widget_scale(*args, **kwargs):
         prRed(f"Error updating version in node: {node.id_data.name}::{node.name}; see error:")
         print(e)
 
-# versioning tasks that involve Blender versions rather than Mantis versions:
-error_description_4_5_0_LTS = 'There is a bug in Blender 4.5.0 LTS, that is why these sockets are blue.'\
-                             ' This will be fixed in future Blender versions.'
-def cleanup_4_5_0_LTS_interface_workaround(*args, **kwargs):
-    # this is a function for cleaning up the workaround up above
-    tree = kwargs['tree']
-    if bpy_version == (4,5,0): return
-    if not hasattr(tree, "interface_helper"):
-        return
-    import json
-    try:
-        interface_helper = json.loads(tree.interface_helper)
-    except:
-        return # this should mean it was never a problem to begin with.
-    prPurple(f"Restoring Tree Interface for {tree.name}.")
-    for interface_item in tree.interface.items_tree:
-        if interface_item.item_type == 'PANEL': continue
-        # now we need to restore the socket types, which are in the interface helper
-        # keep the interface stuff around, I'll use it for marking arrays in the future
-        int_info = interface_helper[interface_item.identifier]
-        socket_type = int_info['bl_socket_idname']
-        interface_item.socket_type = socket_type
-        if interface_item.description == error_description_4_5_0_LTS:
-            interface_item.description = ''
-    # that should be enough!
 
 def up_0_12_25_replace_floor_offset_type(*args, **kwargs):
-    # add an inherit color input.
     node = kwargs['node']
     current_major_version = node.id_data.mantis_version[0]
     current_minor_version = node.id_data.mantis_version[1]
@@ -233,7 +205,6 @@ def up_0_12_25_replace_floor_offset_type(*args, **kwargs):
     if  current_major_version > 0: return# major version must be 0
     if current_minor_version > 12: return# minor version must be 12 or less
     if current_minor_version == 12 and current_sub_version > 24: return 
-    from .utilities.utilities import get_socket_maps, do_relink
     socket_maps = get_socket_maps(node)
     prPurple(f"Fixing \"Offset\" socket in {node.name}")
     try:
@@ -246,14 +217,15 @@ def up_0_12_25_replace_floor_offset_type(*args, **kwargs):
         prRed(f"Error updating version in node: {node.id_data.name}::{node.name}; see error:")
         print(e)
 
-def get_absolute_location(node): # us9ng this for version compatibility
+def get_absolute_location(node): # using this for version compatibility
     location = node.location.copy() # FUTURE: deprecate old blenders and use absolute_location
     while(node.parent):
         node = node.parent
         location+= node.location
     return location
-    
 
+# SERIOUS BUG here, it doesn't relink sockets from the old custom property input
+#  to default value of new custom property node
 def up_0_13_0_new_custom_prop_node(*args, **kwargs):
     tree, node = kwargs['node_tree'], kwargs['node']
     current_major_version = tree.mantis_version[0]
@@ -262,8 +234,9 @@ def up_0_13_0_new_custom_prop_node(*args, **kwargs):
     if current_minor_version >= 13: return# minor version must be 12 or less
     remove_me, prop_nodes = [], []
     from .xForm_nodes_ui import xFormBoneNode
+    socket_map_in, socket_map_out = get_socket_maps(node)
     if isinstance(node, xFormBoneNode):
-        for custom_input in node.inputs:
+        for custom_input in reversed(list(node.inputs)):
             if 'Parameter' not in custom_input.bl_idname:
                 continue
             custom_prop_node = tree.nodes.new('UtilityCustomProperty')
@@ -288,10 +261,13 @@ def up_0_13_0_new_custom_prop_node(*args, **kwargs):
             elif custom_input.bl_idname == 'ParameterVectorSocket':
                 prop_type = 'VECTOR'
                 custom_prop_node.inputs['Default (Vector)'].default_value = getattr(custom_input, "default_value")
-                custom_prop_node.inputs['Min (Float)'].default_value = getattr(custom_input, "min")
-                custom_prop_node.inputs['Max (Float)'].default_value = getattr(custom_input, "max")
-                custom_prop_node.inputs['Soft Min (Float)'].default_value = getattr(custom_input, "soft_min")
-                custom_prop_node.inputs['Soft Max (Float)'].default_value = getattr(custom_input, "soft_max")
+                try:
+                    custom_prop_node.inputs['Min (Float)'].default_value = getattr(custom_input, "min")
+                    custom_prop_node.inputs['Max (Float)'].default_value = getattr(custom_input, "max")
+                    custom_prop_node.inputs['Soft Min (Float)'].default_value = getattr(custom_input, "soft_min")
+                    custom_prop_node.inputs['Soft Max (Float)'].default_value = getattr(custom_input, "soft_max")
+                except AttributeError: # I don't know if I just never implemented these or if it is version specific
+                    pass # anyways this isn't critical and should not trigger even a warning
             elif custom_input.bl_idname == 'ParameterStringSocket':
                 prop_type = 'STRING'
                 custom_prop_node.inputs['Default (String)'].default_value = getattr(custom_input, "default_value")
@@ -299,6 +275,28 @@ def up_0_13_0_new_custom_prop_node(*args, **kwargs):
             custom_prop_node.inputs['Type'].default_value = prop_type
             prop_nodes.append(custom_prop_node)
             remove_me.append(custom_input)
+            # now we need to relink things, because the custom property socket could have had an
+            # input supplying the default value
+            relink_value = socket_map_in.get(custom_input.identifier, None)
+            if isinstance(relink_value, list): # this indicates it is a list of links
+                # CRITICALLY, we need to force display update before doing this.
+                custom_prop_node.display_update({}, None) # parsed_tree and context, not needed
+                input_socket = None
+                match prop_type:
+                    case 'BOOL':
+                        input_socket = "Default (Bool)"
+                    case 'INT':
+                        input_socket = "Default (Int)"
+                    case 'FLOAT':
+                        input_socket = "Default (Float)"
+                    case 'VECTOR':
+                        input_socket = "Default (Vector)"
+                    case 'STRING':
+                        input_socket = "Default (String)"
+                    case _: # Should never never happen
+                        raise RuntimeError("Unexpected Code Path Reached, this is a bug.")
+                do_relink(custom_prop_node, custom_prop_node.inputs[input_socket],
+                          {input_socket:relink_value})
         while remove_me:
             custom_input = remove_me.pop()
             node.inputs.remove(custom_input)
@@ -352,9 +350,6 @@ def schema_enable_custom_interface_types(*args, **kwargs):
                 n.is_updating = False
         tree.do_live_update = True
 
-
-
-# since this is basically the same operation, just do it all together
 def update_fcurve_and_armature_node_to_multi_socket(*args, **kwargs):
     node = kwargs['node']
     live_updates = node.id_data.do_live_update
@@ -394,6 +389,31 @@ def update_fcurve_and_armature_node_to_multi_socket(*args, **kwargs):
     finally:
         node.id_data.do_live_update = live_updates
 
+# versioning tasks that involve Blender versions rather than Mantis versions:
+error_description_4_5_0_LTS = 'There is a bug in Blender 4.5.0 LTS, that is why these sockets are blue.'\
+                             ' This will be fixed in future Blender versions.'
+def cleanup_4_5_0_LTS_interface_workaround(*args, **kwargs):
+    # this is a function for cleaning up the workaround up above
+    tree = kwargs['tree']
+    if bpy_version == (4,5,0): return
+    if not hasattr(tree, "interface_helper"):
+        return
+    import json
+    try:
+        interface_helper = json.loads(tree.interface_helper)
+    except:
+        return # this should mean it was never a problem to begin with.
+    prPurple(f"Restoring Tree Interface for {tree.name}.")
+    for interface_item in tree.interface.items_tree:
+        if interface_item.item_type == 'PANEL': continue
+        # now we need to restore the socket types, which are in the interface helper
+        # keep the interface stuff around, I'll use it for marking arrays in the future
+        int_info = interface_helper[interface_item.identifier]
+        socket_type = int_info['bl_socket_idname']
+        interface_item.socket_type = socket_type
+        if interface_item.description == error_description_4_5_0_LTS:
+            interface_item.description = ''
+    # that should be enough!
 
 versioning_tasks = [
     # node bl_idname    task                required keyword arguments
@@ -408,8 +428,6 @@ versioning_tasks = [
     (['UtilityFCurve', 'LinkArmature'],
            update_fcurve_and_armature_node_to_multi_socket, ['node']),
 ]
-
-
 
 
 # WORKAROUNDS for bugs should go here:
