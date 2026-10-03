@@ -335,32 +335,48 @@ def schema_enable_custom_interface_types(*args, **kwargs):
         tree.do_live_update = True
 
 def update_fcurve_and_armature_node_to_multi_socket(*args, **kwargs):
+    from .base_definitions import SchemaUINode
     node = kwargs['node']
     live_updates = node.id_data.do_live_update
     node.id_data.do_live_update = False
     # First we have to get the socket maps and re-init the sockets
-    from .utilities.utilities import get_socket_maps, do_relink
     convert_keys = {'UtilityFCurve' : [ 'Keyframe', ],
                     'LinkArmature'  : [ 'Target', 'Weight', ], }
     my_convert_keys = convert_keys[node.bl_idname]
     sockets_in, _sockets_out = get_socket_maps(node,)
-    node.inputs.clear()
-    input_templates = [st for st in node.socket_templates if st.is_input == True]
-    node.init_sockets(input_templates)
+    # NOTE IMPORTANT BUG INFO
+    # I was using node.inputs.clear() here before unguarded...
+    # this caused connected Schema nodes to update and mutate the socket map
+    # which, in turn, connected the new socket to the wildcard and extended the schema
+    # resulting in trees that fail to run. This was particularly bad because it was
+    # so hard to debug (due to spooky action at a distance mutation)
+    # So we have to mark the connected nodes as "updating" before we modify the tree.
+    # TODO: should I just mark all nodes as updating during versioning?
+    toggle_updating = []
+    was_updating = {}
+    for socket_name, links in sockets_in.items():
+        if isinstance(links, list):
+            for link in links:
+                if hasattr(link, 'node') and hasattr(link.node, 'is_updating'):
+                    toggle_updating.append(link.node)
+                    was_updating[link.node.name] = link.node.is_updating
+                    link.node.is_updating = True
+    node.inputs.clear() # this is VERY DANGEROUS without the above
+    add_me_sockets = [st for st in node.socket_templates if st.is_input == True]
+    node.init_sockets(add_me_sockets)
     try:
         new_sockets_in = {}
         for convert_key in my_convert_keys:
             for socket_name, links in sockets_in.items():
+                print (f"Socket Name: {socket_name}, Links:  {links},")
                 if links is None: continue
                 if convert_key+'.' in socket_name:
-                    print (socket_name, links)
                     if new_sockets_in.get(convert_key+'s'):
                                                     # has to be in this order to come back alright.
                                                     # assuming, that is, that the keys are sorted. they should be.
                         new_sockets_in[convert_key+'s'] = sockets_in[socket_name] + new_sockets_in[convert_key+'s']
                     else:
                         new_sockets_in[convert_key+'s'] = sockets_in[socket_name]
-                    prWhite (new_sockets_in[convert_key+'s'])
             do_relink(node, node.inputs[convert_key+'s'], new_sockets_in, in_out="INPUT",)
         for socket_name, links in sockets_in.items():
             proceed = True
@@ -369,8 +385,10 @@ def update_fcurve_and_armature_node_to_multi_socket(*args, **kwargs):
                     proceed = False
             if proceed:
                 do_relink(node, node.inputs[socket_name], sockets_in, in_out='INPUT')
-
     finally:
+        # Now we have to clean up by removing the unneeded sockets and repositioning.
+        for other_node in toggle_updating:
+            other_node.is_updating = was_updating[other_node.name]
         node.id_data.do_live_update = live_updates
 
 # versioning tasks that involve Blender versions rather than Mantis versions:
