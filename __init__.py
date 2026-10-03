@@ -54,6 +54,9 @@ if environ.get("ENABLEVIS"):
 DOERROR = False
 if environ.get("DOERROR"):
     DOERROR = True
+DOVERSIONING = True
+if environ.get("DOVERSIONING") in ["0", "False", "false", "off"]:
+    DOVERSIONING = False
 
 import nodeitems_utils
 from nodeitems_utils import NodeCategory, NodeItem
@@ -325,7 +328,10 @@ def version_update_handler(filename):
                 node_tree.is_exporting=False; node_tree.is_executing=False
     for node_tree in bpy.data.node_groups:
         if node_tree.bl_idname in ["MantisTree", "SchemaTree"]:
-            if (node_tree.mantis_version[0] < MANTIS_VERSION_MAJOR) or \
+            if DOVERSIONING == False:
+                version = node_tree.mantis_version
+                print (f"{node_tree.name}:  v{version[0], version[1], version[2]}")
+            elif (node_tree.mantis_version[0] < MANTIS_VERSION_MAJOR) or \
                (node_tree.mantis_version[1] < MANTIS_VERSION_MINOR) or \
                (node_tree.mantis_version[2] < MANTIS_VERSION_SUB):
                 do_version_update(node_tree)
