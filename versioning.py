@@ -104,7 +104,6 @@ def version_upgrade_very_old(*args, **kwargs):
         prRed(f"Error updating version in node: {node.id_data.name}::{node.name}; see error:")
         print(e)
 
-
 def version_upgrade_bone_0_12_0_from_older(*args, **kwargs):
     # we need to check if it has an array collection input and a color input
     # then we need to solve each task
@@ -131,17 +130,7 @@ def version_upgrade_bone_0_12_0_from_older(*args, **kwargs):
             s = node.inputs.new('BoneCollectionSocket', 'Bone Collection',
                                 identifier='Bone Collection', use_multi_input=True)
             node.inputs.move(len(node.inputs)-1, i)
-            socket_map_from_old_socket = socket_map[old_id]
-            # there seems to be an error in do_relink
-            # gonna do it directly instead
-            if isinstance(socket_map_from_old_socket, list):
-                for map_info in socket_map_from_old_socket:
-                    if isinstance(map_info, Node ):
-                        l = node.id_data.links.new(input=map_info.outputs[0], output=s)
-                    elif isinstance(map_info, NodeSocket):
-                        l = node.id_data.links.new(input=map_info, output=s)
-            else:
-                s.default_value = socket_map_from_old_socket
+            do_relink(node, s, socket_map, in_out='INPUT')
         if node.inputs.get('Color') is None:
             prPurple(f"Adding \"Color\" Socket to {node.name}")
             s = node.inputs.new('ColorSetSocket', 'Color',)
@@ -149,7 +138,6 @@ def version_upgrade_bone_0_12_0_from_older(*args, **kwargs):
     except Exception as e:
         prRed(f"Error updating version in node: {node.id_data.name}::{node.name}; see error:")
         print(e)
-
 
 def up_0_12_1_add_inherit_color(*args, **kwargs):
     # add an inherit color input.
@@ -196,7 +184,6 @@ def up_0_12_13_add_widget_scale(*args, **kwargs):
         prRed(f"Error updating version in node: {node.id_data.name}::{node.name}; see error:")
         print(e)
 
-
 def up_0_12_25_replace_floor_offset_type(*args, **kwargs):
     node = kwargs['node']
     current_major_version = node.id_data.mantis_version[0]
@@ -224,8 +211,6 @@ def get_absolute_location(node): # using this for version compatibility
         location+= node.location
     return location
 
-# SERIOUS BUG here, it doesn't relink sockets from the old custom property input
-#  to default value of new custom property node
 def up_0_13_0_new_custom_prop_node(*args, **kwargs):
     tree, node = kwargs['node_tree'], kwargs['node']
     current_major_version = tree.mantis_version[0]
@@ -311,7 +296,6 @@ def up_0_13_0_new_custom_prop_node(*args, **kwargs):
         new_input = node.inputs.new("CustomPropSocket", "Custom Properties", use_multi_input=True)
 
 def schema_enable_custom_interface_types(*args, **kwargs):
-    # return
     tree = kwargs['tree']
     current_major_version = tree.mantis_version[0]
     current_minor_version = tree.mantis_version[1]
@@ -396,8 +380,7 @@ def cleanup_4_5_0_LTS_interface_workaround(*args, **kwargs):
     # this is a function for cleaning up the workaround up above
     tree = kwargs['tree']
     if bpy_version == (4,5,0): return
-    if not hasattr(tree, "interface_helper"):
-        return
+    if not hasattr(tree, "interface_helper"): return
     import json
     try:
         interface_helper = json.loads(tree.interface_helper)
@@ -413,7 +396,6 @@ def cleanup_4_5_0_LTS_interface_workaround(*args, **kwargs):
         interface_item.socket_type = socket_type
         if interface_item.description == error_description_4_5_0_LTS:
             interface_item.description = ''
-    # that should be enough!
 
 versioning_tasks = [
     # node bl_idname    task                required keyword arguments
