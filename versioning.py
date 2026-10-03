@@ -10,6 +10,17 @@ from .utilities.utilities import (prRed, prGreen, prPurple, prWhite,
                               wrapOrange,
                               get_socket_maps, do_relink, )
 
+
+# CHECKLIST FOR DUMMIES:
+# Did you make sure to turn off and re-enable tree updates?
+# Did you restore connections to the node socket after changing things?
+# Did you test FUNCTIONALITY in your test rigs instead of just checking if the tree
+#    would generate? CHANGED FUNCTIONALITY IS STILL A BUG!!
+# Did you make sure to toggle the is_updating flag for ANY node that is touched by
+#    the edits you are doing to the current node (example: removing a socket causes
+#    linked group and schema nodes to update)
+# (add more whenever a weird or difficult to debug problem occurs)
+
 def version_upgrade_very_old(*args, **kwargs):
     node = kwargs['node']
     current_major_version = node.id_data.mantis_version[0]
@@ -108,6 +119,9 @@ def version_upgrade_bone_0_12_0_from_older(*args, **kwargs):
     # we need to check if it has an array collection input and a color input
     # then we need to solve each task
     node = kwargs['node']
+    live_updates = node.id_data.do_live_update
+    node.id_data.do_live_update = False
+
     current_major_version = node.id_data.mantis_version[0]
     current_minor_version = node.id_data.mantis_version[1]
     if  current_major_version > 0: # major version must be 0
@@ -115,8 +129,14 @@ def version_upgrade_bone_0_12_0_from_older(*args, **kwargs):
     if current_minor_version >= 12: # minor version must be 11 or less
         return
     # sub version doesn't matter since any subversion of 11 should trigger this task
+    collection_input_is_array = False
     try:
         collection_input_is_array = node.inputs['Bone Collection'].is_multi_input
+    except KeyError: # I suppose this happens in very, very old trees
+        pass         # but it is extremely unlikely
+    toggle_updating = []
+    was_updating = {}
+    try:
         if not collection_input_is_array: # it must be made into an array!
             prPurple(f"Updating \"Bone Collection\" Socket in {node.name}")
             from .utilities.utilities import get_socket_maps
@@ -124,8 +144,14 @@ def version_upgrade_bone_0_12_0_from_older(*args, **kwargs):
             socket_map = socket_maps[0]
             for i, socket in enumerate(node.inputs):
                 if socket.name == 'Bone Collection': break
-            old_id = socket.identifier
-            # it is an input
+            # Always guard socket removal in case of connection to e.g. schema
+            for socket_name, links in socket_map.items():
+                if isinstance(links, list):
+                    for link in links:
+                        if hasattr(link, 'node') and hasattr(link.node, 'is_updating'):
+                            toggle_updating.append(link.node)
+                            was_updating[link.node.name] = link.node.is_updating
+                            link.node.is_updating = True
             node.inputs.remove(socket)
             s = node.inputs.new('BoneCollectionSocket', 'Bone Collection',
                                 identifier='Bone Collection', use_multi_input=True)
@@ -138,6 +164,11 @@ def version_upgrade_bone_0_12_0_from_older(*args, **kwargs):
     except Exception as e:
         prRed(f"Error updating version in node: {node.id_data.name}::{node.name}; see error:")
         print(e)
+    finally:
+        # Now we have to clean up by removing the unneeded sockets and repositioning.
+        for other_node in toggle_updating:
+            other_node.is_updating = was_updating[other_node.name]
+        node.id_data.do_live_update = live_updates
 
 def up_0_12_1_add_inherit_color(*args, **kwargs):
     # add an inherit color input.
