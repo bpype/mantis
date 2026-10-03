@@ -62,60 +62,69 @@ for space in spaces:
 #  - easy to fix, will do it when clearing TODO's here.
 
 def timer_update_selection_sync():
-    if not ENABLED: return None
-    root_tree = None
-    tree_path = None
-    parsed_tree = None
-    spaces = get_visible_space_data()
-    if not spaces:
-        return SELECTION_POLL_RATE
-
-    selection_state_start = cached_selection_state.copy()
-    selection_state = cached_selection_state.copy()
-    current_tree_selected_total = 0
-
-    # we can't get UI context in this function so we have to checc all of them
-    #maybe the tree itself can load the timer when it is opened in the node editor?
-    for space in spaces:
-        # if we are in the node editor, manage node selection
-        if space.type == "NODE_EDITOR":
-            root_tree = space.path[0].node_tree
-            parsed_tree = root_tree.parsed_tree
-            tree_path = [path_item.node_tree for path_item in space.path]
-            if root_tree is None:
-                return SELECTION_POLL_RATE
-            if root_tree.bl_idname != 'MantisTree':
-                return SELECTION_POLL_RATE
-            active_ui_signature = (get_signature_from_space(tree_path[-1].nodes.active, space))
-            for n in tree_path[-1].nodes:
-                if n.bl_idname not in WATCH_FOR_SELECTION: continue
-                selection_state[ui_signature := get_signature_from_space(n, space)] = n.select
-                current_tree_selected_total += int(n.select)
-    
-    if parsed_tree is None:
-        return SELECTION_POLL_RATE
-    cached_selection_state.update(selection_state)
-    # We only fire the update if things have changed.
-    if selection_state != selection_state_start:
-        
-        from bpy import context
-        view_layer = context.view_layer
-        deselect = not bool(current_tree_selected_total)
-        try:
-            update_scene_selection_from_node_graph_selection_sync(
-                active_ui_signature, view_layer,
-                selection_state, deselect)
-        except Exception as e:
-            prRed (e)
+    try:
+        if not ENABLED: return None
+        root_tree = None
+        tree_path = None
+        parsed_tree = None
+        spaces = get_visible_space_data()
+        if not spaces:
             return SELECTION_POLL_RATE
+
+        selection_state_start = cached_selection_state.copy()
+        selection_state = cached_selection_state.copy()
+        current_tree_selected_total = 0
+
+        # we can't get UI context in this function so we have to checc all of them
+        #maybe the tree itself can load the timer when it is opened in the node editor?
+        for space in spaces:
+            # if we are in the node editor, manage node selection
+            if space.type == "NODE_EDITOR":
+                root_tree = space.path[0].node_tree
+                parsed_tree = root_tree.parsed_tree
+                tree_path = [path_item.node_tree for path_item in space.path]
+                if root_tree is None:
+                    return SELECTION_POLL_RATE
+                if root_tree.bl_idname != 'MantisTree':
+                    return SELECTION_POLL_RATE
+                active_ui_signature = (get_signature_from_space(tree_path[-1].nodes.active, space))
+                for n in tree_path[-1].nodes:
+                    if n.bl_idname not in WATCH_FOR_SELECTION: continue
+                    selection_state[ui_signature := get_signature_from_space(n, space)] = n.select
+                    current_tree_selected_total += int(n.select)
+        
+        if parsed_tree is None:
+            return SELECTION_POLL_RATE
+        cached_selection_state.update(selection_state)
+        # We only fire the update if things have changed.
+        if selection_state != selection_state_start:
+            from bpy import context
+            view_layer = context.view_layer
+            deselect = not bool(current_tree_selected_total)
+            try:
+                update_scene_selection_from_node_graph_selection_sync(
+                    active_ui_signature, view_layer,
+                    selection_state, deselect)
+            except Exception as e:
+                prRed (e)
+                return SELECTION_POLL_RATE
+    except Exception as e:
+        print ("Error in Selection Sync")
+        print (e)
     return SELECTION_POLL_RATE
+
+def set_bone_selection(pose_bone, selection_state):
+    # in some older blender versions, select was a bone property
+    if hasattr(pose_bone, 'select'):
+        pose_bone.select = selection_state
+    elif hasattr(pose_bone.bone, 'select'):
+        pose_bone.bone.select = selection_state
 
 def update_scene_selection_from_node_graph_selection_sync(
         active_ui_signature, view_layer,
         selection_state, deselect ):
-    from .base_definitions import ( selection_sync_node_to_object,
-                                    selection_sync_object_to_node, )
-    prWhite("Updating Scene Selection from Node Graph Selection")
+    from .base_definitions import selection_sync_node_to_object
+    # prWhite("Updating Scene Selection from Node Graph Selection")
     deselect_do_once = []
     for ui_signature, selected in selection_state.items():
         this_one_is_active = False
@@ -123,15 +132,16 @@ def update_scene_selection_from_node_graph_selection_sync(
         for object_key in selection_sync_node_to_object.get(ui_signature, []):
             id_data = bpy.data.objects.get(object_key[0])
             if object_key[1]: # we have a sub_value, it's a bone
-                if deselect and object_key[0] not in deselect_do_once:
-                    for pb in id_data.pose.bones:
-                        pb.select = False
-                    deselect_do_once.append(object_key[0])
+                if deselect:
+                    if object_key[0] not in deselect_do_once:
+                        for pb in id_data.pose.bones:
+                            set_bone_selection(pb, False)
+                        deselect_do_once.append(object_key[0])
                 else:
-                    ob = id_data.pose.bones[object_key[1]]
-                    ob.select = selected
+                    pb = id_data.pose.bones[object_key[1]]
+                    set_bone_selection(pb, selected)
                     if this_one_is_active: # set the active bone
-                        id_data.data.bones.active = ob.bone
+                        id_data.data.bones.active = pb.bone
                     # now do its parent object...
                     if selected:
                         id_data.select_set(True, view_layer=view_layer)
