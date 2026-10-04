@@ -145,15 +145,24 @@ class xFormBoneNode(Node, xFormNode):
             if mantis_node and (pb := mantis_node.bGetObject(mode='POSE')):
                 self.display_ik_settings = pb.is_in_ik_chain
             self.inputs['Name'].display_text = ""
-            if mantis_node and mantis_node.prepared:
+            mantis_node_ready = mantis_node and mantis_node.prepared
+            if self.inputs['Custom Object'].is_linked and mantis_node_ready:
+                self.display_vp_settings = mantis_node.evaluate_input("Custom Object")
+            if self.inputs['Deform'].is_linked and mantis_node_ready:
+                self.display_def_settings = mantis_node.evaluate_input("Deform")
+            else:
+                self.display_def_settings = self.inputs['Deform'].default_value
+            if self.inputs['BBone Segments'].is_linked and mantis_node_ready:
+                segs = mantis_node.evaluate_input("BBone Segments")
                 try:
-                    self.inputs['Name'].display_text = mantis_node.evaluate_input("Name")
-                    self.display_vp_settings = mantis_node.inputs["Custom Object"].is_connected
-                    self.display_def_settings = mantis_node.evaluate_input("Deform")
-                    self.display_bb_settings = mantis_node.evaluate_input("BBone Segments") > 1
-                except KeyError:
-                    return # the tree isn't ready yet.
-            
+                    self.display_bb_settings = segs > 1
+                except TypeError:
+                    self.display_bb_settings = True # it is probably a driver
+            else:
+                self.display_bb_settings = self.inputs['BBone Segments'].default_value > 1
+            if self.inputs['Name'].is_linked and mantis_node_ready:
+                self.inputs['Name'].display_text = mantis_node.evaluate_input("Name")
+
             for template in self.socket_templates:
                 name = template.name
                 category = template.category
