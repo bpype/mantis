@@ -10,15 +10,22 @@ Target = ST(name="Target", bl_idname='xFormSocket',
 
 DeformArmatureSockets = [ 
     ArmatureObject := replace(Target, name="Armature Object"),
-    BlendVertexGroup := ST(name="Blend Vertex Group", bl_idname="StringSocket", is_input=True),
-    InvertBlendVertexGroup := ST(name="Invert Vertex Group", bl_idname="BooleanSocket", is_input=True),
+    BlendVertexGroup := ST(name="Blend Vertex Group", bl_idname="StringSocket", is_input=True,
+                           blender_property='vertex_group'),
+    InvertBlendVertexGroup := ST(name="Invert Vertex Group", bl_idname="BooleanSocket", is_input=True,
+                           blender_property='invert_vertex_group'),
     # QuatBlendVertexGroup := ST(name="Preserve Volume Vertex Group", bl_idname="StringSocket", is_input=True)
     # ^ TODO figure out the right UX for automatic dual-quat blending
-    PreserveVolume := ST(name="Preserve Volume", bl_idname="BooleanSocket", is_input=True),
+    PreserveVolume := ST(name="Preserve Volume", bl_idname="BooleanSocket", is_input=True,
+                           blender_property='use_deform_preserve_volume'),
     # ^ TODO: make the above controlled by a vertex group instead.
-    UseMultiModifier := ST(name="Use Multi Modifier", bl_idname="BooleanSocket", is_input=True), # might just set this auto
-    UseEnvelopes := ST(name="Use Envelopes", bl_idname="BooleanSocket", is_input=True, default_value=False),
-    UseVertexGroups := ST(name="Use Vertex Groups", bl_idname="BooleanSocket", is_input=True, default_value=True),
+    # might just set this below to auto (I don't evern understand it)
+    UseMultiModifier := ST(name="Use Multi Modifier", bl_idname="BooleanSocket", is_input=True,
+                           blender_property='use_multi_modifier'),
+    UseEnvelopes := ST(name="Use Envelopes", bl_idname="BooleanSocket", is_input=True, default_value=False,
+                           blender_property='use_bone_envelopes'),
+    UseVertexGroups := ST(name="Use Vertex Groups", bl_idname="BooleanSocket", is_input=True, default_value=True,
+                           blender_property='use_vertex_groups'),
     DeformerInput := ST(name="Deformer", bl_idname="DeformerSocket", is_input=True),
     CopySkinWeightsFrom := ST(name="Copy Skin Weights From", bl_idname="xFormSocket", is_input=True, hide=True),
     SkinningMethod := ST(name="Skinning Method", bl_idname="EnumSkinning", is_input=True),

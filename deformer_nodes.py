@@ -265,14 +265,7 @@ class DeformerArmature(MantisDeformerNode):
                 raise RuntimeError(f"Modifier was not created in node {self} -- the object is invalid.")
             self.bObject.append(d)
             d.object = self.bGetParentArmature()
-            props_sockets = {
-            'vertex_group'               : ("Blend Vertex Group", ""),
-            'invert_vertex_group'        : ("Invert Vertex Group", ""),
-            'use_deform_preserve_volume' : ("Preserve Volume", False),
-            'use_multi_modifier'         : ("Use Multi Modifier", False),
-            'use_bone_envelopes'         : ("Use Envelopes", False),
-            'use_vertex_groups'          : ("Use Vertex Groups", False),
-            }
+            props_sockets = self.gen_property_socket_map()
             evaluate_sockets(self, d, props_sockets)
             #
             if (skin_method := self.evaluate_input("Skinning Method")) == "AUTOMATIC_HEAT":
