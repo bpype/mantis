@@ -20,6 +20,7 @@ from .utilities.utilities import (prRed, prGreen, prPurple, prWhite,
 #    the edits you are doing to the current node (example: removing a socket causes
 #    linked group and schema nodes to update)
 # (add more whenever a weird or difficult to debug problem occurs)
+# Did you check the update script on a tree that doesn't need it?
 
 def version_upgrade_very_old(*args, **kwargs):
     node = kwargs['node']
@@ -399,7 +400,6 @@ def update_fcurve_and_armature_node_to_multi_socket(*args, **kwargs):
         new_sockets_in = {}
         for convert_key in my_convert_keys:
             for socket_name, links in sockets_in.items():
-                print (f"Socket Name: {socket_name}, Links:  {links},")
                 if links is None: continue
                 if convert_key+'.' in socket_name:
                     if new_sockets_in.get(convert_key+'s'):
@@ -408,7 +408,8 @@ def update_fcurve_and_armature_node_to_multi_socket(*args, **kwargs):
                         new_sockets_in[convert_key+'s'] = sockets_in[socket_name] + new_sockets_in[convert_key+'s']
                     else:
                         new_sockets_in[convert_key+'s'] = sockets_in[socket_name]
-            do_relink(node, node.inputs[convert_key+'s'], new_sockets_in, in_out="INPUT",)
+            if new_sockets_in:
+                do_relink(node, node.inputs[convert_key+'s'], new_sockets_in, in_out="INPUT",)
         for socket_name, links in sockets_in.items():
             proceed = True
             for convert_key in my_convert_keys:
