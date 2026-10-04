@@ -80,6 +80,8 @@ def timer_update_selection_sync():
         for space in spaces:
             # if we are in the node editor, manage node selection
             if space.type == "NODE_EDITOR":
+                if not space.path:
+                    return SELECTION_POLL_RATE # empty tree
                 root_tree = space.path[0].node_tree
                 parsed_tree = root_tree.parsed_tree
                 tree_path = [path_item.node_tree for path_item in space.path]
