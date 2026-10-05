@@ -100,6 +100,17 @@ def tree_from_mantis_node(sig, base_tree):
 def get_ui_node(sig, base_tree):
     return tree_from_mantis_node(sig, base_tree).nodes.get( sig[-1] )
 
+# Function for splitting up 
+def split_quoted_substrings_to_strings(text):
+    import re
+    pattern = r'''(?:"([^"]*)"|'([^']*)'|([^"']+))'''
+    substrings = [
+        next(group for group in match.groups() if group is not None)
+        for match in re.finditer(pattern, text)
+    ]
+    return substrings
+
+
 
 ##################################################################################################
 # groups and changing sockets -- this is used extensively by Schema.

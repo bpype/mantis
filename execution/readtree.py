@@ -269,11 +269,17 @@ def node_scan_overlays(node, socket_id,):
                 overlay_keys.add(input.name)
     # sort by reverse length so we find "CatsAndFrogs" before "Cats"
     overlay_keys = sorted(overlay_keys, key= lambda a :-1*len(a))
-    overlay_tries = value.split("$")
+    # First I need to break it into substrings based on quotation marks
+    from ..utilities.utilities import split_quoted_substrings_to_strings
+    quoted_substrings = split_quoted_substrings_to_strings(value)
+    overlay_tries = []
+    for quoted_substring in  quoted_substrings:
+        overlay_tries.extend(quoted_substring.split("$"))
     result = overlay_tries[0] # the 0th element is always before the split character
     # the reason for the difference between overlay_try and key is because
     #  we don't actually know if the $text part has a key in it
     for overlay_try in overlay_tries[1:]:
+        if not overlay_try: continue # some of these are empty
         overlay_resolved_value = "$" + overlay_try
         for key in overlay_keys:
             if key in overlay_try:
