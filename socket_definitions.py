@@ -29,16 +29,16 @@ if bpy_version == (4,5,0): # THere is a bug that requires the socket type to inh
     parent_classes = (NodeSocketGeometry, NodeSocket)
 
 class MantisSocket(parent_classes):
-        is_valid_interface_type=False
+    is_valid_interface_type=False
     enum_display_type="TABS" # TABS or DROPDOWN
-        category : bpy.props.StringProperty()
-        @property
-        def interface_type(self):
-            # this is stupid but it is the fastest way to implement this
-            # TODO: refactor this, it should be a class property
-            if hasattr(self, "color"):
-                return map_color_to_socket_type(self.color)
-            return map_color_to_socket_type(self.color_simple)
+    category : bpy.props.StringProperty()
+    @property
+    def interface_type(self):
+        # this is stupid but it is the fastest way to implement this
+        # TODO: refactor this, it should be a class property
+        if hasattr(self, "color"):
+            return map_color_to_socket_type(self.color)
+        return map_color_to_socket_type(self.color_simple)
     def draw(self, context, layout, node, text):
         ChooseDraw(self, context, layout, node, text)
     def draw_color(self, context, node):
@@ -624,7 +624,7 @@ def ChooseDraw(self, context, layout, node, text, icon = "NONE", use_enum=True, 
                 if self.__class__.enum_display_type == 'DROPDOWN':
                     layout.prop(self, "default_value",)
                 else:
-                layout.prop_tabs_enum(self, "default_value",)
+                    layout.prop_tabs_enum(self, "default_value",)
             else:
                 layout.prop(text=text)
         # for OUTPUT sockets that take INPUT (confusing name!)

@@ -301,10 +301,10 @@ def do_version_update(node_tree):
         if hasattr(node, 'is_updating'):
             node.is_updating = True
     # start by doing tree versioning tasks
-    for affected_bl_idnames, task, arguments_needed in versioning_tasks:
+    for affected_bl_idnames, task, required_kwargs in versioning_tasks:
         if node_tree.bl_idname not in affected_bl_idnames: continue # this is a node task.
         arguments = {}
-        if 'tree' in arguments_needed:
+        if 'tree' in required_kwargs:
             arguments['tree']=node_tree
         task(**arguments)
     # run the updates that have no prerequisites
