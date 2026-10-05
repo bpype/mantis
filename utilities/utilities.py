@@ -110,8 +110,6 @@ def split_quoted_substrings_to_strings(text):
     ]
     return substrings
 
-
-
 ##################################################################################################
 # groups and changing sockets -- this is used extensively by Schema.
 ##################################################################################################

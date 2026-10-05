@@ -211,10 +211,16 @@ def data_from_tree(base_tree, tree_path, mContext, dummy_nodes, all_mantis_nodes
             data_from_tree(base_tree, tree_path+[mantis_node.ui_node], mContext, dummy_nodes, all_mantis_nodes, all_schema)
     return dummy_nodes, all_mantis_nodes, all_schema
 
+STRING_PADDING = 4
+overlay_valid_socket_types = [
+    "FloatSocket", "FloatPositiveSocket", "FloatFactorSocket",
+    "FloatAngleSocket", "UnsignedIntSocket", "IntSocket", "StringSocket",
+]
 # Do not use these input names as overlay keys:
 forbidden_key_names = ["",]
 forbidden_in_key_name = ['$',]
 def node_scan_overlays(node, socket_id,):
+    from ..utilities.node_common import GraphError
     interface_nodes = node.mContext.interface_nodes
     from ..utilities.utilities import get_ui_node
     ui_node = get_ui_node(node.ui_signature, node.base_tree)
@@ -242,6 +248,7 @@ def node_scan_overlays(node, socket_id,):
     # the my_interfaces list is sorted in REVERSE order of importance
     # Next, get all the overlay providers.
     name_to_id_map = {}
+    name_to_type_map = {} # Just for printing reasonable error messages
     overlay_keys = set()
     root_overlay_values = {}
     # First, we'll get the base tree's default inputs
@@ -249,24 +256,32 @@ def node_scan_overlays(node, socket_id,):
         if interface_item.item_type != "SOCKET": continue
         if interface_item.in_out != "INPUT": continue
         # NOTE this will need to change if overlays extend to other data types
-        if not hasattr(interface_item, "default_string"): continue
-        # NOTE that there may be duplicate names. Too bad!
-        root_overlay_values[interface_item.name] = interface_item.default_string
+        if hasattr(interface_item, "default_string"):
+            # NOTE that there may be duplicate names. Too bad!
+            root_overlay_values[interface_item.name] = interface_item.default_string
+        elif hasattr(interface_item, "default_int"):
+            root_overlay_values[interface_item.name] = str(interface_item.default_int).zfill(STRING_PADDING)
+        elif hasattr(interface_item, "default_float"):
+            root_overlay_values[interface_item.name] = str(interface_item.default_float).zfill(STRING_PADDING)
         overlay_keys.add(interface_item.name)
         name_to_id_map[interface_item.name] = None # don't worry about it
+        name_to_type_map[interface_item.name] = interface_item.bl_socket_idname
     for interface_node in interface_nodes.values():
         # problem: the interface node stores socket identifiers as keys
         # so in reality we need to get the group UI node and ask for its input names
         # if there is a duplicate name, too bad!
         group_ui_node = get_ui_node(interface_node.ui_signature[:-1], node.base_tree)
-        for input in group_ui_node.inputs:
-            if input.name in forbidden_key_names: continue
+        for interface_item in group_ui_node.node_tree.interface.items_tree:
+            if interface_item.item_type != 'SOCKET': continue
+            if interface_item.in_out != 'INPUT': continue
+            if interface_item.name in forbidden_key_names: continue
             for substr in forbidden_in_key_name:
-                if substr in input.name:
+                if substr in interface_item.name:
                     break
             else: # if we do not find a bad substr
-                name_to_id_map[input.name]=input.identifier
-                overlay_keys.add(input.name)
+                name_to_id_map[interface_item.name]=interface_item.identifier
+                name_to_type_map[interface_item.name] = interface_item.bl_socket_idname
+                overlay_keys.add(interface_item.name)
     # sort by reverse length so we find "CatsAndFrogs" before "Cats"
     overlay_keys = sorted(overlay_keys, key= lambda a :-1*len(a))
     # First I need to break it into substrings based on quotation marks
@@ -286,7 +301,23 @@ def node_scan_overlays(node, socket_id,):
                 overlay_resolved_value = "$" + key
                 for interface in reversed(my_interfaces): # since this is reversed when we build it
                     if interface.inputs.get(actual_key := name_to_id_map.get(key)):
-                        overlay_resolved_value = overlay_try.replace(key, interface.evaluate_input(actual_key))
+                        overlay_value = None
+                        try:
+                            overlay_value = interface.evaluate_input(actual_key)
+                        except KeyError:
+                            if (socket_type := name_to_type_map.get(key) or 'NOT FOUND') in overlay_valid_socket_types:
+                                raise GraphError(f"Error: Variable {key} is not supported because it has "
+                                                 f"an invalid input in the node group: {interface.signature[:-1]}.")
+                            raise GraphError( f"Error: Variable {key} is not supported because it is "
+                                              f"type {socket_type}" )
+                            continue
+                            # NOTE that the above can also be caused by any BUG occuring in node group update
+                            # because it causes the interface to be invalid for the UI node that spawns the interface node.
+                        
+                        if isinstance(overlay_value, (float, int)):
+                            overlay_value = str(overlay_value).zfill(STRING_PADDING)
+                        assert (isinstance(overlay_value, str)), f"Error: Variable {key} is not supported because it is type {type(overlay_value)}"
+                        overlay_resolved_value = overlay_try.replace(key, overlay_value)
                         break
                 else: # we'll try the base tree
                     if base_tree_result := root_overlay_values.get(overlay_try):
