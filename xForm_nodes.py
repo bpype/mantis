@@ -79,23 +79,32 @@ class xFormNode(MantisNode):
 
     def check_drivers(self):
         for st in self.socket_templates:
-            if st.is_animatable == False:
-                socket = st.name
-                multi = st.use_multi_input
-                vector = isinstance(st.default_value, tuple)
-                # if single property
-                if not multi and not vector:
-                    has_driver = check_for_driver(self, socket)
-                elif not multi and vector:
-                    for i in range(len(st.default_value)):
-                        has_driver = check_for_driver(self, socket, i)
-                        if has_driver: break
-                elif multi:
-                    for i in range(len(self.inputs[socket].links)):
-                        has_driver = check_for_driver(self, socket, 0, i)
-                        if has_driver: break
-                if has_driver:
-                    raise GraphError(f"Error: Socket \"{socket}\" is not animatable and cannot be driven.")
+            try:
+                if st.is_animatable == False:
+                    socket = st.name
+                    multi = st.use_multi_input
+                    vector = isinstance(st.default_value, tuple)
+                    # if single property
+                    if not multi and not vector:
+                        has_driver = check_for_driver(self, socket)
+                    elif not multi and vector:
+                        for i in range(len(st.default_value)):
+                            has_driver = check_for_driver(self, socket, i)
+                            if has_driver: break
+                    elif multi:
+                        if socket == 'Custom Properties':
+                            has_driver = check_for_driver(self, socket,)
+                        else:
+                            for i in range(len(self.inputs[socket].links)):
+                                has_driver = check_for_driver(self, socket, 0, i)
+                                if has_driver: break
+                    if has_driver:
+                        raise GraphError(f"Error: Socket \"{socket}\" is not animatable and cannot be driven.")
+            except Exception as e:
+                # This isn't really an error and the user should not see it.
+                from .__init__ import DOERROR
+                if DOERROR:
+                    raise e
     
     def setup_custom_props(self, ob, input):
         from .mantis_dataclasses import custom_prop_template
