@@ -253,6 +253,8 @@ def up_0_13_0_new_custom_prop_node(*args, **kwargs):
     from .xForm_nodes_ui import xFormBoneNode
     socket_map_in, socket_map_out = get_socket_maps(node)
     if isinstance(node, xFormBoneNode):
+        if node.inputs.get('Custom Properties'):
+            return # already done here
         for custom_input in reversed(list(node.inputs)):
             if 'Parameter' not in custom_input.bl_idname:
                 continue
