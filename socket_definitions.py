@@ -23,18 +23,14 @@ no_default_value= [
 # the sockets that do not have this field do not transfer data.
 # instead, it is the link itself which is meaningful.
 from bpy.app import version as bpy_version
+parent_classes = (NodeSocket)
 if bpy_version == (4,5,0): # THere is a bug that requires the socket type to inherit from a Blender class
     from bpy.types import NodeSocketGeometry # so we will just inherit from NodeSocketGeometry
-    class MantisSocket(NodeSocketGeometry, NodeSocket): # even though that is kinda silly
+    parent_classes = (NodeSocketGeometry, NodeSocket)
+
+class MantisSocket(parent_classes):
         is_valid_interface_type=False
-        category : bpy.props.StringProperty()
-        @property # making this a classmethod is apparently not gonna work
-        def interface_type(self):
-            return NodeSocketGeometry.bl_idname
-        
-else:
-    class MantisSocket(NodeSocket):
-        is_valid_interface_type=False
+    enum_display_type="TABS" # TABS or DROPDOWN
         category : bpy.props.StringProperty()
         @property
         def interface_type(self):
@@ -43,6 +39,13 @@ else:
             if hasattr(self, "color"):
                 return map_color_to_socket_type(self.color)
             return map_color_to_socket_type(self.color_simple)
+    def draw(self, context, layout, node, text):
+        ChooseDraw(self, context, layout, node, text)
+    def draw_color(self, context, node):
+        return self.color
+    @classmethod
+    def draw_color_simple(self):
+        return self.color_simple    
 
 
 
@@ -83,6 +86,18 @@ enumRotationOrder =(('AUTO', 'Auto', 'Auto'),
                     ('YZX', "YZX", "YZX"),
                     ('QUATERNION', "Quaternion", "Quaternion"),
                     ('AXIS_ANGLE', "Axis Angle", "Axis Angle"),)
+
+eMatrixFromCurveModes = (('DIVISIONS', "Divisions", "Get a matrix from the curve automattically "
+                                                    "based on dividing it into pieces."),
+                         ('FACTOR', "Spline Factor", "Get a matrix from a specific factor"
+                                                     " along the spline."))
+
+eMatrixComposeModes = (('BASIS', "Basis Vectors", "Compose a matrix from basis vectors. "
+                                                  "Mantis will not automatically orthonormalize them."),
+# TODO: Implement #    ('BASIS_AUTO', "Basis Ortho Vectors", "Compose a matrix from basis vectors. "
+#       this feature! #                            "Mantis will automatically orthonormalize them."),
+                       ('CHANNELS', "Transform Channels", "Compose a matrix from translation, rotation, "
+                                                          "and scale transform channels."))
 
 
 # node socket colors:
@@ -284,6 +299,9 @@ def TellClasses() -> List[MantisSocket]:
              MatrixTransformOperation,
              #conditions
              EnumCompareOperation,
+             # modes, options for node operations
+            EnumMatrixFromCurveMode,
+            EnumComposeMatrixModes,
              # Schema
              WildcardSocket,
             #  xFormArraySocket,
@@ -603,6 +621,9 @@ def ChooseDraw(self, context, layout, node, text, icon = "NONE", use_enum=True, 
         # ENUM VALUES (this is a HACK, fix it later)
         if ('Enum' in self.bl_idname) and (use_enum):
             if not (self.is_output or self.is_linked):
+                if self.__class__.enum_display_type == 'DROPDOWN':
+                    layout.prop(self, "default_value",)
+                else:
                 layout.prop_tabs_enum(self, "default_value",)
             else:
                 layout.prop(text=text)
@@ -666,13 +687,6 @@ class RelationshipSocket(MantisSocket):
     color : bpy.props.FloatVectorProperty(default=cRelationship, size=4)
     input : bpy.props.BoolProperty(default =False,)
     is_valid_interface_type=True
-    def draw(self, context, layout, node, text):
-        ChooseDraw(self, context, layout, node, text)
-    def draw_color(self, context, node):
-        return self.color
-    @classmethod
-    def draw_color_simple(self):
-        return self.color_simple
 
 class DeformerSocket(MantisSocket):
     # Description string
@@ -684,13 +698,6 @@ class DeformerSocket(MantisSocket):
     color_simple = cDeformer
     color : bpy.props.FloatVectorProperty(default=cDeformer, size=4)
     input : bpy.props.BoolProperty(default =False,)
-    def draw(self, context, layout, node, text):
-        ChooseDraw(self, context, layout, node, text)
-    def draw_color(self, context, node):
-        return self.color
-    @classmethod
-    def draw_color_simple(self):
-        return self.color_simple
 
 
 
@@ -750,13 +757,6 @@ class xFormSocket(MantisSocket):
     color : bpy.props.FloatVectorProperty(default=cxForm, size=4)
     input : bpy.props.BoolProperty(default =False,)
     is_valid_interface_type=True
-    def draw(self, context, layout, node, text):
-        ChooseDraw(self, context, layout, node, text)
-    def draw_color(self, context, node):
-        return self.color
-    @classmethod
-    def draw_color_simple(self):
-        return self.color_simple
 
 class GeometrySocket(MantisSocket):
     '''Geometry Input Output'''
@@ -766,13 +766,6 @@ class GeometrySocket(MantisSocket):
     color : bpy.props.FloatVectorProperty(default=cGeometry, size=4)
     input : bpy.props.BoolProperty(default =False,)
     is_valid_interface_type=True
-    def draw(self, context, layout, node, text):
-        ChooseDraw(self, context, layout, node, text)
-    def draw_color(self, context, node):
-        return self.color
-    @classmethod
-    def draw_color_simple(self):
-        return self.color_simple
 
 class GenericRotationSocket(MantisSocket):
     '''Custom node socket type'''
@@ -783,13 +776,6 @@ class GenericRotationSocket(MantisSocket):
 
 
 
-    def draw(self, context, layout, node, text):
-        ChooseDraw(self, context, layout, node, text)
-    def draw_color(self, context, node):
-        return self.color
-    @classmethod
-    def draw_color_simple(self):
-        return self.color_simple
 
 ###############################
 
@@ -837,13 +823,6 @@ class FCurveSocket(MantisSocket):
     is_valid_interface_type=True
     def init(self):
         self.display_shape = 'CIRCLE_DOT'
-    def draw(self, context, layout, node, text):
-        ChooseDraw(self, context, layout, node, text)
-    def draw_color(self, context, node):
-        return self.color
-    @classmethod
-    def draw_color_simple(self):
-        return self.color_simple
 
 class DriverSocket(MantisSocket):
     '''Driver'''
@@ -856,13 +835,6 @@ class DriverSocket(MantisSocket):
 
     def init(self):
         self.display_shape = 'CIRCLE_DOT'
-    def draw(self, context, layout, node, text):
-        ChooseDraw(self, context, layout, node, text)
-    def draw_color(self, context, node):
-        return self.color
-    @classmethod
-    def draw_color_simple(self):
-        return self.color_simple
 
 class DriverVariableSocket(MantisSocket):
     '''Driver'''
@@ -875,22 +847,6 @@ class DriverVariableSocket(MantisSocket):
 
     def init(self):
         self.display_shape = 'CIRCLE_DOT'
-    def draw(self, context, layout, node, text):
-        ChooseDraw(self, context, layout, node, text)
-    def draw_color(self, context, node):
-        return self.color
-    @classmethod
-    def draw_color_simple(self):
-        return self.color_simple
-
-
-
-# transform_spaces
-# transform_spaces_bone_object
-# transform_spaces_object
-
-# def get_transform_space_enum(self, context):
-    # pass
 
 def get_transform_space(self, context):
     if "Owner" in self.name:
@@ -912,14 +868,6 @@ class TransformSpaceSocket(MantisSocket):
     color : bpy.props.FloatVectorProperty(default=cTransformSpace, size=4)
     input : bpy.props.BoolProperty(default =False,)
 
-    def draw(self, context, layout, node, text):
-        ChooseDraw(self, context, layout, node, text)
-    def draw_color(self, context, node):
-        return self.color
-    @classmethod
-    def draw_color_simple(self):
-        return self.color_simple
-
 class BooleanSocket(MantisSocket):
     '''Custom node socket type'''
     bl_idname = 'BooleanSocket'
@@ -929,13 +877,6 @@ class BooleanSocket(MantisSocket):
     color : bpy.props.FloatVectorProperty(default=cBool, size=4)
     input : bpy.props.BoolProperty(default =False,)
     is_valid_interface_type=True
-    def draw(self, context, layout, node, text):
-        ChooseDraw(self, context, layout, node, text)
-    def draw_color(self, context, node):
-        return self.color
-    @classmethod
-    def draw_color_simple(self):
-        return self.color_simple
 
 class InvertedBooleanSocket(MantisSocket):
     '''Custom node socket type'''
@@ -947,13 +888,6 @@ class InvertedBooleanSocket(MantisSocket):
     input : bpy.props.BoolProperty(default =False,)
     invert : bpy.props.BoolProperty(default=True,)
     is_valid_interface_type=False
-    def draw(self, context, layout, node, text):
-        ChooseDraw(self, context, layout, node, text)
-    def draw_color(self, context, node):
-        return self.color
-    @classmethod
-    def draw_color_simple(self):
-        return self.color_simple
 
 class BooleanThreeTupleSocket(MantisSocket):
     # Description string
@@ -966,13 +900,6 @@ class BooleanThreeTupleSocket(MantisSocket):
     color : bpy.props.FloatVectorProperty(default=cBool3, size=4)
     input : bpy.props.BoolProperty(default =False,)
     is_valid_interface_type=True
-    def draw(self, context, layout, node, text):
-        ChooseDraw(self, context, layout, node, text)
-    def draw_color(self, context, node):
-        return self.color
-    @classmethod
-    def draw_color_simple(self):
-        return self.color_simple
     def TellValue(self):
         return (self.default_value[0], self.default_value[1], self.default_value[2])
 
@@ -990,14 +917,6 @@ class RotationOrderSocket(MantisSocket):
     color : bpy.props.FloatVectorProperty(default=cRotationOrder, size=4)
     input : bpy.props.BoolProperty(default =False,)
 
-    def draw(self, context, layout, node, text):
-        ChooseDraw(self, context, layout, node, text)
-    def draw_color(self, context, node):
-        return self.color
-    @classmethod
-    def draw_color_simple(self):
-        return self.color_simple
-
 class QuaternionSocket(MantisSocket):
     '''Custom node socket type'''
     bl_idname = 'QuaternionSocket'
@@ -1010,14 +929,6 @@ class QuaternionSocket(MantisSocket):
     color_simple = cQuaternion
     color : bpy.props.FloatVectorProperty(default=cQuaternion, size=4)
     input : bpy.props.BoolProperty(default =False,)
-
-    def draw(self, context, layout, node, text):
-        ChooseDraw(self, context, layout, node, text)
-    def draw_color(self, context, node):
-        return self.color
-    @classmethod
-    def draw_color_simple(self):
-        return self.color_simple
 
 class QuaternionSocketAA(MantisSocket):
     '''Custom node socket type'''
@@ -1032,14 +943,6 @@ class QuaternionSocketAA(MantisSocket):
         default = (1.0, 0.0, 0.0, 0.0,),
         update = update_socket,)
 
-    def draw(self, context, layout, node, text):
-        ChooseDraw(self, context, layout, node, text)
-    def draw_color(self, context, node):
-        return self.color
-    @classmethod
-    def draw_color_simple(self):
-        return self.color_simple
-
 class IntSocket(MantisSocket):
     '''Custom node socket type'''
     bl_idname = 'IntSocket'
@@ -1049,13 +952,6 @@ class IntSocket(MantisSocket):
     color : bpy.props.FloatVectorProperty(default=cInt, size=4)
     input : bpy.props.BoolProperty(default =False,)
     is_valid_interface_type=True
-    def draw(self, context, layout, node, text):
-        ChooseDraw(self, context, layout, node, text)
-    def draw_color(self, context, node):
-        return self.color
-    @classmethod
-    def draw_color_simple(self):
-        return self.color_simple
 
 class UnsignedIntSocket(MantisSocket):
     '''Unsigned Integer Socket'''
@@ -1066,13 +962,6 @@ class UnsignedIntSocket(MantisSocket):
     color : bpy.props.FloatVectorProperty(default=cInt, size=4)
     input : bpy.props.BoolProperty(default =False,)
     is_valid_interface_type=True
-    def draw(self, context, layout, node, text):
-        ChooseDraw(self, context, layout, node, text)
-    def draw_color(self, context, node):
-        return self.color
-    @classmethod
-    def draw_color_simple(self):
-        return self.color_simple
 
 class StringSocket(MantisSocket):
     """Float Input socket"""
@@ -1127,14 +1016,6 @@ class BoneCollectionSocket(MantisSocket):
     color_simple = cBoneCollection
     color : bpy.props.FloatVectorProperty(default=cBoneCollection, size=4)
     is_valid_interface_type=True
-
-    def draw(self, context, layout, node, text):
-        ChooseDraw(self, context, layout, node, text)
-    def draw_color(self, context, node):
-        return self.color
-    @classmethod
-    def draw_color_simple(self):
-        return self.color_simple
 
 def get_bone_theme_color(socket, prop,):
     from bpy import context
@@ -1269,13 +1150,6 @@ class EnumArrayGetOptions(MantisSocket):
     color : bpy.props.FloatVectorProperty(default=cString, size=4)
     input : bpy.props.BoolProperty(default =False,)
 
-    def draw(self, context, layout, node, text):
-        ChooseDraw(self, context, layout, node, text)
-    def draw_color(self, context, node):
-        return self.color
-    @classmethod
-    def draw_color_simple(self):
-        return self.color_simple
 
 #####################################################################################
 # Parameters
@@ -1295,23 +1169,14 @@ class EnumCustomPropTypeSocket(MantisSocket):
     bl_idname = 'EnumCustomPropTypeSocket'
     bl_label = "Property Type"
     color_simple = cString
-
     default_value: bpy.props.EnumProperty(
         items=eCustomPropType,
         description="Custom Property Type",
         default = 'BOOL',
         update = update_socket,)
-
     color : bpy.props.FloatVectorProperty(default=cString, size=4)
     input : bpy.props.BoolProperty(default =False,)
 
-    def draw(self, context, layout, node, text):
-        ChooseDraw(self, context, layout, node, text)
-    def draw_color(self, context, node):
-        return self.color
-    @classmethod
-    def draw_color_simple(self):
-        return self.color_simple
 # what is this one again?
 
 class CustomPropSocket(MantisSocket):
@@ -1322,16 +1187,8 @@ class CustomPropSocket(MantisSocket):
     is_valid_interface_type=True
     color : bpy.props.FloatVectorProperty(default=cString, size=4)
     input : bpy.props.BoolProperty(default =False,)
-
     def init(self):
         self.display_shape = 'CIRCLE_DOT'
-    def draw(self, context, layout, node, text):
-        ChooseDraw(self, context, layout, node, text)
-    def draw_color(self, context, node):
-        return self.color
-    @classmethod
-    def draw_color_simple(self):
-        return self.color_simple
 
 class xFormParameterSocket(MantisSocket):
     '''xFrom Parameter'''
@@ -1340,26 +1197,14 @@ class xFormParameterSocket(MantisSocket):
     color_simple = cxForm
     color : bpy.props.FloatVectorProperty(default=cxForm, size=4)
     input : bpy.props.BoolProperty(default =False,)
-
-
     def init(self):
         self.display_shape = 'CIRCLE_DOT'
-    def draw(self, context, layout, node, text):
-        ChooseDraw(self, context, layout, node, text)
-    def draw_color(self, context, node):
-        return self.color
-    @classmethod
-    def draw_color_simple(self):
-        return self.color_simple
-# what is this one again?
-
 
 class ParameterBoolSocket(MantisSocket):
     """Boolean Parameter Socket"""
     bl_idname = 'ParameterBoolSocket'
     bl_label = "Boolean Parameter"
     color_simple = cBool
-
     color : bpy.props.FloatVectorProperty(default=cBool, size=4)
     input : bpy.props.BoolProperty(default =False,)
     #custom properties:
@@ -1371,25 +1216,6 @@ class ParameterBoolSocket(MantisSocket):
     default_value : bpy.props.BoolProperty(default = False, update = update_socket,)
     def init(self):
         self.display_shape = 'CIRCLE_DOT'
-        # if True:
-            # print (self.is_property_set("default_value"))
-            # ui_data = self.id_properties_ui("default_value")
-            # ui_data.update(
-                # description=self.description,
-                # default=0,) # for now
-            # ui_data.update(
-                # min = self.min,
-                # max = self.max,
-                # soft_min = self.soft_min,
-                # soft_max = self.soft_max,)
-
-    def draw(self, context, layout, node, text):
-        ChooseDraw(self, context, layout, node, text)
-    def draw_color(self, context, node):
-        return self.color
-    @classmethod
-    def draw_color_simple(self):
-        return self.color_simple
 
 class ParameterIntSocket(MantisSocket):
     """Integer Parameter socket"""
@@ -1408,13 +1234,6 @@ class ParameterIntSocket(MantisSocket):
     description:bpy.props.StringProperty(default = "")
     def init(self):
         self.display_shape = 'CIRCLE_DOT'
-    def draw(self, context, layout, node, text):
-        ChooseDraw(self, context, layout, node, text)
-    def draw_color(self, context, node):
-        return self.color
-    @classmethod
-    def draw_color_simple(self):
-        return self.color_simple
 
 class ParameterFloatSocket(MantisSocket):
     """Float Parameter socket"""
@@ -1433,13 +1252,6 @@ class ParameterFloatSocket(MantisSocket):
     description:bpy.props.StringProperty(default = "")
     def init(self):
         self.display_shape = 'CIRCLE_DOT'
-    def draw(self, context, layout, node, text):
-        ChooseDraw(self, context, layout, node, text)
-    def draw_color(self, context, node):
-        return self.color
-    @classmethod
-    def draw_color_simple(self):
-        return self.color_simple
 
 class ParameterVectorSocket(MantisSocket):
     """Vector Parameter socket"""
@@ -1456,13 +1268,6 @@ class ParameterVectorSocket(MantisSocket):
     description:bpy.props.StringProperty(default = "")
     def init(self):
         self.display_shape = 'CIRCLE_DOT'
-    def draw(self, context, layout, node, text):
-        ChooseDraw(self, context, layout, node, text)
-    def draw_color(self, context, node):
-        return self.color
-    @classmethod
-    def draw_color_simple(self):
-        return self.color_simple
 
 class ParameterStringSocket(MantisSocket):
     """String Parameter socket"""
@@ -1477,14 +1282,6 @@ class ParameterStringSocket(MantisSocket):
     description:bpy.props.StringProperty(default = "")
     def init(self):
         self.display_shape = 'CIRCLE_DOT'
-    def draw(self, context, layout, node, text):
-        ChooseDraw(self, context, layout, node, text)
-    def draw_color(self, context, node):
-        return self.color
-    @classmethod
-    def draw_color_simple(self):
-        return self.color_simple
-
 
 #####################################################################################
 # Additional socket types, for special cases
@@ -1769,14 +1566,6 @@ class BoolUpdateParentNode(MantisSocket):
     color : bpy.props.FloatVectorProperty(default=cBool, size=4)
     input : bpy.props.BoolProperty(default =False,)
 
-    def draw(self, context, layout, node, text):
-        ChooseDraw(self, context, layout, node, text)
-    def draw_color(self, context, node):
-        return self.color
-    @classmethod
-    def draw_color_simple(self):
-        return self.color_simple
-
 class IKChainLengthSocket(MantisSocket):
     '''Custom node socket type'''
     bl_idname = 'IKChainLengthSocket'
@@ -1786,16 +1575,8 @@ class IKChainLengthSocket(MantisSocket):
 
     color : bpy.props.FloatVectorProperty(default=cInt, size=4)
     input : bpy.props.BoolProperty(default =False,)
-    def draw(self, context, layout, node, text):
-        ChooseDraw(self, context, layout, node, text)
-    def draw_color(self, context, node):
-        return self.color
-    @classmethod
-    def draw_color_simple(self):
-        return self.color_simple
 
 # Inherit
-
 eInheritScale = (
         ('FULL', "Full", "Fully inherit scale", 1),
         ('AVERAGE', "Average", "todo", 2),
@@ -1818,16 +1599,8 @@ class EnumInheritScale(MantisSocket):
 
     color : bpy.props.FloatVectorProperty(default=cString, size=4)
     input : bpy.props.BoolProperty(default =False,)
-    def draw(self, context, layout, node, text):
-        ChooseDraw(self, context, layout, node, text)
-    def draw_color(self, context, node):
-        return self.color
-    @classmethod
-    def draw_color_simple(self):
-        return self.color_simple
 
 # Copy Rotation
-
 eRotationMix =(
         ('REPLACE', "Replace", "Fully inherit scale", 0),
         ('BEFORE', "Before", "Fully inherit scale", 1),
@@ -1837,15 +1610,13 @@ eRotationMix =(
     )
 
 # TODO HACK
-# I am trying to figure out how to do enum_flag as
-#  mutually exclusive options
-# but! I don't think it's possible
-# I just like the UI for it :P
+# do enum_flag as mutually exclusive options here
 
 class EnumRotationMix(MantisSocket):
     '''Custom node socket type'''
     bl_idname = 'EnumRotationMix'
     bl_label = "Rotation Mix"
+    enum_display_type='DROPDOWN'
     default_value: bpy.props.EnumProperty(
         items=eRotationMix,
         name="Rotation Mix",
@@ -1856,14 +1627,6 @@ class EnumRotationMix(MantisSocket):
     color_simple = cString
     color : bpy.props.FloatVectorProperty(default=cString, size=4)
     input : bpy.props.BoolProperty(default =False,)
-
-    def draw(self, context, layout, node, text):
-        ChooseDraw(self, context, layout, node, text)
-    def draw_color(self, context, node):
-        return self.color
-    @classmethod
-    def draw_color_simple(self):
-        return self.color_simple
 
 eRotationMix_copytransforms =(
         ('REPLACE', "Replace (Aligned)", "Fully inherit scale"),
@@ -1891,16 +1654,8 @@ class EnumRotationMixCopyTransforms(MantisSocket):
     color_simple = cString
     color : bpy.props.FloatVectorProperty(default=cString, size=4)
     input : bpy.props.BoolProperty(default =False,)
-    def draw(self, context, layout, node, text):
-        ChooseDraw(self, context, layout, node, text)
-    def draw_color(self, context, node):
-        return self.color
-    @classmethod
-    def draw_color_simple(self):
-        return self.color_simple
 
 # STRETCH TO
-
 eMaintainVolumeStretchTo = (('VOLUME_XZX', "XZ", "XZ", 1),
                             ('VOLUME_X', "X", "X", 2),
                             ('VOLUME_Z', "Z", "Z", 4),
@@ -1920,14 +1675,6 @@ class EnumMaintainVolumeStretchTo(MantisSocket):
     color_simple = cString
     color : bpy.props.FloatVectorProperty(default=cString, size=4)
     input : bpy.props.BoolProperty(default =False,)
-    def draw(self, context, layout, node, text):
-        ChooseDraw(self, context, layout, node, text)
-    def draw_color(self, context, node):
-        return self.color
-    @classmethod
-    def draw_color_simple(self):
-        return self.color_simple
-
 eRotationStretchTo = (('PLANE_X', "XZ", "XZ", 1),
                       ('PLANE_Z', "ZX", "ZX", 2),
                       ('SWING_Y', "Swing", "Swing", 4),)
@@ -1947,16 +1694,8 @@ class EnumRotationStretchTo(MantisSocket):
     color_simple = cString
     color : bpy.props.FloatVectorProperty(default=cString, size=4)
     input : bpy.props.BoolProperty(default =False,)
-    def draw(self, context, layout, node, text):
-        ChooseDraw(self, context, layout, node, text)
-    def draw_color(self, context, node):
-        return self.color
-    @classmethod
-    def draw_color_simple(self):
-        return self.color_simple
 
 # Track-To
-
 eTrackAxis = (('TRACK_X', "X", "X", 1),
                ('TRACK_Y', "Y", "Y", 2),
                ('TRACK_Z', "Z", "Z", 4),
@@ -1984,13 +1723,6 @@ class EnumTrackAxis(MantisSocket):
     color_simple = cString
     color : bpy.props.FloatVectorProperty(default=cString, size=4)
     input : bpy.props.BoolProperty(default =False,)
-    def draw(self, context, layout, node, text):
-        ChooseDraw(self, context, layout, node, text)
-    def draw_color(self, context, node):
-        return self.color
-    @classmethod
-    def draw_color_simple(self):
-        return self.color_simple
 
 class EnumUpAxis(MantisSocket):
     '''Custom node socket type'''
@@ -2007,13 +1739,6 @@ class EnumUpAxis(MantisSocket):
     color_simple = cString
     color : bpy.props.FloatVectorProperty(default=cString, size=4)
     input : bpy.props.BoolProperty(default =False,)
-    def draw(self, context, layout, node, text):
-        ChooseDraw(self, context, layout, node, text)
-    def draw_color(self, context, node):
-        return self.color
-    @classmethod
-    def draw_color_simple(self):
-        return self.color_simple
 
 # Follow Track Forward axis
 eForwardAxis = (('FORWARD_X',        "X",  "X",  0),
@@ -2037,13 +1762,6 @@ class EnumFollowPathForwardAxis(MantisSocket):
     color_simple = cString
     color : bpy.props.FloatVectorProperty(default=cString, size=4)
     input : bpy.props.BoolProperty(default =False,)
-    def draw(self, context, layout, node, text):
-        ChooseDraw(self, context, layout, node, text)
-    def draw_color(self, context, node):
-        return self.color
-    @classmethod
-    def draw_color_simple(self):
-        return self.color_simple
 
 # Follow Track Forward axis
 eFloorAxis =   (('FLOOR_X',        "X",  "X",  0),
@@ -2067,15 +1785,8 @@ class EnumFloorAxis(MantisSocket):
     color_simple = cString
     color : bpy.props.FloatVectorProperty(default=cString, size=4)
     input : bpy.props.BoolProperty(default =False,)
-    def draw(self, context, layout, node, text):
-        ChooseDraw(self, context, layout, node, text)
-    def draw_color(self, context, node):
-        return self.color
-    @classmethod
-    def draw_color_simple(self):
-        return self.color_simple
-# Locked Track
 
+# Locked Track
 eLockAxis = (('LOCK_X', "X", "X", 1),
              ('LOCK_Y', "Y", "Y", 2),
              ('LOCK_Z', "Z", "Z", 4),)
@@ -2095,16 +1806,8 @@ class EnumLockAxis(MantisSocket):
     color_simple = cString
     color : bpy.props.FloatVectorProperty(default=cString, size=4)
     input : bpy.props.BoolProperty(default =False,)
-    def draw(self, context, layout, node, text):
-        ChooseDraw(self, context, layout, node, text)
-    def draw_color(self, context, node):
-        return self.color
-    @classmethod
-    def draw_color_simple(self):
-        return self.color_simple
 
 # Limit Distance:
-
 eLimitMode = (('LIMITDIST_INSIDE', "Inside", "Inside",),
               ('LIMITDIST_OUTSIDE', "Outside", "Outside",),
               ('LIMITDIST_ONSURFACE', "On Surface", "On Surface",),)
@@ -2123,14 +1826,6 @@ class EnumLimitMode(MantisSocket):
     color_simple = cString
     color : bpy.props.FloatVectorProperty(default=cString, size=4)
     input : bpy.props.BoolProperty(default =False,)
-    def draw(self, context, layout, node, text):
-        ChooseDraw(self, context, layout, node, text)
-    def draw_color(self, context, node):
-        return self.color
-    @classmethod
-    def draw_color_simple(self):
-        return self.color_simple
-
 
 # Spline IK
 eYScaleMode = (('NONE', "None", "Don’t scale the X and Z axes.",),
@@ -2156,13 +1851,6 @@ class EnumYScaleMode(MantisSocket):
     color_simple = cString
     color : bpy.props.FloatVectorProperty(default=cString, size=4)
     input : bpy.props.BoolProperty(default =False,)
-    def draw(self, context, layout, node, text):
-        ChooseDraw(self, context, layout, node, text)
-    def draw_color(self, context, node):
-        return self.color
-    @classmethod
-    def draw_color_simple(self):
-        return self.color_simple
 
 class EnumXZScaleMode(MantisSocket):
     '''Custom node socket type'''
@@ -2178,14 +1866,6 @@ class EnumXZScaleMode(MantisSocket):
     color_simple = cString
     color : bpy.props.FloatVectorProperty(default=cString, size=4)
     input : bpy.props.BoolProperty(default =False,)
-    def draw(self, context, layout, node, text):
-        ChooseDraw(self, context, layout, node, text)
-    def draw_color(self, context, node):
-        return self.color
-    @classmethod
-    def draw_color_simple(self):
-        return self.color_simple
-
 
 eMapxForm = (('LOCATION', "Location", "Location",),
              ('ROTATION', "Rotation", "Rotation",),
@@ -2232,14 +1912,6 @@ class EnumTransformationMap(MantisSocket):
     color_simple = cString
     color : bpy.props.FloatVectorProperty(default=cString, size=4)
     input : bpy.props.BoolProperty(default =False,)
-    def draw(self, context, layout, node, text):
-        ChooseDraw(self, context, layout, node, text)
-    def draw_color(self, context, node):
-        return self.color
-    @classmethod
-    def draw_color_simple(self):
-        return self.color_simple
-
 
 class EnumTransformationRotationMode(MantisSocket):
     '''Custom node socket type'''
@@ -2610,13 +2282,6 @@ class EnumMixModeGeometryAttribute(MantisSocket):
     color_simple = cString
     color : bpy.props.FloatVectorProperty(default=cString, size=4)
     input : bpy.props.BoolProperty(default =False,)
-    def draw(self, context, layout, node, text):
-        ChooseDraw(self, context, layout, node, text)
-    def draw_color(self, context, node):
-        return self.color
-    @classmethod
-    def draw_color_simple(self):
-        return self.color_simple
 
 eSkinningMethod = (('EXISTING_GROUPS', "Use Existing Groups", "Use the existing vertex groups, or create empty groups if not found.",),
                    ('AUTOMATIC_HEAT', "Automatic (Heat)", "Use Blender's heatmap automatic skinning",),
@@ -2633,16 +2298,8 @@ class EnumSkinning(MantisSocket):
         default = 'AUTOMATIC_HEAT',
         update = update_socket,)
     color_simple = cString
-
     color : bpy.props.FloatVectorProperty(default=cString, size=4)
     input : bpy.props.BoolProperty(default =False,)
-    def draw(self, context, layout, node, text):
-        ChooseDraw(self, context, layout, node, text)
-    def draw_color(self, context, node):
-        return self.color
-    @classmethod
-    def draw_color_simple(self):
-        return self.color_simple
 
 
 class MorphTargetSocket(MantisSocket):
@@ -2654,16 +2311,6 @@ class MorphTargetSocket(MantisSocket):
     color : bpy.props.FloatVectorProperty(default=cShapeKey, size=4)
     input : bpy.props.BoolProperty(default =False,)
     is_valid_interface_type=True
-    def draw(self, context, layout, node, text):
-        ChooseDraw(self, context, layout, node, text)
-    def draw_color(self, context, node):
-        return self.color
-    @classmethod
-    def draw_color_simple(self):
-        return self.color_simple
-
-
-
 
 eDriverVariableType = (
                         ( 'SINGLE_PROP',
@@ -2849,13 +2496,6 @@ class FloatSocket(MantisSocket):
     color_simple = cFloat
     color : bpy.props.FloatVectorProperty(default=cFloat, size=4)
     input : bpy.props.BoolProperty(default =False,)
-    def draw(self, context, layout, node, text):
-        ChooseDraw(self, context, layout, node, text)
-    def draw_color(self, context, node):
-        return self.color
-    @classmethod
-    def draw_color_simple(self):
-        return self.color_simple
 
 class FloatPositiveSocket(MantisSocket):
     """Float Input socket"""
@@ -2866,13 +2506,6 @@ class FloatPositiveSocket(MantisSocket):
     color_simple = cFloat
     color : bpy.props.FloatVectorProperty(default=cFloat, size=4)
     input : bpy.props.BoolProperty(default =False,)
-    def draw(self, context, layout, node, text):
-        ChooseDraw(self, context, layout, node, text)
-    def draw_color(self, context, node):
-        return self.color
-    @classmethod
-    def draw_color_simple(self):
-        return self.color_simple
 
 class FloatFactorSocket(MantisSocket):
     '''xFrom Input Output'''
@@ -2888,13 +2521,6 @@ class FloatFactorSocket(MantisSocket):
     color_simple = cFloat
     color : bpy.props.FloatVectorProperty(default=cFloat, size=4)
     input : bpy.props.BoolProperty(default =False,)
-    def draw(self, context, layout, node, text):
-        ChooseDraw(self, context, layout, node, text)
-    def draw_color(self, context, node):
-        return self.color
-    @classmethod
-    def draw_color_simple(self):
-        return self.color_simple
 
 class FloatAngleSocket(MantisSocket):
     '''xFrom Input Output'''
@@ -2910,13 +2536,6 @@ class FloatAngleSocket(MantisSocket):
     color_simple = cFloat
     color : bpy.props.FloatVectorProperty(default=cFloat, size=4)
     input : bpy.props.BoolProperty(default =False,)
-    def draw(self, context, layout, node, text):
-        ChooseDraw(self, context, layout, node, text)
-    def draw_color(self, context, node):
-        return self.color
-    @classmethod
-    def draw_color_simple(self):
-        return self.color_simple
 
 class VectorSocket(MantisSocket):
     """Vector Input socket"""
@@ -2929,13 +2548,6 @@ class VectorSocket(MantisSocket):
     color_simple = cVector
     color : bpy.props.FloatVectorProperty(default=cVector, size=4)
     input : bpy.props.BoolProperty(default =False,)
-    def draw(self, context, layout, node, text):
-        ChooseDraw(self, context, layout, node, text)
-    def draw_color(self, context, node):
-        return self.color
-    @classmethod
-    def draw_color_simple(self):
-        return self.color_simple
 
 class VectorEulerSocket(MantisSocket):
     """Vector Input socket"""
@@ -2949,13 +2561,6 @@ class VectorEulerSocket(MantisSocket):
     color_simple = cVector
     color : bpy.props.FloatVectorProperty(default=cVector, size=4)
     input : bpy.props.BoolProperty(default =False,)
-    def draw(self, context, layout, node, text):
-        ChooseDraw(self, context, layout, node, text)
-    def draw_color(self, context, node):
-        return self.color
-    @classmethod
-    def draw_color_simple(self):
-        return self.color_simple
 
 class VectorTranslationSocket(MantisSocket):
     """Vector Input socket"""
@@ -2969,13 +2574,6 @@ class VectorTranslationSocket(MantisSocket):
     color_simple = cVector
     color : bpy.props.FloatVectorProperty(default=cVector, size=4)
     input : bpy.props.BoolProperty(default =False,)
-    def draw(self, context, layout, node, text):
-        ChooseDraw(self, context, layout, node, text)
-    def draw_color(self, context, node):
-        return self.color
-    @classmethod
-    def draw_color_simple(self):
-        return self.color_simple
 
 class VectorScaleSocket(MantisSocket):
     """Vector Input socket"""
@@ -2989,13 +2587,6 @@ class VectorScaleSocket(MantisSocket):
     color_simple = cVector
     color : bpy.props.FloatVectorProperty(default=cVector, size=4)
     input : bpy.props.BoolProperty(default =False,)
-    def draw(self, context, layout, node, text):
-        ChooseDraw(self, context, layout, node, text)
-    def draw_color(self, context, node):
-        return self.color
-    @classmethod
-    def draw_color_simple(self):
-        return self.color_simple
 
 class KeyframeSocket(MantisSocket):
     '''Keyframe'''
@@ -3007,16 +2598,6 @@ class KeyframeSocket(MantisSocket):
     input : bpy.props.BoolProperty(default =False, update = update_socket)
     def init(self):
         self.display_shape = 'CIRCLE_DOT'
-    def draw(self, context, layout, node, text):
-        ChooseDraw(self, context, layout, node, text)
-    def draw_color(self, context, node):
-        return self.color
-    @classmethod
-    def draw_color_simple(self):
-        return self.color_simple
-
-
-
 
 EnumKeyframeInterpolationType = (('CONSTANT', 'Stepped', 'Stepped'),
                                  ('LINEAR', "Linear", "Linear"),
@@ -3038,14 +2619,6 @@ class EnumKeyframeInterpolationTypeSocket(MantisSocket):
     color_simple = cString
     color : bpy.props.FloatVectorProperty(default=cString, size=4)
     input : bpy.props.BoolProperty(default =False, update = update_socket)
-    def draw(self, context, layout, node, text):
-        ChooseDraw(self, context, layout, node, text)
-    def draw_color(self, context, node):
-        return self.color
-    @classmethod
-    def draw_color_simple(self):
-        return self.color_simple
-
 
 
 EnumKeyframeBezierHandleType = (('FREE', 'Free', 'Completely independent manually set handle.'),
@@ -3054,34 +2627,23 @@ EnumKeyframeBezierHandleType = (('FREE', 'Free', 'Completely independent manuall
                                 ('AUTO', "Automatic", "Automatic handles that create smooth curves."),
                                 ('AUTO_CLAMPED', "Auto Clamped", "Automatic handles that create smooth curves which only change direction at keyframes."),)
 
-
 class EnumKeyframeBezierHandleTypeSocket(MantisSocket):
     '''Keyframe Bezier Handle Type'''
     bl_idname = 'EnumKeyframeBezierHandleTypeSocket'
     bl_label = "Keyframe Bezier Handle Type"
-
     default_value :bpy.props.EnumProperty(
         name="",
         description="Handle Type",
         items=EnumKeyframeBezierHandleType,
         default='AUTO_CLAMPED',
         update = update_socket,)
-
     color_simple = cString
     color : bpy.props.FloatVectorProperty(default=cString, size=4)
     input : bpy.props.BoolProperty(default =False, update = update_socket)
-    def draw(self, context, layout, node, text):
-        ChooseDraw(self, context, layout, node, text)
-    def draw_color(self, context, node):
-        return self.color
-    @classmethod
-    def draw_color_simple(self):
-        return self.color_simple
 
 
 enumExtrapolationMode = (('CONSTANT', 'Constant', 'Constant'),
                          ('LINEAR', "Linear", "Linear"),)
-
 
 class eFCrvExtrapolationMode(MantisSocket):
     '''FCurve Extrapolation Mode'''
@@ -3098,14 +2660,6 @@ class eFCrvExtrapolationMode(MantisSocket):
     color_simple = cString
     color : bpy.props.FloatVectorProperty(default=cString, size=4)
     input : bpy.props.BoolProperty(default =False, update = update_socket)
-    def draw(self, context, layout, node, text):
-        ChooseDraw(self, context, layout, node, text)
-    def draw_color(self, context, node):
-        return self.color
-    @classmethod
-    def draw_color_simple(self):
-        return self.color_simple
-
 
 EnumLatticeInterpolationType = (('KEY_LINEAR',   'Linear', 'Linear Interpolation.'),
                                 ('KEY_CARDINAL', "Cardinal", "Cardinal Interpolation."),
@@ -3128,13 +2682,6 @@ class EnumLatticeInterpolationTypeSocket(MantisSocket):
     color_simple = cString
     color : bpy.props.FloatVectorProperty(default=cString, size=4)
     input : bpy.props.BoolProperty(default =False, update = update_socket)
-    def draw(self, context, layout, node, text):
-        ChooseDraw(self, context, layout, node, text)
-    def draw_color(self, context, node):
-        return self.color
-    @classmethod
-    def draw_color_simple(self):
-        return self.color_simple
 
 EnumCorrectiveSmoothType = (('SIMPLE',   'Simple', 'Use the average of adjacent edge-vertices.'),
                             ('LENGTH_WEIGHTED', "Length Weight", "Use the average of adjacent"
@@ -3154,14 +2701,6 @@ class EnumCorrectiveSmoothTypeSocket(MantisSocket):
     color_simple = cString
     color : bpy.props.FloatVectorProperty(default=cString, size=4)
     input : bpy.props.BoolProperty(default =False, update = update_socket)
-    def draw(self, context, layout, node, text):
-        ChooseDraw(self, context, layout, node, text)
-    def draw_color(self, context, node):
-        return self.color
-    @classmethod
-    def draw_color_simple(self):
-        return self.color_simple
-
 
 enumArmatureDisplayType =( ('OCTAHEDRAL', "Octahedral", "Octahedral"),
                            ('STICK', "Stick", "Stick"),
@@ -3239,25 +2778,15 @@ class MathFloatOperation(MantisSocket):
     """Float Math Operation"""
     bl_idname = 'MathFloatOperation'
     bl_label = "Operation"
-
     default_value :bpy.props.EnumProperty(
         name="",
         description="Operation",
         items=enumFloatOperations,
         default='MULTIPLY',
         update = update_socket,)
-
     color_simple = cString
     color : bpy.props.FloatVectorProperty(default=cString, size=4)
     input : bpy.props.BoolProperty(default =False,)
-    def draw(self, context, layout, node, text):
-        ChooseDraw(self, context, layout, node, text)
-    def draw_color(self, context, node):
-        return self.color
-    @classmethod
-    def draw_color_simple(self):
-        return self.color_simple
-
 
 
 enumVectorOperations = (('ADD', 'Add', 'Add (Component-wise)'),
@@ -3278,24 +2807,15 @@ class MathVectorOperation(MantisSocket):
     """Vector Math Operation"""
     bl_idname = 'MathVectorOperation'
     bl_label = "Operation"
-
     default_value :bpy.props.EnumProperty(
         name="",
         description="Operation",
         items=enumVectorOperations,
         default='MULTIPLY',
         update = update_socket,)
-
     color_simple = cString
     color : bpy.props.FloatVectorProperty(default=cString, size=4)
     input : bpy.props.BoolProperty(default =False,)
-    def draw(self, context, layout, node, text):
-        ChooseDraw(self, context, layout, node, text)
-    def draw_color(self, context, node):
-        return self.color
-    @classmethod
-    def draw_color_simple(self):
-        return self.color_simple
 
 
 enumMatrixTransform  = (('TRANSLATE', 'Translate', 'Translate'),
@@ -3310,27 +2830,15 @@ class MatrixTransformOperation(MantisSocket):
     """Matrix Transform Operation"""
     bl_idname = 'MatrixTransformOperation'
     bl_label = "Operation"
-
     default_value :bpy.props.EnumProperty(
         name="",
         description="Operation",
         items=enumMatrixTransform,
         default='TRANSLATE',
         update = update_socket,)
-
     color_simple = cString
     color : bpy.props.FloatVectorProperty(default=cString, size=4)
     input : bpy.props.BoolProperty(default =False,)
-    def draw(self, context, layout, node, text):
-        ChooseDraw(self, context, layout, node, text)
-    def draw_color(self, context, node):
-        return self.color
-    @classmethod
-    def draw_color_simple(self):
-        return self.color_simple
-
-
-
 
 enumIntOperations =  (('ADD', 'Add', 'Add'),
                       ('SUBTRACT', "Subtract", "Subtract"),
@@ -3359,14 +2867,6 @@ class MathIntOperation(MantisSocket):
     color_simple = cString
     color : bpy.props.FloatVectorProperty(default=cString, size=4)
     input : bpy.props.BoolProperty(default =False,)
-    def draw(self, context, layout, node, text):
-        ChooseDraw(self, context, layout, node, text)
-    def draw_color(self, context, node):
-        return self.color
-    @classmethod
-    def draw_color_simple(self):
-        return self.color_simple
-
 
 enumCompareOperations =  (('EQUAL', "Equal", "Equal"),
                           ('NOT_EQUAL', "Not Equal", "Not Equal"),
@@ -3379,24 +2879,49 @@ class EnumCompareOperation(MantisSocket):
     """Compare Operation"""
     bl_idname = 'EnumCompareOperation'
     bl_label = "Comparison"
-
     default_value :bpy.props.EnumProperty(
         name="",
         description="Comparison",
         items=enumCompareOperations,
         default='EQUAL',
         update = update_socket,)
+    enum_display_type = 'DROPDOWN'
+    color_simple = cString
+    color : bpy.props.FloatVectorProperty(default=cString, size=4)
+    input : bpy.props.BoolProperty(default =False,)
+
+class EnumMatrixFromCurveMode(MantisSocket):
+    """Matrix From Curve Mode"""
+    bl_idname = 'EnumMatrixFromCurveMode'
+    bl_label = "Mode"
+
+    default_value :bpy.props.EnumProperty(
+        name="",
+        description="Mode",
+        items=eMatrixFromCurveModes,
+        default='DIVISIONS',
+        update = update_socket,)
+
+    color_simple = cString
+    enum_display_type = 'DROPDOWN'
+    color : bpy.props.FloatVectorProperty(default=cString, size=4)
+    input : bpy.props.BoolProperty(default =False,)
+
+class EnumComposeMatrixModes(MantisSocket):
+    """Compose Matrix Mode"""
+    bl_idname = 'EnumComposeMatrixModes'
+    bl_label = "Mode"
+
+    default_value :bpy.props.EnumProperty(
+        name="",
+        description="Mode",
+        items=eMatrixComposeModes,
+        default='BASIS',
+        update = update_socket,)
 
     color_simple = cString
     color : bpy.props.FloatVectorProperty(default=cString, size=4)
     input : bpy.props.BoolProperty(default =False,)
-    def draw(self, context, layout, node, text):
-        ChooseDraw(self, context, layout, node, text)
-    def draw_color(self, context, node):
-        return self.color
-    @classmethod
-    def draw_color_simple(self):
-        return self.color_simple
 
 class WildcardSocket(MantisSocket):
     """Some kind of node socket lol I donno"""
@@ -3406,11 +2931,3 @@ class WildcardSocket(MantisSocket):
     color_simple = (0.0,0.0,0.0,0.0)
     color : bpy.props.FloatVectorProperty(default=(0.0,0.0,0.0,0.0), size=4)
     input : bpy.props.BoolProperty(default =False,)
-
-    def draw(self, context, layout, node, text):
-        ChooseDraw(self, context, layout, node, text)
-    def draw_color(self, context, node):
-        return self.color
-    @classmethod
-    def draw_color_simple(self):
-        return self.color_simple
