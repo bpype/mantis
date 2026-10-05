@@ -83,14 +83,14 @@ def timer_update_selection_sync():
                 if not space.path:
                     return SELECTION_POLL_RATE # empty tree
                 root_tree = space.path[0].node_tree
-                parsed_tree = root_tree.parsed_tree
-                tree_path = [path_item.node_tree for path_item in space.path]
                 if root_tree is None:
                     return SELECTION_POLL_RATE
                 if root_tree.bl_idname != 'MantisTree':
                     return SELECTION_POLL_RATE
+                tree_path = [path_item.node_tree for path_item in space.path]
                 if len(tree_path[-1].nodes) == 0:
                     return SELECTION_POLL_RATE # empty graph
+                parsed_tree = root_tree.parsed_tree
                 active_ui_signature = (get_signature_from_space(tree_path[-1].nodes.active, space))
                 for n in tree_path[-1].nodes:
                     if n.bl_idname not in WATCH_FOR_SELECTION: continue
