@@ -523,6 +523,21 @@ def add_new_display_features_v0_13_5(*args, **kwargs):
                 node.is_updating = False
         tree.do_live_update = live_updates
 
+def up_0_13_5_modes_for_matrix_from_curve_and_compose_matrix(*args, **kwargs):
+    node = kwargs['node']
+    node.is_updating = True
+    do_live_updates = node.id_data.do_live_updates
+    node.id_data.do_live_updates = False
+    # new re_init keyword should use socket template to automate the update.
+    prGreen("THIS ONE HERE")
+    print (node.id_data.name, node.name)
+    print (node.inputs.keys())
+    if "Mode" not in node.inputs.keys(): # just check here to see if it is needed.
+        prOrange("DOING THE THING BRO")
+        node.init_sockets(node.__class__.socket_templates, re_init=True)
+    node.id_data.do_live_updates = do_live_updates
+    node.is_updating = False
+
 # versioning tasks that involve Blender versions rather than Mantis versions:
 error_description_4_5_0_LTS = 'There is a bug in Blender 4.5.0 LTS, that is why these sockets are blue.'\
                              ' This will be fixed in future Blender versions.'
@@ -561,6 +576,9 @@ versioning_tasks = [
            update_fcurve_and_armature_node_to_multi_socket, ['node']),
     (['MantisTree', 'SchemaTree'], fix_bbone_default_scale_in_and_out, ['tree']),
     (['MantisTree', 'SchemaTree'], add_new_display_features_v0_13_5, ['tree']),
+    (['UtilityMatrixFromCurve', 'UtilityMatrixCompose'],
+       up_0_13_5_modes_for_matrix_from_curve_and_compose_matrix,
+     ['node',], ),
 ]
 
 

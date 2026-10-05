@@ -49,19 +49,25 @@ InputMatrixSockets = [
 ]
 
 MatrixFromCurveSockets=[
+    MatrixFromCurveMode := ST(name="Mode", bl_idname="EnumMatrixFromCurveMode",
+        is_input = True, ),
     CurveTemplate := ST(name="Curve", bl_idname='EnumCurveSocket', 
         is_input=True,),
     SplineIndexTemplate,
-    TotalDivisionsTemplate := ST(name="Total Divisions",
+    TotalDivisionsTemplate := ST(name="Total Divisions", category = "divisions",
         bl_idname='UnsignedIntSocket', is_input=True, default_value=0,),
-    MatrixIndexTemplate := ST(name="Matrix Index",
+    MatrixIndexTemplate := ST(name="Matrix Index", category = "divisions",
         bl_idname='UnsignedIntSocket', is_input=True, default_value=0,),
+    replace(FactorTemplate, category="factor"),
     MatrixOutput,
 ]
 
-MatricesFromCurveSockets=MatrixFromCurveSockets.copy()
-MatricesFromCurveSockets[4] = MatricesOutTemplate
-MatricesFromCurveSockets.pop(3)
+MatricesFromCurveSockets=[
+    CurveTemplate,
+    SplineIndexTemplate,
+    TotalDivisionsTemplate,
+    MatricesOutTemplate,
+]
 
 MatrixFromCurveSegmentSockets=[
     CurveTemplate,

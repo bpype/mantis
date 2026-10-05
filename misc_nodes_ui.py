@@ -224,7 +224,26 @@ class UtilityMatrixFromCurve(Node, MantisMiscNode):
     mantis_node_class_name=bl_idname
     socket_templates=MatrixFromCurveSockets
 
-class UtilityPointFromCurve(Node, MantisMiscNode):
+    def display_update(self, parsed_tree, context):
+        # first we'll checc if the mode is connected to a noodle, should be rare
+        mode = 'DIVISIONS'
+        if self.inputs['Mode'].is_linked:
+            if mantis_node := parsed_tree.get(get_signature_from_edited_tree(self, context)):
+                mode = mantis_node.evaluate_input("Mode")
+        else: # We can use it directly, this is a little faster.
+            mode = self.inputs['Mode'].default_value
+        # We just hide/show based on the selected mode.
+        for template in self.__class__.socket_templates:
+            if mode == 'DIVISIONS' and template.category == 'factor':
+                self.inputs[template.name].hide=True
+            if mode == 'DIVISIONS' and template.category == 'divisions':
+                self.inputs[template.name].hide=False
+            elif mode == 'FACTOR' and template.category == 'divisions':
+                self.inputs[template.name].hide=True
+            elif mode == 'FACTOR' and template.category == 'factor':
+                self.inputs[template.name].hide=False
+
+class UtilityPointFromCurve(Node, MantisUINode):
     """Gets a point from a curve."""
     bl_idname = "UtilityPointFromCurve"
     bl_label = "Point from Curve"
