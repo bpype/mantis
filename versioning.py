@@ -393,9 +393,11 @@ def update_fcurve_and_armature_node_to_multi_socket(*args, **kwargs):
                     toggle_updating.append(link.node)
                     was_updating[link.node.name] = link.node.is_updating
                     link.node.is_updating = True
+    socket_templates_original = node.socket_templates
     node.inputs.clear() # this is VERY DANGEROUS without the above
     add_me_sockets = [st for st in node.socket_templates if st.is_input == True]
     node.init_sockets(add_me_sockets)
+    node.socket_templates = socket_templates_original
     try:
         new_sockets_in = {}
         for convert_key in my_convert_keys:
@@ -438,6 +440,7 @@ def fix_bbone_default_scale_in_and_out(*args, **kwargs):
     if current_minor_version == 13 and current_sub_version >= 5: return# sub version must be 4 or less
     prPurple(f"Fixing BBone Settings for {tree.name}")
     live_updates = tree.do_live_update
+    tree.do_live_update = False
     bones = []
     for node in tree.nodes:
         if hasattr(node, 'is_updating'):
@@ -452,6 +455,71 @@ def fix_bbone_default_scale_in_and_out(*args, **kwargs):
         for node in tree.nodes:
             if hasattr(node, 'is_updating'):
                 node.is_updating = False
+        tree.do_live_update = live_updates
+
+# New display features, Display Type, new Custom Object gizmo/pivot stuff
+def add_new_display_features_v0_13_5(*args, **kwargs):
+    tree = kwargs['tree']
+    current_major_version = tree.mantis_version[0]
+    current_minor_version = tree.mantis_version[1]
+    current_sub_version = tree.mantis_version[2]
+    if  current_major_version > 0: return# major version must be 0
+    if current_minor_version >= 13: return# minor version must be 12 or less
+    if current_minor_version == 13 and current_sub_version >= 5: return# sub version must be 4 or less
+    prPurple(f"Adding new Display Features to {tree.name}")
+    live_updates = tree.do_live_update
+    tree.do_live_update = False
+    live_updates = tree.do_live_update
+    bones = []
+    armatures = []
+    for node in tree.nodes:
+        if hasattr(node, 'is_updating'):
+            node.is_updating = True
+        if node.bl_idname == 'xFormBoneNode':
+            bones.append(node)
+        if node.bl_idname == 'xFormArmatureNode':
+            armatures.append(node)
+    try:
+        for bone_node in bones:
+            # we'll just try this...
+            from .xForm_socket_templates import (BoneDisplayType,
+                                                 CustomObjectWireWidth,
+                                                 UseTransformAtCustomShape,
+                                                 UseTransformAroundCustomShape,
+                                                 xFormBoneSockets)
+            input_templates = ( BoneDisplayType,
+                                CustomObjectWireWidth,
+                                UseTransformAroundCustomShape,
+                                UseTransformAtCustomShape, )
+            bone_node.init_sockets(input_templates)
+            bone_node.socket_templates = xFormBoneSockets
+            for i, inp in enumerate(bone_node.inputs):
+                if inp.name == 'Custom Object xForm Override':
+                    # As confusing as this is, it is the least terrible way to do this
+                    # We add the sockets to the end, then move them from the end to the right place
+                    bone_node.inputs.move(len(bone_node.inputs)-1, i+1)
+                    bone_node.inputs.move(len(bone_node.inputs)-1, i+2)
+                    bone_node.inputs.move(len(bone_node.inputs)-1, i+3)
+                    bone_node.inputs.move(len(bone_node.inputs)-1, i+4)
+                    break
+        
+        for armature_node in armatures:
+            # we'll just try this...
+            from .xForm_socket_templates import (ArmatureDisplayType,
+                                                 xFormArmatureSockets)
+            input_templates = ( ArmatureDisplayType, )
+            armature_node.init_sockets(input_templates)
+            armature_node.socket_templates = xFormArmatureSockets
+            for i, inp in enumerate(armature_node.inputs):
+                if inp.name == 'Relationship':
+                    armature_node.inputs.move(len(armature_node.inputs)-1, i+1)
+                    break
+
+    finally:
+        for node in tree.nodes:
+            if hasattr(node, 'is_updating'):
+                node.is_updating = False
+        tree.do_live_update = live_updates
 
 # versioning tasks that involve Blender versions rather than Mantis versions:
 error_description_4_5_0_LTS = 'There is a bug in Blender 4.5.0 LTS, that is why these sockets are blue.'\
@@ -490,6 +558,7 @@ versioning_tasks = [
     (['UtilityFCurve', 'LinkArmature'],
            update_fcurve_and_armature_node_to_multi_socket, ['node']),
     (['MantisTree', 'SchemaTree'], fix_bbone_default_scale_in_and_out, ['tree']),
+    (['MantisTree', 'SchemaTree'], add_new_display_features_v0_13_5, ['tree']),
 ]
 
 

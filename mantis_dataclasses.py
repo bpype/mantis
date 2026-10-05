@@ -18,8 +18,10 @@ class MantisSocketTemplate():
     # this is a hint for the props_sockets system for complex situations
     #  where multiple blender objects own the properties, like e.g. bone/posebone
     prop_owner_group : str = field(default="")
-    # do? add versioning fields for Mantis, Blender version min/max
     is_animatable    : bool = field(default=True) # controls whether a driver is legal or not
+    # These attributes are for deprecated or new features in Blender
+    min_bpy_version  : Optional[tuple[int]] = field(default=None)
+    max_bpy_version  : Optional[tuple[int]] = field(default=None)
 
 @dataclass
 class xForm_info():

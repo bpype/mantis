@@ -85,7 +85,6 @@ enumRotationOrder =(('AUTO', 'Auto', 'Auto'),
                     ('AXIS_ANGLE', "Axis Angle", "Axis Angle"),)
 
 
-
 # node socket colors:
 cFloat          = (0.631373, 0.631373, 0.631373, 1.000000)
 cColor          = (0.780392, 0.780392, 0.160784, 1.000000)
@@ -276,7 +275,9 @@ def TellClasses() -> List[MantisSocket]:
              EnumLatticeInterpolationTypeSocket,
              EnumCorrectiveSmoothTypeSocket,
              eFCrvExtrapolationMode,
-
+             # other enums
+             EnumArmatureDisplayType,
+             EnumDisplayType,
              # Math
              MathFloatOperation,
              MathVectorOperation,
@@ -594,7 +595,7 @@ def ChooseDraw(self, context, layout, node, text, icon = "NONE", use_enum=True, 
             if not (self.is_output or self.is_linked):
                 layout.prop_tabs_enum(self, "default_value",)
             else:
-                layout.label(text=text)
+                layout.prop(text=text)
         # for OUTPUT sockets that take INPUT (confusing name!)
         elif ((hasattr(self, "default_value")) and hasattr(self, "input") and getattr(self, "input")):
             # for simple input nodes
@@ -2986,12 +2987,6 @@ class VectorScaleSocket(MantisSocket):
     def draw_color_simple(self):
         return self.color_simple
 
-
-
-
-
-
-
 class KeyframeSocket(MantisSocket):
     '''Keyframe'''
     bl_idname = 'KeyframeSocket'
@@ -3151,6 +3146,62 @@ class EnumCorrectiveSmoothTypeSocket(MantisSocket):
     input : bpy.props.BoolProperty(default =False, update = update_socket)
     def draw(self, context, layout, node, text):
         ChooseDraw(self, context, layout, node, text)
+    def draw_color(self, context, node):
+        return self.color
+    @classmethod
+    def draw_color_simple(self):
+        return self.color_simple
+
+
+enumArmatureDisplayType =( ('OCTAHEDRAL', "Octahedral", "Octahedral"),
+                           ('STICK', "Stick", "Stick"),
+                           ('BBONE', "BBone", "BBone"),
+                           ('ENVELOPE', "Envelope", "Envelope"),
+                           ('WIRE', "Wire", "Wire"),)
+
+class EnumArmatureDisplayType(MantisSocket):
+    """Float Math Operation"""
+    bl_idname = 'EnumArmatureDisplayType'
+    bl_label = "Operation"
+    default_value :bpy.props.EnumProperty(
+        name="",
+        description="Display Type",
+        items=enumArmatureDisplayType,
+        default='OCTAHEDRAL',
+        update = update_socket,)
+    color_simple = cString
+    color : bpy.props.FloatVectorProperty(default=cString, size=4)
+    input : bpy.props.BoolProperty(default =False,)
+    def draw(self, context, layout, node, text):
+        ChooseDraw(self, context, layout, node, text, use_enum=False)
+    def draw_color(self, context, node):
+        return self.color
+    @classmethod
+    def draw_color_simple(self):
+        return self.color_simple
+
+enumDisplayType =(('ARMATURE_DEFINED', 'Auto', 'Auto'),
+                  ('OCTAHEDRAL', "Octahedral", "Octahedral"),
+                  ('STICK', "Stick", "Stick"),
+                  ('BBONE', "BBone", "BBone"),
+                  ('ENVELOPE', "Envelope", "Envelope"),
+                  ('WIRE', "Wire", "Wire"),)
+
+class EnumDisplayType(MantisSocket):
+    """Float Math Operation"""
+    bl_idname = 'EnumDisplayType'
+    bl_label = "Operation"
+    default_value :bpy.props.EnumProperty(
+        name="",
+        description="Display Type",
+        items=enumDisplayType,
+        default='ARMATURE_DEFINED',
+        update = update_socket,)
+    color_simple = cString
+    color : bpy.props.FloatVectorProperty(default=cString, size=4)
+    input : bpy.props.BoolProperty(default =False,)
+    def draw(self, context, layout, node, text):
+        ChooseDraw(self, context, layout, node, text, use_enum=False)
     def draw_color(self, context, node):
         return self.color
     @classmethod

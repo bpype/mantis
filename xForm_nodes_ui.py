@@ -146,8 +146,11 @@ class xFormBoneNode(Node, xFormNode):
                 self.display_ik_settings = pb.is_in_ik_chain
             self.inputs['Name'].display_text = ""
             mantis_node_ready = mantis_node and mantis_node.prepared
+            self.display_vp_settings = False
+            self.display_def_settings = False
+            self.display_bb_settings = False
             if self.inputs['Custom Object'].is_linked and mantis_node_ready:
-                self.display_vp_settings = mantis_node.evaluate_input("Custom Object")
+                self.display_vp_settings = True
             if self.inputs['Deform'].is_linked and mantis_node_ready:
                 self.display_def_settings = mantis_node.evaluate_input("Deform")
             else:
@@ -163,23 +166,30 @@ class xFormBoneNode(Node, xFormNode):
             if self.inputs['Name'].is_linked and mantis_node_ready:
                 self.inputs['Name'].display_text = mantis_node.evaluate_input("Name")
 
-            for template in self.socket_templates:
-                name = template.name
-                category = template.category
-                if category == "IK":
-                    self.inputs[name].hide = not self.display_ik_settings
-                if category == "Display":
-                    if name in ['Custom Object', 'Bone Collection']: continue
-                    self.inputs[name].hide = not self.display_vp_settings
-                if category == "Deform":
-                    if name in ['Deform']: continue
-                    self.inputs[name].hide = not self.display_def_settings
-                if category == "bbone":
-                    if name in ['BBone Segments']: continue
-                    self.inputs[name].hide = not self.display_bb_settings
+        for template in self.socket_templates:
+            name = template.name
+            category = template.category
+            if category == "IK":
+                self.inputs[name].hide = not self.display_ik_settings
+            if category == "Display":
+                if name in ['Custom Object', 'Bone Collection']: continue
+                self.inputs[name].hide = not self.display_vp_settings
+                if name == 'Display Type': # This one is only meaningful when there is no custom shape.
+                    self.inputs[name].hide = self.display_vp_settings
+            if category == "Deform":
+                if name in ['Deform']: continue
+                self.inputs[name].hide = not self.display_def_settings
+            if category == "bbone":
+                if name in ['BBone Segments']: continue
+                self.inputs[name].hide = not self.display_bb_settings
+            # Now hide the sockets that aren't usable in this Blender
+            if template.min_bpy_version:
+                if bpy_version < template.min_bpy_version:
+                    if template.is_input:
+                        self.inputs[template.name].hide = True # Not usable in this Blender
         # TEMPORARY HACK because this one is basically not implemented
         self.inputs['BBone HQ Deformation'].hide = True
-
+        
 def object_displaty_update(self, parsed_tree, context):
     custom_prop_display_update(self)
     if context.space_data:

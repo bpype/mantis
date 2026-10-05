@@ -153,6 +153,7 @@ class xFormNode(MantisNode):
             ob.property_overridable_library_set(f"[\"{name}\"]", True)
             pass
 
+# TODO this should use the socket templates / prop_sockets system!
 class xFormArmature(xFormNode):
     '''A node representing an armature object'''
 
@@ -247,6 +248,8 @@ class xFormArmature(xFormNode):
         while (len(ob.data.edit_bones) > 0):
             ob.data.edit_bones.remove(ob.data.edit_bones[0])
         # bContext.view_layer.objects.active = prevAct
+
+        ob.data.display_type = self.evaluate_input('Display Type')
 
         # This will OVERWRITE the root armature since bones have to trace back to this one.
         root_armature = ob.name

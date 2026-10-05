@@ -785,8 +785,14 @@ class MantisNode:
     def gen_property_socket_map(self, prop_owner_group=None) -> dict:
         from .mantis_dataclasses import MantisSocketFiller
         from dataclasses import replace
+        from bpy.app import version as bpy_version
         props_sockets = {}
         for s_template in self.socket_templates:
+            if s_template.min_bpy_version:
+                if bpy_version < s_template.min_bpy_version:
+                    prPurple(f"Skipping socket {s_template.name} because "
+                             f"it requires Blender {s_template.min_bpy_version} or higher")
+                    continue # We can't set or drive this obviously.
             if prop_owner_group is not None and \
                     s_template.prop_owner_group != prop_owner_group:
                 continue # for composite objects like bones

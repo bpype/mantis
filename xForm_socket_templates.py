@@ -15,6 +15,9 @@ xFormArmatureSockets=[
             blender_property='matrix_world' ),
     RelationshipInTemplate := SockTemplate(
         name="Relationship", is_input=True,  bl_idname='RelationshipSocket', ),
+    ArmatureDisplayType := SockTemplate(name='Display Type', category='Display',
+        default_value='OCTAHEDRAL', blender_property='display_type',
+        min_bpy_version=(4,5,0), bl_idname='EnumArmatureDisplayType',  is_input=True,),
     CustomPropsTemplate := SockTemplate(
         name="Custom Properties", is_input=True,  bl_idname='CustomPropSocket',
             use_multi_input=True, is_animatable=False, ),
@@ -127,6 +130,23 @@ bbone_template = SockTemplate( name="<BBone Template>",
 # When there is a driver, you usually want the Pose Bone to hold it
 # but when there isn't you probably want it on the Bone since it isn't animated
 
+
+# Version-dependent for Blender
+
+BoneDisplayType = SockTemplate(name='Display Type', category='Display',
+    default_value='ARMATURE_DEFINED', blender_property='display_type',
+    min_bpy_version=(4,5,0), bl_idname='EnumDisplayType',
+    prop_owner_group='bone', is_input=True,)
+# 5.0 needed for these
+UseTransformAtCustomShape = SockTemplate(name="Affect Gizmo", category='Display',
+    default_value=False, blender_property='use_transform_at_custom_shape', is_input=True,
+    min_bpy_version=(5,0,0), bl_idname='BooleanSocket', prop_owner_group='pose_bone',)
+UseTransformAroundCustomShape = SockTemplate(name="Use as Pivot", category='Display',
+    default_value=False, blender_property='use_transform_around_custom_shape', is_input=True,
+    min_bpy_version=(5,0,0), bl_idname='BooleanSocket', prop_owner_group='pose_bone',)
+
+
+
 # and bones! this one is a bit much...
 from math import pi
 xFormBoneSockets = [
@@ -178,6 +198,12 @@ xFormBoneSockets = [
         name='Custom Object Scale to Bone Length', category='Display',
         blender_property='use_custom_shape_bone_size',
         default_value=True, prop_owner_group='pose_bone', ),
+    UseTransformAtCustomShape, # requires Blender >= 5.0 to use
+    UseTransformAroundCustomShape, # requires Blender >= 5.0 to use
+    CustomObjectWireWidth := SockTemplate(name='Custom Object Wire Width',
+        category='Display', default_value=1.0, blender_property='custom_shape_wire_width',
+        bl_idname='FloatPositiveSocket', prop_owner_group='pose_bone', is_input=True,),
+    BoneDisplayType, # requires Blender >= 4.5.0 to use
     CustomObjectWireframeTemplate := replace(HideRenderTemplate,
             name='Custom Object Wireframe', category='Display',
             blender_property='show_wire', default_value=True,
