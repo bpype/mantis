@@ -313,8 +313,6 @@ def update_interface(interface, name, in_out, sock_type, parent_name):
     else:
         raise RuntimeError(wrapRed("Cannot add interface item to tree without specifying type."))
 
-
-# D.node_groups['Rigging Nodes'].interface.new_socket('beans', description='the b word', socket_type='NodeSocketGeometry')
 #UGLY BAD REFACTOR
 def relink_socket_map_add_socket(node, socket_collection, item,  in_out=None,):
     from bpy.app import version as bpy_version
@@ -351,9 +349,6 @@ def relink_socket_map_add_socket(node, socket_collection, item,  in_out=None,):
     if read_schema_type(item) == 'Array': s.display_shape = 'SQUARE_DOT'
     elif node.bl_idname in ['MantisSchemaGroup'] and read_schema_type(item) == 'Constant':
         s.display_shape='CIRCLE_DOT'
-
-    # if item.parent.name == 'Array': s.display_shape = 'SQUARE_DOT'
-    # elif item.parent.name == 'Constant': s.display_shape='CIRCLE_DOT'
     return s
 
 # TODO REFACTOR THIS
