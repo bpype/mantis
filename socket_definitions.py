@@ -470,9 +470,19 @@ def default_update(ui_socket, context, do_execute=True):
     # if it is a Schema Node, it will fail the checks below -- but we need it to update the tree.
     from .base_definitions import SchemaUINode
     if isinstance(ui_socket.node, SchemaUINode):
-        node_tree.update_tree(context, force = True)
-        prPurple(f"Executing tree after socket change: {ui_socket.node.name}:{ui_socket.name}")
-        node_tree.execute_tree(context)
+        # This was causing infinite loops before checking for is_updating
+        # It seems to be happening when adding/removing links that are in schema trees
+        # even if they are not connected to the schema node
+        # I suspect that this completely disables this feature... whatever. TODO checc this
+        if ui_socket.node.is_updating: return
+        updating = ui_socket.node.is_updating
+        ui_socket.node.is_updating=True
+        try:
+            node_tree.update_tree(context, force = True)
+            prPurple(f"Executing tree after socket change: {ui_socket.node.name}:{ui_socket.name}")
+            node_tree.execute_tree(context)
+        finally:
+            ui_socket.node.is_updating=updating
         return
     if hasattr(ui_socket.node, "initialized"):
         if not ui_socket.node.initialized: return
