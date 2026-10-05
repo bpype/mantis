@@ -177,6 +177,8 @@ class xFormBoneNode(Node, xFormNode):
                 if category == "bbone":
                     if name in ['BBone Segments']: continue
                     self.inputs[name].hide = not self.display_bb_settings
+        # TEMPORARY HACK because this one is basically not implemented
+        self.inputs['BBone HQ Deformation'].hide = True
 
 def object_displaty_update(self, parsed_tree, context):
     custom_prop_display_update(self)

@@ -92,6 +92,7 @@ class xFormNode(MantisNode):
                             has_driver = check_for_driver(self, socket, i)
                             if has_driver: break
                     elif multi:
+                        # TODO: this is a HACK, try and understand this later
                         if socket == 'Custom Properties':
                             has_driver = check_for_driver(self, socket,)
                         else:
