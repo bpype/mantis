@@ -315,9 +315,16 @@ def update_interface(interface, name, in_out, sock_type, parent_name):
             from ..versioning import workaround_4_5_0_interface_update
             socket = workaround_4_5_0_interface_update(tree=interface.id_data, name=name, in_out=in_out,
                                                        sock_type=sock_type, parent_name=parent_name, do_parent=True)
+        match parent_name:
+            case "Connection":
+                socket.is_connection=True
+            case "Array":
+                socket.is_array=True
+        
         if parent_name == 'Connection':
             in_out = 'OUTPUT' if in_out == 'INPUT' else 'INPUT' # flip this make sure connections always do both
-            interface.new_socket(name=name,in_out=in_out, socket_type=sock_type, parent=interface_parent)
+            other_socket = interface.new_socket(name=name,in_out=in_out, socket_type=sock_type, parent=interface_parent)
+            other_socket.is_connection = True
         return socket
     else:
         raise RuntimeError(wrapRed("Cannot add interface item to tree without specifying type."))
@@ -353,8 +360,6 @@ def relink_socket_map_add_socket(node, socket_collection, item,  in_out=None,):
                 s.default_value = default_value
             else: # TODO: make this work with color sets.
                 raise Warning("WARN: Not yet implemented: default values for color sets.")
-                
-
     if read_schema_type(item) == 'Array': s.display_shape = 'SQUARE_DOT'
     elif node.bl_idname in ['MantisSchemaGroup'] and read_schema_type(item) == 'Constant':
         s.display_shape='CIRCLE_DOT'
