@@ -1,6 +1,7 @@
 from .mantis_dataclasses import MantisSocketTemplate as SockTemplate
 from .misc_nodes_socket_templates import SplineIndexTemplate
 from dataclasses import replace
+from bpy.app import version as bpy_version
 
 xFormArmatureSockets=[
     NameTemplate := SockTemplate(
@@ -16,7 +17,7 @@ xFormArmatureSockets=[
         name="Relationship", is_input=True,  bl_idname='RelationshipSocket', ),
     CustomPropsTemplate := SockTemplate(
         name="Custom Properties", is_input=True,  bl_idname='CustomPropSocket',
-            use_multi_input=True, ),
+            use_multi_input=True, is_animatable=False, ),
     xFormOutTemplate := SockTemplate(
         name="xForm Out", is_input=False,  bl_idname='xFormSocket', ),
 ]
@@ -84,150 +85,232 @@ xFormGetBoneSockets = [
 ]
 
 
+# Some (especially BBone) properties are good to treat differently
+#  based on bone/posebone or value/driver
+# I'll use these lists to make decisions about that sort of thing
+attributes_shared_by_bone_and_pose_bone = [
+    "bbone_curveinx",
+    "bbone_curveinz",
+    "bbone_curveoutx",
+    "bbone_curveoutz",
+    "bbone_custom_handle_end",
+    "bbone_custom_handle_start",
+    "bbone_easein",
+    "bbone_easeout",
+    "bbone_rollin",
+    "bbone_rollout",
+    "bbone_scalein",
+    "bbone_scaleout",
+]
+
+# these need to be 1 in edit mode and 0 in pose mode, by default. Pain.
+need_different_defaults = [
+    ("bbone_easein", 1, 0 ),
+    ("bbone_easeout", 1, 0),
+]
+
+
+# VERSIONING for Bone
+bone_hide_prop_group='bone'
+if bpy_version >= (5,0,0):
+    bone_hide_prop_group='pose_bone'
+bone_hide_template = replace(HideTemplate, name='Hide', category='always_show',
+                            blender_property='hide', default_value=False,
+                            prop_owner_group = bone_hide_prop_group)
+
+bbone_template = SockTemplate( name="<BBone Template>",
+        default_value = 0.0, blender_property=None, is_input=True,
+        bl_idname='FloatSocket', prop_owner_group='bone',)
+
+# And there is some serious confusing stuff regarding BBones so I'll explain...
+# Blender has duplicated properties for Bone and Pose Bone
+# When there is a driver, you usually want the Pose Bone to hold it
+# but when there isn't you probably want it on the Bone since it isn't animated
+
 # and bones! this one is a bit much...
 from math import pi
 xFormBoneSockets = [
-    replace(NameTemplate, default_value='Bone', category='always_show'),
-    replace(RotationOrderTemplate, category='always_show'),
-    BoneMatrixTemplate := replace(ObjectMatrixTemplate,
-            blender_property='matrix', category='always_show'),
-    replace(RelationshipInTemplate, category='always_show'),
+    replace(NameTemplate, default_value='Bone', category='always_show',
+            is_animatable=False,),
+    replace(RotationOrderTemplate, category='always_show',),
+    BoneMatrixTemplate := replace(ObjectMatrixTemplate, is_animatable=False,
+            blender_property='matrix', category='always_show',),
+    replace(RelationshipInTemplate, category='always_show', is_animatable=False,),
     # IK
     IKStretch := SockTemplate(
         name="IK Stretch", is_input=True,  bl_idname='FloatFactorSocket',
-        default_value=0, blender_property='ik_stretch', category='IK'),
+        default_value=0, blender_property='ik_stretch', category='IK',
+        prop_owner_group='pose_bone',),
     IKLock := SockTemplate(
         name="Lock IK", is_input=True,  bl_idname='BooleanThreeTupleSocket',
         default_value=(False, False, False), category='IK',
-        blender_property=('lock_ik_x', 'lock_ik_y', 'lock_ik_z'),),
+        blender_property=('lock_ik_x', 'lock_ik_y', 'lock_ik_z'),
+        prop_owner_group='pose_bone', ),
     IKStiffness := SockTemplate(
         name="IK Stiffness", is_input=True,  bl_idname='BooleanThreeTupleSocket',
         default_value=(False, False, False), category='IK',
-        blender_property=('ik_stiffness_x', 'ik_stiffness_y', 'ik_stiffness_z')),
+        blender_property=('ik_stiffness_x', 'ik_stiffness_y', 'ik_stiffness_z'),
+        prop_owner_group='pose_bone', ),
     IKLimit := SockTemplate(
         name="Limit IK", is_input=True,  bl_idname='BooleanThreeTupleSocket',
         default_value=(False, False, False), category='IK',
-        blender_property=('use_ik_limit_x', 'use_ik_limit_y', 'use_ik_limit_z')),
+        blender_property=('use_ik_limit_x', 'use_ik_limit_y', 'use_ik_limit_z'),
+        prop_owner_group='pose_bone', ),
     IKXMin := SockTemplate(
         name="X Min", is_input=True,  bl_idname='NodeSocketFloatAngle',
-        default_value=-pi, blender_property='ik_min_x', category='IK'),
+        default_value=-pi, blender_property='ik_min_x', category='IK',
+        prop_owner_group='pose_bone', ),
     IKXMax := replace(IKXMin, name="X Max", default_value=pi,
-                      blender_property='ik_max_x'),
+                      blender_property='ik_max_x',),
     IKYMax := replace(IKXMin, name="Y Min", blender_property='ik_min_y'),
     IKYMax := replace(IKXMax, name="Y Max", blender_property='ik_max_y'),
     IKZMax := replace(IKXMin, name="Z Min", blender_property='ik_min_z'),
     IKZMax := replace(IKXMax, name="Z Max", blender_property='ik_max_z'),
     # Visual Stuff
     BoneCollectionTemplate := SockTemplate(name="Bone Collection", is_input=True,
-            bl_idname='BoneCollectionSocket', category='Display', use_multi_input=True),
+            bl_idname='BoneCollectionSocket', category='Display', use_multi_input=True,
+            is_animatable=False,),
     CustomObjectTemplate := replace(SourcexFormTemplate, name='Custom Object',
-                                    category='Display'),
-    OverrideXFormTemplate := replace(SourcexFormTemplate,
-                    name='Custom Object xForm Override', category='Display'),
+        category='Display', is_animatable=False,),
+    OverrideXFormTemplate := replace(SourcexFormTemplate, is_animatable=False,
+        name='Custom Object xForm Override', category='Display',),
     CustomObjectScaleToBoneTemplate := replace(HideRenderTemplate,
-            name='Custom Object Scale to Bone Length', category='Display',
-            blender_property='use_custom_shape_bone_size',
-            default_value=True,),
+        name='Custom Object Scale to Bone Length', category='Display',
+        blender_property='use_custom_shape_bone_size',
+        default_value=True, prop_owner_group='pose_bone', ),
     CustomObjectWireframeTemplate := replace(HideRenderTemplate,
             name='Custom Object Wireframe', category='Display',
-            blender_property='show_wire', default_value=True,),
+            blender_property='show_wire', default_value=True,
+            prop_owner_group='bone', ),
     CustomObjectScaleTemplate := SockTemplate(name="Custom Object Scale",
             is_input=True, bl_idname='VectorScaleSocket',
-            category='Display', default_value=(1.0,1.0,1.0),),
+            category='Display', default_value=(1.0,1.0,1.0),
+            blender_property = 'custom_shape_scale_xyz',
+            prop_owner_group='pose_bone', ),
     CustomObjectTranslationTemplate := SockTemplate(name="Custom Object Translation",
             is_input=True, bl_idname='VectorSocket',
-            category='Display', default_value=(0.0,0.0,0.0),),
+            category='Display', default_value=(0.0,0.0,0.0),
+            blender_property = 'custom_shape_translation',
+            prop_owner_group='pose_bone', ),
     CustomObjectRotationTemplate := SockTemplate(name="Custom Object Rotation",
             is_input=True, bl_idname='VectorEulerSocket',
-            category='Display', default_value=(0.0,0.0,0.0),),
+            category='Display', default_value=(0.0,0.0,0.0),
+            blender_property = 'custom_shape_rotation_euler',
+            prop_owner_group='pose_bone', ),
     CustomColor := SockTemplate(name="Color",
             is_input=True, bl_idname='ColorSetSocket',
-            category='Display',),
+            category='Display', is_animatable=False,),
     InheritColor := SockTemplate(name="Inherit Color",
-            is_input=True, bl_idname='BooleanSocket',
-            category='Display', default_value=True),
+            is_input=True, bl_idname='BooleanSocket', is_animatable=False,
+            category='Display', default_value=True, prop_owner_group='pose_bone', ),
     # Deform Stuff
     BoneDeformTemplate := replace(HideRenderTemplate, name='Deform',
-        category='Deform', blender_property='use_deform', default_value=False,),
+        category='Deform', blender_property='use_deform', default_value=False,
+        prop_owner_group='edit_bone', is_animatable=False,),
     EnvelopeDistanceTemplate := SockTemplate( name='Envelope Distance',
-            bl_idname='FloatPositiveSocket', category='Deform',
-            blender_property='envelope_distance', default_value=0,
-            is_input=True,),
+        bl_idname='FloatPositiveSocket', category='Deform',
+        blender_property='envelope_distance', default_value=0,
+        is_input=True, prop_owner_group='edit_bone', is_animatable=False,),
     EnvelopeWeightTemplate := replace(EnvelopeDistanceTemplate,
-            name='Envelope Weight', bl_idname = 'FloatFactorSocket',
-            blender_property='envelope_weight', default_value=1.0,),
-    EnvelopeWeightTemplate := replace(EnvelopeDistanceTemplate,
-            name='Envelope Multiply', bl_idname = 'BooleanSocket',
-            blender_property='use_envelope_multiply', default_value=False,),
-    EnvelopeWeightTemplate := replace(EnvelopeDistanceTemplate,
+        name='Envelope Weight', bl_idname = 'FloatFactorSocket',
+        blender_property='envelope_weight', default_value=1.0,
+        prop_owner_group='edit_bone', is_animatable=False,),
+    EnvelopeMultiplyTemplate := replace(EnvelopeDistanceTemplate,
+        name='Envelope Multiply', bl_idname = 'BooleanSocket',
+        blender_property='use_envelope_multiply', default_value=False,
+        prop_owner_group='edit_bone', is_animatable=False,),
+    EnvelopeHeadRadiusTemplate := replace(EnvelopeDistanceTemplate,
         name='Envelope Head Radius', blender_property='head_radius', default_value=0.0,),
-    EnvelopeWeightTemplate := replace(EnvelopeDistanceTemplate,
+    EnvelopeTailRadiusTemplate := replace(EnvelopeDistanceTemplate,
         name='Envelope Tail Radius', blender_property='tail_radius', default_value=0.0,),
     # BBone Stuff
     BBoneSegmentsTemplate := SockTemplate(name="BBone Segments", is_input=True,
         bl_idname='UnsignedIntSocket', category = 'bbone',
-        blender_property='bbone_segments', default_value=1 ),
+        blender_property='bbone_segments', default_value=1,
+        prop_owner_group='bone', ),
     BBoneXSizeTemplate := replace(BBoneSegmentsTemplate, name='BBone X Size',
-        bl_idname='FloatSocket', blender_property='bbone_x', default_value=0.0025, ),
+        bl_idname='FloatSocket', blender_property='bbone_x', default_value=0.0025,
+        prop_owner_group='bone',),
     BBoneZSizeTemplate := replace(BBoneXSizeTemplate, name='BBone Z Size',
         blender_property='bbone_z', ),
     BBoneHQDeformation := replace(BBoneSegmentsTemplate, name='BBone HQ Deformation',
-        bl_idname='BooleanSocket', blender_property='', default_value=None ),
+        bl_idname='BooleanSocket', blender_property='', default_value=None, is_animatable=False, ),
     BBoneXCurveInTemplate := replace( BBoneXSizeTemplate, name="BBone X Curve-In",
-        bl_idname='FloatSocket', blender_property='bbone_curveinx', default_value=0.0, ),
+        bl_idname='FloatSocket', blender_property='bbone_curveinx', default_value=0.0,
+        prop_owner_group='bone',),
     BBoneZCurveInTemplate := replace(BBoneXCurveInTemplate, name="BBone Z Curve-In",
-        blender_property='bbone_curveinz', ),
+        blender_property='bbone_curveinz', prop_owner_group='bone', ),
     BBoneXCurveOutTemplate := replace(BBoneXCurveInTemplate, name="BBone X Curve-Out",
-        blender_property='bbone_curveoutx', ),
+                                      default_value=0.0,
+        blender_property='bbone_curveoutx', prop_owner_group='bone', ),
     BBoneZCurveOutTemplate := replace(BBoneXCurveInTemplate, name="BBone Z Curve-Out",
-        blender_property='bbone_curveoutz', ),  # I'm tired of assigning variables, not gonna bother anymore lol
-                                                # it's just a conincidence that a lot of these are also unimplemented
-    replace(BBoneXCurveInTemplate, name="BBone Roll-In", blender_property='bbone_rollin', ), # CURRENTLY UNIMPLEMENTED
-    replace(BBoneXCurveInTemplate, name="BBone Roll-Out", blender_property='bbone_rollout', ), # CURRENTLY UNIMPLEMENTED
-    replace(BBoneXCurveInTemplate, name="BBone Inherit End Roll",
-            bl_idname='BooleanSocket', default_value=False,), # CURRENTLY UNIMPLEMENTED
-    replace(BBoneXCurveInTemplate, name="BBone Scale-In",
-            bl_idname='VectorSocket', default_value=(0.0,0.0,0.0),), # CURRENTLY DOESN'T WORK
-    replace(BBoneXCurveInTemplate, name="BBone Scale-Out",
-            bl_idname='VectorSocket', default_value=(0.0,0.0,0.0)), # CURRENTLY DOESN'T WORK
-    replace(BBoneXCurveInTemplate, name="BBone Ease-In",), # CURRENTLY DOESN'T WORK
-    replace(BBoneXCurveInTemplate, name="BBone Ease-Out",), # CURRENTLY DOESN'T WORK
-    replace(BBoneXCurveInTemplate, name="BBone Easing",
-            bl_idname='BooleanSocket', default_value=False,), # CURRENTLY DOESN'T WORK
-    replace(BBoneXCurveInTemplate, name="BBone Start Handle Type",
+        blender_property='bbone_curveoutz', prop_owner_group='bone', ), 
+    replace(bbone_template, name="BBone Roll-In",
+            default_value = 0.0,
+            blender_property='bbone_rollin',),
+    replace(bbone_template, name="BBone Roll-Out", blender_property='bbone_rollout', ),
+    replace(bbone_template, name="BBone Inherit End Roll",
+            bl_idname='BooleanSocket', default_value=False,
+            blender_property = 'use_endroll_as_inroll',
+            is_animatable=False, prop_owner_group='bone',),
+    replace(bbone_template, name="BBone Scale-In",
+            bl_idname='VectorSocket', default_value=(1.0,1.0,1.0),
+            blender_property = 'bbone_scalein'),
+    replace(bbone_template, name="BBone Scale-Out",
+            bl_idname='VectorSocket', default_value=(1.0,1.0,1.0),
+            blender_property = 'bbone_scaleout'),
+    replace(bbone_template, name="BBone Ease-In",
+            blender_property = 'bbone_easein'),
+    replace(bbone_template, name="BBone Ease-Out",
+            blender_property = 'bbone_easeout'),
+    replace(bbone_template, name="BBone Easing",
+            bl_idname='BooleanSocket', default_value=False,
+            blender_property='use_scale_easing',  prop_owner_group='bone',),
+    replace(bbone_template, name="BBone Start Handle Type",
             bl_idname="EnumBBoneHandleType",
-            blender_property='bbone_handle_type_start', default_value=None, ),
-    replace(BBoneXCurveInTemplate, name="BBone Custom Start Handle",
+            blender_property='bbone_handle_type_start', default_value=None,
+            prop_owner_group='bone', is_animatable=False,),
+    replace(bbone_template, name="BBone Custom Start Handle",
             bl_idname="StringSocket",
-            blender_property='bbone_custom_handle_start', default_value=None, ),
-    replace(BBoneXCurveInTemplate, name="BBone Start Handle Scale",
+            blender_property=None, # not handled by this system
+            default_value=None, is_animatable=False,),
+    replace(bbone_template, name="BBone Start Handle Scale",
             bl_idname="BooleanThreeTupleSocket",
-            blender_property='bbone_handle_use_scale_start', default_value=None, ),
-    replace(BBoneXCurveInTemplate, name="BBone Start Handle Ease",
-            bl_idname='BooleanSocket', default_value=False),# CURRENTLY DOESN'T WORK),
-    replace(BBoneXCurveInTemplate, name="BBone End Handle Type",
+            default_value = (False, False, False),
+            blender_property='bbone_handle_use_scale_start',
+            prop_owner_group='bone', ),
+    replace(bbone_template, name="BBone Start Handle Ease",
+            bl_idname='BooleanSocket', default_value=False,
+            blender_property = 'bbone_handle_use_ease_start',
+            prop_owner_group='bone',),
+    replace(bbone_template, name="BBone End Handle Type",
             bl_idname="EnumBBoneHandleType",
-            blender_property='bbone_handle_type_end', default_value=None, ),
-    replace(BBoneXCurveInTemplate, name="BBone Custom End Handle",
+            blender_property='bbone_handle_type_end', default_value=None,
+            prop_owner_group='bone', is_animatable=False,),
+    replace(bbone_template, name="BBone Custom End Handle",
             bl_idname="StringSocket",
-            blender_property='bbone_custom_handle_end', default_value=None, ),
-    replace(BBoneXCurveInTemplate, name="BBone End Handle Scale",
+            blender_property=None, # not handled by this system
+            default_value=None, is_animatable=False,),
+    replace(bbone_template, name="BBone End Handle Scale",
             bl_idname="BooleanThreeTupleSocket",
+            default_value= (False, False, False),
             blender_property='bbone_handle_use_scale_end',
-            default_value= (False, False, False)),
-    replace(BBoneXCurveInTemplate, name="BBone End Handle Ease",
-            bl_idname='BooleanSocket', default_value=False),# CURRENTLY DOESN'T WORK),
+            prop_owner_group='bone',),
+    replace(bbone_template, name="BBone End Handle Ease",
+            bl_idname='BooleanSocket', default_value=False,
+            blender_property = 'bbone_handle_use_ease_end',
+            prop_owner_group='bone',),
     # locks
     LockLocationTemplate := SockTemplate(name="Lock Location",
         is_input=True, bl_idname='BooleanThreeTupleSocket', category = 'lock',
-        blender_property='lock_location', default_value=[True, True, True] ),
+        blender_property='lock_location', default_value=[True, True, True],
+        prop_owner_group='pose_bone', ),
     LockRotationTemplate := replace(LockLocationTemplate, name="Lock Rotation",
         blender_property='lock_rotation',),
     LockRotationTemplate := replace(LockLocationTemplate, name="Lock Scale",
         blender_property='lock_scale',),
     # hide
-    replace(HideTemplate, name='Hide', category='always_show',
-            blender_property='hide', default_value=False,),
+    bone_hide_template,
     CustomPropsTemplate,
     # Output
     xFormOutTemplate,

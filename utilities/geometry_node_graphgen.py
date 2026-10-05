@@ -79,7 +79,13 @@ def gen_morph_target_nodes(mod_name, mod_ob, targets, context, use_offset=True):
             ng.links.new(input=inp.outputs[mt_name+" Value"], output=scale1.inputs["Scale"])
         add_these.append(scale1)
         object_map["Socket_"+str((i+1)*2)]=mt_node.GetxForm().bGetObject()
-        props_sockets["Socket_"+str((i+1)*2+1)]= ("Value."+str(i).zfill(3), 1.0)
+        from ..mantis_dataclasses import MantisSocketFiller
+        socket_value = MantisSocketFiller(
+            property_name = (prop := "Socket_"+str((i+1)*2+1)),
+            socket_name = (socket_name := "Value."+str(i).zfill(3)),
+            default_value = 1.0
+        )
+        props_sockets[prop] = socket_value
     
     set_position = ng.nodes.new("GeometryNodeSetPosition")
     bake = ng.nodes.new("GeometryNodeBake")

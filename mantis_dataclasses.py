@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import List, Any, Tuple
+from typing import List, Any, Tuple, Optional
 
 @dataclass
 class MantisSocketTemplate():
@@ -19,6 +19,7 @@ class MantisSocketTemplate():
     #  where multiple blender objects own the properties, like e.g. bone/posebone
     prop_owner_group : str = field(default="")
     # do? add versioning fields for Mantis, Blender version min/max
+    is_animatable    : bool = field(default=True) # controls whether a driver is legal or not
 
 @dataclass
 class xForm_info():
@@ -79,3 +80,21 @@ class MantisBBoneTransform():
     use_bbone_custom_handles: bool = field(default=False)
     bbone_custom_handle_start: str = field(default=None)
     bbone_custom_handle_end: str = field(default=None)
+
+# used to apply values or drivers to blender properties in a generic way
+@dataclass
+class MantisSocketFiller():
+    socket_name: str = field(default="")
+    property_name : str = field(default="")
+    default_value: Any = field(default=None)
+    array_index: int = field(default=0) # for multi-input array sockets
+    value_index: Optional[int] = field(default=None) # for vector properties
+    # A Combo Property is a property that jams a bunch of blender properties into one socket
+    combo_property: bool = field(default=False)
+
+    def __repr__(self):
+        return f"socket_name: {self.socket_name}, " \
+               f"property_name: {self.property_name}, " \
+               f"default_value: {self.default_value}, " \
+               f"array_index: {self.array_index or 0}, " \
+               f"value_index: {self.value_index or None}" 

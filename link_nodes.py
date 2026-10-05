@@ -65,7 +65,7 @@ class MantisLinkNode(MantisNode):
             return None
 
         else:
-            return super().evaluate_input(input_name)
+            return super().evaluate_input(input_name, index)
 
     def gen_property_socket_map(self) -> dict:
         props_sockets = super().gen_property_socket_map()
@@ -319,17 +319,21 @@ class LinkTransformation(MantisLinkNode):
                 for axis in ['x', 'y', 'z']:
                     stub='from_min_'+axis
                     props_sockets[stub+from_suffix]=props_sockets[stub]
+                    props_sockets[stub+from_suffix].property_name = stub+from_suffix
                     del props_sockets[stub]
                     stub='from_max_'+axis
                     props_sockets[stub+from_suffix]=props_sockets[stub]
+                    props_sockets[stub+from_suffix].property_name = stub+from_suffix
                     del props_sockets[stub]
             if to_replace:
                 for axis in ['x', 'y', 'z']:
                     stub='to_min_'+axis
                     props_sockets[stub+to_replace]=props_sockets[stub]
+                    props_sockets[stub+from_suffix].property_name = stub+to_replace
                     del props_sockets[stub]
                     stub='to_max_'+axis
                     props_sockets[stub+to_replace]=props_sockets[stub]
+                    props_sockets[stub+from_suffix].property_name = stub+to_replace
                     del props_sockets[stub]
             evaluate_sockets(self, c, props_sockets)
         self.executed = True
@@ -766,8 +770,11 @@ class LinkDrivenParameter(MantisLinkNode):
                 def_value=[0.0]*length
                 self.parameters["Value"] = tuple( 0.0 if i != index else value for i in range(length))
 
+            from .mantis_dataclasses import MantisSocketFiller
             props_sockets = {
-                prop: ("Value", def_value)
+                prop: MantisSocketFiller( property_name=prop,
+                                          socket_name="Value",
+                                          default_value=def_value)
             }
             evaluate_sockets(self, ob, props_sockets)
 
@@ -814,6 +821,7 @@ class LinkArmature(MantisLinkNode):
             #       are all in the same armature
             # Mantis should intelligently provide a working armature constraint
             # even if the user supplies targets that would not work in vanilla Blender
+            # TODO find out this is reading the arrays in reverse order? is that bad?
             targets_weights = {}
             for i in range(num_targets):
                 target = c.targets.new()
@@ -822,7 +830,17 @@ class LinkArmature(MantisLinkNode):
                 if not isinstance(weight_value, float):
                     weight_value=0
                 targets_weights[i]=weight_value
-                props_sockets["targets[%d].weight" % i] = ("Weights", i)
+                from .mantis_dataclasses import MantisSocketFiller
+                default_value = 1.0
+                if self.inputs['Weights'].links:
+                    default_value = 1/len(self.inputs['Weights'].links)
+                filler = MantisSocketFiller(
+                    property_name= (prop_name := "targets[%d].weight" % i),
+                    socket_name="Weights",
+                    default_value=default_value,
+                    array_index=i,
+                )
+                props_sockets[prop_name] = filler
             evaluate_sockets(self, c, props_sockets)
             for target, value in targets_weights.items():
                 c.targets[target].weight=value
@@ -904,14 +922,13 @@ class LinkShrinkWrap(MantisLinkNode):
                 wrapGreen(" Constraint for bone: ") +
                 wrapOrange(xf.bGetObject().name))
             c = xf.bGetObject().constraints.new('SHRINKWRAP')
+            self.bObject.append(c)
             self.get_target_and_subtarget(c)
             if constraint_name := self.evaluate_input("Name"):
                 c.name = constraint_name
             props_sockets = self.gen_property_socket_map()
-            print (props_sockets.keys())
-            self.bObject.append(c)
-            # self.set_custom_space() # this needs to be overridden for me TODO
             evaluate_sockets(self, c, props_sockets)
+            # self.set_custom_space() # this needs to be overridden for me TODO
         self.executed = True
 
 
@@ -931,10 +948,10 @@ class LinkGeometryAttribute(MantisLinkNode):
         for xf in self.GetxForm():
             print
             c = xf.bGetObject().constraints.new('GEOMETRY_ATTRIBUTE')
+            self.bObject.append(c)
             self.get_target_and_subtarget(c)
             if constraint_name := self.evaluate_input("Name"):
                 c.name = constraint_name
             props_sockets = self.gen_property_socket_map()
-            self.bObject.append(c)
             evaluate_sockets(self, c, props_sockets)
         self.executed = True

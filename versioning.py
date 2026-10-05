@@ -423,6 +423,36 @@ def update_fcurve_and_armature_node_to_multi_socket(*args, **kwargs):
             other_node.is_updating = was_updating[other_node.name]
         node.id_data.do_live_update = live_updates
 
+# These BBone Scale-In, Scale-Out properties had the wrong defaults
+# now that they are implemented properly, 
+# since they were not implemented before, we'll do all of them at once.
+# Normally it is wrong to set things directly like this, but they didn't
+# do anything before. Oh well.
+def fix_bbone_default_scale_in_and_out(*args, **kwargs):
+    tree = kwargs['tree']
+    current_major_version = tree.mantis_version[0]
+    current_minor_version = tree.mantis_version[1]
+    current_sub_version = tree.mantis_version[2]
+    if  current_major_version > 0: return# major version must be 0
+    if current_minor_version >= 13: return# minor version must be 12 or less
+    if current_minor_version == 13 and current_sub_version >= 5: return# sub version must be 4 or less
+    prPurple(f"Fixing BBone Settings for {tree.name}")
+    live_updates = tree.do_live_update
+    bones = []
+    for node in tree.nodes:
+        if hasattr(node, 'is_updating'):
+            node.is_updating = True
+        if node.bl_idname == 'xFormBoneNode':
+            bones.append(node)
+    try:
+        for bone_node in bones:
+            bone_node.inputs['BBone Scale-In'].default_value = (1,1,1)
+            bone_node.inputs['BBone Scale-Out'].default_value = (1,1,1)
+    finally:
+        for node in tree.nodes:
+            if hasattr(node, 'is_updating'):
+                node.is_updating = False
+
 # versioning tasks that involve Blender versions rather than Mantis versions:
 error_description_4_5_0_LTS = 'There is a bug in Blender 4.5.0 LTS, that is why these sockets are blue.'\
                              ' This will be fixed in future Blender versions.'
@@ -459,6 +489,7 @@ versioning_tasks = [
     (['SchemaTree'], schema_enable_custom_interface_types, ['tree']),
     (['UtilityFCurve', 'LinkArmature'],
            update_fcurve_and_armature_node_to_multi_socket, ['node']),
+    (['MantisTree', 'SchemaTree'], fix_bbone_default_scale_in_and_out, ['tree']),
 ]
 
 

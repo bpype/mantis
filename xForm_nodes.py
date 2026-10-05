@@ -76,6 +76,26 @@ class xFormNode(MantisNode):
     def reset_execution(self):
         super().reset_execution()
         self.prepared=False
+
+    def check_drivers(self):
+        for st in self.socket_templates:
+            if st.is_animatable == False:
+                socket = st.name
+                multi = st.use_multi_input
+                vector = isinstance(st.default_value, tuple)
+                # if single property
+                if not multi and not vector:
+                    has_driver = check_for_driver(self, socket)
+                elif not multi and vector:
+                    for i in range(len(st.default_value)):
+                        has_driver = check_for_driver(self, socket, i)
+                        if has_driver: break
+                elif multi:
+                    for i in range(len(self.inputs[socket].links)):
+                        has_driver = check_for_driver(self, socket, 0, i)
+                        if has_driver: break
+                if has_driver:
+                    raise GraphError(f"Error: Socket \"{socket}\" is not animatable and cannot be driven.")
     
     def setup_custom_props(self, ob, input):
         from .mantis_dataclasses import custom_prop_template
@@ -149,9 +169,13 @@ class xFormArmature(xFormNode):
 
         #check if an object by the name exists
         if (name) and (ob := bpy.data.objects.get(name)):
+            # Clear the drivers from BOTH the object/pose and the skeleton
             if (ob.animation_data):
                 while (ob.animation_data.drivers):
                         ob.animation_data.drivers.remove(ob.animation_data.drivers[-1])
+            if (ob.data.animation_data):
+                while (ob.data.animation_data.drivers):
+                        ob.data.animation_data.drivers.remove(ob.data.animation_data.drivers[-1])
             for pb in ob.pose.bones:
                 # clear it, even after deleting the edit bones,
                 #  if we create them again the pose bones will be reused
@@ -269,6 +293,7 @@ class xFormBone(xFormNode):
             eb.inherit_scale = parent_mantis_node.evaluate_input("Inherit Scale")
 
     def bPrepare(self, bContext=None):
+        self.check_drivers()
         self.parameters['Matrix'] = get_matrix(self)
         self.prepared = True
 
@@ -341,13 +366,9 @@ class xFormBone(xFormNode):
             raise RuntimeError(wrapRed(f"Could not create edit bone: {name} because bone head was located in the same place as bone tail."))
 
         # Setup Deform attributes...
-        eb.use_deform            = self.evaluate_input("Deform")
-        eb.envelope_distance     = self.evaluate_input("Envelope Distance")
-        eb.envelope_weight       = self.evaluate_input("Envelope Weight")
-        eb.use_envelope_multiply = self.evaluate_input("Envelope Multiply")
-        eb.head_radius           = self.evaluate_input("Envelope Head Radius")
-        eb.tail_radius           = self.evaluate_input("Envelope Tail Radius")
-
+        eb_props_sockets = self.gen_property_socket_map(prop_owner_group="edit_bone")
+        evaluate_sockets(self, eb, eb_props_sockets)
+        
         print( wrapGreen("Created Bone: ") + wrapOrange(eb.name) + wrapGreen(" in ") + wrapWhite(self.bGetParentArmature().name))
 
         parent_xForm_info = get_parent_xForm_info(self)
@@ -360,7 +381,6 @@ class xFormBone(xFormNode):
             self_edit_name=eb.name,
         )
         self.parameters['xForm Out'] = my_info
-
         self.executed = True
 
     def set_bone_color(self, b, inherit_color, bContext):
@@ -401,155 +421,68 @@ class xFormBone(xFormNode):
 
 
     def bFinalize(self, bContext = None):
+
         b = self.bGetParentArmature().data.bones[self.bObject]
         # let's do bone colors first
         inherit_color = self.evaluate_input("Inherit Color")
         if len(self.inputs['Color'].links) > 0:
             inherit_color = False # use the link instead
-        # try: # just in case, this shouldn't cause a failure
         self.set_bone_color(b, inherit_color, bContext)
-        # except Exception as e:
-        #     prRed("WARNING: failed to set color because of error, see report below:")
-        #     prOrange(e)
-        #
-        do_bb=False
-        b.bbone_x = self.evaluate_input("BBone X Size"); b.bbone_x = max(b.bbone_x, 0.0002)
-        b.bbone_z = self.evaluate_input("BBone Z Size"); b.bbone_z = max(b.bbone_z, 0.0002)
-        if (segs := self.evaluate_input("BBone Segments")) > 1:
-            do_bb=True
-            b.bbone_segments = segs
-            b.bbone_x = self.evaluate_input("BBone X Size")
-            b.bbone_z = self.evaluate_input("BBone Z Size")
-            if self.evaluate_input("BBone HQ Deformation"):
-                b.bbone_mapping_mode = "CURVED"
-            # 'bbone_handle_type_start'    : ("BBone Start Handle Type", "AUTO"),
-            # 'bbone_handle_type_end'      : ("BBone End Handle Type", "AUTO"),
-            # 'bbone_custom_handle_start'  : ("BBone Custom Start Handle", "AUTO"),
-            # 'bbone_custom_handle_end'    : ("BBone Custom End Handle", "AUTO"),
-            if handle_type := self.evaluate_input("BBone Start Handle Type"):
-                b.bbone_handle_type_start = handle_type
-            if handle_type := self.evaluate_input("BBone End Handle Type"):
-                b.bbone_handle_type_end = handle_type
-
-            try:
-                if (custom_handle := self.evaluate_input("BBone Custom Start Handle")):
-                    b.bbone_custom_handle_start = self.bGetParentArmature().data.bones[custom_handle]
-                if (custom_handle := self.evaluate_input("BBone Custom End Handle")):
-                    b.bbone_custom_handle_end = self.bGetParentArmature().data.bones[custom_handle]
-            except KeyError:
-                prRed("Warning: BBone start or end handle not set because of missing bone in armature.")
-
-            bone_props_socket= {
-                'bbone_curveinx'     : ("BBone X Curve-In", 0.0),
-                'bbone_curveinz'     : ("BBone Z Curve-In", 0.0),
-                'bbone_curveoutx'    : ("BBone X Curve-Out", 0.0),
-                'bbone_curveoutz'    : ("BBone Z Curve-Out", 0.0),
-            }
-            evaluate_sockets(self, b, bone_props_socket)
-            # TODO this section should be done with props-socket thing
-            b.bbone_handle_use_scale_start = self.evaluate_input("BBone Start Handle Scale")
-            b.bbone_handle_use_scale_end = self.evaluate_input("BBone End Handle Scale")
-
+        if self.evaluate_input("BBone HQ Deformation"):
+            b.bbone_mapping_mode = "CURVED"
+        if handle_type := self.evaluate_input("BBone Start Handle Type"):
+            b.bbone_handle_type_start = handle_type
+        if handle_type := self.evaluate_input("BBone End Handle Type"):
+            b.bbone_handle_type_end = handle_type
+        try:
+            if (custom_handle := self.evaluate_input("BBone Custom Start Handle")):
+                b.bbone_custom_handle_start = self.bGetParentArmature().data.bones[custom_handle]
+            if (custom_handle := self.evaluate_input("BBone Custom End Handle")):
+                b.bbone_custom_handle_end = self.bGetParentArmature().data.bones[custom_handle]
+        except KeyError:
+            prRed("Warning: BBone start or end handle not set because of missing bone in armature.")
 
         import bpy
-
         pb = self.bGetParentArmature().pose.bones[self.bObject]
-        rotation_mode = self.evaluate_input("Rotation Order")
-        if rotation_mode == "AUTO": rotation_mode = "XYZ"
-        pb.rotation_mode = rotation_mode
+
+        if check_for_driver(self, 'Rotation Order'):
+            # this is stupid and a HACK
+            from .mantis_dataclasses import MantisSocketFiller
+            props_sockets = {"rotation_mode": MantisSocketFiller( socket_name="Rotation Order",
+                property_name="rotation_mode", default_value='XYZ',)}
+            evaluate_sockets(self, pb, props_sockets)
+        else: # This is stupid, but I did it to myself and it will be annoying to fix
+            rotation_mode = self.evaluate_input("Rotation Order")
+            if rotation_mode == "AUTO": rotation_mode = "XYZ"
+            pb.rotation_mode = rotation_mode
+            
+            
+
         pb.id_properties_clear()
         self.setup_custom_props(pb, "Custom Properties")
+        pb_props_sockets = self.gen_property_socket_map(prop_owner_group='pose_bone')
+        evaluate_sockets(self, pb, pb_props_sockets)
 
-        if (pb.is_in_ik_chain):
-            # this  props_socket thing wasn't really meant to work here but it does, neat
-            props_sockets = {
-            'ik_stretch'          : ("IK Stretch", 0),
-            'lock_ik_x'           : (("Lock IK", 0), False),
-            'lock_ik_y'           : (("Lock IK", 1), False),
-            'lock_ik_z'           : (("Lock IK", 2), False),
-            'ik_stiffness_x'      : (("IK Stiffness", 0), 0.0),
-            'ik_stiffness_y'      : (("IK Stiffness", 1), 0.0),
-            'ik_stiffness_z'      : (("IK Stiffness", 2), 0.0),
-            'use_ik_limit_x'      : (("Limit IK", 0), False),
-            'use_ik_limit_y'      : (("Limit IK", 1), False),
-            'use_ik_limit_z'      : (("Limit IK", 2), False),
-            'ik_min_x'            : ("X Min", 0),
-            'ik_max_x'            : ("X Max", 0),
-            'ik_min_y'            : ("Y Min", 0),
-            'ik_max_y'            : ("Y Max", 0),
-            'ik_min_z'            : ("Z Min", 0),
-            'ik_max_z'            : ("Z Max", 0),
-            }
-            evaluate_sockets(self, pb, props_sockets)
-        if do_bb:
-            props_sockets = {
-            'bbone_curveinx'             : ("BBone X Curve-In", pb.bone.bbone_curveinx),
-            'bbone_curveinz'             : ("BBone Z Curve-In", pb.bone.bbone_curveinz),
-            'bbone_curveoutx'            : ("BBone X Curve-Out", pb.bone.bbone_curveoutx),
-            'bbone_curveoutz'            : ("BBone Z Curve-Out", pb.bone.bbone_curveoutz),
-            'bbone_easein'               : ("BBone Ease-In", 0),
-            'bbone_easeout'              : ("BBone Ease-Out", 0),
-            'bbone_rollin'               : ("BBone Roll-In", 0),
-            'bbone_rollout'              : ("BBone Roll-Out", 0),
-            'bbone_scalein'              : ("BBone Scale-In", (1,1,1)),
-            'bbone_scaleout'             : ("BBone Scale-Out", (1,1,1)),
-            }
-            evaluate_sockets(self, pb, props_sockets)
-            # we need to clear this stuff since our only real goal was to get some drivers from the above
-            for attr_name in props_sockets.keys():
-                try:
-                    setattr(pb, attr_name, 0) # just clear it
-                except (ValueError, TypeError): # Blender 5.2 raises TypeError for scalar -> vector
-                    setattr(pb, attr_name, (1.0,1.0,1.0)) # scale needs to be set to 1
+        bone_props_socket = self.gen_property_socket_map(prop_owner_group='bone')
+        evaluate_sockets(self, pb.bone, bone_props_socket)
 
+        # and in edit mode we need to explicitly set the bbone properties
+        # I don't like this HACK but there seems to be no other way...
+        # Better to ask forgiveness than permission. If anyone wants control over this, I'll solve the problem then
+        # IN the near future, in fact, I think I'll make a BBone Rest Pose matrix thing
+        # and allow users to set it from bezier curves
+        pb.bone.bbone_easein = 1; pb.bone.bbone_easeout = 1
 
-            # important TODO... all of the drivers and stuff should be handled this way, right?
-        # time to set up drivers!
-
-        # just gonna add this to the end and build off it I guess
-        props_sockets = {
-            "lock_location"               : ("Lock Location", [False, False, False]),
-            "lock_rotation"               : ("Lock Rotation", [False, False, False]),
-            "lock_scale"                  : ("Lock Scale", [False, False, False]),
-            'custom_shape_scale_xyz'      : ("Custom Object Scale",  (0.0,0.0,0.0) ),
-            'custom_shape_translation'    : ("Custom Object Translation",  (0.0,0.0,0.0) ),
-            'custom_shape_rotation_euler' : ("Custom Object Rotation",  (0.0,0.0,0.0) ),
-            'use_custom_shape_bone_size'  : ("Custom Object Scale to Bone Length",  True,),
-        }
-        # in 5.0.0 and newer I have to do pose bone, this is an error in < 5.0
-        if bpy_version >=(5,0,0):
-            props_sockets['hide'] = ("Hide", False)
-
-        evaluate_sockets(self, pb, props_sockets)
-
-        # this could probably be moved to bTransformPass
-        # TODO VERSIONING: newer (5.0+ ?) Blenders need to use PoseBone for this
-        props_sockets = {
-            'hide'      : ("Hide", False),
-            'show_wire' : ("Custom Object Wireframe", False),
-        }
-        evaluate_sockets(self, pb.bone, props_sockets)
-
-        # whatever I was doing there.... was stupid. CLEAN UP TODO
-        # this is the right thing to do.
         finish_drivers(self)
-        #
-        # OK, visual settings
-        #
-        # Get the override xform's bone:
-
-
 
         pb.custom_shape_transform = None
         pb.custom_shape = None
-
         if len(self.inputs["Custom Object xForm Override"].links) > 0:
             trace = trace_single_line(self, "Custom Object xForm Override")
             try:
                 pb.custom_shape_transform = trace[0][1].bGetObject()
             except AttributeError:
                 pass
-
         if len(self.inputs["Custom Object"].links) > 0:
             trace = trace_single_line(self, "Custom Object")
             try:
@@ -668,10 +601,7 @@ class xFormGeometryObject(xFormNode):
         self.has_shape_keys = False
         # putting this in bTransformPass simply prevents it from being run more than once.
         # maybe I should do that with the rest of bPrepare, too.
-        props_sockets = {
-            'hide_viewport'    : ("Hide in Viewport", False),
-            'hide_render'      : ("Hide in Render", False),
-        }
+        props_sockets = self.gen_property_socket_map()
         evaluate_sockets(self, self.bObject, props_sockets)
         self.executed = True
 

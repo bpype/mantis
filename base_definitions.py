@@ -782,16 +782,30 @@ class MantisNode:
         for key, value in additional_parameters.items():
             self.parameters[key]=value
 
-    def gen_property_socket_map(self) -> dict:
+    def gen_property_socket_map(self, prop_owner_group=None) -> dict:
+        from .mantis_dataclasses import MantisSocketFiller
+        from dataclasses import replace
         props_sockets = {}
         for s_template in self.socket_templates:
+            if prop_owner_group is not None and \
+                    s_template.prop_owner_group != prop_owner_group:
+                continue # for composite objects like bones
             if not s_template.blender_property:
                 continue
+            filler = MantisSocketFiller(socket_name=s_template.name)
             if isinstance(s_template.blender_property, str):
-                props_sockets[s_template.blender_property]=(s_template.name, s_template.default_value)
+                filler = replace(filler)
+                filler.property_name = s_template.blender_property
+                filler.default_value=s_template.default_value
+                props_sockets[s_template.blender_property]=filler
             elif isinstance(s_template.blender_property, (tuple, list)):
                 for index, sub_prop in enumerate(s_template.blender_property):
-                    props_sockets[sub_prop]=( (s_template.name, index),s_template.default_value[index] )
+                    filler = replace(filler)
+                    filler.property_name = sub_prop
+                    filler.value_index=index
+                    filler.default_value = s_template.default_value[index]
+                    filler.combo_property=True
+                    props_sockets[sub_prop]= filler
         return props_sockets
 
     def set_traverse(self, traversal_pairs = [(str, str)]) -> None:

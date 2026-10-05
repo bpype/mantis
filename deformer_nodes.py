@@ -561,7 +561,13 @@ class DeformerMorphTargetDeform(MantisDeformerNode):
             sk.slider_min = -10
             sk.slider_max = 10
             keys[mt_name]=sk
-            props_sockets[mt_name]= ("Value."+str(i).zfill(3), 1.0)
+            from .mantis_dataclasses import MantisSocketFiller
+            socket_value = MantisSocketFiller(
+                property_name=mt_name,
+                socket_name = "Value."+str(i).zfill(3),
+                default_value= 1.0,
+            )
+            props_sockets[mt_name]= socket_value
         for i, t in enumerate(targets):
             mt_node = t.links[0].from_node; sk_ob = mt_node.GetxForm().bGetObject()
             if sk_ob is None: continue
@@ -573,9 +579,6 @@ class DeformerMorphTargetDeform(MantisDeformerNode):
         evaluate_sockets(self, sk.id_data, props_sockets)
         finish_drivers(self)
         prWhite(f"Initializing morph target took {time() -start_time} seconds")
-
-
-        
 
     def gen_shape_key(self, xf, context):
         # TODO: make this a feature of the node definition that appears only when there are no prior deformers - and shows a warning!
@@ -652,7 +655,13 @@ class DeformerMorphTargetDeform(MantisDeformerNode):
             sk.slider_min = -10
             sk.slider_max = 10
             keys[mt_name]=sk
-            props_sockets[mt_name]= ("Value."+str(i).zfill(3), 1.0)
+            from .mantis_dataclasses import MantisSocketFiller
+            socket_value = MantisSocketFiller(
+                property_name=mt_name,
+                socket_name = "Value."+str(i).zfill(3),
+                default_value= 1.0,
+            )
+            props_sockets[mt_name]= socket_value
         for i, t in enumerate(targets):
             mt_node = t.links[0].from_node; sk_ob = mt_node.GetxForm().bGetObject()
             if sk_ob is None: continue
