@@ -243,7 +243,7 @@ class UtilityMatrixFromCurve(Node, MantisMiscNode):
             elif mode == 'FACTOR' and template.category == 'factor':
                 self.inputs[template.name].hide=False
 
-class UtilityPointFromCurve(Node, MantisUINode):
+class UtilityPointFromCurve(Node, MantisMiscNode):
     """Gets a point from a curve."""
     bl_idname = "UtilityPointFromCurve"
     bl_label = "Point from Curve"
