@@ -97,7 +97,10 @@ def timer_update_selection_sync():
                 if len(tree_path[-1].nodes) == 0:
                     return SELECTION_POLL_RATE # empty graph
                 parsed_tree = root_tree.parsed_tree
-                active_ui_signature = (get_signature_from_space(tree_path[-1].nodes.active, space))
+                if tree_path[-1].nodes.active is not None:
+                    active_ui_signature = (get_signature_from_space(tree_path[-1].nodes.active, space))
+                else:
+                    active_ui_signature = None
                 for n in tree_path[-1].nodes:
                     if n.bl_idname not in WATCH_FOR_SELECTION: continue
                     selection_state[ui_signature := get_signature_from_space(n, space)] = n.select
@@ -119,9 +122,11 @@ def timer_update_selection_sync():
                 prRed (e)
                 return SELECTION_POLL_RATE
     except Exception as e:
-        print ("Error in Selection Sync")
-        print (e)
-        raise e
+        from .__init__ import DOERROR
+        if DOERROR:
+            print ("Error in Selection Sync")
+            print (e)
+            raise e
     return SELECTION_POLL_RATE
 
 def set_bone_selection(pose_bone, selection_state):
