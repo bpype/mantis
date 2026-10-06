@@ -375,6 +375,8 @@ class UtilityMatrixFromCurve(MantisNode):
         mat = Matrix.Identity(4)
         curve_name = self.evaluate_input("Curve")
         curve = bpy_object_get_guarded( curve_name, self)
+        mode = self.evaluate_input("Mode")
+        # DIVISIONS, FACTOR
         if not curve:
             prRed(f"WARN: No curve found for {self}. Using an identity matrix instead.")
             mat[3][3] = 1.0
@@ -387,10 +389,10 @@ class UtilityMatrixFromCurve(MantisNode):
             from .utilities.utilities import data_from_ribbon_mesh
             #
             num_divisions = self.evaluate_input("Total Divisions")
-            if num_divisions <= 0:
+            if mode == 'DIVISIONS' and num_divisions <= 0:
                 raise GraphError("The number of divisions in the curve must be 1 or greater.")
             m_index = self.evaluate_input("Matrix Index")
-            if m_index >= num_divisions:
+            if mode == 'DIVISIONS' and m_index >= num_divisions:
                 prRed(m_index, num_divisions)
                 raise GraphError(f"{self} tried to get a matrix-index greater the total number of divisions."
                                   "The matrix index starts at 0. You're probably off by +1.")
@@ -399,11 +401,24 @@ class UtilityMatrixFromCurve(MantisNode):
                 raise GraphError(f"{self} is attempting to read from a spline in {curve.name} that does not exist."
                                   " Try and reduce the value of Spline Index.")
             splines_factors = [ [] for i in range (spline_index)]
-            factors = [1/num_divisions*m_index, 1/num_divisions*(m_index+1)]
+            if mode == 'DIVISIONS':
+                factors = [1/num_divisions*m_index, 1/num_divisions*(m_index+1)]
+            elif mode == 'FACTOR':
+                factor = self.evaluate_input('Factor')
+                factor = min(factor, 1 - 0.0001) # to make our fake tangent work
+                factors = [ factor, factor + 0.0001 ]
+                # TODO this is technically not accurate, we want the real tangent
+                # ... but this should be close enough.
+            elif mode == 'FACTOR_WITH_TAIL':
+                factor = self.evaluate_input('Factor')
+                factor = min(factor, 1 - 0.0001) # to make our fake tangent work
+                factors = [ factor,
+                            self.evaluate_input('Factor (Tail)')]
             splines_factors.append(factors)
             data = data_from_ribbon_mesh(m, splines_factors, curve.matrix_world)
             if data[spline_index][1][0] < FLOAT_EPSILON: # radius is None:
                 raise RuntimeError(zero_radius_error_message(self, curve))
+            
             head=data[spline_index][0][0]
             tail= data[spline_index][0][1]
             axis = (tail-head).normalized()
@@ -416,6 +431,8 @@ class UtilityMatrixFromCurve(MantisNode):
             mat = matrix_from_head_tail(head, tail, normal)
             # this is in world space... let's just convert it back
             mat.translation = head - curve.location
+            if mode == 'FACTOR':
+                mat[3][3]=1.0 # Set the length
 
             # TODO HACK TODO
             # all the nodes should work in world-space, and it should be the responsibility
@@ -1584,13 +1601,23 @@ class UtilityMatrixCompose(MantisNode):
         self.node_type = "UTILITY"
 
     def bPrepare(self, bContext = None,):
-        from mathutils import Matrix
-        matrix= Matrix.Identity(3)
-        matrix[0] = self.evaluate_input('X Basis Vector')
-        matrix[1] = self.evaluate_input('Y Basis Vector')
-        matrix[2] = self.evaluate_input('Z Basis Vector')
-        matrix.transpose(); matrix=matrix.to_4x4()
-        matrix.translation = self.evaluate_input('Translation')
+        from mathutils import Matrix, Vector
+        mode = self.evaluate_input("Mode")
+        translation = self.evaluate_input('Translation')
+        length = self.evaluate_input('Bone Length')
+        match mode:
+            case "BASIS":
+                matrix= Matrix.Identity(3)
+                matrix[0] = self.evaluate_input('X Basis Vector')
+                matrix[1] = self.evaluate_input('Y Basis Vector')
+                matrix[2] = self.evaluate_input('Z Basis Vector')
+                matrix.transpose(); matrix=matrix.to_4x4()
+                matrix.translation = translation
+            case "CHANNELS":
+                rotation    = self.evaluate_input('Rotation')
+                scale       = Vector((1,1,1))
+                matrix= Matrix.LocRotScale(translation, rotation, scale)
+        matrix[3][3]=length # Length
         self.parameters['Matrix']=matrix
         self.prepared = True; self.executed = True
 

@@ -327,6 +327,8 @@ def up_0_13_0_new_custom_prop_node(*args, **kwargs):
             prop_node.location = prop_node.location - Vector((180, -260*i))
             prop_node.select = False # it is annoying to select them all by default
     else: # just need to add the socket.
+        if node.inputs.get('Custom Properties'):
+            return # already done here
         new_input = node.inputs.new("CustomPropSocket", "Custom Properties", use_multi_input=True)
 
 def schema_enable_custom_interface_types(*args, **kwargs):
@@ -523,20 +525,49 @@ def add_new_display_features_v0_13_5(*args, **kwargs):
                 node.is_updating = False
         tree.do_live_update = live_updates
 
-# def up_0_13_5_modes_for_matrix_from_curve_and_compose_matrix(*args, **kwargs):
-#     node = kwargs['node']
-#     node.is_updating = True
-#     do_live_updates = node.id_data.do_live_updates
-#     node.id_data.do_live_updates = False
-#     # new re_init keyword should use socket template to automate the update.
-#     prGreen("THIS ONE HERE")
-#     print (node.id_data.name, node.name)
-#     print (node.inputs.keys())
-#     if "Mode" not in node.inputs.keys(): # just check here to see if it is needed.
-#         prOrange("DOING THE THING BRO")
-#         node.init_sockets(node.__class__.socket_templates, re_init=True)
-#     node.id_data.do_live_updates = do_live_updates
-#     node.is_updating = False
+def up_0_13_5_modes_for_matrix_from_curve_and_compose_matrix(*args, **kwargs):
+    node = kwargs['node']
+    if 'Mode' in node.inputs:
+        return # done already
+    tree = node.id_data
+    current_major_version = tree.mantis_version[0]
+    current_minor_version = tree.mantis_version[1]
+    current_sub_version = tree.mantis_version[2]
+    if  current_major_version > 0: return# major version must be 0
+    if current_minor_version >= 13: return# minor version must be 12 or less
+    if current_minor_version == 13 and current_sub_version >= 5: return# sub version must be 4 or less
+
+    live_updates = tree.do_live_update
+    tree.do_live_update = False
+
+    for other_node in tree.nodes:
+        if hasattr(other_node, 'is_updating'):
+            other_node.is_updating = True
+    try:
+        socket_templates = node.socket_templates
+        if node.bl_idname == 'UtilityMatrixFromCurve':
+            from .misc_nodes_socket_templates import (MatrixFromCurveMode,
+                                                    MatrixFromCurveFactor,
+                                                    MatrixFromCurveTailFactor, )
+            input_templates = ( MatrixFromCurveMode, MatrixFromCurveFactor,
+                                MatrixFromCurveTailFactor, )
+            node.init_sockets(input_templates)
+            node.inputs.move(len(node.inputs)-3, 0) # move Mode to first place
+        elif node.bl_idname == 'UtilityMatrixCompose':
+            from .misc_nodes_socket_templates import (ComposeMatrixBoneLength,
+                                                    MatrixComposeMode,
+                                                    ComposeMatrixRotation,)
+            input_templates = ( ComposeMatrixBoneLength, MatrixComposeMode,
+                                ComposeMatrixRotation,)
+            node.init_sockets(input_templates)
+            node.inputs.move(len(node.inputs)-1, 0) # These go in the top, so make em in order
+            node.inputs.move(len(node.inputs)-1, 0) # and move 'em one at a time in reverse order
+        node.socket_templates = socket_templates
+    finally:
+        for other_node in tree.nodes:
+            if hasattr(other_node, 'is_updating'):
+                other_node.is_updating = False
+        tree.do_live_update = live_updates
 
 # versioning tasks that involve Blender versions rather than Mantis versions:
 error_description_4_5_0_LTS = 'There is a bug in Blender 4.5.0 LTS, that is why these sockets are blue.'\
@@ -576,9 +607,9 @@ versioning_tasks = [
            update_fcurve_and_armature_node_to_multi_socket, ['node']),
     (['MantisTree', 'SchemaTree'], fix_bbone_default_scale_in_and_out, ['tree']),
     (['MantisTree', 'SchemaTree'], add_new_display_features_v0_13_5, ['tree']),
-    # (['UtilityMatrixFromCurve', 'UtilityMatrixCompose'],
-    #    up_0_13_5_modes_for_matrix_from_curve_and_compose_matrix,
-    #  ['node',], ),
+    (['UtilityMatrixFromCurve', 'UtilityMatrixCompose'],
+       up_0_13_5_modes_for_matrix_from_curve_and_compose_matrix,
+     ['node',], ),
 ]
 
 

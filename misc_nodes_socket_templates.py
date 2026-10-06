@@ -58,7 +58,8 @@ MatrixFromCurveSockets=[
         bl_idname='UnsignedIntSocket', is_input=True, default_value=0,),
     MatrixIndexTemplate := ST(name="Matrix Index", category = "divisions",
         bl_idname='UnsignedIntSocket', is_input=True, default_value=0,),
-    replace(FactorTemplate, category="factor"),
+    MatrixFromCurveFactor := replace(FactorTemplate, category="factor"),
+    MatrixFromCurveTailFactor := replace(FactorTemplate, name='Factor (Tail)', category="factor_tail"),
     MatrixOutput,
 ]
 
@@ -372,14 +373,22 @@ MatrixInvertSockets=[
 ]
 
 MatrixComposeSockets=[
+    MatrixComposeMode := ST(name='Mode', bl_idname='EnumComposeMatrixModes',
+        category='always_show', is_input=True,),
+    ComposeMatrixRotation := ST( name="Euler Rotation", is_input=True,  
+        bl_idname='VectorEulerSocket', hide = True,
+        default_value = (0.0, 0.0, 0.0), category="transform" ),
     XBasisVector := ST(
     name="X Basis Vector", is_input=True,  bl_idname='VectorSocket', 
-        default_value = (1.0, 0.0, 0.0) ),
+        default_value = (1.0, 0.0, 0.0), category='axes', ),
     YBasisVector := replace(XBasisVector, name="Y Basis Vector",
-        default_value = (0.0, 1.0, 0.0) ),
+        default_value = (0.0, 1.0, 0.0), category='axes',),
     ZBasisVector := replace(XBasisVector, name="Z Basis Vector",
-        default_value = (0.0, 0.0, 1.0) ),
-    Translation := replace(XBasisVector, name="Translation"),
+        default_value = (0.0, 0.0, 1.0), category='axes', ),
+    Translation := replace(XBasisVector, name="Translation", category='always_show'),
+    ComposeMatrixBoneLength := ST( name="Bone Length", is_input=True,
+        bl_idname='FloatPositiveSocket', 
+        default_value = 1.0, category="always_show" ),
     MatrixOutput,
 ]
 

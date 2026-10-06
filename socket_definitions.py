@@ -90,7 +90,10 @@ enumRotationOrder =(('AUTO', 'Auto', 'Auto'),
 eMatrixFromCurveModes = (('DIVISIONS', "Divisions", "Get a matrix from the curve automattically "
                                                     "based on dividing it into pieces."),
                          ('FACTOR', "Spline Factor", "Get a matrix from a specific factor"
-                                                     " along the spline."))
+                                                     " along the spline."),
+                         ('FACTOR_WITH_TAIL', "Spline Factor (With Tail)",
+                          "Get a matrix from a specific factor along the spline, "
+                          "and place the tail on the curve at a specific factor. "))
 
 eMatrixComposeModes = (('BASIS', "Basis Vectors", "Compose a matrix from basis vectors. "
                                                   "Mantis will not automatically orthonormalize them."),
@@ -2894,7 +2897,7 @@ class EnumMatrixFromCurveMode(MantisSocket):
     """Matrix From Curve Mode"""
     bl_idname = 'EnumMatrixFromCurveMode'
     bl_label = "Mode"
-
+    enum_display_type='DROPDOWN'
     default_value :bpy.props.EnumProperty(
         name="",
         description="Mode",
@@ -2911,7 +2914,7 @@ class EnumComposeMatrixModes(MantisSocket):
     """Compose Matrix Mode"""
     bl_idname = 'EnumComposeMatrixModes'
     bl_label = "Mode"
-
+    enum_display_type='DROPDOWN'
     default_value :bpy.props.EnumProperty(
         name="",
         description="Mode",
