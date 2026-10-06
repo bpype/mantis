@@ -75,8 +75,9 @@ def insert_lazy_parents(mantis_node):
     from ..link_nodes import LinkInherit
     inherit_node = None
     if mantis_node.inputs["Relationship"].is_connected:
-        from ..utilities.node_common import trace_single_line
-        node_line, last_socket = trace_single_line(mantis_node, 'Relationship')
+        from ..utilities.node_common import trace_single_line_safe
+        # BUG this line can create infinite loops
+        node_line, last_socket = trace_single_line_safe(mantis_node, 'Relationship')
         # if last_socket is from a valid XFORM, it is the relationship in
         # because it was traversed from the xForm Out... so get the traverse target.
         if last_socket.traverse_target is None:
@@ -576,7 +577,7 @@ def parse_tree(base_tree, error_popups=False):
                     solved_nodes = {}
                     if error_popups == False:
                         raise e
-                    return # break out of this function regardless.
+                    return # it is not possible to parse the tree.
                 unsolved_schema.remove(n)
                 schema_solve_done.add(n)
                 for node in solved_nodes.values():
@@ -634,16 +635,31 @@ def parse_tree(base_tree, error_popups=False):
             init_connections(mantis_node) # because we have removed many connections.
 
         if (mantis_node.node_type in ['XFORM']) and ("Relationship" in mantis_node.inputs.keys()):
-            if (new_mantis_node := insert_lazy_parents(mantis_node)):
-                kept_mantis_node[new_mantis_node.signature]=new_mantis_node
-                # be sure to add the Mantis context.
-                new_mantis_node.mContext =mContext
+            from ..utilities.node_common import GraphError
+            try:
+                if (new_mantis_node := insert_lazy_parents(mantis_node)):
+                    kept_mantis_node[new_mantis_node.signature]=new_mantis_node
+                    # be sure to add the Mantis context.
+                    new_mantis_node.mContext =mContext
+            except GraphError as e:
+                e = execution_error_cleanup(mantis_node, e, show_error=error_popups)
+                if error_popups == False:
+                    raise e
+                return  # it is not possible to parse the tree.
         kept_mantis_node[mantis_node.signature]=mantis_node
     prWhite(f"Parsing tree took {time.time()-start_time} seconds.")
     prWhite("Number of Nodes: %s" % (len(kept_mantis_node)))
     return kept_mantis_node
 
 from ..utilities.utilities import switch_mode
+
+
+def error_popup_draw_inner(layout, exception, ui_sig):
+    message = f"Error: {exception}\n" \
+              f"See node: {ui_sig[1:]}."
+    lines = message.splitlines()
+    for line in lines:
+        layout.label(text=line)
 
 def execution_error_cleanup(node, exception, switch_objects = [], show_error=False ):
     from bpy import  context
@@ -671,8 +687,7 @@ def execution_error_cleanup(node, exception, switch_objects = [], show_error=Fal
                 pass
             finally:
                 def error_popup_draw(self, context):
-                    self.layout.label(text=f"Error: {exception}")
-                    self.layout.label(text=f"see node: {ui_sig[1:]}.")
+                    error_popup_draw_inner(self.layout, exception, ui_sig)
                 context.window_manager.popup_menu(error_popup_draw, title="Error", icon='ERROR')
     switch_mode(mode='OBJECT', objects=switch_objects)
     for ob in switch_objects:
@@ -680,7 +695,13 @@ def execution_error_cleanup(node, exception, switch_objects = [], show_error=Fal
     prRed(f"Error: {exception} in node {ui_sig}")
     return exception
 
-def sort_execution(nodes):
+def print_cycle(nodes):
+    ret_str = ""
+    for node in nodes:
+        ret_str+= node.__repr__() + '\n'
+    return ret_str
+
+def sort_execution(nodes, error_popups):
     from ..utilities.node_common import GraphError
     from collections import deque
     xForm_pass = deque()
@@ -705,8 +726,15 @@ def sort_execution(nodes):
             if child.unmet_hierarchy_dependency_count == 0:
                 xForm_pass.append(child)
     if processed_count < len(nodes):
+        cycle = []
+        for n in nodes.values():
+            if n.execution_prepared == False:
+                cycle.append(n)
         execution_failed = True
-        raise GraphError("detected a cycle in the tree")
+        e = GraphError("Detected a cycle in the tree, containing at "
+                         "least one of the following nodes: " + print_cycle(cycle))
+        e = execution_error_cleanup(cycle[-1], e, show_error=error_popups)
+        raise e
     return sorted_nodes, execution_failed
 
 def execute_tree(nodes, base_tree, context, error_popups = False, profile=False):
@@ -751,8 +779,15 @@ def execute_tree(nodes, base_tree, context, error_popups = False, profile=False)
         profiler.new_session(mContext.execution_id)
         sort_key = 'total'
     try:
-        sorted_nodes, execution_failed = sort_execution(nodes)
+        sorted_nodes, execution_failed = sort_execution(nodes, error_popups=error_popups)
+    except Exception as e:
+        # We'll fire the popup in sort_execution because it has the node in scope
+        if error_popups == False:
+            raise e
+        execution_failed = True
+    try:
         for n in sorted_nodes:
+            if execution_failed: break
             try:
                 check_and_apply_overlay(n)
                 if not n.prepared:

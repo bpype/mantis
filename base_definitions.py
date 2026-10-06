@@ -159,6 +159,10 @@ class MantisTree(NodeTree):
             finally:
                 scene.render.use_lock_interface = False
                 self.is_executing = False
+        if self.parsed_tree is None:
+            self.parsed_tree = {}
+            return 1 # failure
+        return 0 # success
 
     def display_update(self, context):
         if self.is_exporting:

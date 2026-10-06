@@ -11,6 +11,23 @@ from collections.abc import Callable
 from bpy.app import version as bpy_version
 
 
+# Utility to print links nicely for end user.
+def print_link_list(links):
+    ret_str = ""
+    for link in links:
+        ret_str+= link.__repr__() + '\n'
+    return ret_str
+
+# I've moved this to a separate function because the trace functions
+# are kind of hard to understand and the cycle check breaks the flow
+# of the code. 
+def detect_cycle_in_trace(link, link_circle):
+    if link.is_hierarchy:
+        if link in link_circle:
+            raise GraphError( "There is a cycle in the following links:\n" +
+                                print_link_list(link_circle))
+        link_circle.append(link)
+
 #TODO: refactor the socket definitions so this becomes unnecessary.
 def get_socket_value(node_socket):
     value = None
@@ -20,12 +37,38 @@ def get_socket_value(node_socket):
         value =  node_socket.TellValue()
     return value
 
-# TODO: modify this to work with multi-input nodes
+# NOTE this is a dupe of trace_single_line, and it must be used
+#      at any time before the tree is parsed (to check for cycles)
+#      I don't want or need to pay the performance cost to check this everywhere
+def trace_single_line_safe(mantis_node, input_name, link_index=0):
+    # DO: refactor this for new link class
+    """Traces a line to its input."""
+    nodes = [mantis_node]
+    # a test for cyclic connections
+    link_circle = []
+    # Trace a single line
+    if (socket := mantis_node.inputs.get(input_name) ):
+        while (socket.is_linked):
+            link = socket.links[link_index]; link_index = 0
+            # should throw an error if it is in the set
+            if detect_cycle_in_trace(link, link_circle):
+                return
+            if (socket := link.from_node.outputs.get(link.from_socket)):
+                nodes.append(socket.node)
+                if socket.can_traverse:
+                    socket = socket.traverse_target
+                else: # this is an output.
+                    break
+            else:
+                break
+    return nodes, socket
+
+
 def trace_single_line(mantis_node, input_name, link_index=0):
     # DO: refactor this for new link class
     """Traces a line to its input."""
     nodes = [mantis_node]
-    # Trace a single line
+    # a test for cyclic connections
     if (socket := mantis_node.inputs.get(input_name) ):
         while (socket.is_linked):
             link = socket.links[link_index]; link_index = 0
@@ -39,7 +82,7 @@ def trace_single_line(mantis_node, input_name, link_index=0):
                 break
     return nodes, socket
 
-# this is same as the other, just flip from/to and in/out
+
 def trace_single_line_up(mantis_node, output_name,):
     """I use this to get the xForm from a link node."""
     nodes = [mantis_node]

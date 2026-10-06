@@ -299,7 +299,9 @@ class ExecuteNodeTree(Operator):
                 print(s.getvalue())
 
         else:
-            tree.update_tree(context, error_popups = pass_error)
+            update_failed = tree.update_tree(context, error_popups = pass_error)
+            if update_failed: # failed. Cannot execute.
+                return {"FINISHED"}
             tree.execute_tree(context, error_popups = pass_error)
         prGreen("Finished executing tree in %f seconds" % (time() - start_time))
         return {"FINISHED"}
