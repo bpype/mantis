@@ -31,7 +31,10 @@ def get_signature_from_space(node, space):
             sig_path.append(item.node_tree.nodes.active.name)
         else:
             return () # can't be determined, should not happen in normal use.
-    return tuple(sig_path+[node.name])
+    if node:
+        return tuple(sig_path+[node.name])
+    else: # it's also necessary to do this if there is no path at all.
+        return ()
 
 def get_visible_space_data(space_types={'NODE_EDITOR'}):
     visible_spaces = []
@@ -118,6 +121,7 @@ def timer_update_selection_sync():
     except Exception as e:
         print ("Error in Selection Sync")
         print (e)
+        raise e
     return SELECTION_POLL_RATE
 
 def set_bone_selection(pose_bone, selection_state):
