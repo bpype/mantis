@@ -167,7 +167,7 @@ xFormBoneSockets = [
         blender_property=('lock_ik_x', 'lock_ik_y', 'lock_ik_z'),
         prop_owner_group='pose_bone', ),
     IKStiffness := SockTemplate(
-        name="IK Stiffness", is_input=True,  bl_idname='BooleanThreeTupleSocket',
+        name="IK Stiffness", is_input=True,  bl_idname='VectorSocket',
         default_value=(False, False, False), category='IK',
         blender_property=('ik_stiffness_x', 'ik_stiffness_y', 'ik_stiffness_z'),
         prop_owner_group='pose_bone', ),
