@@ -27,7 +27,10 @@ WATCH_FOR_SELECTION = [ 'xFormBoneNode', 'xFormArmatureNode',
 def get_signature_from_space(node, space):
     sig_path=[None,]
     for item in space.path[:-1]:
-        sig_path.append(item.node_tree.nodes.active.name)
+        if item.node_tree.nodes.active:
+            sig_path.append(item.node_tree.nodes.active.name)
+        else:
+            return () # can't be determined, should not happen in normal use.
     return tuple(sig_path+[node.name])
 
 def get_visible_space_data(space_types={'NODE_EDITOR'}):
