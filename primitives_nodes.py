@@ -13,10 +13,10 @@ def TellClasses():
 #*#-------------------------------#++#-------------------------------#*#
 
 class PrimitiveNode(MantisNode):
-
+    node_type = "UTILITY"
+    
     def __init__(self, signature, base_tree, socket_templates=[]):
         super().__init__(signature, base_tree, socket_templates)
-        self.node_type = "UTILITY"
         self.prepared = True
     
     def reset_execution(self):

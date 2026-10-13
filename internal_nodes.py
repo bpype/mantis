@@ -3,14 +3,17 @@ from bpy.types import Node
 from .base_definitions import MantisNode, MantisSocketTemplate
 from uuid import uuid4
 
+# TODO: make node_type a class property like it is for everything else
+# I can't do this without making some changes to schema and anything that
+# checks for DUMMY SCHEMA
 class DummyNode(MantisNode):
     def __init__(self, signature, base_tree, ui_node = None, ui_signature=None):
         super().__init__(signature, base_tree)
         self.ui_node = ui_node
-        self.node_type = 'DUMMY'
         self.prepared = True
         self.uuid = uuid4()
         self.solver = None
+        self.node_type = 'DUMMY'
         if ui_node:
             if ui_node.bl_idname in ["MantisSchemaGroup"]:
                 self.node_type = 'DUMMY_SCHEMA'
@@ -32,23 +35,22 @@ class DummyNode(MantisNode):
         # this is ugly and I hate it.
         self.execution_prepared=True # in case it gets left behind in the tree as a dependency
 
-
 class NoOpNode(MantisNode):
+    node_type = 'UTILITY'
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree)
         self.inputs.init_sockets(["Input"])
         self.outputs.init_sockets(["Output"])
         self.init_parameters()
         self.set_traverse([("Input", "Output")])
-        self.node_type = 'UTILITY'
         self.prepared, self.executed = True, True
         self.execution_prepared=True
     # this node is useful for me to insert in the tree and use for debugging especially connections.
 
 class AutoGenNode(MantisNode):
+    node_type = 'UTILITY'
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree)
-        self.node_type = 'UTILITY'
         self.prepared, self.executed = True, True
         self.execution_prepared=True
 
@@ -61,9 +63,9 @@ class AutoGenNode(MantisNode):
 #   going in or out of the group and connecting back out the other side
 # this is also where caching and overlays live
 class GroupInterface(MantisNode):
+    node_type = 'INTERFACE'
     def __init__(self, signature, base_tree, ui_node, in_out):
         super().__init__(signature, base_tree)
-        self.node_type = 'INTERFACE'
         self.prepared, self.executed = True, True; sockets = []
         self.in_out = in_out
         # init the sockets based on in/out, then set up traversal

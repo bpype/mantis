@@ -35,11 +35,11 @@ def trace_xForm_back(mantis_node, socket):
         raise GraphError(wrapRed(f"No other object found for {mantis_node}."))
 
 class MantisDeformerNode(MantisNode):
+    node_type = 'LINK'
     def __init__(self, signature : tuple,
                  base_tree : NodeTree,
                  socket_templates : list[MantisSocketTemplate]=[]):
         super().__init__(signature, base_tree, socket_templates)
-        self.node_type = 'LINK'
         self.prepared = True
         self.bObject=[]
     # we need evaluate_input to have the same behaviour as links.
@@ -84,7 +84,6 @@ class DeformerArmature(MantisDeformerNode):
         super().__init__(signature, base_tree, DeformArmatureSockets)
         self.init_parameters(additional_parameters={"Name":None})
         self.set_traverse([("Deformer", "Deformer")])
-        self.node_type = "LINK"
         self.prepared = True
 
     def GetxForm(self, socket="Deformer"):
@@ -421,7 +420,6 @@ class DeformerMorphTarget(MantisDeformerNode):
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, MorphTargetSockets)
         self.init_parameters(additional_parameters={"Name":None})
-        self.node_type = "LINK"
         self.prepared = True
     
     def GetxForm(self, trace_input="Object"):
@@ -475,7 +473,6 @@ class DeformerMorphTargetDeform(MantisDeformerNode):
         self.inputs.init_sockets(inputs)
         self.init_parameters(additional_parameters={"Name":None})
         self.set_traverse([("Deformer", "Deformer")])
-        self.node_type = "LINK"
         self.prepared = True
         self.executed = True
         setup_custom_property_inputs_outputs(self)

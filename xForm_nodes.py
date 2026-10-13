@@ -67,9 +67,9 @@ def set_object_parent(node):
         node_ob.parent_bone = parent_xForm_info.self_edit_name
 
 class xFormNode(MantisNode):
+    node_type = 'XFORM'
     def __init__(self, signature, base_tree, socket_templates=[]):
         super().__init__(signature, base_tree, socket_templates)
-        self.node_type = 'XFORM'
         self.bObject=None
 
     # because new objects are created during prep phase

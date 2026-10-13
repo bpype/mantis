@@ -733,6 +733,7 @@ class MantisNode:
         A MantisNode is used internally by Mantis to represent the final evaluated node graph.
         It gets generated with data from a MantisUINode when the graph is read.
     """
+    node_type='UNINITIALIZED'
     def __init__(self, signature : tuple,
                  base_tree : bpy.types.NodeTree,
                  socket_templates : list[MantisSocketTemplate]=[],):
@@ -742,7 +743,6 @@ class MantisNode:
         self.inputs = MantisNodeSocketCollection(node=self, is_input=True)
         self.outputs = MantisNodeSocketCollection(node=self, is_input=False)
         self.parameters, self.drivers = {}, {}; self.bObject=None
-        self.node_type='UNINITIALIZED'
         self.hierarchy_connections, self.connections = [], []
         self.hierarchy_dependencies, self.dependencies = [], []
         self.unmet_hierarchy_dependency_count = float("inf") # we will set this when filling the dependencies lists

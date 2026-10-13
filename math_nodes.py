@@ -51,12 +51,11 @@ def math_operation(operation, a, b):
 # M A T H  N O D E S
 #*#-------------------------------#++#-------------------------------#*#
 class MathStaticInt(MantisNode):
-    '''A node representing an armature object'''
-
+    '''A node representing an integer math operation'''
+    node_type = "UTILITY"
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, StaticIntSockets)
         self.init_parameters()
-        self.node_type = "UTILITY"
 
     def bPrepare(self, bContext = None,):
         a = self.evaluate_input("Int A"); b = self.evaluate_input("Int B")
@@ -65,12 +64,11 @@ class MathStaticInt(MantisNode):
         self.prepared, self.executed = True, True
 
 class MathStaticFloat(MantisNode):
-    '''A node representing an armature object'''
-
+    '''A node representing a float math operation'''
+    node_type = "UTILITY"
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, StaticFloatSockets)
         self.init_parameters()
-        self.node_type = "UTILITY"
 
     def bPrepare(self, bContext = None,):
         a = self.evaluate_input("Float A"); b = self.evaluate_input("Float B")
@@ -79,12 +77,11 @@ class MathStaticFloat(MantisNode):
         self.prepared, self.executed = True, True
 
 class MathStaticVector(MantisNode):
-    '''A node representing an armature object'''
-
+    '''A node representing a vector math operation'''
+    node_type = "UTILITY"
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, StaticVectorSockets)
         self.init_parameters()
-        self.node_type = "UTILITY"
 
     def bPrepare(self, bContext = None,):
         from mathutils import Vector

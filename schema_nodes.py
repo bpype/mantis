@@ -34,9 +34,9 @@ def schema_init_sockets(mantis_node, is_input = True, in_out='INPUT', category='
 
 
 class SchemaNode(MantisNode):
+    node_type = 'SCHEMA'
     def __init__(self, signature, base_tree, socket_templates=[]):
         super().__init__(signature, base_tree, socket_templates)
-        self.node_type = 'SCHEMA'
         self.prepared = True; self.executed = True
         self.execution_prepared = True # should not affect execution!
 

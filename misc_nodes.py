@@ -200,10 +200,13 @@ def bpy_object_get_guarded(get_name, node=None):
 # B A S E  C L A S S E S
 #*#-------------------------------#++#-------------------------------#*#
 
-class SimpleInputNode(MantisNode):
+class MantisMiscNode(MantisNode):
+    node_type='UTILITY'
+
+class SimpleInputNode(MantisMiscNode):
+    node_type = 'UTILITY'
     def __init__(self, signature, base_tree, socket_templates=[]):
         super().__init__(signature, base_tree, socket_templates)
-        self.node_type = 'UTILITY'
         self.prepared, self.executed = True, True
 
 #*#-------------------------------#++#-------------------------------#*#
@@ -315,11 +318,10 @@ class InputColorSetPallete(SimpleInputNode):
         return super().fill_parameters(ui_node)
 
 
-class UtilityCustomProperty(MantisNode):
+class UtilityCustomProperty(MantisMiscNode):
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, UtilityCustomPropertySockets)
         self.init_parameters()
-        self.node_type = "UTILITY"
     # this should output a dataclass containing custom prop info
     # then the xForm will use it to assign custom properties
 
@@ -361,13 +363,12 @@ class UtilityCustomProperty(MantisNode):
         self.parameters['Custom Property'] = my_data
         self.prepared = True; self.executed = True
 
-class UtilityMatrixFromCurve(MantisNode):
+class UtilityMatrixFromCurve(MantisMiscNode):
     '''Get a matrix from a curve'''
 
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, MatrixFromCurveSockets)
         self.init_parameters()
-        self.node_type = "UTILITY"
 
     def bPrepare(self, bContext = None,):
         from mathutils import Matrix
@@ -445,13 +446,12 @@ class UtilityMatrixFromCurve(MantisNode):
     def bFinalize(self, bContext=None):
         cleanup_curve(self.evaluate_input("Curve"), self.base_tree.execution_id)
 
-class UtilityPointFromCurve(MantisNode):
+class UtilityPointFromCurve(MantisMiscNode):
     '''Get a point from a curve'''
 
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, PointFromCurveSockets)
         self.init_parameters()
-        self.node_type = "UTILITY"
 
     def bPrepare(self, bContext = None,):
         import bpy
@@ -479,13 +479,12 @@ class UtilityPointFromCurve(MantisNode):
     def bFinalize(self, bContext=None):
         cleanup_curve(self.evaluate_input("Curve"), self.base_tree.execution_id)
 
-class UtilityMatricesFromCurve(MantisNode):
+class UtilityMatricesFromCurve(MantisMiscNode):
     '''Get matrices from a curve'''
 
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, MatricesFromCurveSockets)
         self.init_parameters()
-        self.node_type = "UTILITY"
 
     def bPrepare(self, bContext = None,):
         import time
@@ -548,11 +547,10 @@ class UtilityMatricesFromCurve(MantisNode):
             prGreen(f"Freeing mesh data {m_name}...")
             bpy.data.meshes.remove(mesh)
 
-class UtilityNumberOfCurveSegments(MantisNode):
+class UtilityNumberOfCurveSegments(MantisMiscNode):
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, NumberOfCurveSegmentsSockets)
         self.init_parameters()
-        self.node_type = "UTILITY"
 
     def bPrepare(self, bContext = None,):
         curve_name = self.evaluate_input("Curve")
@@ -565,11 +563,10 @@ class UtilityNumberOfCurveSegments(MantisNode):
         self.prepared = True
         self.executed = True
 
-class UtilityNumberOfSplines(MantisNode):
+class UtilityNumberOfSplines(MantisMiscNode):
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, NumberOfSplinesSockets)
         self.init_parameters()
-        self.node_type = "UTILITY"
 
     def bPrepare(self, bContext = None,):
         curve_name = self.evaluate_input("Curve")
@@ -577,11 +574,10 @@ class UtilityNumberOfSplines(MantisNode):
         self.parameters["Number of Splines"] = len(curve.data.splines)
         self.prepared, self.executed = True, True
 
-class UtilityMatrixFromCurveSegment(MantisNode):
+class UtilityMatrixFromCurveSegment(MantisMiscNode):
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, MatrixFromCurveSegmentSockets)
         self.init_parameters()
-        self.node_type = "UTILITY"
 
     def bPrepare(self, bContext = None,):
         import bpy
@@ -635,11 +631,10 @@ class UtilityMatrixFromCurveSegment(MantisNode):
     def bFinalize(self, bContext=None):
         cleanup_curve(self.evaluate_input("Curve"), self.base_tree.execution_id)
 
-class UtilityGetCurvePoint(MantisNode):
+class UtilityGetCurvePoint(MantisMiscNode):
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, GetCurvePointSockets)
         self.init_parameters()
-        self.node_type = "UTILITY"
 
     def bPrepare(self, bContext=None):
         import bpy
@@ -660,11 +655,10 @@ class UtilityGetCurvePoint(MantisNode):
             self.parameters["Point"]=(pt.co[0], pt.co[1], pt.co[2])
         self.prepared, self.executed = True, True
 
-class UtilityGetNearestFactorOnCurve(MantisNode):
+class UtilityGetNearestFactorOnCurve(MantisMiscNode):
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, GetNearestFactorOnCurveSockets)
         self.init_parameters()
-        self.node_type = "UTILITY"
 
     def bPrepare(self, bContext = None,):
         import bpy
@@ -689,11 +683,10 @@ class UtilityGetNearestFactorOnCurve(MantisNode):
             self.parameters["Factor"] = pt
         self.prepared, self.executed = True, True
 
-class UtilityKDChoosePoint(MantisNode):
+class UtilityKDChoosePoint(MantisMiscNode):
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, KDChoosePointSockets)
         self.init_parameters()
-        self.node_type = "UTILITY"
         self.rerouted=[]
 
     def bPrepare(self, bContext = None,):
@@ -715,11 +708,10 @@ class UtilityKDChoosePoint(MantisNode):
         array_choose_data(self, distances, "Result Distance")
         self.prepared, self.executed = True, True
 
-class UtilityKDChooseXForm(MantisNode):
+class UtilityKDChooseXForm(MantisMiscNode):
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, KDChooseXFormSockets)
         self.init_parameters()
-        self.node_type = "UTILITY"
         self.rerouted=[]
 
     def bPrepare(self, bContext = None,):
@@ -752,13 +744,12 @@ class UtilityKDChooseXForm(MantisNode):
         array_choose_data(self, distances, "Result Distance")
         self.prepared, self.executed = True, True
 
-class UtilityMetaRig(MantisNode):
+class UtilityMetaRig(MantisMiscNode):
     '''A node representing an armature object'''
 
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, MetaRigSockets)
         self.init_parameters()
-        self.node_type = "UTILITY"
 
     def bPrepare(self, bContext = None,):
         #kinda clumsy, whatever
@@ -805,13 +796,12 @@ class UtilityBoneProperties(SimpleInputNode):
         return
 
 # TODO this should probably be moved to Links
-class UtilityDriverVariable(MantisNode):
+class UtilityDriverVariable(MantisMiscNode):
     '''A node representing an armature object'''
-
+    node_type = "DRIVER"
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, DriverVariableSockets)
-        self.init_parameters()
-        self.node_type = "DRIVER" # MUST be run in Pose mode
+        self.init_parameters()    
         self.prepared = True
 
     def reset_execution(self):
@@ -889,16 +879,14 @@ class UtilityDriverVariable(MantisNode):
         print (my_var['prop'])
         self.executed = True
 
-class UtilityKeyframe(MantisNode):
+class UtilityKeyframe(MantisMiscNode):
     '''A node representing a keyframe for a F-Curve'''
-
+    # TODO: try UTILITY type and remove setup_custom_property stuff
+    node_type = "DRIVER" # MUST be run in Pose mode
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, KeyframeSockets)
         additional_parameters = {"Keyframe":{}}
         self.init_parameters( additional_parameters=additional_parameters)
-        # I think both of these are wrong.
-        # TODO: try UTILITY type and remove setup_custom_property stuff
-        self.node_type = "DRIVER" # MUST be run in Pose mode
         setup_custom_property_inputs_outputs(self)
 
     def bPrepare(self, bContext = None,):
@@ -912,13 +900,12 @@ class UtilityKeyframe(MantisNode):
         self.prepared = True
         self.executed = True
 
-class UtilityFCurve(MantisNode):
+class UtilityFCurve(MantisMiscNode):
     '''A node representing an armature object'''
 
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, FCurveSockets)
         self.init_parameters()
-        self.node_type = "UTILITY"
         setup_custom_property_inputs_outputs(self)
         self.prepared = True
 
@@ -939,9 +926,9 @@ class UtilityFCurve(MantisNode):
         self.executed = True
 #TODO make the keyframe, fCurve data classes instead of dicts!
 
-class UtilityDriver(MantisNode):
+class UtilityDriver(MantisMiscNode):
     '''A node representing an armature object'''
-
+    node_type = "DRIVER" # MUST be run in Pose mode
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, DriverSockets)
         from .utilities.drivers import MantisDriver
@@ -949,7 +936,6 @@ class UtilityDriver(MantisNode):
           "Driver":MantisDriver(),
         }
         self.init_parameters(additional_parameters=additional_parameters)
-        self.node_type = "DRIVER" # MUST be run in Pose mode
         setup_custom_property_inputs_outputs(self)
         self.prepared = True
 
@@ -994,9 +980,9 @@ class UtilityDriver(MantisNode):
         print("Initializing driver %s " % (wrapPurple(self.__repr__())) )
         self.executed = True
 
-class UtilitySwitch(MantisNode):
+class UtilitySwitch(MantisMiscNode):
     '''A node representing an armature object'''
-
+    node_type = "DRIVER" # MUST be run in Pose mode
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, SwitchSockets)
         from .utilities.drivers import MantisDriver
@@ -1004,7 +990,6 @@ class UtilitySwitch(MantisNode):
           "Driver":MantisDriver(),
         }
         self.init_parameters(additional_parameters=additional_parameters)
-        self.node_type = "DRIVER" # MUST be run in Pose mode
         self.prepared = True
 
     # NOTE: _index for interface consistency
@@ -1071,13 +1056,12 @@ class UtilitySwitch(MantisNode):
         print("Initializing driver %s " % (wrapPurple(self.__repr__())) )
         self.executed = True
 
-class UtilityCombineThreeBool(MantisNode):
+class UtilityCombineThreeBool(MantisMiscNode):
     '''A node for combining three booleans into a boolean three-tuple'''
 
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, CombineThreeBoolSockets)
         self.init_parameters()
-        self.node_type = "UTILITY"
 
     def reset_execution(self): # need to make sure any references are deleted
         super().reset_execution() # so we prepare the node again to reset them
@@ -1095,13 +1079,12 @@ class UtilityCombineThreeBool(MantisNode):
         self.executed = True
 
 # Note this is a copy of the above. This needs to be de-duplicated.
-class UtilityCombineVector(MantisNode):
+class UtilityCombineVector(MantisMiscNode):
     '''A node for combining three floats into a vector'''
 
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, CombineVectorSockets)
         self.init_parameters()
-        self.node_type = "UTILITY"
 
     def reset_execution(self): # need to make sure any references are deleted
         super().reset_execution() # so we prepare the node again to reset them
@@ -1119,13 +1102,12 @@ class UtilityCombineVector(MantisNode):
           self.evaluate_input("Z"), )
         self.prepared, self.executed = True, True
 
-class UtilitySeparateVector(MantisNode):
+class UtilitySeparateVector(MantisMiscNode):
     '''A node for separating a vector into three floats'''
 
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, SeparateVectorSockets)
         self.init_parameters()
-        self.node_type = "UTILITY"
 
     def bPrepare(self, bContext = None,):
         self.parameters["X"] = self.evaluate_input("Vector")[0]
@@ -1133,25 +1115,24 @@ class UtilitySeparateVector(MantisNode):
         self.parameters["Z"] = self.evaluate_input("Vector")[2]
         self.prepared, self.executed = True, True
 
-class UtilityCatStrings(MantisNode):
+class UtilityCatStrings(MantisMiscNode):
     '''A node representing an armature object'''
 
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, CatStringsSockets)
         self.init_parameters()
-        self.node_type = "UTILITY"
 
     def bPrepare(self, bContext = None,):
         self.parameters["OutputString"] = self.evaluate_input("String_1")+self.evaluate_input("String_2")
         self.prepared, self.executed = True, True
 
 # TODO move this to the Xform file
-class InputWidget(MantisNode):
+class InputWidget(MantisMiscNode):
     '''A node representing an existing object'''
+    node_type = "XFORM"
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, InputWidgetSockets)
         self.init_parameters()
-        self.node_type = "XFORM"
 
     def reset_execution(self):
         super().reset_execution()
@@ -1233,13 +1214,13 @@ class InputWidget(MantisNode):
         return self.bObject
 
 # TODO move this to the Xform file
-class InputExistingGeometryObject(MantisNode):
+class InputExistingGeometryObject(MantisMiscNode):
     '''A node representing an existing object'''
-
+    node_type = "XFORM"
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, InputExistingGeometryObjectSockets)
         self.init_parameters()
-        self.node_type = "XFORM"
+        
 
     def reset_execution(self):
         super().reset_execution()
@@ -1259,13 +1240,12 @@ class InputExistingGeometryObject(MantisNode):
     def bGetObject(self, mode=''):
         return self.bObject
 
-class InputExistingGeometryData(MantisNode):
+class InputExistingGeometryData(MantisMiscNode):
     '''A node representing existing object data'''
 
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, InputExistingGeometrySockets)
         self.init_parameters()
-        self.node_type = "UTILITY"
         self.prepared = True; self.executed = True
 
     def reset_execution(self):
@@ -1283,13 +1263,12 @@ class InputExistingGeometryData(MantisNode):
             raise RuntimeError(f"Could not find a mesh or curve datablock named \"{self.evaluate_input('Name')}\" for node {self}")
         return bObject
 
-class UtilityDeclareCollections(MantisNode):
+class UtilityDeclareCollections(MantisMiscNode):
     '''A node to help manage bone collections'''
     def __init__(self, signature, base_tree):
         # NOTE this one does not use socket template because it is special.
         # The user creates all the sockets for this one.
         super().__init__(signature, base_tree)
-        self.node_type = "UTILITY"
         self.prepared, self.executed = True, True
 
     def reset_execution(self):
@@ -1310,12 +1289,11 @@ class UtilityDeclareCollections(MantisNode):
         for out in ui_node.outputs:
             self.parameters[out.name] = out.default_value
 
-class UtilityCollectionJoin(MantisNode):
+class UtilityCollectionJoin(MantisMiscNode):
     '''A node to help manage bone collections'''
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, CollectionJoinSockets)
         self.init_parameters()
-        self.node_type = "UTILITY"
         self.prepared, self.executed = False, False
 
     def reset_execution(self):
@@ -1340,12 +1318,11 @@ class UtilityCollectionJoin(MantisNode):
         self.parameters['Collection']=bCols
         self.prepared, self.executed = True, True
 
-class UtilityCollectionHierarchy(MantisNode):
+class UtilityCollectionHierarchy(MantisMiscNode):
     '''A node to help manage bone collections'''
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, CollectionHierarchySockets)
         self.init_parameters()
-        self.node_type = "UTILITY"
         self.prepared, self.executed = False, False
 
     def reset_execution(self):
@@ -1365,12 +1342,11 @@ class UtilityCollectionHierarchy(MantisNode):
         self.parameters['Collection']=result
         self.prepared, self.executed = True, True
 
-class UtilityGeometryOfXForm(MantisNode):
+class UtilityGeometryOfXForm(MantisMiscNode):
     '''A node representing existing object data'''
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, GeometryOfXFormSockets)
         self.init_parameters()
-        self.node_type = "UTILITY"
         self.prepared = True
         self.executed = True
 
@@ -1391,12 +1367,11 @@ class UtilityGeometryOfXForm(MantisNode):
         prOrange(f"WARN: Cannot retrieve data from {self}, the connected xForm is not a mesh or curve.")
         return None
 
-class UtilityNameOfXForm(MantisNode):
+class UtilityNameOfXForm(MantisMiscNode):
     '''A node representing existing object data'''
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, NameOfXFormSockets)
         self.init_parameters()
-        self.node_type = "UTILITY"
 
     # mode for interface consistency
     def bPrepare(self, bContext = None,):
@@ -1407,13 +1382,12 @@ class UtilityNameOfXForm(MantisNode):
         self.parameters["Name"] = xf.evaluate_input('Name')
         self.prepared, self.executed = True, True
 
-class UtilityGetBoneLength(MantisNode):
+class UtilityGetBoneLength(MantisMiscNode):
     '''A node to get the length of a bone matrix'''
 
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, GetBoneLengthSockets)
         self.init_parameters()
-        self.node_type = "UTILITY"
 
     def bPrepare(self, bContext = None,):
         if (l := self.evaluate_input("Bone Matrix")) is not None:
@@ -1423,13 +1397,12 @@ class UtilityGetBoneLength(MantisNode):
             raise RuntimeError(f"Cannot get matrix for {self} from {other}")
         self.prepared, self.executed = True, True
 
-class UtilityPointFromBoneMatrix(MantisNode):
+class UtilityPointFromBoneMatrix(MantisMiscNode):
     '''A node representing an armature object'''
 
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, PointFromBoneMatrixSockets)
         self.init_parameters()
-        self.node_type = "UTILITY"
 
     # TODO: find out why this is sometimes not ready at bPrepare phase
     def bPrepare(self, bContext = None,):
@@ -1440,13 +1413,12 @@ class UtilityPointFromBoneMatrix(MantisNode):
         self.parameters["Point"] = head.lerp(tail, self.evaluate_input("Head/Tail"))
         self.prepared, self.executed = True, True
 
-class UtilitySetBoneLength(MantisNode):
+class UtilitySetBoneLength(MantisMiscNode):
     '''Sets the length of a Bone's matrix'''
 
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, SetBoneLengthSockets)
         self.init_parameters()
-        self.node_type = "UTILITY"
 
     def bPrepare(self, bContext = None,):
         from mathutils import Vector
@@ -1460,13 +1432,12 @@ class UtilitySetBoneLength(MantisNode):
             raise RuntimeError(f"Cannot get matrix for {self}")
         self.prepared, self.executed = True, True
 
-class UtilityMatrixSetLocation(MantisNode):
+class UtilityMatrixSetLocation(MantisMiscNode):
     '''Sets the location of a matrix'''
 
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, MatrixSetLocationSockets)
         self.init_parameters()
-        self.node_type = "UTILITY"
 
     def bPrepare(self, bContext = None,):
         from mathutils import Vector
@@ -1478,12 +1449,11 @@ class UtilityMatrixSetLocation(MantisNode):
             self.parameters["Matrix"] = matrix
         self.prepared, self.executed = True, True
 
-class UtilityMatrixGetLocation(MantisNode):
+class UtilityMatrixGetLocation(MantisMiscNode):
     '''Gets the location of a matrix'''
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, MatrixGetLocationSockets)
         self.init_parameters()
-        self.node_type = "UTILITY"
 
     def bPrepare(self, bContext = None,):
         from mathutils import Vector
@@ -1491,11 +1461,10 @@ class UtilityMatrixGetLocation(MantisNode):
             self.parameters["Location"] = matrix.to_translation()
         self.prepared = True; self.executed = True
 
-class UtilityMatrixFromXForm(MantisNode):
+class UtilityMatrixFromXForm(MantisMiscNode):
     """Returns the matrix of the given xForm node."""
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, MatrixFromXFormSockets)
-        self.node_type = "UTILITY"
         self.init_parameters()
 
     def GetxForm(self):
@@ -1518,12 +1487,11 @@ class UtilityMatrixFromXForm(MantisNode):
             prRed(f"Could not find matrix for {self} - check if the referenced object exists.")
         self.prepared = True; self.executed = True
 
-class UtilityAxesFromMatrix(MantisNode):
+class UtilityAxesFromMatrix(MantisMiscNode):
     """Returns the axes of the given matrix."""
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, AxesFromMatrixSockets)
         self.init_parameters()
-        self.node_type = "UTILITY"
 
     def bPrepare(self, bContext = None,):
         from mathutils import Vector
@@ -1534,11 +1502,10 @@ class UtilityAxesFromMatrix(MantisNode):
             self.parameters['Z Axis'] = matrix[2]
         self.prepared = True; self.executed = True
 
-class UtilityBoneMatrixHeadTailFlip(MantisNode):
+class UtilityBoneMatrixHeadTailFlip(MantisMiscNode):
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, BoneMatrixHeadTailFlipSockets)
         self.init_parameters()
-        self.node_type = "UTILITY"
 
     def bPrepare(self, bContext = None,):
         from mathutils import Vector, Matrix, Quaternion
@@ -1555,11 +1522,10 @@ class UtilityBoneMatrixHeadTailFlip(MantisNode):
             self.parameters["Bone Matrix"] = new_mat
         self.prepared, self.executed = True, True
 
-class UtilityMatrixTransform(MantisNode):
+class UtilityMatrixTransform(MantisMiscNode):
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, MatrixTransformSockets)
         self.init_parameters()
-        self.node_type = "UTILITY"
 
     def bPrepare(self, bContext = None,):
         from mathutils import Vector
@@ -1573,11 +1539,10 @@ class UtilityMatrixTransform(MantisNode):
                             " found input 1? {mat1 is not None}, 2? {mat2 is not None}"))
         self.prepared, self.executed = True, True
 
-class UtilityMatrixInvert(MantisNode):
+class UtilityMatrixInvert(MantisMiscNode):
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, MatrixInvertSockets)
         self.init_parameters()
-        self.node_type = "UTILITY"
 
     def bPrepare(self, bContext = None,):
         from mathutils import Vector
@@ -1594,11 +1559,10 @@ class UtilityMatrixInvert(MantisNode):
                                        " found input 1? {mat1 is not None}"))
         self.prepared, self.executed = True, True
 
-class UtilityMatrixCompose(MantisNode):
+class UtilityMatrixCompose(MantisMiscNode):
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, MatrixComposeSockets)
         self.init_parameters()
-        self.node_type = "UTILITY"
 
     def bPrepare(self, bContext = None,):
         from mathutils import Matrix, Vector
@@ -1621,11 +1585,10 @@ class UtilityMatrixCompose(MantisNode):
         self.parameters['Matrix']=matrix
         self.prepared = True; self.executed = True
 
-class UtilityMatrixAlignRoll(MantisNode):
+class UtilityMatrixAlignRoll(MantisMiscNode):
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, MatrixAlignRollSockets)
         self.init_parameters()
-        self.node_type = "UTILITY"
 
     def bPrepare(self, bContext = None,):
         from mathutils import Vector, Matrix
@@ -1658,11 +1621,10 @@ class UtilityMatrixAlignRoll(MantisNode):
         #  axis, and their cross-product. That only nearly worked.
         # this calculation should not work better, but it does. Why?
 
-class UtilityTransformationMatrix(MantisNode):
+class UtilityTransformationMatrix(MantisMiscNode):
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, TransformationMatrixSockets)
         self.init_parameters()
-        self.node_type = "UTILITY"
 
     def bPrepare(self, bContext = None,):
         from mathutils import Matrix, Vector
@@ -1680,11 +1642,10 @@ class UtilityTransformationMatrix(MantisNode):
             raise NotImplementedError(self.evaluate_input("Operation").__repr__()+ "  Operation not yet implemented.")
         self.prepared = True; self.executed = True
 
-class UtilityIntToString(MantisNode):
+class UtilityIntToString(MantisMiscNode):
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, IntToStringSockets)
         self.init_parameters()
-        self.node_type = "UTILITY"
 
     def bPrepare(self, bContext = None,):
         number = self.evaluate_input("Number")
@@ -1693,11 +1654,10 @@ class UtilityIntToString(MantisNode):
         self.parameters["String"] = str(int(number)).zfill(int(zeroes))
         self.prepared = True; self.executed = True
 
-class UtilityArrayGet(MantisNode):
+class UtilityArrayGet(MantisMiscNode):
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, ArrayGetSockets)
         self.init_parameters()
-        self.node_type = "UTILITY"
         self.rerouted=[]
 
     def bPrepare(self, bContext = None,):
@@ -1721,21 +1681,19 @@ class UtilityArrayGet(MantisNode):
             array_choose_relink(self, [index], "Array", "Output")
         self.prepared, self.executed = True, True
 
-class UtilityArrayLength(MantisNode):
+class UtilityArrayLength(MantisMiscNode):
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, UtilityArrayLengthSockets)
         self.init_parameters()
-        self.node_type = "UTILITY"
 
     def bPrepare(self, bContext = None,):
         self.parameters["Length"] = len(self.inputs["Array"].links)
         self.prepared, self.executed = True, True
 
-class UtilitySetBoneMatrixTail(MantisNode):
+class UtilitySetBoneMatrixTail(MantisMiscNode):
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, SetBoneMatrixTailSockets)
         self.init_parameters()
-        self.node_type = "UTILITY"
 
     def bPrepare(self, bContext = None,):
         from mathutils import Matrix
@@ -1745,11 +1703,10 @@ class UtilitySetBoneMatrixTail(MantisNode):
         self.parameters["Result"] = matrix_from_head_tail(matrix.translation, self.evaluate_input("Tail Location"))
         self.prepared = True; self.executed = True
 
-class UtilityCompare(MantisNode):
+class UtilityCompare(MantisMiscNode):
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, CompareSockets)
         self.init_parameters()
-        self.node_type = "UTILITY"
 
     def bPrepare(self, bContext = None,):
         operation=self.evaluate_input("Comparison")
@@ -1778,11 +1735,10 @@ class UtilityCompare(MantisNode):
                 self.parameters["Result"] = a <= b
         self.prepared = True; self.executed = True
 
-class UtilityChoose(MantisNode):
+class UtilityChoose(MantisMiscNode):
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, ChooseSockets)
         self.init_parameters()
-        self.node_type = "UTILITY"
 
     def reset_execution(self):
         prepared=self.prepared
@@ -1809,11 +1765,10 @@ class UtilityChoose(MantisNode):
                 raise GraphError(f"Choose Node {self} has incorrect types.")
         self.prepared = True; self.executed = True
 
-class UtilityPrint(MantisNode):
+class UtilityPrint(MantisMiscNode):
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, PrintSockets)
         self.init_parameters()
-        self.node_type = "UTILITY"
 
     def bPrepare(self, bContext = None,):
         if my_input := self.evaluate_input("Input"):

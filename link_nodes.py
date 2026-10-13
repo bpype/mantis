@@ -42,11 +42,11 @@ set_constraint_name = lambda mantis_node : mantis_node.evaluate_input("Name") if
 
 
 class MantisLinkNode(MantisNode):
+    node_type = 'LINK'
     def __init__(self, signature : tuple,
                  base_tree : NodeTree,
                  socket_templates : list[SockTemplate]=[]):
         super().__init__(signature, base_tree, socket_templates)
-        self.node_type = 'LINK'
         self.prepared = True; self.bObject=[]
 
     def bTransformPass(self, bContext=None):
