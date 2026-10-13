@@ -287,16 +287,27 @@ class ExecuteNodeTree(Operator):
         if do_profile:
             import pstats, io
             from pstats import SortKey
+            sortby = SortKey.TIME
+            printme1 = ''
             with cProfile.Profile() as pr:
                 tree.update_tree(context, error_popups = pass_error)
+                # from the Python docs at https://docs.python.org/3/library/profile.html#module-cProfile
+                s1 = io.StringIO()
+                # sortby = SortKey.CUMULATIVE
+                ps1 = pstats.Stats(pr, stream=s1).strip_dirs().sort_stats(sortby)
+                ps1.print_stats(30) # print the top 20
+                printme1 += s1.getvalue()
+                printme1 += f"Total profiled time: {ps1.total_tt:.6f} seconds"
+            with cProfile.Profile() as pr:
                 tree.execute_tree(context, error_popups = pass_error, profile=True)
                 # from the Python docs at https://docs.python.org/3/library/profile.html#module-cProfile
                 s = io.StringIO()
-                sortby = SortKey.TIME
                 # sortby = SortKey.CUMULATIVE
                 ps = pstats.Stats(pr, stream=s).strip_dirs().sort_stats(sortby)
-                ps.print_stats(20) # print the top 20
+                ps.print_stats(30) # print the top 20
+                print (printme1)
                 print(s.getvalue())
+                print(f"Total profiled time: {ps.total_tt:.6f} seconds")
 
         else:
             update_failed = tree.update_tree(context, error_popups = pass_error)
