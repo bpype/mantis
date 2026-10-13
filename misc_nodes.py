@@ -402,9 +402,8 @@ class UtilityMatrixFromCurve(MantisMiscNode):
                 raise GraphError(f"{self} is attempting to read from a spline in {curve.name} that does not exist."
                                   " Try and reduce the value of Spline Index.")
             splines_factors = [ [] for i in range (spline_index)]
-            if mode == 'DIVISIONS':
-                factors = [1/num_divisions*m_index, 1/num_divisions*(m_index+1)]
-            elif mode == 'FACTOR':
+            
+            if mode == 'FACTOR':
                 factor = self.evaluate_input('Factor')
                 factor = min(factor, 1 - 0.0001) # to make our fake tangent work
                 factors = [ factor, factor + 0.0001 ]
@@ -415,6 +414,8 @@ class UtilityMatrixFromCurve(MantisMiscNode):
                 factor = min(factor, 1 - 0.0001) # to make our fake tangent work
                 factors = [ factor,
                             self.evaluate_input('Factor (Tail)')]
+            else:  # mode == 'DIVISIONS':
+                factors = [1/num_divisions*m_index, 1/num_divisions*(m_index+1)]
             splines_factors.append(factors)
             data = data_from_ribbon_mesh(m, splines_factors, curve.matrix_world)
             if data[spline_index][1][0] < FLOAT_EPSILON: # radius is None:

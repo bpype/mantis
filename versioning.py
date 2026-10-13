@@ -21,6 +21,7 @@ from .utilities.utilities import (prRed, prGreen, prPurple, prWhite,
 #    linked group and schema nodes to update)
 # (add more whenever a weird or difficult to debug problem occurs)
 # Did you check the update script on a tree that doesn't need it?
+# Did you use a >= when you should have used a > (or similar)?
 
 def version_upgrade_very_old(*args, **kwargs):
     node = kwargs['node']
@@ -378,6 +379,11 @@ def update_fcurve_and_armature_node_to_multi_socket(*args, **kwargs):
     # First we have to get the socket maps and re-init the sockets
     convert_keys = {'UtilityFCurve' : [ 'Keyframe', ],
                     'LinkArmature'  : [ 'Target', 'Weight', ], }
+    # first test if we need to do the versioning
+    if (socket := node.inputs.get(convert_keys[node.bl_idname][0]+'s')):
+        if socket.is_multi_input: return
+        else: # this will never happen, doesn't hurt to handle it
+            node.inputs.remove(socket) # must be an array
     my_convert_keys = convert_keys[node.bl_idname]
     sockets_in, _sockets_out = get_socket_maps(node,)
     # NOTE IMPORTANT BUG INFO
@@ -440,7 +446,7 @@ def fix_bbone_default_scale_in_and_out(*args, **kwargs):
     current_minor_version = tree.mantis_version[1]
     current_sub_version = tree.mantis_version[2]
     if  current_major_version > 0: return# major version must be 0
-    if current_minor_version >= 13: return# minor version must be 12 or less
+    if current_minor_version > 13: return# minor version must be 12 or less
     if current_minor_version == 13 and current_sub_version >= 5: return# sub version must be 4 or less
     prPurple(f"Fixing BBone Settings for {tree.name}")
     live_updates = tree.do_live_update
@@ -467,8 +473,9 @@ def add_new_display_features_v0_13_5(*args, **kwargs):
     current_major_version = tree.mantis_version[0]
     current_minor_version = tree.mantis_version[1]
     current_sub_version = tree.mantis_version[2]
-    if  current_major_version > 0: return# major version must be 0
-    if current_minor_version >= 13: return# minor version must be 12 or less
+    print(tree.mantis_version[:])
+    if  current_major_version > 0:return# major version must be 0
+    if current_minor_version > 13: return# minor version must be 12 or less
     if current_minor_version == 13 and current_sub_version >= 5: return# sub version must be 4 or less
     prPurple(f"Adding new Display Features to {tree.name}")
     live_updates = tree.do_live_update
