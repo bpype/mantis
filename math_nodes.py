@@ -52,6 +52,7 @@ def math_operation(operation, a, b):
 #*#-------------------------------#++#-------------------------------#*#
 class MathStaticInt(MantisNode):
     '''A node representing an integer math operation'''
+    __slots__ = ()
     node_type = "UTILITY"
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, StaticIntSockets)
@@ -65,6 +66,7 @@ class MathStaticInt(MantisNode):
 
 class MathStaticFloat(MantisNode):
     '''A node representing a float math operation'''
+    __slots__ = ()
     node_type = "UTILITY"
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, StaticFloatSockets)
@@ -78,6 +80,7 @@ class MathStaticFloat(MantisNode):
 
 class MathStaticVector(MantisNode):
     '''A node representing a vector math operation'''
+    __slots__ = ()
     node_type = "UTILITY"
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, StaticVectorSockets)

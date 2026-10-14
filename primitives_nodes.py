@@ -13,6 +13,7 @@ def TellClasses():
 #*#-------------------------------#++#-------------------------------#*#
 
 class PrimitiveNode(MantisNode):
+    __slots__ = ()
     node_type = "UTILITY"
     
     def __init__(self, signature, base_tree, socket_templates=[]):
@@ -25,6 +26,7 @@ class PrimitiveNode(MantisNode):
 
 class CirclePrimitive(PrimitiveNode):
     '''A node representing a Circle Primitive mesh'''
+    __slots__ = ()
 
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree)
@@ -76,6 +78,7 @@ class CirclePrimitive(PrimitiveNode):
 from .primitives_sockets import LatticeSockets
 class GeometryLattice(PrimitiveNode):
     '''A node representing a Circle Primitive mesh'''
+    __slots__ = ()
 
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, LatticeSockets)

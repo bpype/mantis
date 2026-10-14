@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field
 from typing import List, Any, Tuple, Optional
 
-@dataclass
+@dataclass(slots=True)
 class MantisSocketTemplate():
     name             : str = field(default="")
     bl_idname        : str = field(default="")
@@ -23,7 +23,7 @@ class MantisSocketTemplate():
     min_bpy_version  : Optional[tuple[int]] = field(default=None)
     max_bpy_version  : Optional[tuple[int]] = field(default=None)
 
-@dataclass
+@dataclass(slots=True)
 class xForm_info():
     object_type          :  str = field(default="")
     root_armature        :  str = field(default="")
@@ -33,7 +33,7 @@ class xForm_info():
     self_edit_name      :  str = field(default="")
 # should I add node signatures to this?
 
-@dataclass
+@dataclass(slots=True)
 class custom_prop_template():
     name      : str = field(default="")
     prop_type : str = field(default="")
@@ -48,7 +48,7 @@ class custom_prop_template():
     soft_max : float|int = field(default=1)
     description : str = field(default="")
 
-@dataclass
+@dataclass(slots=True)
 class MantisBoneTransform():
     matrix    : Any = field(default=[1,0,0,0,
                                      0,1,0,0,
@@ -59,7 +59,7 @@ class MantisBoneTransform():
     matrix_space  : str = field(default="OBJECT")
     length    : float = field(default=1.0),
 
-@dataclass
+@dataclass(slots=True)
 class MantisBBoneTransform():
     num_bbone_segmetns: int = field(default=1)
     # Offsets & Curve Handles
@@ -84,7 +84,7 @@ class MantisBBoneTransform():
     bbone_custom_handle_end: str = field(default=None)
 
 # used to apply values or drivers to blender properties in a generic way
-@dataclass
+@dataclass(slots=True)
 class MantisSocketFiller():
     socket_name: str = field(default="")
     property_name : str = field(default="")

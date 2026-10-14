@@ -201,9 +201,11 @@ def bpy_object_get_guarded(get_name, node=None):
 #*#-------------------------------#++#-------------------------------#*#
 
 class MantisMiscNode(MantisNode):
+    __slots__ = ()
     node_type='UTILITY'
 
 class SimpleInputNode(MantisMiscNode):
+    __slots__ = ()
     node_type = 'UTILITY'
     def __init__(self, signature, base_tree, socket_templates=[]):
         super().__init__(signature, base_tree, socket_templates)
@@ -215,6 +217,7 @@ class SimpleInputNode(MantisMiscNode):
 
 class InputFloat(SimpleInputNode):
     '''A node representing float input'''
+    __slots__ = ()
 
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, InputFloatSockets)
@@ -222,6 +225,7 @@ class InputFloat(SimpleInputNode):
 
 class InputIntNode(SimpleInputNode):
     '''A node representing integer input'''
+    __slots__ = ()
 
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, InputIntSockets)
@@ -229,6 +233,7 @@ class InputIntNode(SimpleInputNode):
 
 class InputVector(SimpleInputNode):
     '''A node representing vector input'''
+    __slots__ = ()
 
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, InputVectorSockets)
@@ -236,6 +241,7 @@ class InputVector(SimpleInputNode):
 
 class InputBoolean(SimpleInputNode):
     '''A node representing boolean input'''
+    __slots__ = ()
 
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, InputBooleanSockets)
@@ -243,12 +249,14 @@ class InputBoolean(SimpleInputNode):
 
 class InputBooleanThreeTuple(SimpleInputNode):
     '''A node representing a tuple of three booleans'''
+    __slots__ = ()
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, InputBooleanThreeTupleSockets)
         self.init_parameters()
 
 class InputRotationOrder(SimpleInputNode):
     '''A node representing string input for rotation order'''
+    __slots__ = ()
 
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, InputRotationOrderSockets)
@@ -256,6 +264,7 @@ class InputRotationOrder(SimpleInputNode):
 
 class InputTransformSpace(SimpleInputNode):
     '''A node representing string input for transform space'''
+    __slots__ = ()
 
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, InputTransformSpaceSockets)
@@ -263,6 +272,7 @@ class InputTransformSpace(SimpleInputNode):
 
 class InputString(SimpleInputNode):
     '''A node representing string input'''
+    __slots__ = ()
 
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, InputStringSockets)
@@ -270,6 +280,7 @@ class InputString(SimpleInputNode):
 
 class InputMatrix(SimpleInputNode):
     '''A node representing axis-angle quaternion input'''
+    __slots__ = ()
 
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, InputMatrixSockets)
@@ -277,6 +288,7 @@ class InputMatrix(SimpleInputNode):
 
 class InputThemeBoneColorSets(SimpleInputNode):
     '''A node representing the theme's colors'''
+    __slots__ = ()
 
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree)
@@ -300,6 +312,7 @@ class InputThemeBoneColorSets(SimpleInputNode):
 
 class InputColorSetPallete(SimpleInputNode):
     '''A node representing the theme's colors'''
+    __slots__ = ()
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree)
 
@@ -319,6 +332,7 @@ class InputColorSetPallete(SimpleInputNode):
 
 
 class UtilityCustomProperty(MantisMiscNode):
+    __slots__ = ()
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, UtilityCustomPropertySockets)
         self.init_parameters()
@@ -365,6 +379,7 @@ class UtilityCustomProperty(MantisMiscNode):
 
 class UtilityMatrixFromCurve(MantisMiscNode):
     '''Get a matrix from a curve'''
+    __slots__ = ()
 
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, MatrixFromCurveSockets)
@@ -449,6 +464,7 @@ class UtilityMatrixFromCurve(MantisMiscNode):
 
 class UtilityPointFromCurve(MantisMiscNode):
     '''Get a point from a curve'''
+    __slots__ = ()
 
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, PointFromCurveSockets)
@@ -482,6 +498,7 @@ class UtilityPointFromCurve(MantisMiscNode):
 
 class UtilityMatricesFromCurve(MantisMiscNode):
     '''Get matrices from a curve'''
+    __slots__ = ()
 
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, MatricesFromCurveSockets)
@@ -549,6 +566,7 @@ class UtilityMatricesFromCurve(MantisMiscNode):
             bpy.data.meshes.remove(mesh)
 
 class UtilityNumberOfCurveSegments(MantisMiscNode):
+    __slots__ = ()
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, NumberOfCurveSegmentsSockets)
         self.init_parameters()
@@ -565,6 +583,7 @@ class UtilityNumberOfCurveSegments(MantisMiscNode):
         self.executed = True
 
 class UtilityNumberOfSplines(MantisMiscNode):
+    __slots__ = ()
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, NumberOfSplinesSockets)
         self.init_parameters()
@@ -576,6 +595,7 @@ class UtilityNumberOfSplines(MantisMiscNode):
         self.prepared, self.executed = True, True
 
 class UtilityMatrixFromCurveSegment(MantisMiscNode):
+    __slots__ = ()
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, MatrixFromCurveSegmentSockets)
         self.init_parameters()
@@ -633,6 +653,7 @@ class UtilityMatrixFromCurveSegment(MantisMiscNode):
         cleanup_curve(self.evaluate_input("Curve"), self.base_tree.execution_id)
 
 class UtilityGetCurvePoint(MantisMiscNode):
+    __slots__ = ()
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, GetCurvePointSockets)
         self.init_parameters()
@@ -657,6 +678,7 @@ class UtilityGetCurvePoint(MantisMiscNode):
         self.prepared, self.executed = True, True
 
 class UtilityGetNearestFactorOnCurve(MantisMiscNode):
+    __slots__ = ()
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, GetNearestFactorOnCurveSockets)
         self.init_parameters()
@@ -685,6 +707,7 @@ class UtilityGetNearestFactorOnCurve(MantisMiscNode):
         self.prepared, self.executed = True, True
 
 class UtilityKDChoosePoint(MantisMiscNode):
+    __slots__ = ('rerouted')
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, KDChoosePointSockets)
         self.init_parameters()
@@ -710,6 +733,7 @@ class UtilityKDChoosePoint(MantisMiscNode):
         self.prepared, self.executed = True, True
 
 class UtilityKDChooseXForm(MantisMiscNode):
+    __slots__ = ('rerouted')
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, KDChooseXFormSockets)
         self.init_parameters()
@@ -747,6 +771,7 @@ class UtilityKDChooseXForm(MantisMiscNode):
 
 class UtilityMetaRig(MantisMiscNode):
     '''A node representing an armature object'''
+    __slots__ = ()
 
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, MetaRigSockets)
@@ -788,6 +813,7 @@ class UtilityMetaRig(MantisMiscNode):
 
 class UtilityBoneProperties(SimpleInputNode):
     '''A node representing a bone's gettable properties'''
+    __slots__ = ()
 
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, BonePropertiesSockets)
@@ -799,6 +825,7 @@ class UtilityBoneProperties(SimpleInputNode):
 # TODO this should probably be moved to Links
 class UtilityDriverVariable(MantisMiscNode):
     '''A node representing an armature object'''
+    __slots__ = ()
     node_type = "DRIVER"
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, DriverVariableSockets)
@@ -882,6 +909,7 @@ class UtilityDriverVariable(MantisMiscNode):
 
 class UtilityKeyframe(MantisMiscNode):
     '''A node representing a keyframe for a F-Curve'''
+    __slots__ = ()
     # TODO: try UTILITY type and remove setup_custom_property stuff
     node_type = "DRIVER" # MUST be run in Pose mode
     def __init__(self, signature, base_tree):
@@ -903,6 +931,7 @@ class UtilityKeyframe(MantisMiscNode):
 
 class UtilityFCurve(MantisMiscNode):
     '''A node representing an armature object'''
+    __slots__ = ()
 
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, FCurveSockets)
@@ -929,6 +958,7 @@ class UtilityFCurve(MantisMiscNode):
 
 class UtilityDriver(MantisMiscNode):
     '''A node representing an armature object'''
+    __slots__ = ()
     node_type = "DRIVER" # MUST be run in Pose mode
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, DriverSockets)
@@ -983,6 +1013,7 @@ class UtilityDriver(MantisMiscNode):
 
 class UtilitySwitch(MantisMiscNode):
     '''A node representing an armature object'''
+    __slots__ = ()
     node_type = "DRIVER" # MUST be run in Pose mode
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, SwitchSockets)
@@ -1059,6 +1090,7 @@ class UtilitySwitch(MantisMiscNode):
 
 class UtilityCombineThreeBool(MantisMiscNode):
     '''A node for combining three booleans into a boolean three-tuple'''
+    __slots__ = ()
 
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, CombineThreeBoolSockets)
@@ -1082,6 +1114,7 @@ class UtilityCombineThreeBool(MantisMiscNode):
 # Note this is a copy of the above. This needs to be de-duplicated.
 class UtilityCombineVector(MantisMiscNode):
     '''A node for combining three floats into a vector'''
+    __slots__ = ()
 
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, CombineVectorSockets)
@@ -1105,6 +1138,7 @@ class UtilityCombineVector(MantisMiscNode):
 
 class UtilitySeparateVector(MantisMiscNode):
     '''A node for separating a vector into three floats'''
+    __slots__ = ()
 
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, SeparateVectorSockets)
@@ -1118,6 +1152,7 @@ class UtilitySeparateVector(MantisMiscNode):
 
 class UtilityCatStrings(MantisMiscNode):
     '''A node representing an armature object'''
+    __slots__ = ()
 
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, CatStringsSockets)
@@ -1130,6 +1165,7 @@ class UtilityCatStrings(MantisMiscNode):
 # TODO move this to the Xform file
 class InputWidget(MantisMiscNode):
     '''A node representing an existing object'''
+    __slots__ = ()
     node_type = "XFORM"
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, InputWidgetSockets)
@@ -1217,6 +1253,7 @@ class InputWidget(MantisMiscNode):
 # TODO move this to the Xform file
 class InputExistingGeometryObject(MantisMiscNode):
     '''A node representing an existing object'''
+    __slots__ = ()
     node_type = "XFORM"
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, InputExistingGeometryObjectSockets)
@@ -1243,6 +1280,7 @@ class InputExistingGeometryObject(MantisMiscNode):
 
 class InputExistingGeometryData(MantisMiscNode):
     '''A node representing existing object data'''
+    __slots__ = ()
 
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, InputExistingGeometrySockets)
@@ -1266,6 +1304,7 @@ class InputExistingGeometryData(MantisMiscNode):
 
 class UtilityDeclareCollections(MantisMiscNode):
     '''A node to help manage bone collections'''
+    __slots__ = ()
     def __init__(self, signature, base_tree):
         # NOTE this one does not use socket template because it is special.
         # The user creates all the sockets for this one.
@@ -1292,6 +1331,7 @@ class UtilityDeclareCollections(MantisMiscNode):
 
 class UtilityCollectionJoin(MantisMiscNode):
     '''A node to help manage bone collections'''
+    __slots__ = ()
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, CollectionJoinSockets)
         self.init_parameters()
@@ -1321,6 +1361,7 @@ class UtilityCollectionJoin(MantisMiscNode):
 
 class UtilityCollectionHierarchy(MantisMiscNode):
     '''A node to help manage bone collections'''
+    __slots__ = ()
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, CollectionHierarchySockets)
         self.init_parameters()
@@ -1345,6 +1386,7 @@ class UtilityCollectionHierarchy(MantisMiscNode):
 
 class UtilityGeometryOfXForm(MantisMiscNode):
     '''A node representing existing object data'''
+    __slots__ = ()
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, GeometryOfXFormSockets)
         self.init_parameters()
@@ -1370,6 +1412,7 @@ class UtilityGeometryOfXForm(MantisMiscNode):
 
 class UtilityNameOfXForm(MantisMiscNode):
     '''A node representing existing object data'''
+    __slots__ = ()
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, NameOfXFormSockets)
         self.init_parameters()
@@ -1385,6 +1428,7 @@ class UtilityNameOfXForm(MantisMiscNode):
 
 class UtilityGetBoneLength(MantisMiscNode):
     '''A node to get the length of a bone matrix'''
+    __slots__ = ()
 
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, GetBoneLengthSockets)
@@ -1400,6 +1444,7 @@ class UtilityGetBoneLength(MantisMiscNode):
 
 class UtilityPointFromBoneMatrix(MantisMiscNode):
     '''A node representing an armature object'''
+    __slots__ = ()
 
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, PointFromBoneMatrixSockets)
@@ -1416,6 +1461,7 @@ class UtilityPointFromBoneMatrix(MantisMiscNode):
 
 class UtilitySetBoneLength(MantisMiscNode):
     '''Sets the length of a Bone's matrix'''
+    __slots__ = ()
 
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, SetBoneLengthSockets)
@@ -1435,6 +1481,7 @@ class UtilitySetBoneLength(MantisMiscNode):
 
 class UtilityMatrixSetLocation(MantisMiscNode):
     '''Sets the location of a matrix'''
+    __slots__ = ()
 
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, MatrixSetLocationSockets)
@@ -1452,6 +1499,7 @@ class UtilityMatrixSetLocation(MantisMiscNode):
 
 class UtilityMatrixGetLocation(MantisMiscNode):
     '''Gets the location of a matrix'''
+    __slots__ = ()
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, MatrixGetLocationSockets)
         self.init_parameters()
@@ -1464,6 +1512,7 @@ class UtilityMatrixGetLocation(MantisMiscNode):
 
 class UtilityMatrixFromXForm(MantisMiscNode):
     """Returns the matrix of the given xForm node."""
+    __slots__ = ()
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, MatrixFromXFormSockets)
         self.init_parameters()
@@ -1490,6 +1539,7 @@ class UtilityMatrixFromXForm(MantisMiscNode):
 
 class UtilityAxesFromMatrix(MantisMiscNode):
     """Returns the axes of the given matrix."""
+    __slots__ = ()
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, AxesFromMatrixSockets)
         self.init_parameters()
@@ -1504,6 +1554,7 @@ class UtilityAxesFromMatrix(MantisMiscNode):
         self.prepared = True; self.executed = True
 
 class UtilityBoneMatrixHeadTailFlip(MantisMiscNode):
+    __slots__ = ()
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, BoneMatrixHeadTailFlipSockets)
         self.init_parameters()
@@ -1524,6 +1575,7 @@ class UtilityBoneMatrixHeadTailFlip(MantisMiscNode):
         self.prepared, self.executed = True, True
 
 class UtilityMatrixTransform(MantisMiscNode):
+    __slots__ = ()
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, MatrixTransformSockets)
         self.init_parameters()
@@ -1541,6 +1593,7 @@ class UtilityMatrixTransform(MantisMiscNode):
         self.prepared, self.executed = True, True
 
 class UtilityMatrixInvert(MantisMiscNode):
+    __slots__ = ()
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, MatrixInvertSockets)
         self.init_parameters()
@@ -1561,6 +1614,7 @@ class UtilityMatrixInvert(MantisMiscNode):
         self.prepared, self.executed = True, True
 
 class UtilityMatrixCompose(MantisMiscNode):
+    __slots__ = ()
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, MatrixComposeSockets)
         self.init_parameters()
@@ -1587,6 +1641,7 @@ class UtilityMatrixCompose(MantisMiscNode):
         self.prepared = True; self.executed = True
 
 class UtilityMatrixAlignRoll(MantisMiscNode):
+    __slots__ = ()
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, MatrixAlignRollSockets)
         self.init_parameters()
@@ -1623,6 +1678,7 @@ class UtilityMatrixAlignRoll(MantisMiscNode):
         # this calculation should not work better, but it does. Why?
 
 class UtilityTransformationMatrix(MantisMiscNode):
+    __slots__ = ()
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, TransformationMatrixSockets)
         self.init_parameters()
@@ -1644,6 +1700,7 @@ class UtilityTransformationMatrix(MantisMiscNode):
         self.prepared = True; self.executed = True
 
 class UtilityIntToString(MantisMiscNode):
+    __slots__ = ()
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, IntToStringSockets)
         self.init_parameters()
@@ -1656,6 +1713,7 @@ class UtilityIntToString(MantisMiscNode):
         self.prepared = True; self.executed = True
 
 class UtilityArrayGet(MantisMiscNode):
+    __slots__ = ('rerouted')
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, ArrayGetSockets)
         self.init_parameters()
@@ -1683,6 +1741,7 @@ class UtilityArrayGet(MantisMiscNode):
         self.prepared, self.executed = True, True
 
 class UtilityArrayLength(MantisMiscNode):
+    __slots__ = ()
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, UtilityArrayLengthSockets)
         self.init_parameters()
@@ -1692,6 +1751,7 @@ class UtilityArrayLength(MantisMiscNode):
         self.prepared, self.executed = True, True
 
 class UtilitySetBoneMatrixTail(MantisMiscNode):
+    __slots__ = ()
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, SetBoneMatrixTailSockets)
         self.init_parameters()
@@ -1705,6 +1765,7 @@ class UtilitySetBoneMatrixTail(MantisMiscNode):
         self.prepared = True; self.executed = True
 
 class UtilityCompare(MantisMiscNode):
+    __slots__ = ()
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, CompareSockets)
         self.init_parameters()
@@ -1737,6 +1798,7 @@ class UtilityCompare(MantisMiscNode):
         self.prepared = True; self.executed = True
 
 class UtilityChoose(MantisMiscNode):
+    __slots__ = ()
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, ChooseSockets)
         self.init_parameters()
@@ -1767,6 +1829,7 @@ class UtilityChoose(MantisMiscNode):
         self.prepared = True; self.executed = True
 
 class UtilityPrint(MantisMiscNode):
+    __slots__ = ()
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, PrintSockets)
         self.init_parameters()

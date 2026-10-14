@@ -42,6 +42,7 @@ set_constraint_name = lambda mantis_node : mantis_node.evaluate_input("Name") if
 
 
 class MantisLinkNode(MantisNode):
+    __slots__ = ()
     node_type = 'LINK'
     def __init__(self, signature : tuple,
                  base_tree : NodeTree,
@@ -136,6 +137,7 @@ class MantisLinkNode(MantisNode):
 
 class LinkInherit(MantisLinkNode):
     '''A node representing inheritance'''
+    __slots__ = ()
 
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, LinkInheritSockets)
@@ -183,6 +185,7 @@ class LinkCopyLocation(MantisLinkNode):
 
 class LinkCopyRotation(MantisLinkNode):
     '''A node representing Copy Rotation'''
+    __slots__ = ()
 
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, LinkCopyRotationSockets)
@@ -217,6 +220,7 @@ class LinkCopyRotation(MantisLinkNode):
 
 class LinkCopyScale(MantisLinkNode):
     '''A node representing Copy Scale'''
+    __slots__ = ()
 
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, LinkCopyScaleSockets)
@@ -243,6 +247,7 @@ class LinkCopyScale(MantisLinkNode):
 
 class LinkCopyTransforms(MantisLinkNode):
     '''A node representing Copy Transfoms'''
+    __slots__ = ()
 
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, LinkCopyTransformsSockets)
@@ -268,6 +273,7 @@ class LinkCopyTransforms(MantisLinkNode):
 
 class LinkTransformation(MantisLinkNode):
     '''A node representing Copy Transfoms'''
+    __slots__ = ()
 
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, LinkTransformationSockets)
@@ -339,6 +345,7 @@ class LinkTransformation(MantisLinkNode):
         self.executed = True
 
 class LinkLimitLocation(MantisLinkNode):
+    __slots__ = ()
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, LinkLimitLocationScaleSockets)
         self.init_parameters(additional_parameters={ "Name":None })
@@ -360,6 +367,7 @@ class LinkLimitLocation(MantisLinkNode):
         self.executed = True
 
 class LinkLimitRotation(MantisLinkNode):
+    __slots__ = ()
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, LinkLimitRotationSockets)
         self.init_parameters(additional_parameters={ "Name":None })
@@ -382,6 +390,7 @@ class LinkLimitRotation(MantisLinkNode):
         self.executed = True
 
 class LinkLimitScale(MantisLinkNode):
+    __slots__ = ()
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, LinkLimitLocationScaleSockets)
         self.init_parameters(additional_parameters={ "Name":None })
@@ -404,6 +413,7 @@ class LinkLimitScale(MantisLinkNode):
         self.executed = True
 
 class LinkLimitDistance(MantisLinkNode):
+    __slots__ = ()
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, LinkLimitDistanceSockets)
         self.init_parameters(additional_parameters={ "Name":None })
@@ -428,6 +438,7 @@ class LinkLimitDistance(MantisLinkNode):
 # Tracking
 
 class LinkStretchTo(MantisLinkNode):
+    __slots__ = ()
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, LinkStretchToSockets)
         self.init_parameters(additional_parameters={ "Name":None })
@@ -453,6 +464,7 @@ class LinkStretchTo(MantisLinkNode):
         self.executed = True
 
 class LinkDampedTrack(MantisLinkNode):
+    __slots__ = ()
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, LinkDampedTrackSockets)
         self.init_parameters(additional_parameters={ "Name":None })
@@ -474,6 +486,7 @@ class LinkDampedTrack(MantisLinkNode):
         self.executed = True
 
 class LinkLockedTrack(MantisLinkNode):
+    __slots__ = ()
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree,LinkLockedTrackSockets)
         self.init_parameters(additional_parameters={"Name":None })
@@ -495,6 +508,7 @@ class LinkLockedTrack(MantisLinkNode):
         self.executed = True
 
 class LinkTrackTo(MantisLinkNode):
+    __slots__ = ()
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, LinkTrackToSockets)
         self.init_parameters(additional_parameters={"Name":None })
@@ -516,6 +530,7 @@ class LinkTrackTo(MantisLinkNode):
         self.executed = True
 
 class LinkInheritConstraint(MantisLinkNode):
+    __slots__ = ()
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, LinkInheritConstraintSockets)
         self.init_parameters(additional_parameters={"Name":None })
@@ -539,6 +554,7 @@ class LinkInheritConstraint(MantisLinkNode):
             self.executed = True
 
 class LinkInverseKinematics(MantisLinkNode):
+    __slots__ = ()
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, LinkInverseKinematicsSockets)
         self.init_parameters(additional_parameters={"Name":None })
@@ -739,6 +755,7 @@ def ik_report_error(pb, context, do_print=False):
 
 # This is kinda a weird design decision?
 class LinkDrivenParameter(MantisLinkNode):
+    __slots__ = ()
     '''A node representing an armature object'''
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, LinkDrivenParameterSockets)
@@ -796,6 +813,7 @@ class LinkDrivenParameter(MantisLinkNode):
 
 class LinkArmature(MantisLinkNode):
     '''A node representing an armature object'''
+    __slots__ = ()
 
     def __init__(self, signature, base_tree,):
         super().__init__(signature, base_tree, LinkArmatureSockets)
@@ -848,6 +866,7 @@ class LinkArmature(MantisLinkNode):
 
 class LinkSplineIK(MantisLinkNode):
     '''A node representing an armature object'''
+    __slots__ = ()
 
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, LinkSplineIKSockets)
@@ -886,6 +905,7 @@ class LinkSplineIK(MantisLinkNode):
 
 class LinkFloor(MantisLinkNode):
     '''A node representing an armature object'''
+    __slots__ = ()
 
     def __init__(self, signature, base_tree,):
         super().__init__(signature, base_tree, LinkFloorSockets)
@@ -910,6 +930,7 @@ class LinkFloor(MantisLinkNode):
 
 class LinkShrinkWrap(MantisLinkNode):
     '''A node representing a shrinkwrap relationship.'''
+    __slots__ = ()
     def __init__(self, signature, base_tree,):
         super().__init__(signature, base_tree, LinkShrinkWrapSockets)
         self.init_parameters(additional_parameters={"Name":None })
@@ -934,6 +955,7 @@ class LinkShrinkWrap(MantisLinkNode):
 
 class LinkGeometryAttribute(MantisLinkNode):
     '''A node representing a geometry attribute relationship.'''
+    __slots__ = ()
     def __init__(self, signature, base_tree,):
         super().__init__(signature, base_tree, LinkGeometryAttributeSockets)
         self.init_parameters(additional_parameters={"Name":None })

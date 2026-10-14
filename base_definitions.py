@@ -733,6 +733,16 @@ class MantisNode:
         A MantisNode is used internally by Mantis to represent the final evaluated node graph.
         It gets generated with data from a MantisUINode when the graph is read.
     """
+    __slots__ = (
+        "base_tree", "signature", "ui_signature",
+        "inputs", "outputs",
+        "parameters", "drivers", "bObject",
+        "hierarchy_connections", "connections",
+        "hierarchy_dependencies", "dependencies",
+        "unmet_hierarchy_dependency_count",
+        "prepared", "executed", "execution_prepared",
+        "socket_templates", "mContext",
+        )
     node_type='UNINITIALIZED'
     def __init__(self, signature : tuple,
                  base_tree : bpy.types.NodeTree,
@@ -1049,6 +1059,10 @@ class MantisNode:
 
 # do I need this and the link class above?
 class DummyLink:
+    __slots__ = ("from_socket", "to_socket",
+                 "from_mantis_node", "to_mantis_node",
+                 "multi_input_sort_id",
+                 "original_from")
     #gonna use this for faking links to keep the interface consistent
     def __init__(self, from_socket, to_socket, from_mantis_node=None, to_mantis_node=None, original_from=None, multi_input_sort_id=0):
         self.from_socket = from_socket
@@ -1084,10 +1098,16 @@ def detect_hierarchy_link(from_node, from_socket, to_node, to_socket,):
     return True
 
 class NodeLink:
-    from_node = None
-    from_socket = None
-    to_node = None
-    to_socket = None
+    __slots__ = (
+        "from_node",
+        "from_socket",
+        "to_node",
+        "to_socket",
+        "multi_input_sort_id",
+        "sub_sort_id",
+        "is_hierarchy",
+        "is_alive",
+    )
 
     def __init__(self, from_node, from_socket, to_node, to_socket, multi_input_sort_id=0, sub_sort_id=0):
         if from_node.signature == to_node.signature:
@@ -1131,6 +1151,15 @@ class NodeLink:
             init_dependencies(to_node)
 
 class NodeSocket:
+    __slots__ = (
+        "can_traverse",
+        "traverse_target",
+        "node",
+        "name",
+        "is_input",
+        "links",
+        "is_linked",
+    )
     def __init__(self, is_input = False,
                  node = None, name = None,
                  traverse_target = None):
@@ -1184,6 +1213,7 @@ class NodeSocket:
         return self.node.__repr__() + "::" + self.name
 
 class MantisNodeSocketCollection(dict):
+    __slots__ = ("is_input", "node",)
     def __init__(self, node, is_input=False):
         self.is_input = is_input
         self.node = node

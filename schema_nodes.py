@@ -34,6 +34,7 @@ def schema_init_sockets(mantis_node, is_input = True, in_out='INPUT', category='
 
 
 class SchemaNode(MantisNode):
+    __slots__ = ()
     node_type = 'SCHEMA'
     def __init__(self, signature, base_tree, socket_templates=[]):
         super().__init__(signature, base_tree, socket_templates)
@@ -48,32 +49,38 @@ class SchemaNode(MantisNode):
 
 
 class SchemaIndex(SchemaNode):
+    __slots__ = ()
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, SchemaIndexSockets)
         self.init_parameters()
 
 class SchemaArrayInput(SchemaNode):
+    __slots__ = ()
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree)
         schema_init_sockets(self, is_input=False, in_out='INPUT', category='Array')
 
 
 class SchemaArrayInputGet(SchemaNode):
+    __slots__ = ()
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, SchemaArrayInputGetSockets)
         schema_init_sockets(self, is_input=False, in_out='INPUT', category='Array')
 
 class SchemaArrayInputAll(SchemaNode):
+    __slots__ = ()
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree)
         schema_init_sockets(self, is_input=False, in_out='INPUT', category='Array')
 
 class SchemaArrayOutput(SchemaNode):
+    __slots__ = ()
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree)
         schema_init_sockets(self, is_input=True, in_out='OUTPUT', category='Array')
 
 class SchemaConstInput(SchemaNode):
+    __slots__ = ()
     def __init__(self, signature, base_tree, parent_schema_node=None):
         super().__init__(signature, base_tree)
         if parent_schema_node:
@@ -92,6 +99,7 @@ class SchemaConstInput(SchemaNode):
 
 
 class SchemaConstOutput(SchemaNode):
+    __slots__ = ()
     def __init__(self, signature, base_tree, parent_schema_node=None):
         super().__init__(signature, base_tree)
         inputs = [
@@ -116,12 +124,14 @@ class SchemaConstOutput(SchemaNode):
 
         
 class SchemaOutgoingConnection(SchemaNode):
+    __slots__ = ()
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree)
         schema_init_sockets(self, is_input=True, in_out='INPUT', category='Connection')
 
         
 class SchemaIncomingConnection(SchemaNode):
+    __slots__ = ()
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree)
         schema_init_sockets(self, is_input=False, in_out='OUTPUT', category='Connection')

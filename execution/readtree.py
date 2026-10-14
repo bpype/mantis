@@ -1,74 +1,6 @@
 from ..utilities.utilities import prRed, prGreen, prPurple, prWhite, prOrange, \
                         wrapRed, wrapGreen, wrapPurple, wrapWhite, wrapOrange
 
-
-# this function is kind of confusing and is very important,
-# so it bears a full explanation: its purpose is to connect
-# the links going into a group to the nodes in that group.
-# FIRST we connect all the incoming links into the Group Node to
-# a Group Interface node that does nothing but mark the entrance.
-# Then, we connect all the outgoing links back to the nodes
-# that had incoming links, so the nodes OUTSIDE the Node Group
-# are connected directly to BOTH the GroupInterface and the
-# nodes INSIDE the node group.
-# we give the GroupInterface nodes an obscenely high
-# multi_input_sort_id so that they are always last.
-# but since these links are going IN, they shouldn't cause any problems.
-# the sub_sort_id is set here in case there are UI links which represent
-# multiple Mantis links - the mantis links are sorted within the UI links
-# and the UI links are sorted as normal, so all the links are in the right
-# order.... probably. BUG here?
-# I want the Group Interface nodes to be part of the hierarchy...
-# but I want to cut the links. hmmm what to do? Fix it if it causes problems.
-# solution to hypothetical BUG could be to do traversal on the links
-# instead of the sockets.
-def grp_node_reroute_common(in_node, out_node, interface):
-    from ..base_definitions import links_sort_key
-    for in_node_input in in_node.inputs:
-        i = 0
-        if len(in_node_input.links)>1: # sort here to ensure correct sub_sort_id
-            in_node_input.links.sort(key=links_sort_key)
-        while (in_node_input.links):
-            in_link = in_node_input.links.pop()
-            from_node = in_link.from_node; from_socket = in_link.from_socket
-            link = from_node.outputs[from_socket].connect(
-                interface,in_node_input.name, sort_id = 2**16, sub_sort_id=i)
-            i += 1; in_link.die()
-    for out_node_output in out_node.outputs:
-        while (out_node_output.links):
-            out_link = out_node_output.links.pop()
-            to_node = out_link.to_node; to_socket = out_link.to_socket
-            for j, l in enumerate(interface.inputs[out_node_output.name].links):
-                # we are connecting the link from the ORIGINAL output to the FINAL input.
-                link = l.from_node.outputs[l.from_socket].connect(
-                    to_node, to_socket, sort_id = out_link.multi_input_sort_id)
-                link.sub_sort_id = j
-            out_link.die()
-
-def reroute_links_grp(group, all_nodes):
-    from ..internal_nodes import GroupInterface
-    interface = GroupInterface(
-        ( *group.signature, "InputInterface"),
-        group.base_tree, group.ui_node, 'INPUT',)
-    all_nodes[interface.signature] = interface
-    if group.inputs:
-        if group_input := all_nodes.get(( *group.signature, "NodeGroupInput")):
-            grp_node_reroute_common(group, group_input, interface)
-        else:
-            raise RuntimeError("internal error: failed to enter a node group ")
-
-def reroute_links_grpout(group_output, all_nodes):
-    if (group := all_nodes.get( ( *group_output.signature[:-1],) )):
-        from ..internal_nodes import GroupInterface
-        interface = GroupInterface(
-            ( *group.signature, "OutputInterface"),
-            group.base_tree, group.ui_node, 'OUTPUT',)
-        all_nodes[interface.signature] = interface
-        grp_node_reroute_common(group_output, group, interface)
-    else:
-        prOrange(f"WARN: unconnected outputs from a node group "
-                 "(maybe you are running the tree from inside a node group?)")
-
 # FIXME I don't think these signatures are unique.
 # TODO this is a really silly and bad and also really dumb way to do this
 def insert_lazy_parents(mantis_node):
@@ -158,16 +90,16 @@ def gen_mantis_nodes(base_tree, current_tree, tree_path_names, mContext, all_man
                 mantis_node = DummyNode( signature=sig , base_tree=base_tree, ui_node=ui_node, ui_signature=ui_sig )
                 local_mantis_nodes[sig] = mantis_node; all_mantis_nodes[sig] = mantis_node; dummy_nodes[sig] = mantis_node
                 if ui_node.bl_idname in ["NodeGroupOutput"]:
-                    mantis_node.reroute_links = reroute_links_grpout
+                    mantis_node.reroute_links_type = 'out'
         elif ui_node.bl_idname in  ["MantisNodeGroup", "MantisSchemaGroup"]:
             mantis_node = DummyNode( signature= (sig := (None, *tree_path_names, ui_node.name) ), base_tree=base_tree, ui_node=ui_node )
             local_mantis_nodes[sig] = mantis_node; all_mantis_nodes[sig] = mantis_node; dummy_nodes[sig] = mantis_node
             make_connections_to_ng_dummy(base_tree, tree_path_names, local_mantis_nodes, all_mantis_nodes, mantis_node)
+            group_nodes.append(mantis_node)
             if ui_node.bl_idname == "MantisNodeGroup":
-                group_nodes.append(mantis_node)
-                mantis_node.reroute_links = reroute_links_grp
+                mantis_node.reroute_links_type = 'group'
             else:
-                group_nodes.append(mantis_node)
+                mantis_node.reroute_links_type = 'schema'
                 schema_nodes[sig] = mantis_node
         # if it wasn't the types we ignore or the types we make a Dummy for, use this to catch all non-special cases.
         elif (mantis_class := ui_node.mantis_class):
@@ -506,8 +438,7 @@ def parse_tree(base_tree, error_popups=False):
     # it's REALLY confusing when you run into this sort of problem. So it warrants four entire lines of comments!      
     dummy_nodes, all_mantis_nodes, all_schema =  data_from_tree(base_tree, tree_path = [None], mContext=mContext, dummy_nodes = {}, all_mantis_nodes = {}, all_schema={})
     for dummy in dummy_nodes.values():    # reroute the links in the group nodes
-        if (hasattr(dummy, "reroute_links")):
-            dummy.reroute_links(dummy, all_mantis_nodes)
+        dummy.reroute_links(all_mantis_nodes)
     prGreen(f"Pulling data from tree took {time.time() - data_start_time} seconds")
 
     start_time = time.time()

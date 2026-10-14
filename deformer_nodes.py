@@ -36,6 +36,7 @@ def trace_xForm_back(mantis_node, socket):
 
 class MantisDeformerNode(MantisNode):
     node_type = 'LINK'
+    __slots__ = ()
     def __init__(self, signature : tuple,
                  base_tree : NodeTree,
                  socket_templates : list[MantisSocketTemplate]=[]):
@@ -79,6 +80,7 @@ def standard_modifier_bind(self, bContext=None, operator=None):
 
 class DeformerArmature(MantisDeformerNode):
     '''A node representing an armature deformer'''
+    __slots__ = ()
 
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, DeformArmatureSockets)
@@ -282,6 +284,8 @@ class DeformerArmature(MantisDeformerNode):
 
 class DeformerHook(MantisDeformerNode):
     '''A node representing a hook deformer'''
+    __slots__ = ()
+    
 
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, HookSockets)
@@ -417,6 +421,8 @@ class DeformerHook(MantisDeformerNode):
 
 class DeformerMorphTarget(MantisDeformerNode):
     '''A node representing an armature deformer'''
+    __slots__ = ()
+    
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, MorphTargetSockets)
         self.init_parameters(additional_parameters={"Name":None})
@@ -458,6 +464,8 @@ class DeformerMorphTarget(MantisDeformerNode):
 
 class DeformerMorphTargetDeform(MantisDeformerNode):
     '''A node representing an armature deformer'''
+    __slots__ = ()
+    
 
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree)
@@ -701,6 +709,8 @@ class DeformerMorphTargetDeform(MantisDeformerNode):
 
 class DeformerSurfaceDeform(MantisDeformerNode):
     '''A node representing an surface deform modifier'''
+    __slots__ = ()
+    
 
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, SurfaceDeformSockets)
@@ -738,6 +748,8 @@ class DeformerSurfaceDeform(MantisDeformerNode):
 
 class DeformerMeshDeform(MantisDeformerNode):
     '''A node representing a mesh deform modifier'''
+    __slots__ = ()
+    
 
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, MeshDeformSockets)
@@ -774,6 +786,8 @@ class DeformerMeshDeform(MantisDeformerNode):
 
 class DeformerLatticeDeform(MantisDeformerNode):
     '''A node representing a lattice deform modifier'''
+    __slots__ = ()
+    
 
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, LatticeDeformSockets)
@@ -806,6 +820,8 @@ class DeformerLatticeDeform(MantisDeformerNode):
 
 class DeformerSmoothCorrectiveDeform(MantisDeformerNode):
     '''A node representing a corrective smooth deform modifier'''
+    __slots__ = ()
+    
 
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, SmoothDeformSockets)
