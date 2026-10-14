@@ -45,7 +45,7 @@ def autogen_node(base_tree, ui_socket, signature, mContext):
     from ..internal_nodes import AutoGenNode
     mantis_node = AutoGenNode(signature, base_tree)
     mantis_node.mContext = mContext
-    mantis_node.outputs.init_sockets([ui_socket.name])
+    mantis_node.outputs[ui_socket.name] = NodeSocket(is_input=False, name=ui_socket.name, node=mantis_node)
     mantis_node.ui_signature = None # does not exist in the UI
     return mantis_node
 
@@ -267,13 +267,6 @@ def node_scan_overlays(node, socket_id,):
     return result # because sometimes I need to get the result, too
 
 from ..utilities.utilities import check_and_add_root, init_connections, init_dependencies, init_schema_dependencies
-
-def is_signature_in_other_signature(parent_signature, child_signature):
-    # If the other signature is shorter, it isn't a child node
-    if len(parent_signature) > len(child_signature):
-        return False
-    return parent_signature[0:] == child_signature[:len(parent_signature)]
-
 def solve_schema_to_tree(mantis_node, all_mantis_nodes, roots=[], error_popups=False):
     from ..utilities.utilities import get_ui_node
     np = get_ui_node(mantis_node.signature, mantis_node.base_tree)

@@ -29,7 +29,7 @@ def schema_init_sockets(mantis_node, is_input = True, in_out='INPUT', category='
             if item.item_type == 'PANEL': continue
             if item.parent and read_schema_type(item) == category:
                 if item.in_out == in_out:
-                    sockets.init_sockets([item.name])
+                    sockets[item.name] = NodeSocket(is_input=is_input, name=item.name, node=mantis_node)
     mantis_node.init_parameters()
 
 
@@ -91,7 +91,7 @@ class SchemaConstInput(SchemaNode):
             for item in parent_tree.interface.items_tree:
                 if item.item_type == 'PANEL': continue
                 if item.in_out == 'INPUT':
-                    sockets.init_sockets([item.name])
+                    sockets[item.name] = NodeSocket(is_input=False, node=self, name=item.name)
             self.init_parameters()
             
         else:
@@ -102,19 +102,16 @@ class SchemaConstOutput(SchemaNode):
     __slots__ = ()
     def __init__(self, signature, base_tree, parent_schema_node=None):
         super().__init__(signature, base_tree)
-        inputs = [
-            "Expose at Index",
-        ]
-        self.inputs.init_sockets(inputs)
+        sockets=self.inputs
+        sockets["Expose at Index"] = NodeSocket(is_input=False, node=self, name="Expose at Index")
         if parent_schema_node:
             # this allows us to generate the Constant Input from a normal Node Group
             # and treat the node group as a schema
             parent_tree = parent_schema_node.ui_node.node_tree
-            sockets=self.inputs
             for item in parent_tree.interface.items_tree:
                 if item.item_type == 'PANEL': continue
                 if item.in_out == 'OUTPUT':
-                    sockets.init_sockets([item.name, "Expose at Index",])
+                    sockets[item.name] = NodeSocket(is_input=False, node=self, name=item.name)
             self.init_parameters()
             self.parameters['Expose at Index"']=1
 

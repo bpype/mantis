@@ -148,11 +148,12 @@ class GroupInterface(MantisNode):
     node_type = 'INTERFACE'
     def __init__(self, signature, base_tree, ui_node, in_out):
         super().__init__(signature, base_tree)
-        self.prepared, self.executed = True, True; sockets = []
+        self.prepared, self.executed = True, True
         self.in_out = in_out
         # init the sockets based on in/out, then set up traversal
         collection = ui_node.inputs if in_out == 'INPUT' else ui_node.outputs
-        for socket in collection: sockets.append(socket.identifier)
-        self.inputs.init_sockets(sockets); self.outputs.init_sockets(sockets)
+        for socket in collection:
+            self.inputs[socket.identifier] = NodeSocket(is_input=True, node=self, name=socket.identifier)
+            self.outputs[socket.identifier] = NodeSocket(is_input=False, node=self, name=socket.identifier)
         for socket in self.inputs.keys(): self.set_traverse( [(socket, socket)] )
         self.execution_prepared=True

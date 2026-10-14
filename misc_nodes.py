@@ -164,7 +164,9 @@ def array_choose_data(node, data, output):
         Used to choose the correct data to send out of an array-choose node.
     """
     # We need to make new outputs and link from each one based on the data in the array...
-    node.outputs.init_sockets([output+"."+str(i).zfill(4) for i in range(len(data)) ])
+    for i in range(len(data)):
+        name = output+"."+str(i).zfill(4)
+        node.outputs[name] = NodeSocket(node=node, name=name, is_input=False)
     for i, data_item in enumerate(data):
         node.parameters[output+"."+str(i).zfill(4)] = data_item
     for link in node.outputs[output].links:

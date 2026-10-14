@@ -787,8 +787,18 @@ class MantisNode:
         self.execution_prepared = False
 
     def init_sockets(self) -> None:
-        self.inputs.init_sockets(self.socket_templates)
-        self.outputs.init_sockets(self.socket_templates)
+        # Formerly I was doing this:
+        # self.inputs.init_sockets(self.socket_templates)
+        # self.outputs.init_sockets(self.socket_templates)
+        # Since doing each one causes some redundancy, we'll just reimplement it
+        # This is a highly used and therefore expensive function so we have to make small
+        # optimizations like this, even tho it is ugly.
+        for socket in self.socket_templates:
+            if socket.ui_only == True: continue # used in UI but not in generation
+            if socket.is_input:
+                self.inputs[socket.name] = NodeSocket(is_input=True, name=socket.name, node=self.node)
+            else:
+                self.inputs[socket.name] = NodeSocket(is_input=False, name=socket.name, node=self.node)
 
     def init_parameters(self, additional_parameters = {}) -> None:
         for socket in self.inputs:
@@ -1222,15 +1232,9 @@ class MantisNodeSocketCollection(dict):
 
     def init_sockets(self, sockets):
         for socket in sockets:
-            if isinstance(socket, str):
-                self[socket] = NodeSocket(is_input=self.is_input, name=socket, node=self.node)
-            elif isinstance(socket, MantisSocketTemplate):
-                if socket.ui_only == True: continue # used in UI but not in generation
-                if socket.is_input != self.is_input: continue
-                self[socket.name] = NodeSocket(is_input=self.is_input, name=socket.name, node=self.node)
-            else:
-                raise RuntimeError(f"NodeSocketCollection keys must be str or MantisSocketTemplate, not {type(socket)}")
-
+            if socket.ui_only == True: continue # used in UI but not in generation
+            if socket.is_input != self.is_input: continue
+            self[socket.name] = NodeSocket(is_input=self.is_input, name=socket.name, node=self.node)
     def __delitem__(self, key):
         """Deletes a node socket by name, and all its links."""
         socket = self[key]
