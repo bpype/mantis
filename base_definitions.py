@@ -742,6 +742,7 @@ class MantisNode:
         "unmet_hierarchy_dependency_count",
         "prepared", "executed", "execution_prepared",
         "socket_templates", "mContext",
+        "is_schema_prototype"
         )
     node_type='UNINITIALIZED'
     def __init__(self, signature : tuple,
@@ -762,6 +763,7 @@ class MantisNode:
         #  again without changing the readtree code much.
         self.socket_templates = socket_templates
         self.mContext = None # for now I am gonna set this at runtime
+        self.is_schema_prototype = False
         # I know it isn't "beautiful OOP" or whatever, but it is just easier
         # code should be simple and do things in the simplest way.
         # in the future I can refactor it, but it will require changes to 100+
