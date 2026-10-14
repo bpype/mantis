@@ -796,9 +796,9 @@ class MantisNode:
         for socket in self.socket_templates:
             if socket.ui_only == True: continue # used in UI but not in generation
             if socket.is_input:
-                self.inputs[socket.name] = NodeSocket(is_input=True, name=socket.name, node=self.node)
+                self.inputs[socket.name] = NodeSocket(is_input=True, name=socket.name, node=self)
             else:
-                self.inputs[socket.name] = NodeSocket(is_input=False, name=socket.name, node=self.node)
+                self.outputs[socket.name] = NodeSocket(is_input=False, name=socket.name, node=self)
 
     def init_parameters(self, additional_parameters = {}) -> None:
         for socket in self.inputs:
