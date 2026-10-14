@@ -1318,13 +1318,14 @@ class UtilityDeclareCollections(MantisMiscNode):
         self.prepared, self.executed = True, True
 
     def fill_parameters(self, ui_node=None):
+        from .mantis_dataclasses import MantisSocketTemplate
         if ui_node is None:
             from .utilities.utilities import get_ui_node
             ui_node = get_ui_node(self.ui_signature, self.base_tree)
         templates=[]
         for out in ui_node.outputs:
             if not (out.name in self.outputs.keys()) :
-                templates.append(SockTemplate(name=out.name,
+                templates.append(MantisSocketTemplate(name=out.name,
                         identifier=out.identifier, is_input=False,))
         self.outputs.init_sockets(templates)
         # now we have our parameters, fill them. This is a little inefficient I guess.
