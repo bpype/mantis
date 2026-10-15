@@ -105,7 +105,6 @@ def gen_mantis_nodes(base_tree, current_tree, tree_path_names, mContext, all_man
                 sig = (None, *tree_path_names, ui_node.bl_idname)
                 if local_mantis_nodes.get(sig):
                     continue # already made
-            print (mantis_class)
             mantis_node = mantis_class( sig , base_tree)
             local_mantis_nodes[sig] = mantis_node; all_mantis_nodes[sig] = mantis_node
             mantis_node.ui_signature = (*mantis_node.ui_signature[:-1], ui_node.name) # just to ensure it points to a real node.
