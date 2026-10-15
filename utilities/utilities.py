@@ -26,7 +26,7 @@ def prOrange(*args): print (*[wrapOrange(arg) for arg in args])
 def float_lerp(a : float, b : float, factor : float)  -> float:
     return (a * (1.0 - factor)) + (b * factor)
 
-def find_reroute_start_socket(reroute, track='BACK'):
+def find_reroute_start_socket(reroute,):
     # "BACK" traces back through the tree and returns one socket
     # "FORWARD" traces forward through the tree and returns a list of sockets
     from ..base_definitions import reroute_cache
@@ -34,50 +34,66 @@ def find_reroute_start_socket(reroute, track='BACK'):
     # We assume the cache is good, the tree is responsible for this
     tree = reroute.id_data
     tree_cache = reroute_cache.get(tree.name)
-    if track == 'FORWARD':
-        cache_item = tree_cache.get(reroute.name); sockets = []
-        if not cache_item: # I think this is OK, they don't always go somewhere
-            return # And this FORWARD trace is always a background task
-        for node_name, socket_index in cache_item.destinations:
-            sockets.append(tree.nodes.get(node_name).inputs[socket_index])
-        return sockets
-    if track == 'BACK':
-        cache_item = tree_cache.get(reroute.name)
-        if not cache_item or not cache_item.source:
-            raise GraphError(f"There is a missing link in the tree at reroute node: {reroute.name}")
-        return tree.nodes.get(cache_item.source[0]).outputs[cache_item.source[1]]
+    cache_item = tree_cache.get(reroute.name)
+    if not cache_item or not cache_item.source:
+        raise GraphError(f"There is a missing link in the tree at reroute node: {reroute.name}")
+    return tree.nodes[cache_item.source[0]].outputs[cache_item.source[1]]
+
+def find_reroute_end_socket(reroute,):
+    # "BACK" traces back through the tree and returns one socket
+    # "FORWARD" traces forward through the tree and returns a list of sockets
+    from ..base_definitions import reroute_cache
+    from .node_common import GraphError
+    # We assume the cache is good, the tree is responsible for this
+    tree = reroute.id_data
+    tree_cache = reroute_cache.get(tree.name)
+    cache_item = tree_cache.get(reroute.name); sockets = []
+    if not cache_item: # I think this is OK, they don't always go somewhere
+        return # And this FORWARD trace is always a background task
+    sockets = [ tree.nodes.get(node_name).inputs[socket_index] for \
+                node_name, socket_index in cache_item.destinations.items()]
+    return sockets
 
 # this creates fake links that have the same interface as Blender's
 # so that I can bypass Reroutes
 def clear_reroutes(links):
     from ..base_definitions import DummyLink
-    kept_links, rerouted_starts = [], []
-    rerouted = []
-    all_links = links.copy()
-    while(all_links):
-        link = all_links.pop()
+    kept_links = []
+    for i in range (len(links)):
+        link = links[i]
         to_cls = link.to_socket.node.bl_idname
         from_cls = link.from_socket.node.bl_idname
         reroute_classes = ["NodeReroute"]
         if (to_cls in reroute_classes and
             from_cls in reroute_classes):
-                rerouted.append(link)
+            continue
         elif (to_cls in reroute_classes and not
             from_cls in reroute_classes):
-                rerouted.append(link)
+            continue
         elif (from_cls in reroute_classes and not
             to_cls in reroute_classes):
-                rerouted_starts.append(link)
+            # from_socket = find_reroute_start_socket(link.from_node)
+
+
+            from ..base_definitions import reroute_cache
+            from .node_common import GraphError
+            # We assume the cache is good, the tree is responsible for this
+            tree = link.from_node.id_data
+            tree_cache = reroute_cache.get(tree.name)
+            cache_item = tree_cache.get(link.from_node.name)
+            if not cache_item or not cache_item.source:
+                raise GraphError(f"There is a missing link in the tree at reroute node: {link.from_node.name}")
+            from_socket = tree.nodes[cache_item.source[0]].outputs[cache_item.source[1]]
+
+
+            new_link = DummyLink(from_socket=from_socket,
+                                to_socket=link.to_socket,
+                                from_mantis_node=None,
+                                to_mantis_node=None,
+                                multi_input_sort_id=link.multi_input_sort_id )
+            kept_links.append(new_link)
         else:
             kept_links.append(link)
-    for start in rerouted_starts:
-        from_socket = find_reroute_start_socket(start.from_node)
-        new_link = DummyLink(from_socket=from_socket,
-                             to_socket=start.to_socket,
-                             from_mantis_node=None,
-                             to_mantis_node=None,
-                             multi_input_sort_id=start.multi_input_sort_id )
-        kept_links.append(new_link)
     return kept_links
 
 def tree_from_mantis_node(sig, base_tree):
@@ -215,7 +231,7 @@ def do_relink(node, socket, map, in_out='INPUT', parent_name = ''):
                     if in_out == 'INPUT':
                         socket = find_reroute_start_socket(sub_val); sockets = [socket]
                     else:
-                        sockets = find_reroute_start_socket(sub_val, track="FORWARD")
+                        sockets = find_reroute_end_socket(sub_val)
                 for socket in sockets:
                     sock_type = socket.interface_type
                     name = unique_socket_name(node, socket, tree)
