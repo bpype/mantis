@@ -91,6 +91,6 @@ class GeometryLattice(PrimitiveNode):
         import bpy
         if not data:
             data = bpy.data.lattices.new( self.evaluate_input("Name") )
-        props_sockets = self.gen_property_socket_map()
+        props_sockets = self.property_socket_map
         evaluate_sockets(self, data, props_sockets)
         self.prepared = True; self.executed = True

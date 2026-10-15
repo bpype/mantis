@@ -612,7 +612,7 @@ class xFormGeometryObject(xFormNode):
         self.has_shape_keys = False
         # putting this in bTransformPass simply prevents it from being run more than once.
         # maybe I should do that with the rest of bPrepare, too.
-        props_sockets = self.gen_property_socket_map()
+        props_sockets = self.property_socket_map
         evaluate_sockets(self, self.bObject, props_sockets)
         self.executed = True
 

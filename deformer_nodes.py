@@ -263,7 +263,7 @@ class DeformerArmature(MantisDeformerNode):
                 raise RuntimeError(f"Modifier was not created in node {self} -- the object is invalid.")
             self.bObject.append(d)
             d.object = self.bGetParentArmature()
-            props_sockets = self.gen_property_socket_map()
+            props_sockets = self.property_socket_map
             evaluate_sockets(self, d, props_sockets)
             #
             if (skin_method := self.evaluate_input("Skinning Method")) == "AUTOMATIC_HEAT":
@@ -344,7 +344,7 @@ class DeformerHook(MantisDeformerNode):
         auto_bezier = self.evaluate_input("Auto-Bezier")
         target_node = self.evaluate_input('Hook Target')
         target = target_node.bGetObject(); subtarget = ""
-        props_sockets = self.gen_property_socket_map()
+        props_sockets = self.property_socket_map
         if isinstance(target, Bone) or isinstance(target, PoseBone):
             subtarget = target.name; target = target.id_data
         for xf in self.GetxForm():
@@ -694,7 +694,7 @@ class DeformerSurfaceDeform(MantisDeformerNode):
                 raise RuntimeError(f"Modifier was not created in node {self} -- the object is invalid.")
             self.bObject.append(d)
             self.get_target_and_subtarget(d, input_name="Target")
-            props_sockets = self.gen_property_socket_map()
+            props_sockets = self.property_socket_map
             evaluate_sockets(self, d, props_sockets)
 
     def bModifierApply(self, bContext=None):
@@ -725,7 +725,7 @@ class DeformerMeshDeform(MantisDeformerNode):
                 raise RuntimeError(f"Modifier was not created in node {self} -- the object is invalid.")
             self.bObject.append(d)
             self.get_target_and_subtarget(d, input_name="Object")
-            props_sockets = self.gen_property_socket_map()
+            props_sockets = self.property_socket_map
             evaluate_sockets(self, d, props_sockets)
 
     def bModifierApply(self, bContext=None):
@@ -756,7 +756,7 @@ class DeformerLatticeDeform(MantisDeformerNode):
                 raise RuntimeError(f"Modifier was not created in node {self} -- the object is invalid.")
             self.bObject.append(d)
             self.get_target_and_subtarget(d, input_name="Object")
-            props_sockets = self.gen_property_socket_map()
+            props_sockets = self.property_socket_map
             evaluate_sockets(self, d, props_sockets)
 
 class DeformerSmoothCorrectiveDeform(MantisDeformerNode):
@@ -783,5 +783,5 @@ class DeformerSmoothCorrectiveDeform(MantisDeformerNode):
                 raise RuntimeError(f"Modifier was not created in node {self} -- the object is invalid.")
             self.bObject.append(d)
             # self.get_target_and_subtarget(d, input_name="Object")
-            props_sockets = self.gen_property_socket_map()
+            props_sockets = self.property_socket_map
             evaluate_sockets(self, d, props_sockets)

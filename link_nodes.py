@@ -69,7 +69,10 @@ class MantisLinkNode(MantisNode):
             return super().evaluate_input(input_name, index)
 
     def gen_property_socket_map(self) -> dict:
-        props_sockets = super().gen_property_socket_map()
+        if self.property_socket_map:
+            props_sockets = self.property_socket_map.copy()
+        else:
+            props_sockets = super().gen_property_socket_map()
         if (os := self.inputs.get("Owner Space")) and os.is_connected:
             node_line, _last_socket = trace_single_line(self, "Owner Space")
             for other_node in node_line:
@@ -281,10 +284,14 @@ class LinkTransformation(MantisLinkNode):
                 c.name = constraint_name
             self.bObject.append(c)
             self.set_custom_space()
-            props_sockets = self.gen_property_socket_map()
+            # TODO: this can be cached I just need a custom
+            #  gen_property_socket_map for this class.
+            from copy import deepcopy
+            props_sockets = self.gen_property_socket_map().copy()
             # we have to fix the blender-property for scale/rotation
             # because Blender stores these separately.
             # I do not care that this code is ugly.
+            # TODO this should be handled by the socket templates
             from_suffix, to_replace = '', ''
             if self.evaluate_input("Map From") == 'ROTATION':
                 from_suffix='_rot'

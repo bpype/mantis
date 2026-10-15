@@ -928,6 +928,7 @@ class MantisNode:
         )
     node_type = 'UNINITIALIZED'
     socket_templates = None
+    property_socket_map = {}
     def __init__(self, signature : tuple,
                  base_tree : bpy.types.NodeTree,
                  socket_templates : list[MantisSocketTemplate]=[],
@@ -1008,12 +1009,14 @@ class MantisNode:
         for key, value in additional_parameters.items():
             self.parameters[key]=value
 
-    def gen_property_socket_map(self, prop_owner_group=None) -> dict:
+    # We really only need to do this once at class registration
+    @classmethod
+    def gen_property_socket_map(cls, prop_owner_group=None) -> dict:
         from .mantis_dataclasses import MantisSocketFiller
         from dataclasses import replace
         from bpy.app import version as bpy_version
         props_sockets = {}
-        for s_template in self.socket_templates:
+        for s_template in cls.socket_templates:
             if s_template.min_bpy_version:
                 if bpy_version < s_template.min_bpy_version:
                     prPurple(f"Skipping socket {s_template.name} because "
@@ -1038,6 +1041,7 @@ class MantisNode:
                     filler.default_value = s_template.default_value[index]
                     filler.combo_property=True
                     props_sockets[sub_prop]= filler
+        cls.property_socket_map = props_sockets
         return props_sockets
 
     def set_traverse(self, traversal_pairs = [(str, str)]) -> None:

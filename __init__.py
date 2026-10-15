@@ -473,6 +473,13 @@ def register():
     # I'm adding mine in first to ensure other addons don't mess up mine
     # but I am a good citizen! so my addon won't mess up yours! probably...
 
+    # Now it is time to pre-cache stuff for Mantis
+    from .base_definitions import MantisNode
+    mantis_classes = [cls for cls in classes if isinstance(cls, MantisNode)]
+    for cls in mantis_classes:
+        # Set up the property socket map cache
+        cls.gen_property_socket_map()
+
 
 def unregister():
     bpy.types.NODE_MT_context_menu.remove(node_context_menu_draw)
