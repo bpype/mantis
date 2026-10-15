@@ -14,7 +14,8 @@ xFormArmatureSockets=[
         name="Matrix", is_input=True,  bl_idname='MatrixSocket',
             blender_property='matrix_world' ),
     RelationshipInTemplate := SockTemplate(
-        name="Relationship", is_input=True,  bl_idname='RelationshipSocket', ),
+        name="Relationship", is_input=True,  bl_idname='RelationshipSocket',
+        traverse_target='xForm Out' ),
     ArmatureDisplayType := SockTemplate(name='Display Type', category='Display',
         default_value='OCTAHEDRAL', blender_property='display_type',
         min_bpy_version=(4,5,0), bl_idname='EnumArmatureDisplayType',  is_input=True,),
@@ -22,7 +23,8 @@ xFormArmatureSockets=[
         name="Custom Properties", is_input=True,  bl_idname='CustomPropSocket',
             use_multi_input=True, is_animatable=False, ),
     xFormOutTemplate := SockTemplate(
-        name="xForm Out", is_input=False,  bl_idname='xFormSocket', ),
+        name="xForm Out", is_input=False,  bl_idname='xFormSocket', 
+        traverse_target='Relationship' ),
 ]
 
 xFormGeometryObjectSockets=[
@@ -76,7 +78,7 @@ xFormCurvePinSockets = [
         name="Display Size", is_input=True,  bl_idname='FloatPositiveSocket',
         default_value=0.05, blender_property='empty_display_size'),
     CustomPropsTemplate,
-    xFormOutTemplate,
+    replace(xFormOutTemplate, traverse_target = None)
 ]
 
 xFormGetBoneSockets = [

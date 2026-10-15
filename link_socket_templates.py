@@ -6,7 +6,8 @@ from .misc_nodes_socket_templates import SplineIndexTemplate
 # Socket Templates we will reuse:
 # inputs:
 InputRelationshipTemplate : SockTemplate = SockTemplate(
-    name="Input Relationship", is_input=True,  bl_idname='RelationshipSocket', )
+    name="Input Relationship", is_input=True,  bl_idname='RelationshipSocket',
+    traverse_target='Output Relationship')
 TargetTemplate : SockTemplate = SockTemplate(
     name="Target", is_input=True,  bl_idname='xFormSocket', )
 Head_Tail_Template : SockTemplate = SockTemplate(
@@ -78,7 +79,8 @@ TrackAxisTemplate= SockTemplate(name="Track Axis", bl_idname="EnumTrackAxis",
 
 # outputs:
 OutputRelationshipTemplate : SockTemplate = SockTemplate(
-    name="Output Relationship", is_input=False,  bl_idname='RelationshipSocket', )
+    name="Output Relationship", is_input=False,  bl_idname='RelationshipSocket',
+    traverse_target='Input Relationship')
 
 
 LinkInheritSockets = [
@@ -88,8 +90,10 @@ LinkInheritSockets = [
                  bl_idname='EnumInheritScale',    default_value="FULL",),
     SockTemplate(name="Connected",        is_input=True,
                  bl_idname='BooleanSocket',       default_value=False,),
-    SockTemplate(name="Parent",           is_input=True,   bl_idname='xFormSocket',),
-    SockTemplate(name="Inheritance",      is_input=False,  bl_idname='RelationshipSocket',),
+    SockTemplate(name="Parent",           is_input=True,   bl_idname='xFormSocket',
+                 traverse_target='Inheritance'),
+    SockTemplate(name="Inheritance",      is_input=False,  bl_idname='RelationshipSocket',
+                 traverse_target='Parent'),
 ]
 
 
@@ -206,7 +210,7 @@ LinkTransformationSockets = [
     OutputRelationshipTemplate,
 ]
 
-LinkLimitLocationScaleSockets = [
+LinkLimitLocationSockets = [
     InputRelationshipTemplate,
     *LimitAxesSocketTemplates, # we generated these ahead of time in a list
     AffectTransformTemplate,
@@ -226,7 +230,7 @@ LinkLimitRotationSockets = [
     OutputRelationshipTemplate,
 ]
 
-LinkLimitLocationScaleSockets = [
+LinkLimitScaleSockets = [
     InputRelationshipTemplate,
     *LimitAxesSocketTemplates, # we generated these ahead of time in a list
     AffectTransformTemplate,

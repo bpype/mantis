@@ -26,11 +26,10 @@ DeformArmatureSockets = [
                            blender_property='use_bone_envelopes'),
     UseVertexGroups := ST(name="Use Vertex Groups", bl_idname="BooleanSocket", is_input=True, default_value=True,
                            blender_property='use_vertex_groups'),
-    DeformerInput := ST(name="Deformer", bl_idname="DeformerSocket", is_input=True),
+    DeformerInput := ST(name="Deformer", bl_idname="DeformerSocket", is_input=True, traverse_target='Deformer'),
     CopySkinWeightsFrom := ST(name="Copy Skin Weights From", bl_idname="xFormSocket", is_input=True, hide=True),
     SkinningMethod := ST(name="Skinning Method", bl_idname="EnumSkinning", is_input=True),
-    DeformerOutput := ST(name="Deformer", bl_idname="DeformerSocket", is_input=False),
-
+    DeformerOutput := ST(name="Deformer", bl_idname="DeformerSocket", is_input=False, traverse_target='Deformer'),
 ]
 
 HookSockets= [

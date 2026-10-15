@@ -69,8 +69,10 @@ def set_object_parent(node):
 class xFormNode(MantisNode):
     __slots__ = ()
     node_type = 'XFORM'
-    def __init__(self, signature, base_tree, socket_templates=[]):
-        super().__init__(signature, base_tree, socket_templates)
+    def __init__(self, signature, base_tree, socket_templates=[],
+                 additional_parameters={}):
+        super().__init__(signature, base_tree, socket_templates,
+                         additional_parameters)
         self.bObject=None
 
     # because new objects are created during prep phase
@@ -158,11 +160,10 @@ class xFormNode(MantisNode):
 class xFormArmature(xFormNode):
     '''A node representing an armature object'''
     __slots__ = ()
+    socket_templates = xFormArmatureSockets
 
     def __init__(self, signature, base_tree):
-        super().__init__(signature, base_tree, xFormArmatureSockets)
-        self.init_parameters()
-        self.set_traverse([("Relationship", "xForm Out")])
+        super().__init__(signature, base_tree, self.socket_templates)
         setup_custom_property_inputs_outputs(self)
 
     def bPrepare(self, bContext=None):
@@ -279,15 +280,10 @@ class xFormArmature(xFormNode):
 class xFormBone(xFormNode):
     '''A node representing a bone in an armature'''
     __slots__ = ()
+    socket_templates = xFormBoneSockets
     # DO: make a way to identify which armature this belongs to
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, xFormBoneSockets)
-        # TODO: implement socket templates completely for Bone
-        # currently it is waiting on BBone and refactoring/cleanup.
-        # the socket templates are being used now but not for mantis node execution.
-        # because of edit/pose/objcet bone this will be a bit complex
-        self.init_parameters()
-        self.set_traverse([("Relationship", "xForm Out")])
         setup_custom_property_inputs_outputs(self)
 
     def bGetParentArmature(self):
@@ -528,11 +524,9 @@ class xFormBone(xFormNode):
 class xFormGeometryObject(xFormNode):
     '''A node representing an armature object'''
     __slots__ = ("has_shape_keys")
+    socket_templates = xFormGeometryObjectSockets
     def __init__(self, signature, base_tree):
-        super().__init__(signature, base_tree, xFormGeometryObjectSockets)
-        self.init_parameters()
-        self.set_traverse([("Relationship", "xForm Out")])
-        self.has_shape_keys = False
+        super().__init__(signature, base_tree, self.socket_templates)
         setup_custom_property_inputs_outputs(self)
 
     def bPrepare(self, bContext = None,):
@@ -640,12 +634,10 @@ class xFormGeometryObject(xFormNode):
 class xFormObjectInstance(xFormNode):
     """Represents an instance of an existing geometry object."""
     __slots__ = ("has_shape_keys")
+    socket_templates = xFormGeometryObjectInstanceSockets
+
     def __init__(self, signature, base_tree):
-        super().__init__(signature, base_tree, xFormGeometryObjectInstanceSockets)
-        self.init_parameters()
-        # TODO: I think this field is a leftover from a test or something. see if it can be removed.
-        self.links = {} # leave this empty for now!
-        self.set_traverse([("Relationship", "xForm Out")])
+        super().__init__(signature, base_tree, self.socket_templates)
         self.has_shape_keys = False # Shape Keys will make a dupe so this is OK
         setup_custom_property_inputs_outputs(self)
 
@@ -740,9 +732,10 @@ class xFormObjectInstance(xFormNode):
 class xFormCurvePin(xFormNode):
     """An xForm pinned to a specific location on a curve."""
     __slots__ = ()
+    socket_templates = xFormCurvePinSockets
     def __init__(self, signature, base_tree):
-        super().__init__(signature, base_tree,xFormCurvePinSockets)
-        self.init_parameters(additional_parameters={"Matrix":None})
+        super().__init__(signature, base_tree, self.socket_templates,
+            additional_parameters={"Matrix":None})
         setup_custom_property_inputs_outputs(self)
 
     def prep_driver_values(self, constraint):
@@ -881,9 +874,9 @@ class xFormCurvePin(xFormNode):
 class xFormGetBone(xFormNode):
     """Represents an instance of an existing geometry object."""
     __slots__ = ()
+    socket_templates = xFormGetBoneSockets
     def __init__(self, signature, base_tree):
-        super().__init__(signature, base_tree, xFormGetBoneSockets)
-        self.init_parameters()
+        super().__init__(signature, base_tree, self.socket_templates)
         # this is just a getter
         self.prepared=True; self.executed=True; self.execution_prepared=True
     

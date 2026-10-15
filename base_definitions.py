@@ -923,13 +923,15 @@ class MantisNode:
         "hierarchy_dependencies", "dependencies",
         "unmet_hierarchy_dependency_count",
         "prepared", "executed", "execution_prepared",
-        "socket_templates", "mContext",
+        "mContext",
         "is_schema_prototype"
         )
-    node_type='UNINITIALIZED'
+    node_type = 'UNINITIALIZED'
+    socket_templates = None
     def __init__(self, signature : tuple,
                  base_tree : bpy.types.NodeTree,
-                 socket_templates : list[MantisSocketTemplate]=[],):
+                 socket_templates : list[MantisSocketTemplate]=[],
+                 additional_parameters :dict = {}, ):
         self.base_tree=base_tree
         self.signature = signature
         self.ui_signature = signature
@@ -943,7 +945,6 @@ class MantisNode:
         self.execution_prepared = False
         # execution_prepared is for tracking prep state in execution, so that I can avoid preparing nodes
         #  again without changing the readtree code much.
-        self.socket_templates = socket_templates
         self.mContext = None # for now I am gonna set this at runtime
         self.is_schema_prototype = False
         # I know it isn't "beautiful OOP" or whatever, but it is just easier
@@ -951,7 +952,7 @@ class MantisNode:
         # in the future I can refactor it, but it will require changes to 100+
         #  classes, instead of adding about 5 lines of code elsewhere.
         if self.socket_templates:
-            self.init_sockets()
+            self.init_sockets( additional_parameters )
 
     @property
     def name(self):
@@ -968,19 +969,36 @@ class MantisNode:
         self.executed = False
         self.execution_prepared = False
 
-    def init_sockets(self) -> None:
+    def init_sockets(self, additional_parameters : dict = {}) -> None:
         # Formerly I was doing this:
         # self.inputs.init_sockets(self.socket_templates)
         # self.outputs.init_sockets(self.socket_templates)
         # Since doing each one causes some redundancy, we'll just reimplement it
         # This is a highly used and therefore expensive function so we have to make small
         # optimizations like this, even tho it is ugly.
+        traverse_in, traverse_out = {}, {}
         for socket in self.socket_templates:
+            if socket.traverse_target:
+                if socket.is_input:
+                    traverse_in[socket.name] = socket.traverse_target
+                else:
+                    traverse_out[socket.name] = socket.traverse_target
             if socket.ui_only == True: continue # used in UI but not in generation
             if socket.is_input:
-                self.inputs[socket.name] = NodeSocket(is_input=True, name=socket.name, node=self)
+                self.inputs[socket.name] = NodeSocket(is_input=True, name=socket.name,
+                                    node=self,)
             else:
-                self.outputs[socket.name] = NodeSocket(is_input=False, name=socket.name, node=self)
+                self.outputs[socket.name] = NodeSocket(is_input=False, name=socket.name,
+                                    node=self,)
+            self.parameters[socket.name] = None
+        for traverse_owner, traverse_target in traverse_in.items():
+            self.inputs[traverse_owner].traverse_target = self.outputs[traverse_target]
+            self.inputs[traverse_owner].can_traverse = True
+        for traverse_owner, traverse_target in traverse_out.items():
+            self.outputs[traverse_owner].traverse_target = self.inputs[traverse_target]
+            self.outputs[traverse_owner].can_traverse = True
+        for key, value in additional_parameters.items():
+            self.parameters[key]=value
 
     def init_parameters(self, additional_parameters = {}) -> None:
         for socket in self.inputs:

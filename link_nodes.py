@@ -45,9 +45,9 @@ class MantisLinkNode(MantisNode):
     __slots__ = ()
     node_type = 'LINK'
     def __init__(self, signature : tuple,
-                 base_tree : NodeTree,
-                 socket_templates : list[SockTemplate]=[]):
-        super().__init__(signature, base_tree, socket_templates)
+                 base_tree : NodeTree,):
+        super().__init__(signature, base_tree, self.socket_templates,
+                         additional_parameters={'Name':None})
         self.prepared = True; self.bObject=[]
 
     def bTransformPass(self, bContext=None):
@@ -138,11 +138,8 @@ class MantisLinkNode(MantisNode):
 class LinkInherit(MantisLinkNode):
     '''A node representing inheritance'''
     __slots__ = ()
+    socket_templates = LinkInheritSockets
 
-    def __init__(self, signature, base_tree):
-        super().__init__(signature, base_tree, LinkInheritSockets)
-        self.init_parameters()
-        self.set_traverse([('Parent', 'Inheritance')])
 
     def bTransformPass(self, bContext=None):
         parent_xForm_info = get_parent_xForm_info(self, 'Parent')
@@ -159,13 +156,8 @@ class LinkInherit(MantisLinkNode):
 
 class LinkCopyLocation(MantisLinkNode):
     '''A node representing Copy Location'''
-
-    def __init__(self, signature : tuple,
-                 base_tree : NodeTree,):
-        super().__init__(signature, base_tree, LinkCopyLocationSockets)
-        additional_parameters = { "Name":None }
-        self.init_parameters(additional_parameters=additional_parameters)
-        self.set_traverse([("Input Relationship", "Output Relationship")])
+    __slots__ = ()
+    socket_templates = LinkCopyLocationSockets
 
     def bRelationshipPass(self, context):
         prepare_parameters(self)
@@ -186,12 +178,7 @@ class LinkCopyLocation(MantisLinkNode):
 class LinkCopyRotation(MantisLinkNode):
     '''A node representing Copy Rotation'''
     __slots__ = ()
-
-    def __init__(self, signature, base_tree):
-        super().__init__(signature, base_tree, LinkCopyRotationSockets)
-        additional_parameters = { "Name":None }
-        self.init_parameters(additional_parameters=additional_parameters)
-        self.set_traverse([("Input Relationship", "Output Relationship")])
+    socket_templates = LinkCopyRotationSockets
 
     def bRelationshipPass(self, context):
         prepare_parameters(self)
@@ -221,12 +208,7 @@ class LinkCopyRotation(MantisLinkNode):
 class LinkCopyScale(MantisLinkNode):
     '''A node representing Copy Scale'''
     __slots__ = ()
-
-    def __init__(self, signature, base_tree):
-        super().__init__(signature, base_tree, LinkCopyScaleSockets)
-        additional_parameters = { "Name":None }
-        self.init_parameters(additional_parameters=additional_parameters)
-        self.set_traverse([("Input Relationship", "Output Relationship")])
+    socket_templates = LinkCopyScaleSockets
 
     def bRelationshipPass(self, context):
         prepare_parameters(self)
@@ -248,12 +230,7 @@ class LinkCopyScale(MantisLinkNode):
 class LinkCopyTransforms(MantisLinkNode):
     '''A node representing Copy Transfoms'''
     __slots__ = ()
-
-    def __init__(self, signature, base_tree):
-        super().__init__(signature, base_tree, LinkCopyTransformsSockets)
-        additional_parameters = { "Name":None }
-        self.init_parameters(additional_parameters=additional_parameters)
-        self.set_traverse([("Input Relationship", "Output Relationship")])
+    socket_templates = LinkCopyTransformsSockets
 
     def bRelationshipPass(self, context):
         prepare_parameters(self)
@@ -274,11 +251,7 @@ class LinkCopyTransforms(MantisLinkNode):
 class LinkTransformation(MantisLinkNode):
     '''A node representing Copy Transfoms'''
     __slots__ = ()
-
-    def __init__(self, signature, base_tree):
-        super().__init__(signature, base_tree, LinkTransformationSockets)
-        self.init_parameters(additional_parameters={"Name":None })
-        self.set_traverse([("Input Relationship", "Output Relationship")])
+    socket_templates = LinkTransformationSockets
 
     def ui_modify_socket(self, ui_socket, socket_name=None):
         from_suffix, to_suffix = '', ''
@@ -346,10 +319,7 @@ class LinkTransformation(MantisLinkNode):
 
 class LinkLimitLocation(MantisLinkNode):
     __slots__ = ()
-    def __init__(self, signature, base_tree):
-        super().__init__(signature, base_tree, LinkLimitLocationScaleSockets)
-        self.init_parameters(additional_parameters={ "Name":None })
-        self.set_traverse([("Input Relationship", "Output Relationship")])
+    socket_templates = LinkLimitLocationSockets
 
     def bRelationshipPass(self, context):
         prepare_parameters(self)
@@ -368,10 +338,7 @@ class LinkLimitLocation(MantisLinkNode):
 
 class LinkLimitRotation(MantisLinkNode):
     __slots__ = ()
-    def __init__(self, signature, base_tree):
-        super().__init__(signature, base_tree, LinkLimitRotationSockets)
-        self.init_parameters(additional_parameters={ "Name":None })
-        self.set_traverse([("Input Relationship", "Output Relationship")])
+    socket_templates = LinkLimitRotationSockets
 
     def bRelationshipPass(self, context):
         prepare_parameters(self)
@@ -391,10 +358,7 @@ class LinkLimitRotation(MantisLinkNode):
 
 class LinkLimitScale(MantisLinkNode):
     __slots__ = ()
-    def __init__(self, signature, base_tree):
-        super().__init__(signature, base_tree, LinkLimitLocationScaleSockets)
-        self.init_parameters(additional_parameters={ "Name":None })
-        self.set_traverse([("Input Relationship", "Output Relationship")])
+    socket_templates = LinkLimitScaleSockets
 
     def bRelationshipPass(self, context):
         prepare_parameters(self)
@@ -414,10 +378,7 @@ class LinkLimitScale(MantisLinkNode):
 
 class LinkLimitDistance(MantisLinkNode):
     __slots__ = ()
-    def __init__(self, signature, base_tree):
-        super().__init__(signature, base_tree, LinkLimitDistanceSockets)
-        self.init_parameters(additional_parameters={ "Name":None })
-        self.set_traverse([("Input Relationship", "Output Relationship")])
+    socket_templates = LinkLimitDistanceSockets
 
     def bRelationshipPass(self, context):
         prepare_parameters(self)
@@ -439,10 +400,7 @@ class LinkLimitDistance(MantisLinkNode):
 
 class LinkStretchTo(MantisLinkNode):
     __slots__ = ()
-    def __init__(self, signature, base_tree):
-        super().__init__(signature, base_tree, LinkStretchToSockets)
-        self.init_parameters(additional_parameters={ "Name":None })
-        self.set_traverse([("Input Relationship", "Output Relationship")])
+    socket_templates = LinkStretchToSockets
 
     def bRelationshipPass(self, context):
         prepare_parameters(self)
@@ -465,11 +423,8 @@ class LinkStretchTo(MantisLinkNode):
 
 class LinkDampedTrack(MantisLinkNode):
     __slots__ = ()
-    def __init__(self, signature, base_tree):
-        super().__init__(signature, base_tree, LinkDampedTrackSockets)
-        self.init_parameters(additional_parameters={ "Name":None })
-        self.set_traverse([("Input Relationship", "Output Relationship")])
-
+    socket_templates = LinkDampedTrackSockets
+    
     def bRelationshipPass(self, context):
         prepare_parameters(self)
         for xf in self.GetxForm():
@@ -487,10 +442,7 @@ class LinkDampedTrack(MantisLinkNode):
 
 class LinkLockedTrack(MantisLinkNode):
     __slots__ = ()
-    def __init__(self, signature, base_tree):
-        super().__init__(signature, base_tree,LinkLockedTrackSockets)
-        self.init_parameters(additional_parameters={"Name":None })
-        self.set_traverse([("Input Relationship", "Output Relationship")])
+    socket_templates = LinkLockedTrackSockets
 
     def bRelationshipPass(self, context):
         prepare_parameters(self)
@@ -509,10 +461,7 @@ class LinkLockedTrack(MantisLinkNode):
 
 class LinkTrackTo(MantisLinkNode):
     __slots__ = ()
-    def __init__(self, signature, base_tree):
-        super().__init__(signature, base_tree, LinkTrackToSockets)
-        self.init_parameters(additional_parameters={"Name":None })
-        self.set_traverse([("Input Relationship", "Output Relationship")])
+    socket_templates = LinkTrackToSockets
 
     def bRelationshipPass(self, context):
         prepare_parameters(self)
@@ -531,10 +480,7 @@ class LinkTrackTo(MantisLinkNode):
 
 class LinkInheritConstraint(MantisLinkNode):
     __slots__ = ()
-    def __init__(self, signature, base_tree):
-        super().__init__(signature, base_tree, LinkInheritConstraintSockets)
-        self.init_parameters(additional_parameters={"Name":None })
-        self.set_traverse([("Input Relationship", "Output Relationship")])
+    socket_templates = LinkInheritConstraintSockets
 
     def bRelationshipPass(self, context):
         prepare_parameters(self)
@@ -555,10 +501,7 @@ class LinkInheritConstraint(MantisLinkNode):
 
 class LinkInverseKinematics(MantisLinkNode):
     __slots__ = ()
-    def __init__(self, signature, base_tree):
-        super().__init__(signature, base_tree, LinkInverseKinematicsSockets)
-        self.init_parameters(additional_parameters={"Name":None })
-        self.set_traverse([("Input Relationship", "Output Relationship")])
+    socket_templates = LinkInverseKinematicsSockets
 
     def get_base_ik_bone(self, ik_bone):
         chain_length : int = (self.evaluate_input("Chain Length"))
@@ -735,7 +678,6 @@ class LinkInverseKinematics(MantisLinkNode):
                     constraint.mute = enabled_before
         super().bFinalize(bContext)
 
-
 def ik_report_error(pb, context, do_print=False):
     dg = context.view_layer.depsgraph
     dg.update()
@@ -755,12 +697,9 @@ def ik_report_error(pb, context, do_print=False):
 
 # This is kinda a weird design decision?
 class LinkDrivenParameter(MantisLinkNode):
-    __slots__ = ()
     '''A node representing an armature object'''
-    def __init__(self, signature, base_tree):
-        super().__init__(signature, base_tree, LinkDrivenParameterSockets)
-        self.init_parameters(additional_parameters={ "Name":None })
-        self.set_traverse([("Input Relationship", "Output Relationship")])
+    __slots__ = ()
+    socket_templates = LinkDrivenParameterSockets
 
     def bRelationshipPass(self, bContext = None,):
         prepare_parameters(self)
@@ -814,12 +753,7 @@ class LinkDrivenParameter(MantisLinkNode):
 class LinkArmature(MantisLinkNode):
     '''A node representing an armature object'''
     __slots__ = ()
-
-    def __init__(self, signature, base_tree,):
-        super().__init__(signature, base_tree, LinkArmatureSockets)
-        self.init_parameters(additional_parameters={"Name":None })
-        self.set_traverse([("Input Relationship", "Output Relationship")])
-        setup_custom_property_inputs_outputs(self) # <-- this takes care of the runtime-added sockets
+    socket_templates = LinkArmatureSockets
 
     def bRelationshipPass(self, bContext = None,):
         prepare_parameters(self)
@@ -867,11 +801,7 @@ class LinkArmature(MantisLinkNode):
 class LinkSplineIK(MantisLinkNode):
     '''A node representing an armature object'''
     __slots__ = ()
-
-    def __init__(self, signature, base_tree):
-        super().__init__(signature, base_tree, LinkSplineIKSockets)
-        self.init_parameters(additional_parameters={"Name":None })
-        self.set_traverse([("Input Relationship", "Output Relationship")])
+    socket_templates = LinkSplineIKSockets
 
     def bRelationshipPass(self, bContext = None,):
         prepare_parameters(self)
@@ -906,11 +836,7 @@ class LinkSplineIK(MantisLinkNode):
 class LinkFloor(MantisLinkNode):
     '''A node representing an armature object'''
     __slots__ = ()
-
-    def __init__(self, signature, base_tree,):
-        super().__init__(signature, base_tree, LinkFloorSockets)
-        self.init_parameters(additional_parameters={"Name":None })
-        self.set_traverse([("Input Relationship", "Output Relationship")])
+    socket_templates = LinkFloorSockets
 
     def bRelationshipPass(self, bContext = None,):
         prepare_parameters(self)
@@ -931,10 +857,7 @@ class LinkFloor(MantisLinkNode):
 class LinkShrinkWrap(MantisLinkNode):
     '''A node representing a shrinkwrap relationship.'''
     __slots__ = ()
-    def __init__(self, signature, base_tree,):
-        super().__init__(signature, base_tree, LinkShrinkWrapSockets)
-        self.init_parameters(additional_parameters={"Name":None })
-        self.set_traverse([("Input Relationship", "Output Relationship")])
+    socket_templates = LinkShrinkWrapSockets
 
     def bRelationshipPass(self, bContext = None,):
         prepare_parameters(self)
@@ -956,10 +879,7 @@ class LinkShrinkWrap(MantisLinkNode):
 class LinkGeometryAttribute(MantisLinkNode):
     '''A node representing a geometry attribute relationship.'''
     __slots__ = ()
-    def __init__(self, signature, base_tree,):
-        super().__init__(signature, base_tree, LinkGeometryAttributeSockets)
-        self.init_parameters(additional_parameters={"Name":None })
-        self.set_traverse([("Input Relationship", "Output Relationship")])
+    socket_templates = LinkGeometryAttributeSockets
 
     def bRelationshipPass(self, bContext = None,):
         from bpy.app import version

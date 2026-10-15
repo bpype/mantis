@@ -5,7 +5,7 @@ from typing import List, Any, Tuple, Optional
 class MantisSocketTemplate():
     name             : str = field(default="")
     bl_idname        : str = field(default="")
-    traverse_target  : str = field(default="")
+    traverse_target  : Optional[str] = field(default=None)
     identifier       : str = field(default="")
     display_shape    : str = field(default="") # for arrays
     category         : str = field(default="") # for use in display update

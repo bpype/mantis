@@ -30,7 +30,6 @@ def schema_init_sockets(mantis_node, is_input = True, in_out='INPUT', category='
             if item.parent and read_schema_type(item) == category:
                 if item.in_out == in_out:
                     sockets[item.name] = NodeSocket(is_input=is_input, name=item.name, node=mantis_node)
-    mantis_node.init_parameters()
 
 
 class SchemaNode(MantisNode):
@@ -50,12 +49,11 @@ class SchemaNode(MantisNode):
 
 class SchemaIndex(SchemaNode):
     __slots__ = ()
-    def __init__(self, signature, base_tree):
-        super().__init__(signature, base_tree, SchemaIndexSockets)
-        self.init_parameters()
+    socket_templates = SchemaIndexSockets
 
 class SchemaArrayInput(SchemaNode):
     __slots__ = ()
+    socket_templates = None
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree)
         schema_init_sockets(self, is_input=False, in_out='INPUT', category='Array')
@@ -63,24 +61,28 @@ class SchemaArrayInput(SchemaNode):
 
 class SchemaArrayInputGet(SchemaNode):
     __slots__ = ()
+    socket_templates = None
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, SchemaArrayInputGetSockets)
         schema_init_sockets(self, is_input=False, in_out='INPUT', category='Array')
 
 class SchemaArrayInputAll(SchemaNode):
     __slots__ = ()
+    socket_templates = None
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree)
         schema_init_sockets(self, is_input=False, in_out='INPUT', category='Array')
 
 class SchemaArrayOutput(SchemaNode):
     __slots__ = ()
+    socket_templates = None
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree)
         schema_init_sockets(self, is_input=True, in_out='OUTPUT', category='Array')
 
 class SchemaConstInput(SchemaNode):
     __slots__ = ()
+    socket_templates = None
     def __init__(self, signature, base_tree, parent_schema_node=None):
         super().__init__(signature, base_tree)
         if parent_schema_node:
@@ -92,14 +94,13 @@ class SchemaConstInput(SchemaNode):
                 if item.item_type == 'PANEL': continue
                 if item.in_out == 'INPUT':
                     sockets[item.name] = NodeSocket(is_input=False, node=self, name=item.name)
-            self.init_parameters()
-            
         else:
             schema_init_sockets(self, is_input=False, in_out='INPUT', category='Constant')
 
 
 class SchemaConstOutput(SchemaNode):
     __slots__ = ()
+    socket_templates = None
     def __init__(self, signature, base_tree, parent_schema_node=None):
         super().__init__(signature, base_tree)
         sockets=self.inputs
@@ -112,7 +113,6 @@ class SchemaConstOutput(SchemaNode):
                 if item.item_type == 'PANEL': continue
                 if item.in_out == 'OUTPUT':
                     sockets[item.name] = NodeSocket(is_input=False, node=self, name=item.name)
-            self.init_parameters()
             self.parameters['Expose at Index"']=1
 
         else:
@@ -122,6 +122,7 @@ class SchemaConstOutput(SchemaNode):
         
 class SchemaOutgoingConnection(SchemaNode):
     __slots__ = ()
+    socket_templates = None
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree)
         schema_init_sockets(self, is_input=True, in_out='INPUT', category='Connection')

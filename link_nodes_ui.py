@@ -183,7 +183,7 @@ class LinkLimitLocationNode(Node, LinkNode):
     bl_icon = 'CON_LOCLIMIT'
     mantis_node_class_name=bl_idname
     category_color=linkTransformColor
-    socket_templates = LinkLimitLocationScaleSockets
+    socket_templates = LinkLimitLocationSockets
 
 class LinkLimitScaleNode(Node, LinkNode):
     '''A node representing Limit Scale'''
@@ -192,7 +192,7 @@ class LinkLimitScaleNode(Node, LinkNode):
     bl_icon = 'CON_SIZELIMIT'
     mantis_node_class_name=bl_idname
     category_color=linkTransformColor
-    socket_templates = LinkLimitLocationScaleSockets
+    socket_templates = LinkLimitScaleSockets
 
 class LinkLimitRotationNode(Node, LinkNode):
     '''A node representing Limit Rotation'''

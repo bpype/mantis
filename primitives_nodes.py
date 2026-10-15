@@ -1,5 +1,6 @@
 from .utilities.node_common import *
 from .base_definitions import MantisNode, NodeSocket
+from .primitives_sockets import *
 
 def TellClasses():
     return [
@@ -16,8 +17,10 @@ class PrimitiveNode(MantisNode):
     __slots__ = ()
     node_type = "UTILITY"
     
-    def __init__(self, signature, base_tree, socket_templates=[]):
-        super().__init__(signature, base_tree, socket_templates)
+    def __init__(self, signature, base_tree, socket_templates=[],
+                 additional_parameters = {}):
+        super().__init__(signature, base_tree, socket_templates,
+                         additional_parameters)
         self.prepared = True
     
     def reset_execution(self):
@@ -27,21 +30,7 @@ class PrimitiveNode(MantisNode):
 class CirclePrimitive(PrimitiveNode):
     '''A node representing a Circle Primitive mesh'''
     __slots__ = ()
-
-    def __init__(self, signature, base_tree):
-        super().__init__(signature, base_tree)
-        inputs = [
-          "Name",
-          "Radius",
-          "Number of Points",
-        ]
-        outputs = [
-          "Circle",
-        ]
-        additional_parameters = {}
-        self.inputs.init_sockets(inputs)
-        self.outputs.init_sockets(outputs)
-        self.init_parameters(additional_parameters=additional_parameters)
+    socket_templates = CirclePrimitiveSockets
 
     # mode is unused but needed for interface consistency
     def bGetObject(self, mode=''):
@@ -79,10 +68,10 @@ from .primitives_sockets import LatticeSockets
 class GeometryLattice(PrimitiveNode):
     '''A node representing a Circle Primitive mesh'''
     __slots__ = ()
+    socket_templates = LatticeSockets
 
     def __init__(self, signature, base_tree):
-        super().__init__(signature, base_tree, LatticeSockets)
-        self.init_parameters(additional_parameters= {})
+        super().__init__(signature, base_tree, self.socket_templates)
         self.prepared = False
 
     def reset_execution(self):

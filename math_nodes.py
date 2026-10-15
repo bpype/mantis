@@ -53,10 +53,8 @@ def math_operation(operation, a, b):
 class MathStaticInt(MantisNode):
     '''A node representing an integer math operation'''
     __slots__ = ()
+    socket_templates = StaticIntSockets
     node_type = "UTILITY"
-    def __init__(self, signature, base_tree):
-        super().__init__(signature, base_tree, StaticIntSockets)
-        self.init_parameters()
 
     def bPrepare(self, bContext = None,):
         a = self.evaluate_input("Int A"); b = self.evaluate_input("Int B")
@@ -67,10 +65,8 @@ class MathStaticInt(MantisNode):
 class MathStaticFloat(MantisNode):
     '''A node representing a float math operation'''
     __slots__ = ()
+    socket_templates = StaticFloatSockets
     node_type = "UTILITY"
-    def __init__(self, signature, base_tree):
-        super().__init__(signature, base_tree, StaticFloatSockets)
-        self.init_parameters()
 
     def bPrepare(self, bContext = None,):
         a = self.evaluate_input("Float A"); b = self.evaluate_input("Float B")
@@ -81,10 +77,8 @@ class MathStaticFloat(MantisNode):
 class MathStaticVector(MantisNode):
     '''A node representing a vector math operation'''
     __slots__ = ()
+    socket_templates = StaticVectorSockets
     node_type = "UTILITY"
-    def __init__(self, signature, base_tree):
-        super().__init__(signature, base_tree, StaticVectorSockets)
-        self.init_parameters()
 
     def bPrepare(self, bContext = None,):
         from mathutils import Vector

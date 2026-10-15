@@ -119,8 +119,8 @@ class NoOpNode(MantisNode):
     node_type = 'UTILITY'
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree)
-        self.inputs.init_sockets(["Input"])
-        self.outputs.init_sockets(["Output"])
+        self.inputs['Input'] = NodeSocket(is_input=True, node=self, name='Input')
+        self.outputs['Output'] = NodeSocket(is_input=False, node=self, name='Output')
         self.init_parameters()
         self.set_traverse([("Input", "Output")])
         self.prepared, self.executed = True, True

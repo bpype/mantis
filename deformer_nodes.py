@@ -40,7 +40,8 @@ class MantisDeformerNode(MantisNode):
     def __init__(self, signature : tuple,
                  base_tree : NodeTree,
                  socket_templates : list[MantisSocketTemplate]=[]):
-        super().__init__(signature, base_tree, socket_templates)
+        super().__init__(signature, base_tree, socket_templates,
+                         additional_parameters= {"Name":None})
         self.prepared = True
         self.bObject=[]
     # we need evaluate_input to have the same behaviour as links.
@@ -81,12 +82,7 @@ def standard_modifier_bind(self, bContext=None, operator=None):
 class DeformerArmature(MantisDeformerNode):
     '''A node representing an armature deformer'''
     __slots__ = ()
-
-    def __init__(self, signature, base_tree):
-        super().__init__(signature, base_tree, DeformArmatureSockets)
-        self.init_parameters(additional_parameters={"Name":None})
-        self.set_traverse([("Deformer", "Deformer")])
-        self.prepared = True
+    socket_templates = DeformArmatureSockets
 
     def GetxForm(self, socket="Deformer"):
         if socket == "Deformer":
@@ -257,7 +253,6 @@ class DeformerArmature(MantisDeformerNode):
                 vg.add([p_index], weights[b_name]/max_pre_normalized_weight, 'REPLACE')
         armOb.data.pose_position = 'POSE'
     
-
     def bFinalize(self, bContext=None):
         prGreen("Executing Armature Deform Node")
         mod_name = self.evaluate_input("Name")
@@ -283,18 +278,10 @@ class DeformerArmature(MantisDeformerNode):
             # elif skin_method == "EXISTING_GROUPS":
             #     pass
 
-
 class DeformerHook(MantisDeformerNode):
     '''A node representing a hook deformer'''
     __slots__ = ()
-    
-
-    def __init__(self, signature, base_tree):
-        super().__init__(signature, base_tree, HookSockets)
-        # now set up the traverse target...
-        self.init_parameters(additional_parameters={"Name":None})
-        self.set_traverse([("Deformer", "Deformer")])
-        self.prepared = True
+    socket_templates = HookSockets
 
     def driver_for_radius(self, object, hook, index, influence, bezier=True):
         """ Creates a driver to control the radius of a curve point with the hook."""
@@ -420,15 +407,10 @@ class DeformerHook(MantisDeformerNode):
         # todo: this node should be able to take many indices in the future.
         # Also: I have a Geometry Nodes implementation of this I can use... maybe...
 
-
 class DeformerMorphTarget(MantisDeformerNode):
     '''A node representing an armature deformer'''
     __slots__ = ()
-    
-    def __init__(self, signature, base_tree):
-        super().__init__(signature, base_tree, MorphTargetSockets)
-        self.init_parameters(additional_parameters={"Name":None})
-        self.prepared = True
+    socket_templates = MorphTargetSockets
     
     def GetxForm(self, trace_input="Object"):
         trace = trace_single_line(self, trace_input)
@@ -436,7 +418,6 @@ class DeformerMorphTarget(MantisDeformerNode):
             if (isinstance(node, deformable_types)):
                 return node
         raise GraphError("%s is not connected to an upstream xForm" % self)
-
 
     def bRelationshipPass(self, bContext = None,):
         prGreen("Executing Morph Target Node")
@@ -462,34 +443,16 @@ class DeformerMorphTarget(MantisDeformerNode):
         self.parameters["Name"] = ob # this is redundant but it's OK since accessing the mt is tedious
         self.executed = True
 
-
-
 class DeformerMorphTargetDeform(MantisDeformerNode):
     '''A node representing an armature deformer'''
     __slots__ = ()
-    
+    socket_templates = MorphTargetDeformSockets
 
     def __init__(self, signature, base_tree):
-        super().__init__(signature, base_tree)
-        inputs = [
-            "Deformer",
-            "Use Shape Key",
-            "Use Offset",
-        ]
-        outputs = [
-          "Deformer",
-        ]
-        self.outputs.init_sockets(outputs)
-        self.inputs.init_sockets(inputs)
-        self.init_parameters(additional_parameters={"Name":None})
-        self.set_traverse([("Deformer", "Deformer")])
-        self.prepared = True
+        super().__init__(signature, base_tree, self.socket_templates)
         self.executed = True
         setup_custom_property_inputs_outputs(self)
     
-    # bpy.data.node_groups["Morph Deform.045"].nodes["Named Attribute.020"].data_type = 'FLOAT_VECTOR'
-    # bpy.context.object.add_rest_position_attribute = True
-
     def reset_execution(self):
         return super().reset_execution()
         self.executed=True
@@ -707,19 +670,10 @@ class DeformerMorphTargetDeform(MantisDeformerNode):
             else:
                 self.gen_morph_target_modifier(xf, bContext)
 
-
-
 class DeformerSurfaceDeform(MantisDeformerNode):
     '''A node representing an surface deform modifier'''
     __slots__ = ()
-    
-
-    def __init__(self, signature, base_tree):
-        super().__init__(signature, base_tree, SurfaceDeformSockets)
-        # now set up the traverse target...
-        self.init_parameters(additional_parameters={"Name":None})
-        self.set_traverse([("Deformer", "Deformer")])
-        self.prepared = True
+    socket_templates = SurfaceDeformSockets
 
     def GetxForm(self, socket="Deformer"):
         if socket == "Deformer":
@@ -747,18 +701,10 @@ class DeformerSurfaceDeform(MantisDeformerNode):
         from bpy import ops
         standard_modifier_bind(self, bContext, ops.object.surfacedeform_bind)
 
-
 class DeformerMeshDeform(MantisDeformerNode):
     '''A node representing a mesh deform modifier'''
     __slots__ = ()
-    
-
-    def __init__(self, signature, base_tree):
-        super().__init__(signature, base_tree, MeshDeformSockets)
-        # now set up the traverse target...
-        self.init_parameters(additional_parameters={"Name":None})
-        self.set_traverse([("Deformer", "Deformer")])
-        self.prepared = True
+    socket_templates = MeshDeformSockets
 
     def GetxForm(self, socket="Deformer"):
         if socket == "Deformer":
@@ -789,14 +735,7 @@ class DeformerMeshDeform(MantisDeformerNode):
 class DeformerLatticeDeform(MantisDeformerNode):
     '''A node representing a lattice deform modifier'''
     __slots__ = ()
-    
-
-    def __init__(self, signature, base_tree):
-        super().__init__(signature, base_tree, LatticeDeformSockets)
-        # now set up the traverse target...
-        self.init_parameters(additional_parameters={"Name":None})
-        self.set_traverse([("Deformer", "Deformer")])
-        self.prepared = True
+    socket_templates = LatticeDeformSockets
 
     def GetxForm(self, socket="Deformer"):
         if socket == "Deformer":
@@ -823,14 +762,7 @@ class DeformerLatticeDeform(MantisDeformerNode):
 class DeformerSmoothCorrectiveDeform(MantisDeformerNode):
     '''A node representing a corrective smooth deform modifier'''
     __slots__ = ()
-    
-
-    def __init__(self, signature, base_tree):
-        super().__init__(signature, base_tree, SmoothDeformSockets)
-        # now set up the traverse target...
-        self.init_parameters(additional_parameters={"Name":None})
-        self.set_traverse([("Deformer", "Deformer")])
-        self.prepared = True
+    socket_templates = SmoothDeformSockets
 
     def GetxForm(self, socket="Deformer"):
         if socket == "Deformer":
