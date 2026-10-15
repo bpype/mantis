@@ -28,15 +28,6 @@ def detect_cycle_in_trace(link, link_circle):
                                 print_link_list(link_circle))
         link_circle.append(link)
 
-#TODO: refactor the socket definitions so this becomes unnecessary.
-def get_socket_value(node_socket):
-    value = None
-    if hasattr(node_socket, "default_value"): 
-        value = node_socket.default_value
-    if node_socket.bl_idname == 'MatrixSocket':
-        value =  node_socket.TellValue()
-    return value
-
 # NOTE this is a dupe of trace_single_line, and it must be used
 #      at any time before the tree is parsed (to check for cycles)
 #      I don't want or need to pay the performance cost to check this everywhere

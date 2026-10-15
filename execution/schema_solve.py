@@ -65,7 +65,7 @@ class SchemaSolver:
 
         from bpy.types import NodeGroupInput, NodeGroupOutput
         for ui_node in self.tree.nodes:
-            # first we need to fill the parameters of the schema nodes.
+            # Make the mantis nodes for the special interface types
             # we use the bl_idname because all schema nodes should be single-instance
             signature = (*self.tree_path_names, ui_node.bl_idname)
             if isinstance(ui_node, (SchemaUINode, NodeGroupInput, NodeGroupOutput)):
@@ -77,18 +77,15 @@ class SchemaSolver:
                 if not (mantis_node := self.all_nodes.get(get_sig)):
                     raise RuntimeError(wrapRed(f"Not found: {get_sig}"))
                 self.schema_nodes[signature] = mantis_node
-                mantis_node.fill_parameters(ui_node)
             # HACK to make Group Nodes work
             if ui_node.bl_idname == "NodeGroupInput":
                 from ..schema_nodes import SchemaConstInput
                 mantis_node = SchemaConstInput(signature=signature, base_tree=self.node.base_tree, parent_schema_node=self.node)
                 self.schema_nodes[signature] = mantis_node
-                mantis_node.fill_parameters(ui_node)
             if ui_node.bl_idname == "NodeGroupOutput":
                 from ..schema_nodes import SchemaConstOutput
                 mantis_node = SchemaConstOutput(signature=signature, base_tree=self.node.base_tree, parent_schema_node=self.node)
                 self.schema_nodes[signature] = mantis_node
-                mantis_node.fill_parameters(ui_node)
 
     def set_index_strings(self):
         self.index_str = lambda : '.'+str(self.uuid)+'.'+str(self.index).zfill(4)

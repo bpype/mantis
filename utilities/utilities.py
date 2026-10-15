@@ -849,18 +849,6 @@ def trace_all_nodes_from_root(root, nodes):
 # misc
 ##################################################################################################
 
-# TODO: get the matrix to return a mathutils.Matrix so I don't need a function call here
-def to_mathutils_value(socket):
-    if hasattr(socket, "default_value"):
-        val = socket.default_value
-        if socket.bl_idname in ['MatrixSocket']:
-            return socket.TellValue()
-        else:
-            return val
-    else:
-        return None
-
-
 def all_trees_in_tree(base_tree, selected=False):
     """ Recursively finds all trees referenced in a given base-tree."""
     # note that this is recursive but not by tail-end recursion

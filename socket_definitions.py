@@ -10,7 +10,6 @@ no_default_value= frozenset({
             'xFormSocket',
             'GeometrySocket',
             'GenericRotationSocket',
-            'EnumCustomPropTypeSocket', 
             'CustomPropSocket',
             'FCurveSocket',
             'DriverSocket',
@@ -735,19 +734,6 @@ class MatrixSocket(MantisSocket):
                                 mat[1][0], mat[1][1], mat[1][2], mat[1][3],
                                 mat[2][0], mat[2][1], mat[2][2], mat[2][3],
                                 mat[3][0], mat[3][1], mat[3][2], mat[3][3], )
-    def TellValue(self):
-        from mathutils import Matrix
-        v = self.default_value
-        return Matrix( ( ( v[ 0], v[ 1], v[ 2], v[ 3],),
-                         ( v[ 4], v[ 5], v[ 6], v[ 7],),
-                         ( v[ 8], v[ 9], v[10], v[11],),
-                         ( v[12], v[13], v[14], v[15]), ) )
-                         #NOTE, we're not using the last row
-                         # so we're gonna use it to store data
-                         # unused, unused, unused, bone_length
-                         # but we're not going to make it
-                         # available except by accessor functions
-    # would like to make this stuff easier to deal with tho
     def TellBoneLength(self):
         return self.default_value[15]
 
@@ -903,8 +889,6 @@ class BooleanThreeTupleSocket(MantisSocket):
     color : bpy.props.FloatVectorProperty(default=cBool3, size=4)
     input : bpy.props.BoolProperty(default =False,)
     is_valid_interface_type=True
-    def TellValue(self):
-        return (self.default_value[0], self.default_value[1], self.default_value[2])
 
 class RotationOrderSocket(MantisSocket):
     '''Custom node socket type'''
@@ -1179,8 +1163,6 @@ class EnumCustomPropTypeSocket(MantisSocket):
         update = update_socket,)
     color : bpy.props.FloatVectorProperty(default=cString, size=4)
     input : bpy.props.BoolProperty(default =False,)
-
-# what is this one again?
 
 class CustomPropSocket(MantisSocket):
     '''Custom Property'''

@@ -71,6 +71,10 @@ class MantisDeformerNode(MantisNode):
         super().reset_execution()
         self.bObject=[]; self.prepared=True
 
+    def fill_parameters(self, ui_node=None):
+        super().fill_parameters(ui_node)
+        self.parameters["Name"] = ui_node.label if ui_node.label else ui_node.name
+
 def standard_modifier_bind(self, bContext=None, operator=None):
     for d in self.bObject:
         # we'll only bind it if it is un-muted.

@@ -213,6 +213,15 @@ class SimpleInputNode(MantisMiscNode):
         super().__init__(signature, base_tree, socket_templates, additional_parameters)
         self.prepared, self.executed = True, True
 
+    def fill_parameters(self, ui_node=None):
+        from .utilities.utilities import handle_overlay_detect
+        ui_outputs = ui_node.outputs
+        node_socket = ui_outputs[0] # this is a simple input node.
+        if (value := node_socket.default_value) is not None:
+            if isinstance(value, str) and "$" in value:
+                value = handle_overlay_detect(self, node_socket.identifier, value)
+            self.parameters[node_socket.name] = value
+        
 #*#-------------------------------#++#-------------------------------#*#
 # U T I L I T Y   N O D E S
 #*#-------------------------------#++#-------------------------------#*#
@@ -261,6 +270,16 @@ class InputMatrix(SimpleInputNode):
     '''A node representing axis-angle quaternion input'''
     __slots__ = ()
     socket_templates = InputMatrixSockets
+
+    def fill_parameters(self, ui_node=None):
+        from mathutils import Matrix
+        ui_outputs = ui_node.outputs
+        node_socket = ui_outputs[0]
+        v = node_socket.default_value
+        self.parameters[node_socket.name] = Matrix(( tuple(v[0:4]),
+                                                     tuple(v[4:8]),
+                                                     tuple(v[8:12]),
+                                                     tuple(v[12:16]) ))
 
 class InputThemeBoneColorSets(SimpleInputNode):
     '''A node representing the theme's colors'''
