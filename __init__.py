@@ -389,6 +389,17 @@ def begin_selection_sync_timer(filename):
         SELECTION_POLL_RATE = bl_mantis_addon.preferences.SelectionSyncPollRate
         bpy.app.timers.register(timer_update_selection_sync)
 
+# Build the reroute cache on file load
+@persistent
+def on_load_build_reroute_cache(filename):
+    for tree in bpy.data.node_groups:
+        if tree.bl_idname in ['MantisTree', 'SchemaTree']:
+            # and I have to do this somewhere, this is the best place...
+            tree.is_quitting = False # reset the quitting flag
+            from .base_definitions import hash_tree, build_reroute_cache
+            tree.hash = str(hash_tree(tree, recurse=False))
+            build_reroute_cache(tree, tree.links)
+
 # I'll need to do some fiddling here when it comes time to try
 #   and make rig definitions animatable.
 @persistent
@@ -407,9 +418,17 @@ def on_undo_post_handler(scene): # the undo will trigger a depsgraph update
     for t in bpy.data.node_groups: # so we enable prevent_next_exec.
         if t.bl_idname in ['MantisTree', 'SchemaTree']:
             t.prevent_next_exec = True
-            t.hash=""
+            t.hash_recursive=""
             # set the tree to invalid to trigger a tree update
             # since the context data is wiped by an undo.
+
+@persistent
+def on_quit_handler(is_ui):
+    # we'll let the node trees know they're quitting
+    # this prevents them from spamming updates on file close.
+    for tree in bpy.data.node_groups:
+        if tree.bl_idname in ['MantisTree', 'SchemaTree']:
+            tree.is_quitting=True
 
 from .menu_classes import (node_context_menu_draw, node_add_menu_draw,
                            armature_add_menu_draw, import_menu_draw)
@@ -446,9 +465,11 @@ def register():
     bpy.app.handlers.load_post.insert(0, begin_selection_sync_timer)
     bpy.app.handlers.load_post.insert(0, autoload_components)
     bpy.app.handlers.load_post.insert(0, version_update_handler)
+    bpy.app.handlers.load_post.insert(0, on_load_build_reroute_cache)
     bpy.app.handlers.animation_playback_pre.insert(0, on_animation_playback_pre_handler)
     bpy.app.handlers.animation_playback_post.insert(0, on_animation_playback_post_handler)
     bpy.app.handlers.undo_post.insert(0, on_undo_post_handler)
+    bpy.app.handlers.exit_pre.insert(0, on_quit_handler)
     # I'm adding mine in first to ensure other addons don't mess up mine
     # but I am a good citizen! so my addon won't mess up yours! probably...
 

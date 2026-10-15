@@ -27,7 +27,7 @@ def tag_mantis_node_for_update(context, node):
         mantis_node = node_tree.parsed_tree.get(
                     get_signature_from_edited_tree(node, context))
         if mantis_node is None:
-            node_tree.hash = ''
+            node_tree.hash_recursive = ''
         else:
             mantis_node.reset_execution_recursive() # tag this as a change.
 #########################################################################3
@@ -256,7 +256,7 @@ class InvalidateNodeTree(Operator):
     def execute(self, context):
         print("Clearing Active Node Tree cache")
         tree=context.space_data.path[0].node_tree
-        tree.execution_id=''; tree.hash=''
+        tree.execution_id=''; tree.hash_recursive=''
         return {"FINISHED"}
 
 class ExecuteNodeTree(Operator):

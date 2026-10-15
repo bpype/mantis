@@ -277,7 +277,7 @@ def solve_schema_to_tree(mantis_node, all_mantis_nodes, roots=[], error_popups=F
     except Exception as e:
     #     # the schema will run the error cleanup code, we just need to raise or not
         solved_nodes = {}
-        mantis_node.base_tree.hash=''
+        mantis_node.base_tree.hash_recursive=''
         raise execution_error_cleanup(mantis_node, e, show_error=error_popups)
     for k,v in solved_nodes.items():
         all_mantis_nodes[k]=v
@@ -412,6 +412,7 @@ def parse_tree(base_tree, error_popups=False):
     base_tree.execution_id = uuid4().__str__() # set the unique id of this execution
 
     from ..base_definitions import MantisExecutionContext
+    from ..utilities.node_common import GraphError
     mContext = MantisExecutionContext(base_tree=base_tree)
 
     import time
@@ -420,15 +421,25 @@ def parse_tree(base_tree, error_popups=False):
     #  then they stick around because the function definition inits them once and keeps a reference
     # so instead I have to supply them to avoid ugly code or bugs elsewhere
     # it's REALLY confusing when you run into this sort of problem. So it warrants four entire lines of comments!      
-    dummy_nodes, all_mantis_nodes, all_schema =  data_from_tree(
-        base_tree,
-        tree_path = [None], 
-        mContext=mContext,
-        dummy_nodes = {},
-        all_mantis_nodes = {},
-        all_schema={},
-        in_schema=False
-        )
+    try:
+        dummy_nodes, all_mantis_nodes, all_schema =  data_from_tree(
+            base_tree,
+            tree_path = [None], 
+            mContext=mContext,
+            dummy_nodes = {},
+            all_mantis_nodes = {},
+            all_schema={},
+            in_schema=False
+            )
+    except GraphError as e:
+        base_tree.tree_valid = False; base_tree.hash_recursive=""
+        if error_popups:
+            from bpy import context
+            def error_popup_draw(self, context):
+                error_popup_draw_inner(self.layout, e, ())
+            context.window_manager.popup_menu(error_popup_draw, title="Error", icon='ERROR')
+        else: raise e
+        return # it is not possible to parse the tree until GraphErrors are resolved.
     for dummy in dummy_nodes.values():    # reroute the links in the group nodes
         dummy.reroute_links(all_mantis_nodes)
     prGreen(f"Pulling data from tree took {time.time() - data_start_time} seconds")
@@ -575,11 +586,9 @@ def parse_tree(base_tree, error_popups=False):
     return kept_mantis_node
 
 from ..utilities.utilities import switch_mode
-
-
-def error_popup_draw_inner(layout, exception, ui_sig):
-    message = f"Error: {exception}\n" \
-              f"See node: {ui_sig[1:]}."
+def error_popup_draw_inner(layout, exception, ui_sig = ()):
+    node_string = f"See node: {ui_sig[1:]}." if ui_sig else ""
+    message = f"Error: {exception}\n" + node_string  
     lines = message.splitlines()
     for line in lines:
         layout.label(text=line)

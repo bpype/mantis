@@ -13,11 +13,20 @@ from .utilities.utilities import (prRed, prGreen, prPurple, prWhite,
 from .utilities.utilities import get_socket_maps, relink_socket_map, do_relink
 from .mantis_dataclasses import MantisSocketTemplate
 
+MANTIS_VERSION_MAJOR=0
+MANTIS_VERSION_MINOR=13
+MANTIS_VERSION_SUB=5
+
 FLOAT_EPSILON=0.0001 # used to check against floating point inaccuracy
 links_sort_key= lambda a : (-a.multi_input_sort_id, -a.sub_sort_id)
 
 selection_sync_node_to_object = {} # what objects a node spawns
 selection_sync_object_to_node = {} # what node an object comes from
+
+# The reroute cache is used to accelerate reading reroute nodes
+# it uses the tree name and hash to ensure reroutes are only updated when needed
+# reroutes recursively find their source and remember it
+reroute_cache = {}
 
 def TellClasses():
     #Why use a function to do this? Because I don't need every class to register.
@@ -44,15 +53,13 @@ def valid_interface_types(cls : NodeTree, socket_idname : str):
         return ['NodeSocketGeometry']
     else: # once versioning is finished this will be unnecesary.
         return socket_idname in tell_valid_bl_idnames()
-
 def fix_reroute_colors(tree):
     context = bpy.context
     if any((tree.is_executing, tree.is_exporting, tree.do_live_update==False, context.space_data is None) ):
         return
-    from collections import deque
     from .utilities.utilities import find_reroute_start_socket
     from .socket_definitions import MantisSocket
-    reroutes_without_color = deque()
+    reroutes_without_color = []
     for n in tree.nodes:
         if n.bl_idname=='NodeReroute' and n.inputs[0].bl_idname == "NodeSocketColor":
             reroutes_without_color.append(n)
@@ -69,11 +76,11 @@ def fix_reroute_colors(tree):
 
 #functions to identify the state of the system using hashes
 # this function runs a lot so it should be optimized as well as possible.
-def hash_tree(tree):
+def hash_tree(tree, recurse=True):
     trees=set(); links=[]; hash_data=""
     for node in tree.nodes:
         hash_data+=str(node.name)
-        if hasattr(node, 'node_tree') and node.node_tree:
+        if recurse and hasattr(node, 'node_tree') and node.node_tree:
             trees.add(node.node_tree)
     for other_tree in trees:
         hash_data+=str(hash_tree(other_tree))
@@ -84,9 +91,157 @@ def hash_tree(tree):
     links.sort(); hash_data+=''.join(links)
     return hash(hash_data)
 
-MANTIS_VERSION_MAJOR=0
-MANTIS_VERSION_MINOR=13
-MANTIS_VERSION_SUB=5
+# TODO: I should see if I can make these work without every using NodeSocket.links
+#  as that getter is very slow at scale
+# however with the cache in place it is probably negligible
+def update_reroute_cache_item_source_recursively(reroute, tree_cache, source):
+    # find all the inputs to this reroute and update their destination sets
+    # every reroute ancestor pushes to this destination... but not every recursive-child
+    #   of the root reroute necessarily does, so pushing back like this is right
+    # since each reroute node only has one ancestor, this is easy
+    from .mantis_dataclasses import RerouteCacheItem
+    tree= reroute.id_data
+    reroutes = {reroute}
+    while(reroutes):
+        reroute = reroutes.pop()
+        # for making a new cache item
+        if (cache_object := tree_cache.get(reroute.name)) is None:
+            cache_object = RerouteCacheItem(
+                    reroute_name=reroute.name,
+                    reroute_tree_name=tree.name,
+                )
+            tree_cache[reroute.name] = cache_object
+        cache_object.source = source
+        if reroute.outputs[0].is_linked: # reroutes are always single-output
+            for l in reroute.outputs[0].links: # with potentially many links
+                if l.to_node.bl_idname == 'NodeReroute':
+                    reroutes.add(l.to_node)
+
+def update_reroute_cache_item_destination_recursively(reroute, tree_cache, destination):
+    # find all the inputs to this reroute and update their destination sets
+    # every reroute ancestor pushes to this destination... but not every recursive-child
+    #   of the root reroute necessarily does, so pushing back like this is right
+    # since each reroute node only has one ancestor, this is easy
+    from .mantis_dataclasses import RerouteCacheItem
+    tree= reroute.id_data
+    while(reroute):
+        # for making a new cache item
+        if (cache_object := tree_cache.get(reroute.name)) is None:
+            cache_object = RerouteCacheItem(
+                    reroute_name=reroute.name,
+                    reroute_tree_name=tree.name,
+                    destinations= {destination},
+                )
+            tree_cache[reroute.name] = cache_object
+        else:
+            cache_object.destinations.add(destination)
+        # Odd: if I check reroute.inputs[0].is_linked with live updates, CRASH.
+        if rr_links := reroute.inputs[0].links:
+            # reroutes are always single-input with at most 1 link
+            if (l := rr_links[0]).from_node == 'NodeReroute':
+                reroute = l.from_node
+                continue
+        reroute = None
+
+# Update the reroute cache from the link
+# NOTE this is updated as the user adds links by the node.insert_link() callback
+def reroute_cache_handle_link(tree, tree_cache, link):
+    from .mantis_dataclasses import RerouteCacheItem
+    # if it is a link to or from a reroute, add or update the cache item
+    # first check if the cache item is stale
+    # then try and fill the source and destination - make sure to recursively fill them
+    # if it isn't connected to a source or destination, it's part of a network
+    # We only need to check the ends, and we can do both the destination and source
+    #  passes simultaneously since they don't depend on each other.
+    # NOTE that we use socket index to make things explicit and fast
+    if link.from_node.bl_idname == 'NodeReroute' and link.to_node.bl_idname != 'NodeReroute':
+        other_node = link.to_node
+        other_socket = link.to_socket
+        for socket_index, check_socket in enumerate(other_node.inputs):
+            if check_socket.identifier == other_socket.identifier: break
+        else:
+            raise RuntimeError("Error, cannot make reroute cache for link: "
+                               f"{link.from_node.name}:{link.from_socket.name} ==>"
+                               f"{link.to_node.name}:{link.to_socket.name}")
+        reroute = link.from_node
+        destination = (other_node.name, socket_index)
+        if (cache_object := tree_cache.get(reroute.name)) is None:
+            cache_object = RerouteCacheItem(
+                reroute_name=reroute.name,
+                reroute_tree_name=tree.name,
+                destinations= {destination},
+            )
+            tree_cache[reroute.name]=cache_object
+        update_reroute_cache_item_destination_recursively(reroute, tree_cache,
+            destination=destination)
+    elif link.from_node.bl_idname != 'NodeReroute' and link.to_node.bl_idname == 'NodeReroute':
+        other_node = link.from_node
+        other_socket = link.from_socket
+        for socket_index, check_socket in enumerate(other_node.outputs):
+            if check_socket.identifier == other_socket.identifier: break
+        else:
+            raise RuntimeError("Error, cannot make reroute cache for link: "
+                               f"{link.from_node.name}:{link.from_socket.name} ==>"
+                               f"{link.to_node.name}:{link.to_socket.name}")
+        reroute = link.to_node
+        source = (link.from_node.name, socket_index)
+        if (cache_object := tree_cache.get(reroute.name)) is None:
+            cache_object = RerouteCacheItem(
+                reroute_name=reroute.name,
+                reroute_tree_name=tree.name,
+                source = source,
+            )
+            tree_cache[reroute.name]=cache_object
+        update_reroute_cache_item_source_recursively(reroute, tree_cache,
+            source=source)
+
+def build_reroute_cache(tree, links):
+    # we'll track this to know if a tree update should invalidate the hash on incremental update
+    tree.number_of_reroute_links = 0
+    # make sure to clear the previous cache or confusing things will happen
+    tree_cache = {}; reroute_cache[tree.name] = tree_cache
+    tree_cache['_MANTIS_RESERVED_TREE_HASH'] = tree.hash
+    for link in links:
+        if link.from_node.bl_idname == 'NodeReroute' or link.to_node.bl_idname == 'NodeReroute':
+            tree.number_of_reroute_links += 1
+        reroute_cache_handle_link(tree, tree_cache, link)
+
+def tree_update_common(tree): # set the reroute colors
+    if tree.is_quitting: return
+    if (bpy.app.version == (4,4,0)): # CTD bug in that version
+        return
+    fix_reroute_colors(tree)
+    # intialize it if e.g the tree is new.
+    if (tree_cache := reroute_cache.get(tree.name)) is None:
+        tree_cache = {}; reroute_cache[tree.name] = tree_cache
+    # events fire in this order:
+    #   - node.insert_link (one for each node)
+    #   - node.update (one for each node)
+    #   - tree.update
+    # so if the node's insert_link handled things, we don't need to check
+    tree.hash = str(hash_tree(tree, recurse=False))
+    if tree.reroute_link_handled: # we can update the hash, it's still good.
+        if tree_cache := reroute_cache.get(tree.name):
+            tree_cache["_MANTIS_RESERVED_TREE_HASH"]=tree.hash
+        tree.reroute_link_handled = False # always make sure to reset the flag
+    else:
+        reroute_links = []
+        # set the UI tree hash for e.g. reroute cache
+        for link in tree.links:
+            if link.from_node.bl_idname == 'NodeReroute' or link.to_node.bl_idname == 'NodeReroute':
+                reroute_links.append(link)
+        if len(reroute_links) == tree.number_of_reroute_links:
+            if tree_cache := reroute_cache.get(tree.name): # we can update the hash, it's still good.
+                tree_cache["_MANTIS_RESERVED_TREE_HASH"] = tree.hash
+            else: # there is no cache after all. How did that happen?
+                build_reroute_cache(tree, reroute_links)
+            # NOTE I put a lot of effort into catching deleted links but it just isn't practical
+            #      to catch this and it is almost free to rebuild the cache.
+        else:
+            build_reroute_cache(tree, reroute_links)
+            # reset the count but do not update the hash.
+        tree.number_of_reroute_links = len(reroute_links)
+
 
 class MantisTree(NodeTree):
     '''A custom node tree type that will show up in the editor type list'''
@@ -95,7 +250,8 @@ class MantisTree(NodeTree):
     bl_icon = 'OUTLINER_OB_ARMATURE'
 
     tree_valid:BoolProperty(default=False)
-    hash:StringProperty(default='')
+    hash:StringProperty(default='') # use for UI updates, reroute cache
+    hash_recursive:StringProperty(default='') # use for checking Mantis state
     do_live_update:BoolProperty(default=True) # use this to disable updates for e.g. scripts
     # operator settings for re-exporting the tree.
     filepath:StringProperty(default="", subtype='FILE_PATH')
@@ -103,6 +259,7 @@ class MantisTree(NodeTree):
     #
     is_executing:BoolProperty(default=False)
     is_exporting:BoolProperty(default=False)
+    is_quitting:BoolProperty(default=False)
     execution_id:StringProperty(default='')
     # prev_execution_id:StringProperty(default='')
     mantis_version:IntVectorProperty(default=[
@@ -113,6 +270,11 @@ class MantisTree(NodeTree):
 
     #added to work around a bug in 4.5.0 LTS
     interface_helper : StringProperty(default='')
+
+    # for reroute cache, to check if it is still good
+    number_of_reroute_links : IntProperty(default=0)
+    # flag to indicate a link was already handled this update
+    reroute_link_handled : BoolProperty(default=False)
 
     parsed_tree={}
 
@@ -129,16 +291,19 @@ class MantisTree(NodeTree):
         def valid_socket_type(cls : NodeTree, socket_idname: str):
             return valid_interface_types(cls, socket_idname)
 
-    def update(self): # set the reroute colors
-        if (bpy.app.version >= (4,4,0)):
-            fix_reroute_colors(self)
+    def update(self):
+        tree_update_common(self)
 
     def update_tree(self, context = None, force=False, error_popups=False):
         if self.is_exporting:
             return
         my_hash = str( hash_tree(self) )
-        if (my_hash != self.hash) or force:
-            self.hash = my_hash
+        my_ui_hash = str( hash_tree(self, recurse=False))
+        tree_cache = reroute_cache.get(self.name)
+        if tree_cache['_MANTIS_RESERVED_TREE_HASH'] != my_ui_hash:
+            build_reroute_cache(self, self.links) # somehow it became invalid, rebuild it.
+        if (my_hash != self.hash_recursive) or force:
+            self.hash_recursive = my_hash
             self.is_executing = True
             from .execution import readtree
             prGreen("Validating Tree: %s" % self.name)
@@ -154,7 +319,7 @@ class MantisTree(NodeTree):
             except Exception as e:
                 prRed("Failed to update node tree due to error.")
                 self.tree_valid = False
-                self.hash='' # unset the hash to mark the tree as un-parsed.
+                self.hash_recursive='' # unset the hash to mark the tree as un-parsed.
                 raise e
             finally:
                 scene.render.use_lock_interface = False
@@ -185,7 +350,7 @@ class MantisTree(NodeTree):
 
     def execute_tree(self,context, error_popups = False, profile=False):
         self.prevent_next_exec = False
-        if not self.hash:
+        if not self.hash_recursive:
             return
         if self.is_exporting or self.is_executing:
             return
@@ -211,20 +376,25 @@ class SchemaTree(NodeTree):
     do_live_update:BoolProperty(default=True) # default to true so that updates work
     is_executing:BoolProperty(default=False)
     is_exporting:BoolProperty(default=False)
+    is_quitting:BoolProperty(default=False)
 
     mantis_version:IntVectorProperty(default=[
         MANTIS_VERSION_MAJOR, MANTIS_VERSION_MINOR, MANTIS_VERSION_SUB])
     # see the note in MantisTree
     interface_helper : StringProperty(default='')
 
+    # for reroute cache, to check if it is still good
+    number_of_reroute_links : IntProperty(default=0)
+    # flag to indicate a link was already handled this update
+    reroute_link_handled : BoolProperty(default=False)
+
     if (bpy.app.version < (4, 4, 0) or bpy.app.version >= (4,5,0)):  # in 4.4 this leads to a crash
         @classmethod
         def valid_socket_type(cls : NodeTree, socket_idname: str):
             return valid_interface_types(cls, socket_idname)
 
-    def update(self): # set the reroute colors
-        if (bpy.app.version >= (4,4,0)):
-            fix_reroute_colors(self)
+    def update(self):
+        tree_update_common(self)
 
 
 #TODO: do a better job explaining how MantisNode and MantisUINode relate.
@@ -290,6 +460,18 @@ class MantisUINode:
             if template.use_multi_input: # this is an array
                 socket.display_shape = 'SQUARE_DOT'
 
+    def insert_link(self, link):
+        if (bpy.app.version == (4, 4, 0)):
+            return # this causes a crash due to a bug.
+        tree = self.id_data
+        if tree.reroute_link_handled: return
+        if ( link.from_node.bl_idname == 'NodeReroute' or
+             link.to_node.bl_idname == 'NodeReroute' ):
+                tree.number_of_reroute_links+=1
+                reroute_cache_handle_link(tree=tree,
+                    tree_cache=reroute_cache.get(tree.name), link=link)
+                tree.reroute_link_handled = True
+        
 # NOTE
 # MantisUINode has no proper mantis libraryclass on its own, so:
 # register()'s are in SUBclasses; they have to run AFTER library is defined

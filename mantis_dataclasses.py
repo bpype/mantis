@@ -99,4 +99,11 @@ class MantisSocketFiller():
                f"property_name: {self.property_name}, " \
                f"default_value: {self.default_value}, " \
                f"array_index: {self.array_index or 0}, " \
-               f"value_index: {self.value_index or None}" 
+               f"value_index: {self.value_index or None}"
+
+@dataclass(slots=True)
+class RerouteCacheItem:
+    reroute_name      : str = field(default="") # the reroute node name in the tree 
+    reroute_tree_name : str = field(default="") # the tree to find the reroute in
+    source            : Tuple[str, str] = field(default_factory=tuple) # the beginning of the reroute network
+    destinations      : set[Tuple[str, str]] = field(default_factory=set) # (node_name, socket_name)

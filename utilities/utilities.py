@@ -26,32 +26,26 @@ def prOrange(*args): print (*[wrapOrange(arg) for arg in args])
 def float_lerp(a : float, b : float, factor : float)  -> float:
     return (a * (1.0 - factor)) + (b * factor)
 
-# TODO: BUG may live here
-#I need to stress-test this to make sure it doesn't hang on:
-# - empty reroute nodes with no links
-# - links starting with reroute nodes with no inputs
-# - links ending with reroute nodes with no outputs
 def find_reroute_start_socket(reroute, track='BACK'):
-    # "BACK" traces back through the tree
-    # "FORWARD" traces forward through the tree
-    socket = None
-    while (reroute and track == 'BACK'):
-        if len(reroute.inputs[0].links) == 1:
-            link = reroute.inputs[0].links[0]
-            socket = link.from_socket
-            if link.from_node.bl_idname == 'NodeReroute':
-                reroute =  link.from_node
-            else:
-                link, reroute = None, None
-    while (reroute and track == 'FORWARD'):
-        if len(reroute.outputs[0].links) == 1:
-            link = reroute.outputs[0].links[0]
-            socket = link.to_socket
-            if link.to_node.bl_idname == 'NodeReroute':
-                reroute =  link.to_node
-            else:
-                link, reroute = None, None
-    return socket
+    # "BACK" traces back through the tree and returns one socket
+    # "FORWARD" traces forward through the tree and returns a list of sockets
+    from ..base_definitions import reroute_cache
+    from .node_common import GraphError
+    # We assume the cache is good, the tree is responsible for this
+    tree = reroute.id_data
+    tree_cache = reroute_cache.get(tree.name)
+    if track == 'FORWARD':
+        cache_item = tree_cache.get(reroute.name); sockets = []
+        if not cache_item: # I think this is OK, they don't always go somewhere
+            return # And this FORWARD trace is always a background task
+        for node_name, socket_index in cache_item.destinations:
+            sockets.append(tree.nodes.get(node_name).inputs[socket_index])
+        return sockets
+    if track == 'BACK':
+        cache_item = tree_cache.get(reroute.name)
+        if not cache_item or not cache_item.source:
+            raise GraphError(f"There is a missing link in the tree at reroute node: {reroute.name}")
+        return tree.nodes.get(cache_item.source[0]).outputs[cache_item.source[1]]
 
 # this creates fake links that have the same interface as Blender's
 # so that I can bypass Reroutes
@@ -208,25 +202,26 @@ def do_relink(node, socket, map, in_out='INPUT', parent_name = ''):
         for sub_val in val:
             # this will only happen once because it assigns socket, so it is safe to do in the for loop.
             if socket is None:
-                socket = sub_val
+                socket = sub_val; sockets = [socket]
                 if sub_val.bl_idname == "NodeReroute":
                     # we have to trace the reroute node...
                     if in_out == 'INPUT':
-                        socket = find_reroute_start_socket(sub_val)
+                        socket = find_reroute_start_socket(sub_val); sockets = [socket]
                     else:
-                        socket = find_reroute_start_socket(sub_val, track="FORWARD")
-                sock_type = socket.interface_type
-                name = unique_socket_name(node, socket, tree)
-                if parent_name:
-                    interface_socket = update_interface(tree.interface, name, interface_in_out, sock_type, parent_name)
-                if in_out =='INPUT':
-                    socket = node.inputs.new(sock_type, name, identifier=interface_socket.identifier)
-                else:
-                    socket = node.outputs.new(sock_type, name, identifier=interface_socket.identifier)
-                if parent_name == 'Array': socket.display_shape='SQUARE_DOT'
-                if parent_name == 'Constant': socket.display_shape='CIRCLE_DOT'
-                # then move it up and delete the other link.
-                # this also needs to modify the interface of the node tree.
+                        sockets = find_reroute_start_socket(sub_val, track="FORWARD")
+                for socket in sockets:
+                    sock_type = socket.interface_type
+                    name = unique_socket_name(node, socket, tree)
+                    if parent_name:
+                        interface_socket = update_interface(tree.interface, name, interface_in_out, sock_type, parent_name)
+                    if in_out =='INPUT':
+                        socket = node.inputs.new(sock_type, name, identifier=interface_socket.identifier)
+                    else:
+                        socket = node.outputs.new(sock_type, name, identifier=interface_socket.identifier)
+                    if parent_name == 'Array': socket.display_shape='SQUARE_DOT'
+                    if parent_name == 'Constant': socket.display_shape='CIRCLE_DOT'
+                    # then move it up and delete the other link.
+                    # this also needs to modify the interface of the node tree.
             if isinstance(sub_val, NodeSocket):
                 counter_id=sub_val.node.name+"::"+sub_val.identifier
                 l = None
