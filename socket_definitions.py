@@ -3,7 +3,7 @@ from bpy.types import NodeSocket, NodeSocketStandard
 
 # Classes which do not have default_value
 # needed to detect when there is an error updating dynamic nodes
-no_default_value= [
+no_default_value= frozenset({
             'MantisSocket',
             'RelationshipSocket',
             'DeformerSocket',
@@ -19,7 +19,7 @@ no_default_value= [
             'MorphTargetSocket',
             'KeyframeSocket',
             'WildcardSocket',
-]
+})
 # the sockets that do not have this field do not transfer data.
 # instead, it is the link itself which is meaningful.
 from bpy.app import version as bpy_version
