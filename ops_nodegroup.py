@@ -290,6 +290,8 @@ class ExecuteNodeTree(Operator):
             sortby = SortKey.TIME
             if 'cum' in environ.get("DOPROFILE").lower():
                 sortby = SortKey.CUMULATIVE
+            if "calls" in environ.get("DOPROFILE").lower():
+                sortby = SortKey.CALLS
             profile_function = environ.get("PROFILE_FUNCTION")
             printme1 = ''
             with cProfile.Profile() as pr:
