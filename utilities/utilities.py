@@ -104,6 +104,13 @@ def split_quoted_substrings_to_strings(text):
     ]
     return substrings
 
+def set_bone_selection(pose_bone, selection_state):
+    # in some older blender versions, select was a bone property
+    if hasattr(pose_bone, 'select'):
+        pose_bone.select = selection_state
+    elif hasattr(pose_bone.bone, 'select'):
+        pose_bone.bone.select = selection_state
+
 ##################################################################################################
 # groups and changing sockets -- this is used extensively by Schema.
 ##################################################################################################

@@ -129,12 +129,7 @@ def timer_update_selection_sync():
             raise e
     return SELECTION_POLL_RATE
 
-def set_bone_selection(pose_bone, selection_state):
-    # in some older blender versions, select was a bone property
-    if hasattr(pose_bone, 'select'):
-        pose_bone.select = selection_state
-    elif hasattr(pose_bone.bone, 'select'):
-        pose_bone.bone.select = selection_state
+from .utilities.utilities import set_bone_selection
 
 def update_scene_selection_from_node_graph_selection_sync(
         active_ui_signature, view_layer,

@@ -186,14 +186,16 @@ class DeformerArmature(MantisDeformerNode):
                             'selected_objects':[ob, armOb],
                             'active_pose_bone':deform_bones[0],
                             'selected_pose_bones':deform_bones,}
-        for b in armOb.data.bones:
-            b.select = True
+        
+        from .utilities.utilities import set_bone_selection
+        for pb in armOb.pose.bones:
+            set_bone_selection(pose_bone=pb, selection_state=True)
         with bContext.temp_override(**context_override):
             bpy.ops.paint.weight_paint_toggle()
             bpy.ops.paint.weight_from_bones(type='AUTOMATIC')
             bpy.ops.paint.weight_paint_toggle()
-        for b in armOb.data.bones:
-            b.select = False
+        for pb in armOb.pose.bones:
+            set_bone_selection(pose_bone=pb, selection_state=False)
         armOb.data.pose_position = 'POSE'
         # TODO: modify Blender to make this available as a Python API function.
 
