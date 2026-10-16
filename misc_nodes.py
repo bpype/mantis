@@ -1188,9 +1188,14 @@ class InputWidget(MantisMiscNode):
                 ng = gen_simple_flip_modifier()
             flip_modifier.node_group = ng
             # this changed at some point in Blender's versions ehhh
-            flip_modifier["Socket_2"]=axes_flipped[0]
-            flip_modifier["Socket_3"]=axes_flipped[1]
-            flip_modifier["Socket_4"]=axes_flipped[2]
+            if bpy_version < (5, 2, 0):
+                flip_modifier["Socket_2"]=axes_flipped[0]
+                flip_modifier["Socket_3"]=axes_flipped[1]
+                flip_modifier["Socket_4"]=axes_flipped[2]
+            else: # this changed in Blender 5.2.0...
+                flip_modifier.properties.inputs.Socket_2.value = axes_flipped[0]
+                flip_modifier.properties.inputs.Socket_3.value = axes_flipped[1]
+                flip_modifier.properties.inputs.Socket_4.value = axes_flipped[2]
         self.prepared, self.executed = True, True
 
     def bGetObject(self, mode=''):
