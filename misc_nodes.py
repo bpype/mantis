@@ -1,6 +1,6 @@
 from .utilities.node_common import *
 from .base_definitions import MantisNode, NodeSocket, FLOAT_EPSILON
-from .xForm_nodes import xFormArmature, xFormBone
+from .xForm_nodes import xFormNode
 from .misc_nodes_socket_templates import *
 from math import pi, tau
 
@@ -817,7 +817,7 @@ class UtilityDriverVariable(MantisMiscNode):
     def GetxForm(self, index=1):
         trace = trace_single_line(self, "xForm 1" if index == 1 else "xForm 2")
         for node in trace[0]:
-            if (node.__class__ in [xFormArmature, xFormBone]):
+            if (isinstance(node, xFormNode)):
                 return node #this will fetch the first one, that's good!
         return None
 
@@ -996,7 +996,7 @@ class UtilitySwitch(MantisMiscNode):
     def GetxForm(self,):
         trace = trace_single_line(self, "Parameter" )
         for node in trace[0]:
-            if (node.__class__ in [xFormArmature, xFormBone]):
+            if (isinstance(node, xFormNode)):
                 return node #this will fetch the first one, that's good!
         return None
 
