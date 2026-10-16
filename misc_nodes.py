@@ -1243,11 +1243,14 @@ class InputExistingGeometryData(MantisMiscNode):
     def bGetObject(self, mode=''):
         from bpy import data
         # first try Curve, then try Mesh
-        bObject = data.curves.get(self.evaluate_input("Name"))
+        name = self.evaluate_input("Name")
+        bObject = data.curves.get(name)
         if not bObject:
-            bObject = data.meshes.get(self.evaluate_input("Name"))
+            bObject = data.meshes.get(name)
+        if not bObject:
+            bObject = data.lattices.get(name)
         if bObject is None:
-            raise RuntimeError(f"Could not find a mesh or curve datablock named \"{self.evaluate_input('Name')}\" for node {self}")
+            raise RuntimeError(f"Could not find a curve, mesh, or lattice datablock named \"{self.evaluate_input('Name')}\" for node {self}")
         return bObject
 
 class UtilityDeclareCollections(MantisMiscNode):
