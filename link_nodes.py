@@ -300,7 +300,6 @@ class LinkTransformation(MantisLinkNode):
             self.set_custom_space()
             # TODO: this can be cached I just need a custom
             #  gen_property_socket_map for this class.
-            from copy import deepcopy
             props_sockets = self.gen_property_socket_map().copy()
             # we have to fix the blender-property for scale/rotation
             # because Blender stores these separately.
@@ -329,11 +328,11 @@ class LinkTransformation(MantisLinkNode):
                 for axis in ['x', 'y', 'z']:
                     stub='to_min_'+axis
                     props_sockets[stub+to_replace]=props_sockets[stub]
-                    props_sockets[stub+from_suffix].property_name = stub+to_replace
+                    props_sockets[stub+to_replace].property_name = stub+to_replace
                     del props_sockets[stub]
                     stub='to_max_'+axis
                     props_sockets[stub+to_replace]=props_sockets[stub]
-                    props_sockets[stub+from_suffix].property_name = stub+to_replace
+                    props_sockets[stub+to_replace].property_name = stub+to_replace
                     del props_sockets[stub]
             evaluate_sockets(self, c, props_sockets)
         self.executed = True
