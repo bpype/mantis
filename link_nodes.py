@@ -37,6 +37,16 @@ def TellClasses():
              LinkDrivenParameter,
             ]
 
+# In order to save time and give users a little more control, we'll cache
+# the IK Pole Vector solution for a given set of bone matrices
+IK_POLE_VECTOR_CACHE = {}
+
+def make_ik_pole_vector_cache_key(start_effector, end_effector, pole_location, knee_location):
+    return frozenset({ tuple( start_effector[:]),
+                       tuple( end_effector[:]),
+                       tuple( pole_location[:]),
+                       tuple( knee_location[:]), })
+
 # set the name if it is available, otherwise just use the constraint's nice name
 set_constraint_name = lambda mantis_node : mantis_node.evaluate_input("Name") if mantis_node.evaluate_input("Name") else mantis_node.__class__.__name__
 
@@ -47,7 +57,7 @@ class MantisLinkNode(MantisNode):
     def __init__(self, signature : tuple,
                  base_tree : NodeTree,):
         super().__init__(signature, base_tree, self.socket_templates,
-                         additional_parameters={'Name':None})
+                         additional_parameters= {'Name':None})
         self.prepared = True; self.bObject=[]
 
     def bTransformPass(self, bContext=None):
@@ -511,7 +521,7 @@ class LinkInheritConstraint(MantisLinkNode):
             self.executed = True
 
 class LinkInverseKinematics(MantisLinkNode):
-    __slots__ = ()
+    __slots__ = ("cache_available", "cache_key")
     socket_templates = LinkInverseKinematicsSockets
 
     def get_base_ik_bone(self, ik_bone):
@@ -565,6 +575,18 @@ class LinkInverseKinematics(MantisLinkNode):
 
         # this is the X-Axis of the bone's rest-pose, added to its bone
         knee_location = base_ik_bone.bone.matrix_local.col[0].xyz+start_effector
+
+        # At this point we can check the cache for the correct IK pole angle
+        cache_key = make_ik_pole_vector_cache_key(start_effector,
+                                                  end_effector,
+                                                  pole_location,
+                                                  knee_location)
+        self.cache_key.append(cache_key)
+        if pole_angle := IK_POLE_VECTOR_CACHE.get(cache_key):
+            self.cache_available.append(True)
+            return pole_angle
+        self.cache_available.append(False)
+
         ik_axis = (end_effector-start_effector).normalized()
         from .utilities.utilities import project_point_to_plane
         pole_planar_projection = project_point_to_plane(pole_location, start_effector, ik_axis)
@@ -651,6 +673,8 @@ class LinkInverseKinematics(MantisLinkNode):
             i+=1
 
     def bRelationshipPass(self, context):
+        self.cache_available = []
+        self.cache_key = []
         prepare_parameters(self)
         for xf in self.GetxForm():
             print(wrapGreen("Creating ")+wrapOrange("Inverse Kinematics")+
@@ -668,6 +692,9 @@ class LinkInverseKinematics(MantisLinkNode):
             #  a whole bunch of circular dependency crap from having infinite chain length
             if (c.pole_target):
                 self.set_pole_angle(c, self.calc_pole_angle_pre(c, ik_bone))
+            else: # no need for cache
+                self.cache_available.append(False)
+                self.cache_key.append(None)
 
             props_sockets = self.gen_property_socket_map()
             evaluate_sockets(self, c, props_sockets)
@@ -676,17 +703,22 @@ class LinkInverseKinematics(MantisLinkNode):
         self.executed = True
 
     def bFinalize(self, bContext = None):
-        # adding a test here
         if bContext:
             for i, constraint in enumerate(self.bObject):
+                # retrieve the cached result if it is available
                 ik_bone = self.GetxForm()[i].bGetObject(mode='POSE')
                 if constraint.pole_target:
-                    prWhite(f"Fine-tuning IK Pole Angle for {self}")
-                    # make sure to enable it first
-                    enabled_before = constraint.mute
-                    constraint.mute = False
-                    self.calc_pole_angle_post(constraint, ik_bone, bContext)
-                    constraint.mute = enabled_before
+                    if self.cache_available[i]:
+                        prWhite(f"Retrieving fine-tuned IK Pole Angle for {self} from cache.")
+                        self.set_pole_angle(constraint, IK_POLE_VECTOR_CACHE[self.cache_key[i]])
+                    else:
+                        prWhite(f"Fine-tuning IK Pole Angle for {self}")
+                        # make sure to enable it first
+                        enabled_before = constraint.mute
+                        constraint.mute = False
+                        self.calc_pole_angle_post(constraint, ik_bone, bContext)
+                        constraint.mute = enabled_before
+                        IK_POLE_VECTOR_CACHE[self.cache_key[i]] = constraint.pole_angle
         super().bFinalize(bContext)
 
 def ik_report_error(pb, context, do_print=False):
