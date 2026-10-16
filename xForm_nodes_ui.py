@@ -249,6 +249,9 @@ class xFormCurvePin(Node, xFormNode):
     mantis_node_class_name=bl_idname
     socket_templates = xFormCurvePinSockets
 
+    def display_update(self, parsed_tree, context):
+        object_displaty_update(self, parsed_tree, context)
+
 class xFormGetBone(Node, xFormNode):
     """"A node representing an existing bone"""
     bl_idname = "xFormGetBone"
