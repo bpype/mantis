@@ -119,13 +119,14 @@ def timer_update_selection_sync():
                     active_ui_signature, view_layer,
                     selection_state, deselect)
             except Exception as e:
+                prRed ("Error in Selection Sync")
                 prRed (e)
                 return SELECTION_POLL_RATE
     except Exception as e:
         from .__init__ import DOERROR
         if DOERROR:
-            print ("Error in Selection Sync")
-            print (e)
+            prRed ("Error in Selection Sync")
+            prRed (e)
             raise e
     return SELECTION_POLL_RATE
 
