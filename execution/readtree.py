@@ -660,15 +660,17 @@ def sort_execution(nodes, error_popups):
     
     processed_count = 0
     while(xForm_pass):
-        n = xForm_pass.pop()
-        # if n.execution_prepared: continue
-        n.execution_prepared = True
-        sorted_nodes.append(n)
-        processed_count+=1
-        for child in n.hierarchy_connections:
-            child.unmet_hierarchy_dependency_count-= 1
-            if child.unmet_hierarchy_dependency_count == 0:
-                xForm_pass.append(child)
+        level_size = len(xForm_pass) # the number of nodes in this depth level
+        for i in range(level_size):
+            n = xForm_pass.popleft()
+            # if n.execution_prepared: continue
+            n.execution_prepared = True
+            sorted_nodes.append(n)
+            processed_count+=1
+            for child in n.hierarchy_connections:
+                child.unmet_hierarchy_dependency_count-= 1
+                if child.unmet_hierarchy_dependency_count == 0:
+                    xForm_pass.append(child)
     if processed_count < expected_sort_quantity:
         cycle = []
         for n in nodes.values():
@@ -732,6 +734,7 @@ def execute_tree(nodes, base_tree, context, error_popups = False, profile=False)
         execution_failed = True
     try:
         for n in sorted_nodes:
+            print ("Transform Pass: ", n)
             if execution_failed: break
             try:
                 check_and_apply_overlay(n)
@@ -758,6 +761,7 @@ def execute_tree(nodes, base_tree, context, error_popups = False, profile=False)
         switch_mode(mode='POSE', objects=switch_me)
 
         for n in sorted_nodes:
+            print ("Relationship Pass: ", n)
             try:
                 check_and_apply_overlay(n)
                 if not n.prepared:
@@ -780,6 +784,7 @@ def execute_tree(nodes, base_tree, context, error_popups = False, profile=False)
             ob.data.pose_position = 'POSE'
 
         for n in sorted_nodes:
+            print ("Finalize Pass: ", n)
             try:
                 if profiler: profiler.record(n, "bFinalize", context)
                 else: n.bFinalize(context)
