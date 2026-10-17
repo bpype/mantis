@@ -660,17 +660,15 @@ def sort_execution(nodes, error_popups):
     
     processed_count = 0
     while(xForm_pass):
-        level_size = len(xForm_pass) # the number of nodes in this depth level
-        for i in range(level_size):
-            n = xForm_pass.popleft()
-            # if n.execution_prepared: continue
-            n.execution_prepared = True
-            sorted_nodes.append(n)
-            processed_count+=1
-            for child in n.hierarchy_connections:
-                child.unmet_hierarchy_dependency_count-= 1
-                if child.unmet_hierarchy_dependency_count == 0:
-                    xForm_pass.append(child)
+        # for some reason using popleft here breaks everything... better not push my luck/
+        n = xForm_pass.pop()
+        n.execution_prepared = True
+        sorted_nodes.append(n)
+        processed_count+=1
+        for child in n.hierarchy_connections:
+            child.unmet_hierarchy_dependency_count-= 1
+            if child.unmet_hierarchy_dependency_count == 0:
+                xForm_pass.append(child)
     if processed_count < expected_sort_quantity:
         cycle = []
         for n in nodes.values():
