@@ -798,9 +798,12 @@ class UtilityDriverVariable(MantisMiscNode):
 
     def reset_execution(self):
         super().reset_execution()
-        # clear this to ensure there are no stale reference pointers
-        self.parameters["Driver Variable"] = None
-        self.prepared=True
+        # clear the pointer properties to prevent using stale pointer data.
+        my_var = self.parameters["Driver Variable"]
+        if my_var is not None:
+            my_var["owner"]   = xForm1 # will be filled in by Driver
+            my_var["xForm 1"] = xForm1 # self.GetxForm(index = 1),
+            my_var["xForm 2"] = xForm2 # self.GetxForm(index = 2),
 
     # NOTE _index for interface consistency
     def evaluate_input(self, input_name, _index=0):
@@ -821,16 +824,7 @@ class UtilityDriverVariable(MantisMiscNode):
                 return node #this will fetch the first one, that's good!
         return None
 
-    def bRelationshipPass(self, bContext = None,):
-        prepare_parameters(self)
-        #prPurple ("Executing Driver Variable Node")
-        xF1 = self.GetxForm()
-        xF2 = self.GetxForm(index=2)
-        # kinda clumsy
-        xForm1, xForm2 = None, None
-        if xF1 : xForm1 = xF1.bGetObject()
-        if xF2 : xForm2 = xF2.bGetObject()
-
+    def bPrepare(self, bContext=None):
         v_type = self.evaluate_input("Variable Type")
         i = self.evaluate_input("Property Index"); dVarChannel = ""
         if not isinstance(i, (int, float)):
@@ -858,17 +852,32 @@ class UtilityDriverVariable(MantisMiscNode):
         if dVarChannel: v_type = "TRANSFORMS"
 
         my_var = {
-            "owner"         : xForm1, # will be filled in by Driver
+            "owner"         : None,
             "prop"          : self.evaluate_input("Property"), # will be filled in by Driver
             "type"          : v_type,
             "space"         : self.evaluate_input("Evaluation Space"),
             "rotation_mode" : self.evaluate_input("Rotation Mode"),
-            "xForm 1"       : xForm1,#self.GetxForm(index = 1),
-            "xForm 2"       : xForm2,#self.GetxForm(index = 2),
+            "xForm 1"       : None, # not available yet
+            "xForm 2"       : None, # not available yet
             "channel"       : dVarChannel,}
 
         self.parameters["Driver Variable"] = my_var
-        print (my_var['prop'])
+        self.prepared = True
+        
+
+    def bRelationshipPass(self, bContext = None,):
+        prepare_parameters(self)
+        xF1 = self.GetxForm(index = 1)
+        xF2 = self.GetxForm(index = 2)
+        # kinda clumsy
+        xForm1, xForm2 = None, None
+        if xF1 : xForm1 = xF1.bGetObject()
+        if xF2 : xForm2 = xF2.bGetObject()
+        my_var = self.parameters["Driver Variable"]
+        if my_var is not None:
+            my_var["owner"]   = xForm1 # will be filled in by Driver
+            my_var["xForm 1"] = xForm1 # self.GetxForm(index = 1),
+            my_var["xForm 2"] = xForm2 # self.GetxForm(index = 2),
         self.executed = True
 
 class UtilityKeyframe(MantisMiscNode):
@@ -899,16 +908,11 @@ class UtilityFCurve(MantisMiscNode):
     __slots__ = ()
     socket_templates = FCurveSockets
 
-    def __init__(self, signature, base_tree):
-        super().__init__(signature, base_tree, self.socket_templates)
-        self.prepared = True
 
     def reset_execution(self):
         super().reset_execution()
-        self.prepared=True
 
-    def bTransformPass(self, bContext = None,):
-        prepare_parameters(self)
+    def bPrepare(self, bContext = None,):
         extrap_mode = self.evaluate_input("Extrapolation Mode")
         keys = []
         for i in range(len(self.inputs['Keyframes'].links)):
@@ -917,7 +921,9 @@ class UtilityFCurve(MantisMiscNode):
             prOrange(f"WARN: no keys in fCurve {self}.")
         keys.append(extrap_mode)
         self.parameters["fCurve"] = keys
+        self.prepared = True
         self.executed = True
+
 #TODO make the keyframe, fCurve data classes instead of dicts!
 
 class UtilityDriver(MantisMiscNode):
