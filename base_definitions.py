@@ -862,12 +862,12 @@ custom_props_types = ["LinkArmature", "UtilityKeyframe", "UtilityFCurve", "Utili
                       "xFormArmature", "xFormGeometryObject", "xFormObjectInstance", "xFormCurvePin",]
 
 # filters for determining if a link is a hierarchy link or a non-hierarchy (cyclic) link.
-from_name_filter = ["Driver",]
-to_name_filter = [
+from_name_filter = frozenset({"Driver",})
+to_name_filter = frozenset({
                    "Custom Object xForm Override",
                    "Custom Object",
                    "Deform Bones",
-                 ]
+                 })
 
 # nodes that must be solved as if they were Schema because they send arrays out.
 array_output_types = [
@@ -1301,7 +1301,7 @@ class DummyLink:
 def detect_hierarchy_link(from_node, from_socket, to_node, to_socket,):
     if to_node.node_type in ['DUMMY_SCHEMA', 'SCHEMA']:
         return False #TODO: find out if filtering SCHEMA types is wise
-    if from_socket in from_name_filter and to_socket in ["Array"]:
+    if from_socket in from_name_filter and to_socket in {"Array"}:
         # SPECIAL CASE: arrays essentially extend the non-hierarchy edge
         #       so if the connection to the array isn't hierarchy, the array node
         #       in the middle gets disconnected and never executes.

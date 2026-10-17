@@ -729,6 +729,7 @@ class xFormObjectInstance(xFormNode):
     def bGetObject(self, mode = 'POSE'):
         return self.bObject
 
+
 class xFormCurvePin(xFormNode):
     """An xForm pinned to a specific location on a curve."""
     __slots__ = ()
@@ -739,25 +740,26 @@ class xFormCurvePin(xFormNode):
         setup_custom_property_inputs_outputs(self)
 
     def prep_driver_values(self, constraint):
-        from .misc_nodes import UtilityDriver, UtilitySwitch
-        for socket_name in ["Curve Pin Factor", "Forward Axis","Up Axis",]:
-            if self.inputs.get(socket_name) is None: continue # in case it has been bypassed
-            if self.inputs[socket_name].is_linked:
-                node_line, _last_socket = trace_single_line(self, socket_name)
-                driver = None
-                for other_node in node_line:
-                    if other_node.node_type == 'DRIVER':
-                        driver = other_node; break
-                if isinstance(driver, UtilityDriver):
-                    prop_amount = driver.evaluate_input("Property")
-                elif isinstance(driver, UtilitySwitch):
-                    xf=driver.GetxForm()
-                    prop_amount = xf.evaluate_input(driver.evaluate_input('Parameter'))
-                else:
-                    return
-                for template in self.socket_templates:
-                    if template.name == socket_name: break
+        enums =  ( None,
+                   ("FORWARD_X", "FORWARD_Y", "FORWARD_Z", "TRACK_NEGATIVE_X", "TRACK_NEGATIVE_Y", "TRACK_NEGATIVE_Z"),
+                   ("UP_X", "UP_Y", "UP_Z"),
+                 )
+        for i, socket_name in enumerate(("Curve Pin Factor", "Forward Axis","Up Axis",)):
+            if self.inputs.get(socket_name) is None: continue 
+            enum = enums[i]
+            for template in self.socket_templates:
+                if template.name == socket_name: break
+            prop_amount = find_driven_default_value(self, socket_name)
+            # after all it may not be driven so it is probably a string if it is one of the axis properties.
+            if isinstance(prop_amount, (int, float)) and enum: # it is actually driving an enum value instead...
+                for i, enum_val in enumerate(enum):
+                    # check if the prop amount is in the current int as the enum val
+                    if i+1 > prop_amount: break
+                prop_amount = enum_val            
+            try:
                 setattr(constraint, template.blender_property, prop_amount )
+            except TypeError:
+                setattr(constraint, template.blender_property, template.default_value )
 
     def bPrepare(self, bContext = None,):
         from bpy import data
@@ -837,6 +839,7 @@ class xFormCurvePin(xFormNode):
         # because the drivers may not have initialized yet.
         self.prep_driver_values(c)
         # now if all goes well... the matrix will be correct.
+        # NOTE: this dg.update() makes this a very expensive node
         dg = bContext.view_layer.depsgraph
         dg.update()
         # and the matrix should be correct now - copy because it may be modified

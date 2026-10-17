@@ -804,6 +804,8 @@ class UtilityDriverVariable(MantisMiscNode):
             my_var["owner"]   = xForm1 # will be filled in by Driver
             my_var["xForm 1"] = xForm1 # self.GetxForm(index = 1),
             my_var["xForm 2"] = xForm2 # self.GetxForm(index = 2),
+        else:
+            self.prepared=False
 
     # NOTE _index for interface consistency
     def evaluate_input(self, input_name, _index=0):
@@ -907,10 +909,6 @@ class UtilityFCurve(MantisMiscNode):
     '''A node representing an armature object'''
     __slots__ = ()
     socket_templates = FCurveSockets
-
-
-    def reset_execution(self):
-        super().reset_execution()
 
     def bPrepare(self, bContext = None,):
         extrap_mode = self.evaluate_input("Extrapolation Mode")

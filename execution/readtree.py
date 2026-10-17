@@ -732,7 +732,6 @@ def execute_tree(nodes, base_tree, context, error_popups = False, profile=False)
         execution_failed = True
     try:
         for n in sorted_nodes:
-            print ("Transform Pass: ", n)
             if execution_failed: break
             try:
                 check_and_apply_overlay(n)
@@ -759,7 +758,6 @@ def execute_tree(nodes, base_tree, context, error_popups = False, profile=False)
         switch_mode(mode='POSE', objects=switch_me)
 
         for n in sorted_nodes:
-            print ("Relationship Pass: ", n)
             try:
                 check_and_apply_overlay(n)
                 if not n.prepared:
@@ -782,7 +780,6 @@ def execute_tree(nodes, base_tree, context, error_popups = False, profile=False)
             ob.data.pose_position = 'POSE'
 
         for n in sorted_nodes:
-            print ("Finalize Pass: ", n)
             try:
                 if profiler: profiler.record(n, "bFinalize", context)
                 else: n.bFinalize(context)

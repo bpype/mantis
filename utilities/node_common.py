@@ -121,6 +121,180 @@ def trace_line_up_branching(mantis_node : MantisNode, output_name : str,
                             leaf_nodes.append(socket.node)
     return leaf_nodes
 
+
+# For this, we basically just evaluate the driver once and use the result
+def find_driven_default_value(mantis_node, socket_name):
+    from ..misc_nodes import UtilityDriver, UtilitySwitch
+    from .utilities import get_ui_node
+    xf_inputs_values_var_names = []
+
+    node_line, _last_socket = trace_single_line(mantis_node, socket_name)
+    driver_node = None
+    driver_type = 'SUM'
+    keys = [ (0, 0), (1, 1) ]
+    for driver_node in node_line:
+        if driver_node.node_type == 'DRIVER': break
+    else: # it's not being driven
+        return mantis_node.evaluate_input(socket_name)
+    
+    if isinstance(driver_node, UtilityDriver):
+        driver_type = driver_node.evaluate_input("Driver Type")
+        # then get the variables
+        for i, input in enumerate(driver_node.inputs):
+            # unicode for 'a'
+            var_name = chr(i - 2 + 96)
+            if i == 0 : continue # the Driver Type doesn't interest us
+            elif i ==1 : continue # for now. we do need the fCurve
+            else:
+                if not input.is_linked: continue # nothing to do here
+            var_node    = input.links[0].from_node
+            # NOTE: this var_node will not be prepared on time unless we sort the graph by depth
+            #       and it doesn't seem to be possible to do that without breaking drivers... so
+            # HACK it's safe to do this, but VERY ugly and bad.
+            if not var_node.prepared:
+                var_node.bPrepare()
+            # end HACK
+            var_data    = var_node.parameters["Driver Variable"]
+            var_type    = var_data['type']
+            var_channel = var_data['channel']
+            prop_name = None; value = None 
+            xf1 = var_node.GetxForm(index=1)
+            match var_type:
+                case "SINGLE_PROP":
+                    prop_name = var_node.evaluate_input("Property")
+                    # we'll get the property value in the next step
+                case "TRANSFORMS":
+                    matrix1 = xf1.evaluate_input['Matrix']
+                    # Mantis ensures that these are identity at creation time
+                    if "LOC" in var_channel or "ROT" in var_channel:
+                            value = 0
+                    else: # Scale, defaults to 1
+                            value = 1
+                case "ROTATION_DIFF":
+                    xf2 = var_node.GetxForm(index=2)
+                    matrix1 = xf1.evaluate_input['Matrix']
+                    matrix2 = xf2.evaluate_input['Matrix']
+                    value = matrix1.to_quaternion().rotation_difference(matrix2.to_quaternion()).angle
+                case "LOC_DIFF":
+                    xf2 = var_node.GetxForm(index=2)
+                    matrix1 = xf1.evaluate_input['Matrix']
+                    matrix2 = xf2.evaluate_input['Matrix']
+                    value = (matrix1.to_translation() - matrix2.to_translation()).length
+                case "CONTEXT_PROP":
+                    raise NotImplementedError("Mantis Does not yet support Context Property")
+                    pass
+            xf_inputs_values_var_names.append((xf1, prop_name, value, var_name))
+
+        # Now we'll get the keyframe points and sort them, too!
+        if driver_node.inputs['fCurve'].is_linked:
+            fCurve_node = driver_node.inputs['fCurve'].links[0].from_node
+        extrapolation_mode = 'CONSTANT'
+        keys = []
+        if fCurve_node:
+            extrapolation_mode = fCurve_node.evaluate_input("Extrapolation Mode")
+            for l in fCurve_node.inputs['Keyframes'].links:
+                key_node = l.from_node
+                if key_node:
+                    keys.append( (key_node.evaluate_input("Frame"),  key_node.evaluate_input("Value")) )
+        keys = sorted( keys, key = lambda a : a[0]) # sort by the frame
+
+    elif isinstance(driver_node, UtilitySwitch):
+        # Reimplementing the GetxForm from the switch here
+        # because it is faster to inline this and store the trace result
+        trace = trace_single_line(driver_node, "Parameter" )
+        for node in trace[0]:
+            if node.node_type == 'XFORM':
+                xf = node                    # reuse trace HERE
+                prop_name = trace[1].name    # saves us from tracing again.
+                xf_inputs_values_var_names.append(( xf, prop_name, None, "a")); break
+        else:
+            raise RuntimeError(f"ERROR: Cannot Set the default of the driven value {socket_name} \n"
+                                f"in node {mantis_node}")
+    # We're gonna assume the xForm is sorting these right
+    # but we'll check the name if it is cheap
+    default_values = {}
+    for xf, prop_name, value, var_name in xf_inputs_values_var_names:
+        i=0
+        for output in xf.outputs:
+            if 'xForm Out' == output.name: continue
+            if output.name == prop_name: break
+            i+=1
+        node_line, _last_socket = trace_single_line(xf, "Custom Properties", i)
+        custom_prop_node = node_line[-1]
+        if value:
+            default_values[var_name] = value; continue
+        if prop_name:
+            if custom_prop_node.evaluate_input("Name") == prop_name:
+                custom_prop_type = custom_prop_node.evaluate_input("Type")
+                default_prop_name = ""
+                match custom_prop_type:
+                    case "BOOL":
+                        default_prop_name = 'Default (Bool)'
+                    case "FLOAT":
+                        default_prop_name = 'Default (Float)'
+                    case "INT":
+                        default_prop_name = 'Default (Int)'
+                    case _:
+                        raise RuntimeError(f"ERROR: Cannot Set the default of the driven value {socket_name} \n"
+                                           f"in node {mantis_node}"
+                                           f"Reason: Custom Property {prop_name} is not a valid type." )
+                default_values[var_name] = float(custom_prop_node.evaluate_input(default_prop_name))
+            else:
+                raise RuntimeError(f"ERROR: failed to get proeprty {prop_name} for node {xf}, \n"
+                                   f"cannot Set the default of the driven value {socket_name} \n"
+                                   f"in node {mantis_node}"
+                                    "Reason: Cannot Find Custom Property Node")
+    frame = 0.0
+    if default_values:
+        match driver_type:
+            case "AVERAGE":
+                frame = sum(default_values.values())/len(default_values)
+            case "SUM":
+                frame = sum(default_values.values())
+            case "MIN":
+                frame = min(default_values.values())
+            case "MAX":
+                frame = max(default_values.values())
+            case "SCRIPTED":
+                raise NotImplementedError (f"ERROR: Cannot Set the default of the driven value {socket_name} \n"
+                                        f"in node {mantis_node} \n"
+                                            "Reason: Driver Expressions are not yet implemented.")
+    # Now we apply the fCurve
+    # For now, We'll assume LINEAR keys TODO: come back to this during Pose update!
+    if len(keys) >= 2:
+        previous_frame = None
+        next_frame = None
+        previous_value = None
+        next_value = None
+        for key in keys:
+            if key[0] <= frame: previous_frame, previous_value = key
+            if key[0] >= frame: next_frame, next_value = key
+            if previous_frame is not None and next_frame is not None: break
+        else: # if our frame is out-of-bounds we need a slope to extrapolate on.
+            if previous_frame and not next_frame:
+                next_frame, next_value = previous_frame, previous_value
+                if extrapolation_mode == 'LINEAR':
+                    previous_frame, previous_value = keys[-2] # we need the second last key to extrapolate
+            elif next_frame and not previous_frame:
+                previous_frame, previous_value = next_frame, next_value
+                if extrapolation_mode == 'LINEAR':
+                    next_frame, next_value = keys[1] # we need the second key to extrapolate
+            else:   
+                raise RuntimeError (f"ERROR: Cannot Set the default of the driven value {socket_name} \n"
+                                    f"in node {mantis_node} \n"
+                                    "Reason: Cannot place value on driver fCurve.")
+        if previous_frame == next_frame: # the frame is exactly on a key
+            return previous_value
+        # this is just a simple lerp because we are assuming the keys are linear for now
+        result = previous_value + ((frame - previous_frame) / (next_frame - previous_frame)) * (next_value - previous_value)
+    elif len(keys) ==1:
+        result = key[1] # flat curve, take the value of the only key
+    else:
+        raise RuntimeError (f"ERROR: Cannot Set the default of the driven value {socket_name} \n"
+                            f"in node {mantis_node} \n"
+                             "Reason: Invalid fCurve has 0 keyframes")
+    return result
+        
 # this function exists to walk back to the first ancestor node of XFORM or LINK without
 #  breaking the traverse behaviour which I still need for various reasons.
 def get_parent_xForm_info(mantis_node, socket_name = 'Relationship'):
