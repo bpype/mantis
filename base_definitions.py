@@ -944,7 +944,7 @@ class MantisNode:
         self.ui_signature = signature
         self.inputs = MantisNodeSocketCollection(node=self, is_input=True)
         self.outputs = MantisNodeSocketCollection(node=self, is_input=False)
-        self.parameters, self.drivers = {}, {}; self.bObject=None
+        self.parameters, self.drivers = {}, []; self.bObject=None
         self.hierarchy_connections, self.connections = [], []
         self.hierarchy_dependencies, self.dependencies = [], []
         self.unmet_hierarchy_dependency_count = float("inf") # we will set this when filling the dependencies lists
@@ -972,7 +972,7 @@ class MantisNode:
     
     def reset_execution(self) -> None:
         """ Reset the node for additional execution without re-building the tree."""
-        self.drivers={}; self.bObject=None
+        self.drivers.clear(); self.bObject=None
         self.executed = False
         self.execution_prepared = False
 
@@ -1016,11 +1016,21 @@ class MantisNode:
             self.parameters[key]=value
 
     # We really only need to do this once at class registration
+    # Therefore the goal is not to have any mutable data here
+    # ======================= READ BELOW =======================
+    # We have the following classes of Mantis Socket ==> Blender Proeprty relationships:
+    # Scalar: 1 Mantis scalar ==> 1 Blender property. 1 Filler.
+    # Vector: 1 Mantis Vector socket ==> Blender vector property. 1 Filler.
+    # Scalar Combo: 1 Mantis scalar ==> many Blender scalars. 1 Filler per property.
+    # Vector Combo: 1 Mantis vector ==> vector of Blender vector property. 1 Filler per property.
+    # In every case, 1 filler per Blender property.
     @classmethod
     def gen_property_socket_map(cls, prop_owner_group=None) -> dict:
         from .mantis_dataclasses import MantisSocketFiller
         from dataclasses import replace
         from bpy.app import version as bpy_version
+        if cls.property_socket_map: # retrieve the cache if possible
+            return cls.property_socket_map
         props_sockets = {}
         for s_template in cls.socket_templates:
             if s_template.min_bpy_version:
@@ -1028,26 +1038,44 @@ class MantisNode:
                     prPurple(f"Skipping socket {s_template.name} because "
                              f"it requires Blender {s_template.min_bpy_version} or higher")
                     continue # We can't set or drive this obviously.
-            if prop_owner_group is not None and \
-                    s_template.prop_owner_group != prop_owner_group:
+            if prop_owner_group is not None and s_template.prop_owner_group != prop_owner_group:
                 continue # for composite objects like bones
-            if not s_template.blender_property:
-                continue
-            filler = MantisSocketFiller(socket_name=s_template.name)
-            if isinstance(s_template.blender_property, str):
-                filler = replace(filler)
-                filler.property_name = s_template.blender_property
-                filler.default_value=s_template.default_value
-                props_sockets[s_template.blender_property]=filler
-            elif isinstance(s_template.blender_property, (tuple, list)):
-                for index, sub_prop in enumerate(s_template.blender_property):
-                    filler = replace(filler)
-                    filler.property_name = sub_prop
-                    filler.value_index=index
-                    filler.default_value = s_template.default_value[index]
-                    filler.combo_property=True
-                    props_sockets[sub_prop]= filler
-        cls.property_socket_map = props_sockets
+            if not s_template.blender_property: # this one has to be handled by the node itself.
+                continue # Or maybe it is UI-only, in any case we don't need to do anything here.
+            # Default to (Scalar <==> Scalar), as tuples for compatibility with other code paths
+            vector_property, combo = False, False # TODO: make socket templates pre-tuple-ize this
+            defaults = ( s_template.default_value, ); properties = ( s_template.blender_property, )
+            if isinstance( s_template.default_value, (list, tuple) ):
+                vector_property = True # this tells us if MANTIS provides a vector
+                # if Blender consumes a vector, then we map the vector to the vector. Easy.
+            if isinstance(s_template.blender_property, (tuple, list)):
+                # But maybe we provide data from one Mantis Socket to many Blender properties...
+                combo=True; properties = s_template.blender_property
+                if vector_property: # we have to break the default value up so we can map
+                                    # mantis data element-wise to a vector of Blender properties 
+                    defaults = s_template.default_value 
+            # Now iteratre through the properties and make 1 filler per.
+            for i, property in enumerate(properties):
+                default_index = i if vector_property and combo else 0 # only needed for Combo Vector
+                default = defaults[default_index] # usually 1:1 except for Combo Scalar
+                key = s_template.name + f"_{default_index}" + (f"_{property}" if combo else "")
+                value_index = default_index if combo and vector_property else None
+                from .utilities import socket_filler_operators as operators
+                property_value_operator = None
+                if s_template.property_value_operator:
+                    property_value_operator = getattr(operators, s_template.property_value_operator)
+                props_sockets[key] = MantisSocketFiller(
+                    socket_name = s_template.name,     # This is a dict because node
+                    property_name = property,          # instances should be able 
+                    value_index = value_index,         # to edit Fillers.
+                    default_value = default,           # The keys are not inherently
+                    combo_property = combo,            # meaningful and are
+                    vector_property = vector_property, # NOT USED DOWNSTREAM!
+                    is_animatable = s_template.is_animatable,
+                    property_group = s_template.prop_owner_group,
+                    property_value_operator = property_value_operator)
+        if prop_owner_group is None:
+            cls.property_socket_map = props_sockets  # We should cache this one!
         return props_sockets
 
     def set_traverse(self, traversal_pairs = [(str, str)]) -> None:

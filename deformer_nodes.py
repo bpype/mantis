@@ -268,7 +268,7 @@ class DeformerArmature(MantisDeformerNode):
             self.bObject.append(d)
             d.object = self.bGetParentArmature()
             props_sockets = self.property_socket_map
-            evaluate_sockets(self, d, props_sockets)
+            evaluate_sockets(self, {"DEFAULT":d}, props_sockets)
             #
             if (skin_method := self.evaluate_input("Skinning Method")) == "AUTOMATIC_HEAT":
                 match ob.type:
@@ -406,7 +406,7 @@ class DeformerHook(MantisDeformerNode):
                 self.driver_for_radius(ob, target_node.bGetObject(), vertex, d.strength, bezier=False)
                 
             d.vertex_indices_set(vertices_used)
-            evaluate_sockets(self, d, props_sockets)
+            evaluate_sockets(self, {"DEFAULT":d}, props_sockets)
         finish_drivers(self)
         # todo: this node should be able to take many indices in the future.
         # Also: I have a Geometry Nodes implementation of this I can use... maybe...
@@ -472,14 +472,14 @@ class DeformerMorphTargetDeform(MantisDeformerNode):
         
         # at this point we make the node tree
         from .utilities.geometry_node_graphgen import gen_morph_target_nodes
-        m, props_sockets = gen_morph_target_nodes(
+        d, props_sockets = gen_morph_target_nodes(
                             self.evaluate_input("Name"),
                             xf.bGetObject(),
                             targets,
                             context,
                             use_offset=self.evaluate_input("Use Offset"))
-        self.bObject.append(m)
-        evaluate_sockets(self, m, props_sockets)
+        self.bObject.append(d)
+        evaluate_sockets(self, {"DEFAULT":d}, props_sockets)
         finish_drivers(self)
 
     def gen_shape_key_lattice(self, xf, context):
@@ -508,7 +508,7 @@ class DeformerMorphTargetDeform(MantisDeformerNode):
         xf.has_shape_keys = True
         
         # first make a basis shape key
-        keys, props_sockets, ={}, {}
+        keys = {}
         for i, t in enumerate(targets):
             mt_node = t.links[0].from_node; sk_ob = mt_node.GetxForm().bGetObject()
             if sk_ob is None:
@@ -536,12 +536,12 @@ class DeformerMorphTargetDeform(MantisDeformerNode):
             sk.slider_max = 10
             keys[mt_name]=sk
             from .mantis_dataclasses import MantisSocketFiller
-            socket_value = MantisSocketFiller(
+            filler = MantisSocketFiller(
                 property_name=mt_name,
                 socket_name = "Value."+str(i).zfill(3),
                 default_value= 1.0,
             )
-            props_sockets[mt_name]= socket_value
+            evaluate_sockets( self, {"DEFAULT":sk}, {mt_name:filler})
         for i, t in enumerate(targets):
             mt_node = t.links[0].from_node; sk_ob = mt_node.GetxForm().bGetObject()
             if sk_ob is None: continue
@@ -550,7 +550,6 @@ class DeformerMorphTargetDeform(MantisDeformerNode):
                 sk.relative_key = keys.get(rel)
         
         self.bObject.append(sk.id_data)
-        evaluate_sockets(self, sk.id_data, props_sockets)
         finish_drivers(self)
         prWhite(f"Initializing morph target took {time() -start_time} seconds")
 
@@ -597,7 +596,6 @@ class DeformerMorphTargetDeform(MantisDeformerNode):
 
         # first make a basis shape key
         keys={}
-        props_sockets={}
         for i, t in enumerate(targets):
             mt_node = t.links[0].from_node; sk_ob = mt_node.GetxForm().bGetObject()
             if sk_ob is None:
@@ -630,12 +628,13 @@ class DeformerMorphTargetDeform(MantisDeformerNode):
             sk.slider_max = 10
             keys[mt_name]=sk
             from .mantis_dataclasses import MantisSocketFiller
-            socket_value = MantisSocketFiller(
+            filler = MantisSocketFiller(
+                property_group=mt_name,
                 property_name=mt_name,
                 socket_name = "Value."+str(i).zfill(3),
                 default_value= 1.0,
             )
-            props_sockets[mt_name]= socket_value
+            evaluate_sockets( self, {"DEFAULT":sk}, {mt_name:filler})
         for i, t in enumerate(targets):
             mt_node = t.links[0].from_node; sk_ob = mt_node.GetxForm().bGetObject()
             if sk_ob is None: continue
@@ -644,7 +643,6 @@ class DeformerMorphTargetDeform(MantisDeformerNode):
                 sk.relative_key = keys.get(rel)
         
         self.bObject.append(sk.id_data)
-        evaluate_sockets(self, sk.id_data, props_sockets)
         finish_drivers(self)
         prWhite(f"Initializing morph target took {time() -start_time} seconds")
 
@@ -699,7 +697,7 @@ class DeformerSurfaceDeform(MantisDeformerNode):
             self.bObject.append(d)
             self.get_target_and_subtarget(d, input_name="Target")
             props_sockets = self.property_socket_map
-            evaluate_sockets(self, d, props_sockets)
+            evaluate_sockets(self, {"DEFAULT":d}, props_sockets)
 
     def bModifierApply(self, bContext=None):
         from bpy import ops
@@ -730,7 +728,7 @@ class DeformerMeshDeform(MantisDeformerNode):
             self.bObject.append(d)
             self.get_target_and_subtarget(d, input_name="Object")
             props_sockets = self.property_socket_map
-            evaluate_sockets(self, d, props_sockets)
+            evaluate_sockets(self, {"DEFAULT":d}, props_sockets)
 
     def bModifierApply(self, bContext=None):
         from bpy import ops
@@ -761,7 +759,7 @@ class DeformerLatticeDeform(MantisDeformerNode):
             self.bObject.append(d)
             self.get_target_and_subtarget(d, input_name="Object")
             props_sockets = self.property_socket_map
-            evaluate_sockets(self, d, props_sockets)
+            evaluate_sockets(self, {"DEFAULT":d}, props_sockets)
 
 class DeformerSmoothCorrectiveDeform(MantisDeformerNode):
     '''A node representing a corrective smooth deform modifier'''
@@ -788,4 +786,4 @@ class DeformerSmoothCorrectiveDeform(MantisDeformerNode):
             self.bObject.append(d)
             # self.get_target_and_subtarget(d, input_name="Object")
             props_sockets = self.property_socket_map
-            evaluate_sockets(self, d, props_sockets)
+            evaluate_sockets(self, {"DEFAULT":d}, props_sockets)

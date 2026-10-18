@@ -189,7 +189,7 @@ class LinkCopyLocation(MantisLinkNode):
             self.bObject.append(c)
             self.set_custom_space()
             props_sockets = self.gen_property_socket_map()
-            evaluate_sockets(self, c, props_sockets)
+            evaluate_sockets(self, {"DEFAULT":c}, props_sockets)
         self.executed = True
 
 class LinkCopyRotation(MantisLinkNode):
@@ -219,7 +219,7 @@ class LinkCopyRotation(MantisLinkNode):
             self.bObject.append(c)
             self.set_custom_space()
             props_sockets = self.gen_property_socket_map()
-            evaluate_sockets(self, c, props_sockets)
+            evaluate_sockets(self, {"DEFAULT":c}, props_sockets)
         self.executed = True
 
 class LinkCopyScale(MantisLinkNode):
@@ -240,7 +240,7 @@ class LinkCopyScale(MantisLinkNode):
             self.bObject.append(c)
             self.set_custom_space()
             props_sockets = self.gen_property_socket_map()
-            evaluate_sockets(self, c, props_sockets)
+            evaluate_sockets(self, {"DEFAULT":c}, props_sockets)
         self.executed = True
 
 
@@ -262,7 +262,7 @@ class LinkCopyTransforms(MantisLinkNode):
             self.bObject.append(c)
             self.set_custom_space()
             props_sockets = self.gen_property_socket_map()
-            evaluate_sockets(self, c, props_sockets)
+            evaluate_sockets(self, {"DEFAULT":c}, props_sockets)
         self.executed = True
 
 class LinkTransformation(MantisLinkNode):
@@ -298,43 +298,8 @@ class LinkTransformation(MantisLinkNode):
                 c.name = constraint_name
             self.bObject.append(c)
             self.set_custom_space()
-            # TODO: this can be cached I just need a custom
-            #  gen_property_socket_map for this class.
-            props_sockets = self.gen_property_socket_map().copy()
-            # we have to fix the blender-property for scale/rotation
-            # because Blender stores these separately.
-            # I do not care that this code is ugly.
-            # TODO this should be handled by the socket templates
-            from_suffix, to_replace = '', ''
-            if self.evaluate_input("Map From") == 'ROTATION':
-                from_suffix='_rot'
-            elif self.evaluate_input("Map From") == 'SCALE':
-                from_suffix='_scale'
-            if self.evaluate_input("Map To") == 'ROTATION':
-                to_replace='_rot'
-            elif self.evaluate_input("Map To") == 'SCALE':
-                to_replace='_scale'
-            if from_suffix:
-                for axis in ['x', 'y', 'z']:
-                    stub='from_min_'+axis
-                    props_sockets[stub+from_suffix]=props_sockets[stub]
-                    props_sockets[stub+from_suffix].property_name = stub+from_suffix
-                    del props_sockets[stub]
-                    stub='from_max_'+axis
-                    props_sockets[stub+from_suffix]=props_sockets[stub]
-                    props_sockets[stub+from_suffix].property_name = stub+from_suffix
-                    del props_sockets[stub]
-            if to_replace:
-                for axis in ['x', 'y', 'z']:
-                    stub='to_min_'+axis
-                    props_sockets[stub+to_replace]=props_sockets[stub]
-                    props_sockets[stub+to_replace].property_name = stub+to_replace
-                    del props_sockets[stub]
-                    stub='to_max_'+axis
-                    props_sockets[stub+to_replace]=props_sockets[stub]
-                    props_sockets[stub+to_replace].property_name = stub+to_replace
-                    del props_sockets[stub]
-            evaluate_sockets(self, c, props_sockets)
+            props_sockets = self.gen_property_socket_map()
+            evaluate_sockets(self, {"DEFAULT":c}, props_sockets)
         self.executed = True
 
 class LinkLimitLocation(MantisLinkNode):
@@ -353,7 +318,7 @@ class LinkLimitLocation(MantisLinkNode):
             self.bObject.append(c)
             self.set_custom_space()
             props_sockets = self.gen_property_socket_map()
-            evaluate_sockets(self, c, props_sockets)
+            evaluate_sockets(self, {"DEFAULT":c}, props_sockets)
         self.executed = True
 
 class LinkLimitRotation(MantisLinkNode):
@@ -367,13 +332,12 @@ class LinkLimitRotation(MantisLinkNode):
             print(wrapGreen("Creating ")+wrapWhite("Limit Rotation")+
                 wrapGreen(" Constraint for bone: ") +
                 wrapOrange(xf.bGetObject().name))
-
             if constraint_name := self.evaluate_input("Name"):
                 c.name = constraint_name
             self.bObject.append(c)
             self.set_custom_space()
             props_sockets = self.gen_property_socket_map()
-            evaluate_sockets(self, c, props_sockets)
+            evaluate_sockets(self, {"DEFAULT":c}, props_sockets)
         self.executed = True
 
 class LinkLimitScale(MantisLinkNode):
@@ -393,7 +357,7 @@ class LinkLimitScale(MantisLinkNode):
             self.bObject.append(c)
             self.set_custom_space()
             props_sockets = self.gen_property_socket_map()
-            evaluate_sockets(self, c, props_sockets)
+            evaluate_sockets(self, {"DEFAULT":c}, props_sockets)
         self.executed = True
 
 class LinkLimitDistance(MantisLinkNode):
@@ -413,7 +377,7 @@ class LinkLimitDistance(MantisLinkNode):
             self.bObject.append(c)
             self.set_custom_space()
             props_sockets = self.gen_property_socket_map()
-            evaluate_sockets(self, c, props_sockets)
+            evaluate_sockets(self, {"DEFAULT":c}, props_sockets)
         self.executed = True
 
 # Tracking
@@ -434,7 +398,7 @@ class LinkStretchTo(MantisLinkNode):
                 c.name = constraint_name
             self.bObject.append(c)
             props_sockets = self.gen_property_socket_map()
-            evaluate_sockets(self, c, props_sockets)
+            evaluate_sockets(self, {"DEFAULT":c}, props_sockets)
 
             if (self.evaluate_input("Original Length") == 0):
                 # this is meant to be set automatically.
@@ -457,7 +421,7 @@ class LinkDampedTrack(MantisLinkNode):
                 c.name = constraint_name
             self.bObject.append(c)
             props_sockets = self.gen_property_socket_map()
-            evaluate_sockets(self, c, props_sockets)
+            evaluate_sockets(self, {"DEFAULT":c}, props_sockets)
         self.executed = True
 
 class LinkLockedTrack(MantisLinkNode):
@@ -476,7 +440,7 @@ class LinkLockedTrack(MantisLinkNode):
                 c.name = constraint_name
             self.bObject.append(c)
             props_sockets = self.gen_property_socket_map()
-            evaluate_sockets(self, c, props_sockets)
+            evaluate_sockets(self, {"DEFAULT":c}, props_sockets)
         self.executed = True
 
 class LinkTrackTo(MantisLinkNode):
@@ -495,7 +459,7 @@ class LinkTrackTo(MantisLinkNode):
                 c.name = constraint_name
             self.bObject.append(c)
             props_sockets = self.gen_property_socket_map()
-            evaluate_sockets(self, c, props_sockets)
+            evaluate_sockets(self, {"DEFAULT":c}, props_sockets)
         self.executed = True
 
 class LinkInheritConstraint(MantisLinkNode):
@@ -515,7 +479,7 @@ class LinkInheritConstraint(MantisLinkNode):
             self.bObject.append(c)
 
             props_sockets = self.gen_property_socket_map()
-            evaluate_sockets(self, c, props_sockets)
+            evaluate_sockets(self, {"DEFAULT":c}, props_sockets)
             c.set_inverse_pending
             self.executed = True
 
@@ -696,7 +660,7 @@ class LinkInverseKinematics(MantisLinkNode):
                 self.cache_key.append(None)
 
             props_sockets = self.gen_property_socket_map()
-            evaluate_sockets(self, c, props_sockets)
+            evaluate_sockets(self, {"DEFAULT":c}, props_sockets)
             c.use_location   = self.evaluate_input("Position") > 0
             c.use_rotation   = self.evaluate_input("Rotation") > 0
         self.executed = True
@@ -774,7 +738,7 @@ class LinkDrivenParameter(MantisLinkNode):
                                           socket_name="Value",
                                           default_value=def_value)
             }
-            evaluate_sockets(self, ob, props_sockets)
+            evaluate_sockets(self, {"DEFAULT":ob}, props_sockets)
 
         self.executed = True
 
@@ -804,6 +768,7 @@ class LinkArmature(MantisLinkNode):
                 wrapGreen(" Constraint for bone: ") +
                 wrapOrange(xf.bGetObject().name))
             c = xf.bGetObject().constraints.new('ARMATURE')
+            b_objects = {"DEFAULT":c}
             if constraint_name := self.evaluate_input("Name"):
                 c.name = constraint_name
             self.bObject.append(c)
@@ -828,14 +793,18 @@ class LinkArmature(MantisLinkNode):
                 default_value = 1.0
                 if self.inputs['Weights'].links:
                     default_value = 1/len(self.inputs['Weights'].links)
+                prop_name = 'weight'
+                # prop_name = f"targets[{i}].weight"
                 filler = MantisSocketFiller(
-                    property_name= (prop_name := "targets[%d].weight" % i),
-                    socket_name="Weights",
-                    default_value=default_value,
+                    property_group = f"target.{str(i).zfill(4)}",
+                    property_name = prop_name,
+                    socket_name = "Weights",
                     array_index=i,
+                    default_value=default_value,
                 )
-                props_sockets[prop_name] = filler
-            evaluate_sockets(self, c, props_sockets)
+                b_objects[f"target.{str(i).zfill(4)}"] = target
+                props_sockets[prop_name+str(i)] = filler
+            evaluate_sockets(self, b_objects, props_sockets)
             for target, value in targets_weights.items():
                 c.targets[target].weight=value
         self.executed = True
@@ -871,7 +840,7 @@ class LinkSplineIK(MantisLinkNode):
                 c.name = constraint_name
             self.bObject.append(c)
             props_sockets = self.gen_property_socket_map()
-            evaluate_sockets(self, c, props_sockets)
+            evaluate_sockets(self, {"DEFAULT":c}, props_sockets)
         self.executed = True
 
 
@@ -893,7 +862,7 @@ class LinkFloor(MantisLinkNode):
             self.bObject.append(c)
             self.set_custom_space()
             props_sockets = self.gen_property_socket_map()
-            evaluate_sockets(self, c, props_sockets)
+            evaluate_sockets(self, {"DEFAULT":c}, props_sockets)
         self.executed = True
 
 class LinkShrinkWrap(MantisLinkNode):
@@ -913,7 +882,7 @@ class LinkShrinkWrap(MantisLinkNode):
             if constraint_name := self.evaluate_input("Name"):
                 c.name = constraint_name
             props_sockets = self.gen_property_socket_map()
-            evaluate_sockets(self, c, props_sockets)
+            evaluate_sockets(self, {"DEFAULT":c}, props_sockets)
             # self.set_custom_space() # this needs to be overridden for me TODO
         self.executed = True
 
@@ -937,5 +906,5 @@ class LinkGeometryAttribute(MantisLinkNode):
             if constraint_name := self.evaluate_input("Name"):
                 c.name = constraint_name
             props_sockets = self.gen_property_socket_map()
-            evaluate_sockets(self, c, props_sockets)
+            evaluate_sockets(self, {"DEFAULT":c}, props_sockets)
         self.executed = True

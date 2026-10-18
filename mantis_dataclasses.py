@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import List, Any, Tuple, Optional
+from typing import List, Any, Tuple, Optional, Callable
 
 @dataclass(slots=True)
 class MantisSocketTemplate():
@@ -15,6 +15,9 @@ class MantisSocketTemplate():
     use_multi_input  : bool = field(default=False)
     ui_only          : bool = field(default=False)
     default_value    : Any = field(default=None)
+    # The data operator is used to transform the Mantis data to a format Blender can use.
+    # For example, type-casting when Blender's C/C++ is more type-sensitve than Python
+    property_value_operator : Optional[Callable] = field (default=None)
     # this is a hint for the props_sockets system for complex situations
     #  where multiple blender objects own the properties, like e.g. bone/posebone
     prop_owner_group : str = field(default="")
@@ -87,19 +90,18 @@ class MantisBBoneTransform():
 @dataclass(slots=True)
 class MantisSocketFiller():
     socket_name: str = field(default="")
+    property_group : str = field(default="")
     property_name : str = field(default="")
     default_value: Any = field(default=None)
     array_index: int = field(default=0) # for multi-input array sockets
     value_index: Optional[int] = field(default=None) # for vector properties
     # A Combo Property is a property that jams a bunch of blender properties into one socket
-    combo_property: bool = field(default=False)
+    combo_property: bool = field(default=False) # i.e. it provides a vector of Blender Properties
+    vector_property : bool = field(default=False)
+    is_animatable : bool = field(default=True) # for catching bad drivers
+    # we pack a function for transforming the data if needed.
+    property_value_operator: Optional[Callable] = field(default=None)
 
-    def __repr__(self):
-        return f"socket_name: {self.socket_name}, " \
-               f"property_name: {self.property_name}, " \
-               f"default_value: {self.default_value}, " \
-               f"array_index: {self.array_index or 0}, " \
-               f"value_index: {self.value_index or None}"
 
 @dataclass(slots=True)
 class RerouteCacheItem:

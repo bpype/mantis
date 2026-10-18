@@ -9,7 +9,8 @@ xFormArmatureSockets=[
             default_value='Armature', blender_property='name' ),
     RotationOrderTemplate := SockTemplate(
         name="Rotation Order", is_input=True,  bl_idname='RotationOrderSocket',
-            default_value='XYZ', blender_property='rotation_mode' ),
+            default_value='XYZ', blender_property='rotation_mode',
+            property_value_operator = "resolve_rotation_mode_auto", ),
     ObjectMatrixTemplate := SockTemplate(
         name="Matrix", is_input=True,  bl_idname='MatrixSocket',
             blender_property='matrix_world' ),
@@ -37,7 +38,8 @@ xFormGeometryObjectSockets=[
                                        bl_idname='DeformerSocket', ),
     HideTemplate := SockTemplate(name="Hide in Viewport",
         is_input=True, bl_idname='HideSocket', default_value=False,
-        blender_property='hide_viewport' ),
+        blender_property='hide_viewport',
+        property_value_operator='cast_to_bool' ),
     HideRenderTemplate := SockTemplate(name="Hide in Render",
         is_input=True, bl_idname='BooleanSocket', default_value=False,
         blender_property='hide_render' ),
@@ -61,22 +63,23 @@ xFormGeometryObjectInstanceSockets=[
 ]
 
 xFormCurvePinSockets = [
-    replace(NameTemplate, default_value='Curve Pin'),
+    replace(NameTemplate, default_value='Curve Pin',  prop_owner_group='object'),
     ParentCurveTemplate := SockTemplate(
-        name="Parent Curve", is_input=True,  bl_idname='xFormSocket', ),
+        name="Parent Curve", is_input=True,  bl_idname='xFormSocket',),
     SplineIndexTemplate,
     FactorTemplate := SockTemplate(
         name="Curve Pin Factor", is_input=True,  bl_idname='FloatFactorSocket',
-        default_value=0.0, blender_property='offset_factor' ),
+        default_value=0.0, blender_property='offset_factor', prop_owner_group='constraint'),
     ForwardAxisTemplate := SockTemplate(
         name="Forward Axis", is_input=True,  bl_idname='EnumFollowPathForwardAxis',
-        default_value="FORWARD_Y", blender_property='forward_axis' ),
+        default_value="FORWARD_Y", blender_property='forward_axis', prop_owner_group='constraint' ),
     UpAxisTemplate := SockTemplate(
         name="Up Axis", is_input=True,  bl_idname='EnumUpAxis',
-        default_value="UP_Z", blender_property='up_axis' ),
+        default_value="UP_Z", blender_property='up_axis', prop_owner_group='constraint'),
     CurvePinDisplaySize := SockTemplate(
         name="Display Size", is_input=True,  bl_idname='FloatPositiveSocket',
-        default_value=0.05, blender_property='empty_display_size'),
+        default_value=0.05, blender_property='empty_display_size',
+        prop_owner_group='object'),
     CustomPropsTemplate,
     replace(xFormOutTemplate, traverse_target = None)
 ]
@@ -153,10 +156,10 @@ UseTransformAroundCustomShape = SockTemplate(name="Use as Pivot", category='Disp
 from math import pi
 xFormBoneSockets = [
     replace(NameTemplate, default_value='Bone', category='always_show',
-            is_animatable=False,),
-    replace(RotationOrderTemplate, category='always_show',),
+            is_animatable=False, blender_property=None), # because we have to set the name directly at creation
+    replace(RotationOrderTemplate, category='always_show', prop_owner_group = 'pose_bone'),
     BoneMatrixTemplate := replace(ObjectMatrixTemplate, is_animatable=False,
-            blender_property='matrix', category='always_show',),
+             category='always_show', blender_property=None ,), # None because it is set at creation
     replace(RelationshipInTemplate, category='always_show', is_animatable=False,),
     # IK
     IKStretch := SockTemplate(

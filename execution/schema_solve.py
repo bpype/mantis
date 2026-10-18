@@ -87,6 +87,8 @@ class SchemaSolver:
                 mantis_node = SchemaConstOutput(signature=signature, base_tree=self.node.base_tree, parent_schema_node=self.node)
                 self.schema_nodes[signature] = mantis_node
 
+    # Using lambdas here causes a lot of function calls, should be optimized out
+    # since after all this only needs to change when the index updates
     def set_index_strings(self):
         self.index_str = lambda : '.'+str(self.uuid)+'.'+str(self.index).zfill(4)
         self.prev_index_str = lambda : '.'+str(self.uuid)+'.'+str(self.index-1).zfill(4)

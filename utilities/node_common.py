@@ -369,7 +369,7 @@ def prepare_parameters(mantis_node):
             mantis_node.parameters[s_name] = sock.links[0].from_node.parameters[sock.name]
     # should work, this is ugly.
 
-def check_for_driver(mantis_node, input_name, value_index = None, array_index = 0, combo_property=False):
+def check_for_driver(mantis_node, input_name, value_index = None, array_index = 0):
     prop = mantis_node.evaluate_input(input_name, array_index)
     if (value_index is not None):
         try:
@@ -379,204 +379,133 @@ def check_for_driver(mantis_node, input_name, value_index = None, array_index = 
         # TODO an Index or Key error here should have a reasonable error message
     return (prop.__class__.__name__ == 'MantisDriver')
 
-def print_driver_item(mantis_node, b_object, original_prop):
-    if mantis_node.node_type in ['LINK',]:
-        printname  = wrapOrange(b_object.id_data.name)
-    elif mantis_node.node_type in ['XFORM',]:
-        printname  = wrapOrange(mantis_node.bGetObject().name)
-    else:
-        printname = wrapOrange(mantis_node)
-    print("Adding driver %s to %s in %s" % (wrapPurple(original_prop), wrapWhite(mantis_node.signature[-1]), printname))
-
-# HACK This is the most hideous voodoo black magic fucntion in the entire program
-#      but everything depends on it and it works 
-def evaluate_sockets(mantis_node, b_object, props_sockets,):
-    # this is neccesary because some things use dict properties for dynamic properties and setattr doesn't work
-    def safe_setattr(ob, att_name, val):
-        if ob.__class__.__name__ in ["NodesModifier"]:
+# this is neccesary because some things use dict properties for dynamic properties and setattr doesn't work
+def safe_setattr(ob, att_name, val):
+    ob_class_name = ob.__class__.__name__
+    match ob_class_name:
+        case "NodesModifier":
             ob[att_name]=val
-        elif b_object.__class__.__name__ in ["Key"]:
-            if not val: val=0
+        case "Key":
             ob.key_blocks[att_name].value=val
-        elif "]." in att_name:
-            # it is of the form prop[int].prop2
-            prop=att_name.split('[')[0]
-            prop1=att_name.split('.')[1]
-            get_index = int(att_name.split('[')[1][0])
-            setattr(getattr(b_object, prop)[get_index], prop1, val)
-        else:
-            try:
-                setattr(ob, att_name, val)
-            except Exception as e:
-                print ("ob, att_name, val")
-                prRed(ob, att_name, val)
-                raise e
-    for prop, filler_item in props_sockets.items():
-        if isinstance(filler_item, tuple):
-            raise NotImplementedError(mantis_node)
-        sock = filler_item.socket_name
-        default = filler_item.default_value
-        value_index = filler_item.value_index
-        array_index = filler_item.array_index
-        combo_property = filler_item.combo_property
-        driver_key = (sock, value_index, array_index)
-        if (check_for_driver(mantis_node, sock, value_index, array_index, combo_property)):
-            original_prop = prop
-            # TODO: deduplicate this terrible hack
-            if ("." in prop) and not b_object.__class__.__name__ in ["Key"]: # this is a property of a property...
-                sub_props = [b_object]
-                while ("." in prop):
-                    split_prop = prop.split(".")
-                    prop = split_prop[1]
-                    sub_prop = (split_prop[0])
-                    if ("[" in sub_prop):
-                        sub_prop, sub_index = sub_prop.split("[")
-                        sub_prop_index = int(sub_index[0])
-                        sub_props.append(getattr(sub_props[-1], sub_prop)[sub_prop_index])
-                    else:
-                        sub_props.append(getattr(sub_props[-1], sub_prop))
-                safe_setattr(sub_props[-1], prop, default)
-            # this is really stupid
-            else:
-                safe_setattr(b_object, prop, default)
-            print_driver_item( mantis_node, b_object, original_prop)
-            if b_object.__class__.__name__ in ["NodesModifier"]:
-                mantis_node.drivers[driver_key] = "[\""+original_prop+"\"]" # lol. It is a dict element not a "true" property
-            elif b_object.__class__.__name__ in ["Key"]:
-                mantis_node.drivers[driver_key] = "key_blocks[\""+original_prop+"\"].value"
-            else:
-                mantis_node.drivers[driver_key] = original_prop
-        else: # here we can do error checking for the socket if needed
-            if (value_index is not None):
-                safe_setattr(b_object, prop, mantis_node.evaluate_input(sock)[value_index])
-            else:                    # 'mute' is better than 'enabled'
-                # UGLY HACK          # because it is available in older
-                if (prop == 'mute'): # Blenders.
-                    safe_setattr(b_object, prop, not bool(mantis_node.evaluate_input(sock)))
-                elif (prop == 'hide'): # this will not cast it for me, annoying.
-                    safe_setattr(b_object, prop, bool(mantis_node.evaluate_input(sock)))
-                else:
-                    try:
-                    # just wanna see if we are dealing with some collection
-                    # check hasattr in case it is one of those ["such-and-such"] props, and ignore those
-                        if hasattr(b_object, prop) and (not isinstance(getattr(b_object, prop), str)) and hasattr(getattr(b_object, prop), "__getitem__"):
-                            # prGreen("Doing the thing")
-                            for val_index, value in enumerate(mantis_node.evaluate_input(sock)):
-                                # assume this will work, both because val should have the right number of elements, and because this should be the right data type.
-                                from .drivers import MantisDriver
-                                if isinstance(value, MantisDriver):
-                                    getattr(b_object,prop)[val_index] = default[val_index]
-                                    print("Adding driver %s to %s in %s" % (wrapPurple(prop), wrapWhite(mantis_node.signature[-1]), mantis_node))
-                                    try:
-                                        mantis_node.drivers[sock].append((prop, val_index))
-                                    except:
-                                        mantis_node.drivers[sock] = [(prop, val_index)]
-                                else:
-                                    getattr(b_object,prop)[val_index] =  value
-                        else:
-                            safe_setattr(b_object, prop, mantis_node.evaluate_input(sock))
-                    except Exception as e:
-                        prRed(b_object, mantis_node, prop, sock, mantis_node.evaluate_input(sock))
-                        raise e
+        case _:
+            setattr(ob, att_name, val)
 
-def finish_driver(mantis_node, b_object, driver_item, prop):
-    try:
-        driver_sock = driver_item[0]; index = driver_item[1]; array_index =driver_item[2]
-    except Exception as e:
-        print (wrapGreen(mantis_node), wrapOrange(b_object), wrapRed(driver_item), wrapWhite(prop),)
-        raise e
-    driver_trace = trace_single_line(mantis_node, driver_sock, array_index)
-    driver_provider, driver_socket = driver_trace[0][-1], driver_trace[1]
-    
-    combo_property = False
-    # try to detect combo properties
-    if mantis_node.socket_templates:
-        for st in mantis_node.socket_templates:
-            if st.name == driver_sock:
-                if isinstance(st.blender_property, tuple):
-                    combo_property = True
-                break
+# do: make this function end in a single setattr
+def evaluate_sockets(mantis_node, b_objects, props_sockets,):
+    # TODO: I think it is wasteful to run this once per b_object for e.g. Link nodes.
+    #       Should be able to get the results once and pass 'em along. Probably only saves
+    #       a handful of fn calls in a big graph. Not worth doing a big refactor right now
+    # Because Mantis Nodes are sometimes a composition of different Blender objects,
+    # We have to set properties on different Blender Objects and the easiest way
+    # is to send the object in directly instead of trying to find e.g. nested properties
+    for property_group, b_object in b_objects.items():
+        ob_class_name = b_object.__class__.__name__
+        for filler_item in props_sockets.values():
+            filler_property_group = filler_item.property_group or "DEFAULT"
+            prop = filler_item.property_name
+            if filler_property_group != property_group: continue
+            if b_object is None: continue
 
-    if index is not None:
-        try:
-            driver = driver_provider.parameters[driver_socket.name][index].copy()
-        except KeyError as e: # try single driver, it should still work fine.
-            if combo_property:
-                driver = driver_provider.parameters[driver_socket.name].copy()
-            else:
-                raise e
-        # this is harmless and necessary for the weird ones where the property is a vector too
-        if not combo_property:
-            driver["ind"] = index
-    else:
-        driver = driver_provider.parameters[driver_socket.name].copy()
-    if driver:
-        socket_template = None
-        if mantis_node.socket_templates:
-            for socket_template in mantis_node.socket_templates:
-                if socket_template.name == driver_sock: break
-        if socket_template:
-            if socket_template.is_animatable == False:
-                raise RuntimeError(f"Driver is not allowed for {driver_sock} in node {mantis_node}")
-        if ("." in prop) and mantis_node.__class__.__name__ != "DeformerMorphTargetDeform": # this is a property of a property...
-            sub_props = [b_object]
-            while ("." in prop):
-                split_prop = prop.split(".")
-                prop = split_prop[1]
-                sub_prop = (split_prop[0])
-                if ("[" in sub_prop):
-                    sub_prop, index = sub_prop.split("[")
-                    index = int(index[0])
-                    sub_props.append(getattr(sub_props[-1], sub_prop)[index])
+            input_name = filler_item.socket_name
+            default = ( filler_item.default_value, )
+            value_index = filler_item.value_index
+            array_index = filler_item.array_index
+            combo = filler_item.combo_property
+            vector = filler_item.vector_property
+
+            # Check for a driver -- this is inlined from check_for_driver()
+            evaluated_value = mantis_node.evaluate_input(input_name, array_index)
+            driver = evaluated_value
+            drivers_exist = (evaluated_value.__class__.__name__ == 'MantisDriver', )
+            single_driver_input = drivers_exist[0]
+
+            if combo and vector: # we map an element of the socket's vector to a single scalar property
+                evaluated_value = evaluated_value[value_index]
+                drivers_exist = (evaluated_value.__class__.__name__ == 'MantisDriver', )
+            if vector and not combo: # then we map a vector to a vector and have to check for drivers per-element
+                default = filler_item.default_value
+                # the evaluated value could either be a vector of scalar values (or scalar drivers) OR one driver
+                if single_driver_input: # we have alredy checked for single-driver, so this is a vector otherwise
+                    drivers_exist = tuple( True for _unused in range(len(default)) )
                 else:
-                    sub_props.append(getattr(sub_props[-1], sub_prop))
-            driver["owner"] = sub_props[-1]
-        elif mantis_node.node_type in ['XFORM',] and mantis_node.__class__.__name__ in ['xFormBone']:
-            # TODO: I really shouldn't have to hardcode this. Look into better solutions.
-            # NOTE: VERSIONING in Blender 5.0 we have to use pose bone for this, too.
-            # default to pose bone, it's usually what we want
-            bone_col = mantis_node.bGetParentArmature().pose.bones
-            from ..xForm_socket_templates import attributes_shared_by_bone_and_pose_bone
-            if socket_template.prop_owner_group == 'bone':
-                bone_col = mantis_node.bGetParentArmature().data.bones
-            # this is a little bit clumsy. TODO clean up here
-            if prop in attributes_shared_by_bone_and_pose_bone:
-                # we want to use the pose bone for this...only if it has a driver
-                bone_col = mantis_node.bGetParentArmature().pose.bones
-            driver["owner"] = bone_col[b_object] # we use "unsafe" brackets instead of get() because we want to see any errors that occur
-        # HACK having special cases here is indicitave of a deeper problem that should be refactored
-        elif mantis_node.__class__.__name__ in ['xFormCurvePin'] and \
-                      prop in ['offset_factor', 'forward_axis', 'up_axis']:
-                driver["owner"] = b_object.constraints['Curve Pin']
-        else:
-            driver["owner"] = b_object
-        driver["prop"] = prop
-        return driver
-    else:
-        prOrange("Provider", driver_provider)
-        prGreen("socket", driver_socket)
-        print (index)
-        prPurple(driver_provider.parameters[driver_socket.name])
-        prRed("Failed to create driver for %s" % prop)
-        return None
+                    drivers_exist = tuple( val.__class__.__name__ == 'MantisDriver' for val in evaluated_value )
+            assign_this_value = evaluated_value # Usually we just assign the value right away
+            if single_driver_input and vector: # in this pernicious case, we need to lift
+                assign_this_value = list(default) # the evaluated value from scalar to vector
+            # We had to pack everything into this weird iterable format so we can handle
+            # all 4 cases, (scalar, vector, scalar combo, vector combo) in one place
+            # this isn't perfectly optimal but I expect it to cost a few milliseconds at most
+            # and while it is kind of confusing it is nice to keep all this in one code path
+            if any(drivers_exist):
+                if vector and not combo and isinstance(assign_this_value, tuple):
+                    assign_this_value = list(assign_this_value) # because we have to mutate it
+                for i, (default_value, driver_exists) in enumerate(zip(default, drivers_exist)):
+                    if driver_exists: # we need to pack data for the driver
+                        if filler_item.is_animatable == False:
+                            raise RuntimeError(f"Driver is not allowed for input \"{input_name}\" in node \"{mantis_node}\".")
+                        # NOTE at this point we can inject the driver's default resulting value
+                        #      and we have to do so in Curve Pin where it has a special case
+                        #      In the future I may implement this HERE in general
+                        printname = wrapOrange(mantis_node)
+
+                        if vector and not combo: assign_this_value[i] = default_value
+                        else: assign_this_value = default_value
+
+                        if mantis_node.node_type == 'LINK': printname  = wrapOrange(b_object.id_data.name)
+                        elif mantis_node.node_type == 'XFORM': printname  = wrapOrange(mantis_node.bGetObject().name)
+                        print(f"Adding driver to property: {wrapPurple(prop)} in {printname} in node: {wrapWhite(mantis_node.ui_signature[1:])}")
+                        # NOW we can set up the driver.
+                        # TODO: Maybe can prefill this in the socket template or cache the result per-socket
+                        driver_properties = {} # use this dict to pack this data without mutating the driver itself
+                        driver_properties["path_from_id"] = b_object.path_from_id(prop,)
+                        driver_properties['owner'] = b_object # it is the CALLER's responsibility to send the right object!!
+                        # we need a special case here for Bones :/
+                        # TODO: refactor so I don't need this
+                        if mantis_node.__class__.__name__ == 'xFormBone':
+                            from ..xForm_socket_templates import attributes_shared_by_bone_and_pose_bone
+                            if prop in attributes_shared_by_bone_and_pose_bone:
+                                driver_properties['owner'] = b_objects['pose_bone']
+                                driver_properties["path_from_id"] = b_objects['pose_bone'].path_from_id(prop,)
+                        if (vector and not combo):
+                            driver_properties['ind'] = i
+                        if vector and single_driver_input:
+                            driver_properties['ind'] = -1 # the driver will be added to all 3 channels
+                        # TODO: I would like the socket filler to handle the special cases here.
+                        #       even if it means I have to pack another operator in the filler.
+                        resolved_prop_name = prop
+                        match ob_class_name:
+                            case "NodesModifier": # It is a dict element.
+                                resolved_prop_name = "[\""+prop+"\"]"
+                            case "Key": # that is, the outer data block that owns shape keys, not a key-frame.
+                                resolved_prop_name = "key_blocks[\""+prop+"\"].value"
+                        driver_properties["prop"] = resolved_prop_name
+                        driver_index = value_index if vector and not single_driver_input else None
+                        if driver_index: driver = driver[driver_index]
+                        mantis_node.drivers.append( (driver, driver_properties) )
+
+            # We wait until now to skip this because it is important to do the
+            #   is_animatable check above and give the user a meaningful error
+            if prop is None: continue
+            # Some socket values need to be transformed, so we can use the operator to do that.
+            if filler_item.property_value_operator:
+                assign_this_value = filler_item.property_value_operator(mantis_node, evaluated_value)
+            # at this point there is ONE filler per property and we just have to assign the value
+            if ob_class_name not in {'NodesModifier', 'Key'}:
+                setattr(b_object, prop, assign_this_value)
+            elif ob_class_name == "NodesModifier":
+                b_object[prop] = assign_this_value
+            else: # ob_class_name == "Key":
+                b_object.key_blocks[prop].value = assign_this_value
 
 def finish_drivers(mantis_node):
     drivers = []
-    if not hasattr(mantis_node, "drivers"):
-        return # HACK
-    for driver_item, prop in mantis_node.drivers.items():
-        b_objects = [mantis_node.bObject]
-        if mantis_node.node_type == 'LINK':
-            b_objects = mantis_node.bObject # this is already a list
-        for b_object in b_objects:
-            # Mutating the driver_item here is the WORST THING I HAVE EVER SEEN
-            # HACK UGLY BUG TERRIBLE BAD CODE
-            if isinstance(prop, list):
-                for sub_item in prop:
-                        drivers.append(finish_driver(mantis_node, b_object, (driver_item, sub_item[1], 0), sub_item[0]))
-                else:
-                    drivers.append(finish_driver(mantis_node, b_object, (driver_item, sub_item[1], 0), sub_item[0]))
-            else:
-                drivers.append(finish_driver(mantis_node, b_object, driver_item, prop))
+    for driver, driver_properties in mantis_node.drivers:
+        drivers_from_socket = (driver,)
+        if isinstance(driver, (tuple, list)):
+            drivers_from_socket = driver # this is a collection e.g. from a Vector Combine
+        for driver in drivers_from_socket:
+            driver_copy = driver.copy() # it is safe to copy it here because it is guarenteed to be filled out.
+            driver_copy.update(driver_properties)
+            drivers.append(driver_copy)
     from .drivers import CreateDrivers
     CreateDrivers(drivers)

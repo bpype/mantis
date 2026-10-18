@@ -33,7 +33,8 @@ InfluenceTemplate : SockTemplate = SockTemplate(
     default_value=1.0, blender_property='influence')
 EnableTemplate : SockTemplate = SockTemplate(
     name="Enable", is_input=True,  bl_idname='EnableSocket',
-    default_value=True, blender_property='mute')
+    default_value=True, blender_property='mute',
+    property_value_operator='invert_cast_to_bool')
 OffsetTemplate : SockTemplate = SockTemplate(
     name="Offset", bl_idname='BooleanSocket', is_input=True,
     default_value=False, blender_property='use_offset')
@@ -164,7 +165,8 @@ TransformationMinMaxTemplateGenerator = lambda name, bprop  : SockTemplate(
     name=name, is_input=True,
     bl_idname='EnumTransformationAxes' if "Source" in name else "FloatSocket",
     default_value='X' if "Source" in name else 1.0,
-    blender_property=bprop)
+    blender_property= bprop if "Source" in name else ( bprop, bprop+"_rot", bprop+"_scale") ,
+    )
 
 LinkTransformationSockets = [
     InputRelationshipTemplate,
@@ -384,8 +386,10 @@ LinkArmatureSockets=[
                  default_value=False, blender_property='use_bone_envelopes'),
     SockTemplate(name="Use Current Location", bl_idname='BooleanSocket', is_input=True,
                  default_value=False, blender_property='use_current_location'),
-    TargetsArray := replace(TargetTemplate, name='Targets', use_multi_input=True),
-    WeightsArray := replace(InfluenceTemplate, name='Weights', use_multi_input=True),
+    TargetsArray := replace(TargetTemplate, name='Targets', use_multi_input=True,
+                            blender_property=None), # the node sets this up
+    WeightsArray := replace(InfluenceTemplate, name='Weights', use_multi_input=True,
+                            blender_property=None), # the node sets this up
     InfluenceTemplate,
     EnableTemplate,
     OutputRelationshipTemplate,

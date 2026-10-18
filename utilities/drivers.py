@@ -58,10 +58,16 @@ def CreateDrivers(drivers):
             ob = driver["owner"]
         else: # Pose Bone:
             ob = driver["owner"].id_data
+        path_from_id = driver.get('path_from_id')
+        # TODO: I want to refactor path_from_id check&set out. it should always be provided
+        # I think this is still here because of the 2 or three places where nodes make their
+        # own drivers e.g. Hook deformer for curves
+        if path_from_id is None:
+            path_from_id = driver["owner"].path_from_id(driver["prop"])
         if isinstance(driver["owner"], Key):
             fcurves = ob.driver_add(driver["prop"])
         else:
-            fcurves = ob.driver_add(driver["owner"].path_from_id(driver["prop"]), driver["ind"])
+            fcurves = ob.driver_add(path_from_id, driver["ind"])
         if not isinstance(fcurves, list):
             fcurves = [fcurves] # ususally it is a single fCurve, sometimes it is a list
             # for e.g. array properties if driver_add is given -1 as index

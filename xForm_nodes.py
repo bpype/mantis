@@ -379,8 +379,8 @@ class xFormBone(xFormNode):
 
         # Setup Deform attributes...
         eb_props_sockets = self.gen_property_socket_map(prop_owner_group="edit_bone")
-        evaluate_sockets(self, eb, eb_props_sockets)
-        
+        b_objects = {'edit_bone':eb, 'pose_bone':None, 'bone':None, 'DEFAULT':None}
+        evaluate_sockets(self, b_objects, eb_props_sockets)
         print( wrapGreen("Created Bone: ") + wrapOrange(eb.name) + wrapGreen(" in ") + wrapWhite(self.bGetParentArmature().name))
 
         parent_xForm_info = get_parent_xForm_info(self)
@@ -454,29 +454,12 @@ class xFormBone(xFormNode):
         except KeyError:
             prRed("Warning: BBone start or end handle not set because of missing bone in armature.")
 
-        import bpy
         pb = self.bGetParentArmature().pose.bones[self.bObject]
-
-        if check_for_driver(self, 'Rotation Order'):
-            # this is stupid and a HACK
-            from .mantis_dataclasses import MantisSocketFiller
-            props_sockets = {"rotation_mode": MantisSocketFiller( socket_name="Rotation Order",
-                property_name="rotation_mode", default_value='XYZ',)}
-            evaluate_sockets(self, pb, props_sockets)
-        else: # This is stupid, but I did it to myself and it will be annoying to fix
-            rotation_mode = self.evaluate_input("Rotation Order")
-            if rotation_mode == "AUTO": rotation_mode = "XYZ"
-            pb.rotation_mode = rotation_mode
-            
-            
-
         pb.id_properties_clear()
         self.setup_custom_props(pb, "Custom Properties")
-        pb_props_sockets = self.gen_property_socket_map(prop_owner_group='pose_bone')
-        evaluate_sockets(self, pb, pb_props_sockets)
-
-        bone_props_socket = self.gen_property_socket_map(prop_owner_group='bone')
-        evaluate_sockets(self, pb.bone, bone_props_socket)
+        b_objects = {'edit_bone':None, 'pose_bone':pb, 'bone':pb.bone, 'DEFAULT':None}
+        props_sockets = self.gen_property_socket_map()
+        evaluate_sockets(self, b_objects, props_sockets)
 
         # and in edit mode we need to explicitly set the bbone properties
         # I don't like this HACK but there seems to be no other way...
@@ -487,8 +470,10 @@ class xFormBone(xFormNode):
 
         finish_drivers(self)
 
+        # TODO: I should not need a special case for this
         pb.custom_shape_transform = None
         pb.custom_shape = None
+        from bpy.types import Object
         if len(self.inputs["Custom Object xForm Override"].links) > 0:
             trace = trace_single_line(self, "Custom Object xForm Override")
             try:
@@ -501,7 +486,7 @@ class xFormBone(xFormNode):
                 ob = trace[0][1].bGetObject()
             except AttributeError:
                 ob=None
-            if type(ob) in [bpy.types.Object]:
+            if type(ob) in {Object}:
                 pb.custom_shape = ob
 
     def bGetObject(self, mode = 'POSE'):
@@ -613,7 +598,7 @@ class xFormGeometryObject(xFormNode):
         # putting this in bTransformPass simply prevents it from being run more than once.
         # maybe I should do that with the rest of bPrepare, too.
         props_sockets = self.property_socket_map
-        evaluate_sockets(self, self.bObject, props_sockets)
+        evaluate_sockets(self, {"DEFAULT":self.bObject}, props_sockets)
         self.executed = True
 
     def bFinalize(self, bContext = None):
@@ -622,9 +607,6 @@ class xFormGeometryObject(xFormNode):
         self.bObject.matrix_world = matrix
         # custom properties
         self.setup_custom_props(self.bGetObject(), "Custom Properties")
-        for i, (driver_key, driver_item) in enumerate(self.drivers.items()):
-            print (wrapGreen(i), wrapWhite(self), wrapPurple(driver_key))
-            prOrange(driver_item)
         finish_drivers(self)
 
 
@@ -700,7 +682,7 @@ class xFormObjectInstance(xFormNode):
             'hide_viewport'    : ("Hide in Viewport", False),
             'hide_render'      : ("Hide in Render", False),
         }
-        evaluate_sockets(self, self.bObject, props_sockets)
+        evaluate_sockets(self, {"DEFAULT":self.bObject}, props_sockets)
         self.executed = True
 
     def bFinalize(self, bContext = None):
@@ -827,13 +809,10 @@ class xFormCurvePin(xFormNode):
         c.use_curve_follow = True
         c.name = "Curve Pin"
 
-        props_sockets = self.gen_property_socket_map()
-        constraint_props_sockets = props_sockets.copy()
-        del constraint_props_sockets['name']; del constraint_props_sockets['empty_display_size']
-        del props_sockets['offset_factor']; del props_sockets['forward_axis']
-        del props_sockets['up_axis']
-        evaluate_sockets(self, c, constraint_props_sockets)
-        evaluate_sockets(self, self.bObject, props_sockets)
+        constraint_props_sockets = self.gen_property_socket_map( prop_owner_group='constraints')
+        props_sockets = self.gen_property_socket_map( prop_owner_group='object')
+        b_objects = {"constraints":c, "object":self.bObject}
+        evaluate_sockets(self, b_objects, props_sockets)
         # this isn't usually run on xForm nodes so for now I need to set the
         #   driver's default values manually if I want a matrix now.
         # because the drivers may not have initialized yet.
