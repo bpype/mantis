@@ -69,6 +69,7 @@ def set_object_parent(node):
 class xFormNode(MantisNode):
     __slots__ = ()
     node_type = 'XFORM'
+    passes=frozenset({'bPrepare', 'bTransform', 'bFinalize'})
     def __init__(self, signature, base_tree, socket_templates=[],
                  additional_parameters={}):
         super().__init__(signature, base_tree, socket_templates,
@@ -431,7 +432,6 @@ class xFormBone(xFormNode):
             b.color.custom.normal=color_normal
             b.color.custom.select=color_select
 
-
     def bFinalize(self, bContext = None):
 
         b = self.bGetParentArmature().data.bones[self.bObject]
@@ -609,7 +609,6 @@ class xFormGeometryObject(xFormNode):
         self.setup_custom_props(self.bGetObject(), "Custom Properties")
         finish_drivers(self)
 
-
     def bGetObject(self, mode = 'POSE'):
         return self.bObject
 
@@ -711,11 +710,11 @@ class xFormObjectInstance(xFormNode):
     def bGetObject(self, mode = 'POSE'):
         return self.bObject
 
-
 class xFormCurvePin(xFormNode):
     """An xForm pinned to a specific location on a curve."""
     __slots__ = ()
     socket_templates = xFormCurvePinSockets
+    passes=frozenset({'bPrepare', 'bFinalize'})
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, self.socket_templates,
             additional_parameters={"Matrix":None})
@@ -857,6 +856,7 @@ class xFormGetBone(xFormNode):
     """Represents an instance of an existing geometry object."""
     __slots__ = ()
     socket_templates = xFormGetBoneSockets
+    passes=frozenset({})
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, self.socket_templates)
         # this is just a getter

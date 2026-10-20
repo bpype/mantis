@@ -935,6 +935,7 @@ class MantisNode:
     node_type = 'UNINITIALIZED'
     socket_templates = None
     property_socket_map = {}
+    passes=frozenset({})
     def __init__(self, signature : tuple,
                  base_tree : bpy.types.NodeTree,
                  socket_templates : list[MantisSocketTemplate]=[],

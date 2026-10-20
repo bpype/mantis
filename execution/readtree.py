@@ -129,6 +129,7 @@ def data_from_tree(base_tree, tree_path, mContext, dummy_nodes, all_mantis_nodes
     local_mantis_nodes, group_nodes = {}, []
     tree_path_names = [tree.name for tree in tree_path if hasattr(tree, "name")]
     if tree_path[-1]:
+        
         current_tree = tree_path[-1].node_tree # this may be None.
     else:
         current_tree = base_tree
@@ -686,7 +687,7 @@ def execute_tree(nodes, base_tree, context, error_popups = False, profile=False)
     assert nodes is not None, "Failed to parse tree."
     assert len(nodes) > 0, "No parsed nodes for execution."\
                            " Mantis probably failed to parse the tree."
-    import bpy
+    from bpy.types import Object as bpy_object
     from time import time
     original_active = context.view_layer.objects.active
     start_execution_time = time()
@@ -735,10 +736,10 @@ def execute_tree(nodes, base_tree, context, error_popups = False, profile=False)
             if execution_failed: break
             try:
                 check_and_apply_overlay(n)
-                if not n.prepared:
+                if not n.prepared and 'bPrepare' in n.passes:
                     if profiler: profiler.record(n, "bPrepare", context)
                     else: n.bPrepare(context)
-                if not n.executed:
+                if not n.executed and 'bTransform' in n.passes:
                     if profiler: profiler.record(n, "bTransformPass", context)
                     else: n.bTransformPass(context)
                 if (n.__class__.__name__ == "xFormArmature" ):
@@ -747,7 +748,7 @@ def execute_tree(nodes, base_tree, context, error_popups = False, profile=False)
                     active = ob
                 if not (n.__class__.__name__ == "xFormBone" ) and hasattr(n, "bGetObject"):
                     ob = n.bGetObject()
-                    if isinstance(ob, bpy.types.Object):
+                    if isinstance(ob, bpy_object):
                         select_me.append(ob)
             except Exception as e:
                 e = execution_error_cleanup(n, e, show_error=error_popups)
@@ -760,10 +761,10 @@ def execute_tree(nodes, base_tree, context, error_popups = False, profile=False)
         for n in sorted_nodes:
             try:
                 check_and_apply_overlay(n)
-                if not n.prepared:
+                if not n.prepared and 'bPrepare' in n.passes:
                     if profiler: profiler.record(n, "bPrepare", context)
                     else: n.bPrepare(context)
-                if not n.executed:
+                if not n.executed and 'bRelationship' in n.passes:
                     if profiler: profiler.record(n, "bRelationshipPass", context)
                     else: n.bRelationshipPass(context)
             except Exception as e:
@@ -780,14 +781,15 @@ def execute_tree(nodes, base_tree, context, error_popups = False, profile=False)
             ob.data.pose_position = 'POSE'
 
         for n in sorted_nodes:
-            try:
-                if profiler: profiler.record(n, "bFinalize", context)
-                else: n.bFinalize(context)
-            except Exception as e:
-                e = execution_error_cleanup(n, e, show_error=error_popups)
-                if error_popups == False:
-                    raise e
-                execution_failed = True; break
+            if 'bFinalize' in n.passes:
+                try:
+                    if profiler: profiler.record(n, "bFinalize", context)
+                    else: n.bFinalize(context)
+                except Exception as e:
+                    e = execution_error_cleanup(n, e, show_error=error_popups)
+                    if error_popups == False:
+                        raise e
+                    execution_failed = True; break
 
         # REST pose for deformer bind, so everything is in the rest position
         for ob in switch_me:
@@ -795,14 +797,15 @@ def execute_tree(nodes, base_tree, context, error_popups = False, profile=False)
 
         # finally, apply modifiers and bind stuff
         for n in sorted_nodes:
-            try:
-                if profiler: profiler.record(n, "bModifierApply", context)
-                else: n.bModifierApply(context)
-            except Exception as e:
-                e = execution_error_cleanup(n, e, show_error=error_popups)
-                if error_popups == False:
-                    raise e
-                execution_failed = True; break
+            if 'bModifierApply' in n.passes:
+                try:
+                    if profiler: profiler.record(n, "bModifierApply", context)
+                    else: n.bModifierApply(context)
+                except Exception as e:
+                    e = execution_error_cleanup(n, e, show_error=error_popups)
+                    if error_popups == False:
+                        raise e
+                    execution_failed = True; break
 
         for ob in switch_me:
             ob.data.pose_position = 'POSE'

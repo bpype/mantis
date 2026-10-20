@@ -37,6 +37,8 @@ def trace_xForm_back(mantis_node, socket):
 class MantisDeformerNode(MantisNode):
     node_type = 'LINK'
     __slots__ = ()
+    passes=frozenset({'bRelationship', 'bFinalize',})
+
     def __init__(self, signature : tuple,
                  base_tree : NodeTree,
                  socket_templates : list[MantisSocketTemplate]=[]):
@@ -415,6 +417,7 @@ class DeformerMorphTarget(MantisDeformerNode):
     '''A node representing an armature deformer'''
     __slots__ = ()
     socket_templates = MorphTargetSockets
+    passes=frozenset({'bRelationship',})
     
     def GetxForm(self, trace_input="Object"):
         trace = trace_single_line(self, trace_input)
@@ -451,6 +454,7 @@ class DeformerMorphTargetDeform(MantisDeformerNode):
     '''A node representing an armature deformer'''
     __slots__ = ()
     socket_templates = MorphTargetDeformSockets
+    passes=frozenset({'bFinalize',})
 
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, self.socket_templates)
@@ -676,6 +680,7 @@ class DeformerSurfaceDeform(MantisDeformerNode):
     '''A node representing an surface deform modifier'''
     __slots__ = ()
     socket_templates = SurfaceDeformSockets
+    passes=frozenset({'bRelationship', 'bFinalize', 'bModifierApply'})
 
     def GetxForm(self, socket="Deformer"):
         if socket == "Deformer":
@@ -707,6 +712,7 @@ class DeformerMeshDeform(MantisDeformerNode):
     '''A node representing a mesh deform modifier'''
     __slots__ = ()
     socket_templates = MeshDeformSockets
+    passes=frozenset({'bRelationship', 'bFinalize', 'bModifierApply'})
 
     def GetxForm(self, socket="Deformer"):
         if socket == "Deformer":

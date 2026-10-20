@@ -54,6 +54,7 @@ set_constraint_name = lambda mantis_node : mantis_node.evaluate_input("Name") if
 class MantisLinkNode(MantisNode):
     __slots__ = ()
     node_type = 'LINK'
+    passes=frozenset({'bRelationship', 'bTransform', 'bFinalize',})
     def __init__(self, signature : tuple,
                  base_tree : NodeTree,):
         super().__init__(signature, base_tree, self.socket_templates,

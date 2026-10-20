@@ -55,6 +55,7 @@ class MathStaticInt(MantisNode):
     __slots__ = ()
     socket_templates = StaticIntSockets
     node_type = "UTILITY"
+    passes=frozenset({'bPrepare',})
 
     def bPrepare(self, bContext = None,):
         a = self.evaluate_input("Int A"); b = self.evaluate_input("Int B")
@@ -67,6 +68,7 @@ class MathStaticFloat(MantisNode):
     __slots__ = ()
     socket_templates = StaticFloatSockets
     node_type = "UTILITY"
+    passes=frozenset({'bPrepare',})
 
     def bPrepare(self, bContext = None,):
         a = self.evaluate_input("Float A"); b = self.evaluate_input("Float B")
@@ -79,6 +81,7 @@ class MathStaticVector(MantisNode):
     __slots__ = ()
     socket_templates = StaticVectorSockets
     node_type = "UTILITY"
+    passes=frozenset({'bPrepare',})
 
     def bPrepare(self, bContext = None,):
         from mathutils import Vector

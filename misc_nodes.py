@@ -205,10 +205,12 @@ def bpy_object_get_guarded(get_name, node=None):
 class MantisMiscNode(MantisNode):
     __slots__ = ()
     node_type='UTILITY'
+    passes=frozenset({'bPrepare',})
 
 class SimpleInputNode(MantisMiscNode):
     __slots__ = ()
     node_type = 'UTILITY'
+    passes=frozenset({})
     def __init__(self, signature, base_tree, socket_templates=[], additional_parameters={}):
         super().__init__(signature, base_tree, socket_templates, additional_parameters)
         self.prepared, self.executed = True, True
@@ -373,6 +375,7 @@ class UtilityMatrixFromCurve(MantisMiscNode):
     '''Get a matrix from a curve'''
     __slots__ = ()
     socket_templates = MatrixFromCurveSockets
+    passes=frozenset({'bPrepare', 'bFinalize'})
 
     def bPrepare(self, bContext = None,):
         from mathutils import Matrix
@@ -455,6 +458,7 @@ class UtilityPointFromCurve(MantisMiscNode):
     '''Get a point from a curve'''
     __slots__ = ()
     socket_templates = PointFromCurveSockets
+    passes=frozenset({'bPrepare', 'bFinalize'})
 
     def bPrepare(self, bContext = None,):
         import bpy
@@ -486,6 +490,7 @@ class UtilityMatricesFromCurve(MantisMiscNode):
     '''Get matrices from a curve'''
     __slots__ = ()
     socket_templates = MatricesFromCurveSockets
+    passes=frozenset({'bPrepare', 'bFinalize'})
 
     def bPrepare(self, bContext = None,):
         import time
@@ -576,6 +581,7 @@ class UtilityNumberOfSplines(MantisMiscNode):
 class UtilityMatrixFromCurveSegment(MantisMiscNode):
     __slots__ = ()
     socket_templates = MatrixFromCurveSegmentSockets
+    passes=frozenset({'bPrepare', 'bFinalize'})
 
     def bPrepare(self, bContext = None,):
         import bpy
@@ -789,12 +795,12 @@ class UtilityBoneProperties(SimpleInputNode):
     def fill_parameters(self, ui_node=None):
         return
 
-# TODO this should probably be moved to Links
 class UtilityDriverVariable(MantisMiscNode):
     '''A node representing an armature object'''
     __slots__ = ()
     socket_templates = DriverVariableSockets
     node_type = "DRIVER"
+    passes=frozenset({'bPrepare', 'bRelationship'})
 
     def reset_execution(self):
         super().reset_execution()
@@ -866,7 +872,6 @@ class UtilityDriverVariable(MantisMiscNode):
         self.parameters["Driver Variable"] = my_var
         self.prepared = True
         
-
     def bRelationshipPass(self, bContext = None,):
         prepare_parameters(self)
         xF1 = self.GetxForm(index = 1)
@@ -929,6 +934,7 @@ class UtilityDriver(MantisMiscNode):
     __slots__ = ()
     socket_templates = DriverSockets
     node_type = "DRIVER" # MUST be run in Pose mode
+    passes=frozenset({'bRelationship'})
     def __init__(self, signature, base_tree):
         from .utilities.drivers import MantisDriver
         super().__init__(signature, base_tree, self.socket_templates,
@@ -982,6 +988,7 @@ class UtilitySwitch(MantisMiscNode):
     __slots__ = ()
     socket_templates = SwitchSockets
     node_type = "DRIVER" # MUST be run in Pose mode
+    passes=frozenset({'bRelationship'})
     def __init__(self, signature, base_tree):
         from .utilities.drivers import MantisDriver
         super().__init__(signature, base_tree, self.socket_templates,
@@ -1234,6 +1241,7 @@ class InputExistingGeometryData(MantisMiscNode):
     '''A node representing existing object data'''
     __slots__ = ()
     socket_templates = InputExistingGeometrySockets
+    passes=frozenset({})
 
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, self.socket_templates)
@@ -1261,6 +1269,7 @@ class UtilityDeclareCollections(MantisMiscNode):
     '''A node to help manage bone collections'''
     __slots__ = ()
     socket_templates = None
+    passes=frozenset({})
     def __init__(self, signature, base_tree):
         # NOTE this one does not use socket template because it is special.
         # The user creates all the sockets for this one.
@@ -1339,6 +1348,7 @@ class UtilityGeometryOfXForm(MantisMiscNode):
     '''A node representing existing object data'''
     __slots__ = ()
     socket_templates = GeometryOfXFormSockets
+    passes=frozenset({})
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, self.socket_templates)
         self.prepared = True; self.executed = True

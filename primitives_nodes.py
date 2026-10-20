@@ -31,6 +31,7 @@ class CirclePrimitive(PrimitiveNode):
     '''A node representing a Circle Primitive mesh'''
     __slots__ = ()
     socket_templates = CirclePrimitiveSockets
+    passes=frozenset({'bPrepare',})
 
     # mode is unused but needed for interface consistency
     def bGetObject(self, mode=''):
@@ -41,7 +42,7 @@ class CirclePrimitive(PrimitiveNode):
             bObject = data.meshes.get(self.evaluate_input("Name"))
         return bObject
         
-    def bTransformPass(self, bContext = None,):
+    def bPrepare(self, bContext = None,):
         # Get the datablock
         data = self.bGetObject()
         import bpy
