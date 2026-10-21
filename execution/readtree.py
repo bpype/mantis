@@ -661,8 +661,8 @@ def sort_execution(nodes, error_popups):
     
     processed_count = 0
     while(xForm_pass):
-        # for some reason using popleft here breaks everything... better not push my luck/
-        n = xForm_pass.pop()
+        n = xForm_pass.popleft()
+        # if n.execution_prepared: continue
         n.execution_prepared = True
         sorted_nodes.append(n)
         processed_count+=1
