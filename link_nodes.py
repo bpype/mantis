@@ -781,29 +781,33 @@ class LinkArmature(MantisLinkNode):
             #       are all in the same armature
             # Mantis should intelligently provide a working armature constraint
             # even if the user supplies targets that would not work in vanilla Blender
-            # TODO find out this is reading the arrays in reverse order? is that bad?
             targets_weights = {}
+            # NOTE: Mantis does not generally sort links because it is slow
+            #       so it is the responsibility of array types to do this.
+            from .base_definitions import links_sort_key
+            for inp in {'Targets', 'Weights'}:
+                self.inputs[inp].links.sort(key=links_sort_key)
             for i in range(num_targets):
                 target = c.targets.new()
                 self.get_target_and_subtarget(target, 'Targets', i)
                 weight_value=self.evaluate_input("Weights", i)
-                if not isinstance(weight_value, float):
-                    weight_value=0
-                targets_weights[i]=weight_value
-                from .mantis_dataclasses import MantisSocketFiller
                 default_value = 1.0
                 if self.inputs['Weights'].links:
                     default_value = 1/len(self.inputs['Weights'].links)
+                if not isinstance(weight_value, float):
+                    weight_value=default_value
+                targets_weights[i]=weight_value
+                from .mantis_dataclasses import MantisSocketFiller
+                property_group=f"target.{str(i).zfill(4)}"
                 prop_name = 'weight'
-                # prop_name = f"targets[{i}].weight"
                 filler = MantisSocketFiller(
-                    property_group = f"target.{str(i).zfill(4)}",
+                    property_group = property_group,
                     property_name = prop_name,
                     socket_name = "Weights",
                     array_index=i,
-                    default_value=default_value,
+                    default_value=weight_value,
                 )
-                b_objects[f"target.{str(i).zfill(4)}"] = target
+                b_objects[property_group] = target
                 props_sockets[prop_name+str(i)] = filler
             evaluate_sockets(self, b_objects, props_sockets)
             for target, value in targets_weights.items():

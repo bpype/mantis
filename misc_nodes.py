@@ -922,6 +922,10 @@ class UtilityFCurve(MantisMiscNode):
             keys.append( self.evaluate_input('Keyframes', i) )
         if len(keys) <1:
             prOrange(f"WARN: no keys in fCurve {self}.")
+        # IT IS VERY IMPORTANT to sort the links
+        from .base_definitions import links_sort_key
+        for inp in {'Keyframes'}:
+            self.inputs[inp].links.sort(key=links_sort_key)
         keys.append(extrap_mode)
         self.parameters["fCurve"] = keys
         self.prepared = True

@@ -22,6 +22,7 @@ from .utilities.utilities import (prRed, prGreen, prPurple, prWhite,
 # (add more whenever a weird or difficult to debug problem occurs)
 # Did you check the update script on a tree that doesn't need it?
 # Did you use a >= when you should have used a > (or similar)?
+# Did you make sure that nodes with array inputs are sorting them properly?
 
 def version_upgrade_very_old(*args, **kwargs):
     node = kwargs['node']
