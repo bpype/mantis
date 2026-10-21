@@ -7,7 +7,7 @@ from ..base_definitions import (SchemaUINode, custom_props_types, \
     MantisNodeGroup, SchemaGroup, replace_types, GraphError, links_sort_key)
 from ..utilities.node_common import setup_custom_props_from_np
 # a class that solves Schema nodes
-from bpy.types import NodeGroupInput, NodeGroupOutput
+from bpy.types import NodeGroupInput, NodeGroupOutput, NodeSocket
 
 from .readtree import execution_error_cleanup
 
@@ -63,7 +63,6 @@ class SchemaSolver:
         for inp in self.node.inputs.values():
             inp.links.sort(key=links_sort_key)
 
-        from bpy.types import NodeGroupInput, NodeGroupOutput
         for ui_node in self.tree.nodes:
             # Make the mantis nodes for the special interface types
             # we use the bl_idname because all schema nodes should be single-instance
@@ -400,7 +399,6 @@ class SchemaSolver:
                              f" but it terminates at index {self.solve_length-1}. "
                              f"The Schema must have a length of at least {expose_when+1}.")
         from_name = get_link_in_out(ui_link)[0]
-        from bpy.types import NodeSocket
         #use it directly if it is a mantis node; this happens when the previous node was a Schema
         if isinstance( ui_link.from_socket, NodeSocket): # normal
             from_node = frame_mantis_nodes[(*self.autogen_path_names, from_name+self.index_str) ]
@@ -439,7 +437,6 @@ class SchemaSolver:
     def handle_link_to_array_output(self, frame_mantis_nodes, index, ui_link, to_ui_node, from_ui_node):# if this duplicated code works, dedupe!
         to_node = self.schema_nodes[(*self.tree_path_names, to_ui_node.bl_idname)] # get it by [], we want a KeyError if this fails
         from_name = get_link_in_out(ui_link)[0]
-        from bpy.types import NodeSocket
         #use it directly if it is a mantis node; this happens when the previous node was a Schema
         if isinstance( ui_link.from_socket, NodeSocket): # normal
             from_node = frame_mantis_nodes[(*self.autogen_path_names, from_name+self.index_str) ]
