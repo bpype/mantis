@@ -273,8 +273,8 @@ def execute_handler(scene):
             # check here instead of in execute_tree because these  values can be
             #  modified at weird times and checking from the handler is more consistent
             if ( node_tree.tree_valid) and ( node_tree.do_live_update ):
-                node_tree.execute_tree(context)
                 node_tree.tree_valid=False
+                node_tree.execute_tree(context)
 
 from .versioning import versioning_tasks
 def node_version_update(node, do_once):

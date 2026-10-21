@@ -315,7 +315,7 @@ class MantisTree(NodeTree):
                 self.parsed_tree = readtree.parse_tree(self, error_popups)
                 if context:
                     self.display_update(context)
-                self.tree_valid = True
+                self.tree_valid = bool(self.parsed_tree)
             except Exception as e:
                 prRed("Failed to update node tree due to error.")
                 self.tree_valid = False
@@ -351,6 +351,8 @@ class MantisTree(NodeTree):
     def execute_tree(self,context, error_popups = False, profile=False):
         self.prevent_next_exec = False
         if not self.hash_recursive:
+            return
+        if not self.parsed_tree:
             return
         if self.is_exporting or self.is_executing:
             return
