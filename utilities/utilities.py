@@ -1137,13 +1137,10 @@ def SetRibbonData(m, ribbon):
     #maybe I can check for closed poly curves here? under what other circumstance
     # will I find the ends of the wire have identical coordinates?
     ribbonData = []
-    tE = ribbon[0].copy(); bE = ribbon[1].copy()# circle = ribbon[2]
-    #
+    tE = ribbon[0].copy(); bE = ribbon[1].copy()
     lengths = RibbonMeshEdgeLengths(m, ribbon)
     lengths.append(0)
     totalLength = sum(lengths)
-    # m.calc_normals() #calculate normals
-    # it appears this has been removed.
     for i, (t, b) in enumerate(zip(tE, bE)):
         ind = old_bad_wrap_that_should_be_refactored( (i + 1), len(tE) - 1 )
         tNext = tE[ind]; bNext = bE[ind]
@@ -1262,43 +1259,39 @@ def mesh_from_curve(crv, context, ribbon=True):
        which will return the correct mesh even with modifiers"""
     import bpy
     m = None
-    bevel = crv.data.bevel_depth
-    extrude = crv.data.extrude
-    offset = crv.data.offset
-    try:
-        if (len(crv.modifiers) > 0):
-            do_unlink = False
-            if (not context.scene.collection.all_objects.get(crv.name)):
-                context.collection.objects.link(crv) # i guess this forces the dg to update it?
-                do_unlink = True
-            dg = context.view_layer.depsgraph
-            # just gonna modify it for now lol
-            if ribbon:
-                EnsureCurveIsRibbon(crv)
-            else:
-                crv.data.bevel_depth=0
-                crv.data.extrude=0
-                crv.data.offset=0
-            # try:
-            dg.update()
-            mOb = crv.evaluated_get(dg)
-            m = bpy.data.meshes.new_from_object(mOb)
-            m.name=crv.data.name+'_mesh'
-            if (do_unlink):
-                context.collection.objects.unlink(crv)
-        else: # (ಥ﹏ಥ) why can't I just use this !
-            # for now I will just do it like this
-            if ribbon:
-                EnsureCurveIsRibbon(crv)
-            else:
-                crv.data.bevel_depth=0
-                crv.data.extrude=0
-                crv.data.offset=0
-            m = bpy.data.meshes.new_from_object(crv)
-    finally:
-        crv.data.bevel_depth = bevel
-        crv.data.extrude = extrude
-        crv.data.offset = offset
+    crv_ob = crv.copy()
+    crv_data_copy = crv.data.copy()
+    crv_ob.data = crv_data_copy
+    if (len(crv_ob.modifiers) > 0):
+        do_unlink = False
+        if (not context.scene.collection.all_objects.get(crv_ob.name)):
+            context.collection.objects.link(crv_ob) # i guess this forces the dg to update it?
+            do_unlink = True
+        dg = context.view_layer.depsgraph
+        # just gonna modify it for now lol
+        if ribbon:
+            EnsureCurveIsRibbon(crv_ob)
+        else:
+            crv_ob.data.bevel_depth=0
+            crv_ob.data.extrude=0
+            crv_ob.data.offset=0
+        # try:
+        dg.update()
+        mOb = crv_ob.evaluated_get(dg)
+        m = bpy.data.meshes.new_from_object(mOb)
+        m.name=crv_ob.data.name+'_mesh'
+        if (do_unlink):
+            context.collection.objects.unlink(crv_ob)
+    else: # (ಥ﹏ಥ) why can't I just use this !
+        # for now I will just do it like this
+        if ribbon:
+            EnsureCurveIsRibbon(crv_ob)
+        else:
+            crv_ob.data.bevel_depth=0
+            crv_ob.data.extrude=0
+            crv_ob.data.offset=0
+        m = bpy.data.meshes.new_from_object(crv_ob)
+    bpy.data.objects.remove(crv_ob)
     return m
 
 def DetectRibbon(f, bm, skipMe):
@@ -1459,7 +1452,109 @@ def data_from_ribbon_mesh(m, factorsList, mat, ribbons = None, fReport = None):
         ret.append( (points, widths, normals) )
     return ret # this is a list of tuples containing three lists
 
+from mathutils import Vector
 
+# Used for filling the Curve LUTimport numpy as np
+import numpy as np
+
+def all_data_from_ribbon(mesh, mat, ribbon):
+    top_indices, bottom_indices, is_closed = ribbon
+    top_indices = np.asarray(top_indices, dtype=np.intp)
+    bottom_indices = np.asarray(bottom_indices, dtype=np.intp)
+    count = len(top_indices)
+    assert count >= 2, "this should never happen, report this as a bug"
+    # we'll use numpy to calculate the positions and normals because it is fast.
+    vertex_count = len(mesh.vertices)
+    coordinates = np.empty(vertex_count * 3, dtype=np.float64)
+    mesh.vertices.foreach_get("co", coordinates)
+    coordinates = coordinates.reshape((-1, 3))
+    vertex_normals = np.empty(vertex_count * 3, dtype=np.float64)
+    mesh.vertices.foreach_get("normal", vertex_normals)
+    vertex_normals = vertex_normals.reshape((-1, 3))
+    
+    top_local = coordinates[top_indices]; bottom_local = coordinates[bottom_indices]
+    # similarly we have to make the world matrix a numpy array
+    transform = np.asarray(mat, dtype=np.float64)
+    basis = transform[:3, :3]; translation = transform[:3, 3]
+    #.T is transpose because this numpy array expects row-major
+    top_positions = top_local @ basis.T + translation
+    bottom_positions = bottom_local @ basis.T + translation
+    positions = (top_positions + bottom_positions) * 0.5
+    radii = np.linalg.norm(top_positions - bottom_positions, axis=1) * 0.5
+
+    # transform the potisions by the object's matrix, mat
+    # and the normals need a slightly different transformation
+    normal_transform = np.linalg.inv(basis).T
+    local_normals = ( vertex_normals[top_indices] + vertex_normals[bottom_indices] )
+    normals = local_normals @ normal_transform.T
+    normal_lengths = np.linalg.norm(normals, axis=1)
+    # Normalize the normals by dividing them by the lengths. avoid dividing by 0
+    normals = np.divide(
+        normals,
+        normal_lengths[:, None],
+        out=np.zeros_like(normals),
+        where=normal_lengths[:, None] != 0,
+    )
+
+    # all of this incoming/outgoing subtraction stuff is doing the following:
+    # take the current vertex positon and get the tangent vector of each segment
+    # it is a part of, then average them
+    if is_closed: # have to adjust it back, I don't really know if this works
+        incoming = positions - np.roll(positions, 1, axis=0)
+        outgoing = np.roll(positions, -1, axis=0) - positions
+    else:
+        incoming = np.zeros_like(positions); outgoing = np.zeros_like(positions)
+        incoming[1:] = positions[1:] - positions[:-1]
+        outgoing[:-1] = positions[1:] - positions[:-1]
+        incoming[0] = outgoing[0]
+        outgoing[-1] = incoming[-1]
+
+    incoming_lengths = np.linalg.norm(incoming, axis=1)
+    outgoing_lengths = np.linalg.norm(outgoing, axis=1)
+    # the segments may be different lengths so we have to normalize them
+    incoming = np.divide(
+        incoming,
+        incoming_lengths[:, None],
+        out=np.zeros_like(incoming),
+        where=incoming_lengths[:, None] != 0,
+    )
+    outgoing = np.divide(
+        outgoing,
+        outgoing_lengths[:, None],
+        out=np.zeros_like(outgoing),
+        where=outgoing_lengths[:, None] != 0,
+    )
+    # then we add them together and normalize again to average them
+    tangents = incoming + outgoing
+    tangent_lengths = np.linalg.norm(tangents, axis=1)
+    tangents = np.divide(
+        tangents,
+        tangent_lengths[:, None],
+        out=np.zeros_like(tangents),
+        where=tangent_lengths[:, None] != 0,
+    )
+    # calcualte the U value of the samples based on the length of the spline
+    segment_lengths = np.linalg.norm(positions[1:] - positions[:-1], axis=1)
+    if is_closed:
+        closing_length = np.linalg.norm(positions[0] - positions[-1])
+        total_length = segment_lengths.sum() + closing_length
+    else:
+        total_length = segment_lengths.sum()
+
+    if total_length:
+        u_samples = np.concatenate(([0.0], np.cumsum(segment_lengths))) / total_length
+    else:
+        u_samples = np.zeros(count, dtype=np.float64)
+    
+    # now we have to convert the values back to values Blender uses
+    # TODO eventually I want to port everything to numpy even tho it is ugly
+    u_samples = tuple(u_samples)
+    radii = tuple(radii)
+    from mathutils import Vector
+    positions = [Vector(elem) for elem in positions]
+    normals = [Vector(elem) for elem in normals]
+    tangents = [Vector(elem) for elem in tangents]
+    return u_samples, positions, normals, tangents, radii
 
 
 #This bisection search is generic, and it searches based on the

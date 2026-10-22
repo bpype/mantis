@@ -720,11 +720,102 @@ class xFormCurvePin(xFormNode):
             additional_parameters={"Matrix":None})
         setup_custom_property_inputs_outputs(self)
 
-    def prep_driver_values(self, constraint):
+    def get_matrix_from_spline(self, spline_lookup):
+        matrix = spline_lookup.matrix_at_u(self.parameters["Curve Pin Factor"])
+        track_axis = self.parameters["Forward Axis"]; up_axis = self.parameters["Up Axis"]
+        # Copy the original basis before changing anything.
+        from mathutils import Vector
+        tangent = Vector(matrix.col[1][:3]); normal = Vector(matrix.col[2][:3])
+        # I have to take the Z axis and invert it because of the way Mantis calculates the normal
+        # using the ribbon mesh rather which extrudes along the binormal
+        # this is bad but it is too late to change this now, oh well
+        normal *= -1 # I have checked this with every combination and it works
+        track_sign = -1 if track_axis.startswith("TRACK_NEGATIVE_") else 1
+        track_axis = track_axis[-1]; up_axis = up_axis[-1]
+        axis_index = {"X": 0, "Y": 1, "Z": 2} #  there is probably a less stupid way to do this
+        track_index = axis_index[track_axis]; up_index = axis_index[up_axis]
+        if track_index == up_index: raise ValueError("Track and up_axis axes must be different")
+        # Assign the requested axes.
+        cols = [None, None, None]
+        cols[track_index] = tangent * track_sign; cols[up_index] = normal
+        # Fill the remaining axis to make a right-handed basis.
+        # the bitanget calculation is order dependent if you want to stay right-handed
+        if track_index != 0 and up_index != 0:   cols[0] = cols[1].cross(cols[2])
+        elif track_index != 1 and up_index != 1: cols[1] = cols[2].cross(cols[0])
+        else:                                    cols[2] = cols[0].cross(cols[1])
+        matrix.col[0].xyz = cols[0]; matrix.col[1].xyz = cols[1]
+        matrix.col[2].xyz = cols[2]
+        return matrix
+
+    def generate_constraints(self, ob, curve):
+        # we'll limit all the transforms so we can parent it without
+        # having to deal with the weird curve parenting (path-animation)
+        c1 = ob.constraints.new("LIMIT_LOCATION")
+        for max_min in ['max','min']:
+            for axis in "xyz":
+                setattr(c1, "use_"+max_min+"_"+axis, True)
+                setattr(c1, max_min+"_"+axis, 0.0)
+        c2 = ob.constraints.new("LIMIT_ROTATION")
+        for axis in "xyz":
+            setattr(c2, "use_limit_"+axis, True)
+            setattr(c2, max_min+"_"+axis, 0.0)
+        c3 = ob.constraints.new("LIMIT_SCALE")
+        for max_min in ['max','min']:
+            for axis in "xyz":
+                setattr(c3, "use_"+max_min+"_"+axis, True)
+                setattr(c3, max_min+"_"+axis, 1.0)
+        c4 = ob.constraints.new("FOLLOW_PATH")
+        c4.target = curve
+        c4.use_fixed_location = True
+        c4.use_curve_radius = True
+        c4.use_curve_follow = True
+        c4.name = "Curve Pin"
+        return (c1, c2, c3, c4,)
+
+    def bPrepare(self, bContext = None,):
+        from bpy import data, context
+        if not bContext: bContext = context # HACK is this wise?
+        # Generate the empty
+        ob = data.objects.get(self.evaluate_input("Name"))
+        if not ob:
+            ob = data.objects.new(self.evaluate_input("Name"), None)
+            ob.lock_location   = [True, True, True]
+            ob.lock_rotation   = [True, True, True]
+            ob.lock_scale      = [True, True, True]
+            ob.lock_rotation_w = True
+            ob.empty_display_type = 'CONE'
+            ob.empty_display_size = 0.10
+        self.bObject = ob; self.bRegisterObject('OBJECT', ob); reset_object_data(ob)
+        # Get the curve and check it
+        node_line = trace_single_line(self, "Parent Curve")[0][1:] # slice excludes self
+        for other_node in node_line:
+            if other_node.node_type == 'XFORM': break
+        else:
+            raise GraphError(f"ERROR: {self} is not connected to a parent curve")
+        if isinstance(other_node, (xFormArmature, xFormBone, xFormObjectInstance,)):
+            raise GraphError(f"ERROR: {self} must be connected to curve,"
+                              " not {other_node.__class__.__name__}")
+        curve=other_node.bGetObject(); curve_name = curve.name
+        if curve.type != 'CURVE':
+            raise GraphError(f"ERROR: {self} must be connected to curve,"
+                              " not {curve.type}")
+        from .utilities.utilities import get_extracted_spline_object
+        spline_index = self.evaluate_input("Spline Index")
+        curve = get_extracted_spline_object(curve, spline_index, self.mContext)
+        for link_me in [ob, curve]: # Link everything to the scene:
+            if (link_me.name not in bContext.view_layer.active_layer_collection.collection.objects):
+                bContext.view_layer.active_layer_collection.collection.objects.link(link_me)
+
+        constraints = self.generate_constraints(ob, curve); c = constraints[-1]
+        props_sockets = self.gen_property_socket_map()
+        b_objects = {"constraints":c, "object":self.bObject}
+        evaluate_sockets(self, b_objects, props_sockets)
+
+        # Find the default values to set even if the properties are drive:
         enums =  ( None,
-                   ("FORWARD_X", "FORWARD_Y", "FORWARD_Z", "TRACK_NEGATIVE_X", "TRACK_NEGATIVE_Y", "TRACK_NEGATIVE_Z"),
-                   ("UP_X", "UP_Y", "UP_Z"),
-                 )
+                ("FORWARD_X", "FORWARD_Y", "FORWARD_Z", "TRACK_NEGATIVE_X", "TRACK_NEGATIVE_Y", "TRACK_NEGATIVE_Z"),
+                ("UP_X", "UP_Y", "UP_Z"),
+                )
         for i, socket_name in enumerate(("Curve Pin Factor", "Forward Axis","Up Axis",)):
             if self.inputs.get(socket_name) is None: continue 
             enum = enums[i]
@@ -736,93 +827,22 @@ class xFormCurvePin(xFormNode):
                 for i, enum_val in enumerate(enum):
                     # check if the prop amount is in the current int as the enum val
                     if i+1 > prop_amount: break
-                prop_amount = enum_val            
-            try:
-                setattr(constraint, template.blender_property, prop_amount )
-            except TypeError:
-                setattr(constraint, template.blender_property, template.default_value )
+                prop_amount = enum_val
+            self.parameters[socket_name] = prop_amount
+            # Explicitly set the constraint attributes
+            setattr(c, template.blender_property, prop_amount)
 
-    def bPrepare(self, bContext = None,):
-        from bpy import data
-
-        if not bContext: # lol
-            import bpy
-            bContext = bpy.context
-        ob = data.objects.get(self.evaluate_input("Name"))
-        if not ob:
-            ob = data.objects.new(self.evaluate_input("Name"), None)
-            ob.lock_location   = [True, True, True]
-            ob.lock_rotation   = [True, True, True]
-            ob.lock_scale      = [True, True, True]
-            ob.lock_rotation_w = True
-            ob.empty_display_type = 'CONE'
-            ob.empty_display_size = 0.10
-
-        self.bObject = ob
-        self.bRegisterObject('OBJECT', self.bObject)
-        reset_object_data(ob)
-
-        node_line = trace_single_line(self, "Parent Curve")[0][1:] # slice excludes self
-        for other_node in node_line:
-            if other_node.node_type == 'XFORM':
-                break
-        else:
-            raise GraphError(f"ERROR: {self} is not connected to a parent curve")
-        if isinstance(other_node, (xFormArmature, xFormBone, xFormObjectInstance,)):
-            raise GraphError(f"ERROR: {self} must be connected to curve,"
-                              " not {other_node.__class__.__name__}")
-        curve=other_node.bGetObject()
-        if curve.type != 'CURVE':
-            raise GraphError(f"ERROR: {self} must be connected to curve,"
-                              " not {curve.type}")
-        # we'll limit all the transforms so we can parent it
-        #  because it is annoying to have a cluttered outliner.
-        #
-        # always do this so that everything stays consistent.
-        spline_index = self.evaluate_input("Spline Index")
-        from .utilities.utilities import get_extracted_spline_object
-        curve = get_extracted_spline_object(curve, spline_index, self.mContext)
-        # Link to Scene:
-        for link_me in [ob, curve]:
-            if (link_me.name not in bContext.view_layer.active_layer_collection.collection.objects):
-                bContext.view_layer.active_layer_collection.collection.objects.link(link_me)
-
-        c = ob.constraints.new("LIMIT_LOCATION")
-        for max_min in ['max','min']:
-            for axis in "xyz":
-                setattr(c, "use_"+max_min+"_"+axis, True)
-                setattr(c, max_min+"_"+axis, 0.0)
-        c = ob.constraints.new("LIMIT_ROTATION")
-        for axis in "xyz":
-            setattr(c, "use_limit_"+axis, True)
-            setattr(c, max_min+"_"+axis, 0.0)
-        c = ob.constraints.new("LIMIT_SCALE")
-        for max_min in ['max','min']:
-            for axis in "xyz":
-                setattr(c, "use_"+max_min+"_"+axis, True)
-                setattr(c, max_min+"_"+axis, 1.0)
-        c = ob.constraints.new("FOLLOW_PATH")
-        c.target = curve
-        c.use_fixed_location = True
-        c.use_curve_radius = True
-        c.use_curve_follow = True
-        c.name = "Curve Pin"
-
-        constraint_props_sockets = self.gen_property_socket_map( prop_owner_group='constraints')
-        props_sockets = self.gen_property_socket_map( prop_owner_group='object')
-        b_objects = {"constraints":c, "object":self.bObject}
-        evaluate_sockets(self, b_objects, props_sockets)
-        # this isn't usually run on xForm nodes so for now I need to set the
-        #   driver's default values manually if I want a matrix now.
-        # because the drivers may not have initialized yet.
-        self.prep_driver_values(c)
-        # now if all goes well... the matrix will be correct.
-        # NOTE: this dg.update() makes this a very expensive node
-        dg = bContext.view_layer.depsgraph
-        dg.update()
-        # and the matrix should be correct now - copy because it may be modified
-        self.parameters['Matrix'] = ob.matrix_world.copy()
+        # Now set the matrix - since this may provide dependencies to other nodes
+        from .misc_nodes import get_from_curve_lut
+        spline_lookup = get_from_curve_lut(curve_name, spline_index, bContext)
+        matrix = self.get_matrix_from_spline(spline_lookup)
+        # HACK: this is giving a local space matrix, and that's dumb
+        # TODO: Mantis should handle coordinate space conversion automatically
+        self.parameters['Matrix'] = matrix
         ob.parent=curve
+        # NOTE: Blender does weird things with curve parenting when there is Path Animation
+        #  and it sets the inverse parent matrix based on the evaluated matrix from the point
+        #  on the curve set by path animation. (That's why we need all the WS limit constraints)
         print( wrapGreen("Created Curve Pin: ") + wrapOrange(self.bObject.name) )
 
         parent_xForm_info = get_parent_xForm_info(self)

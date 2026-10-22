@@ -72,6 +72,167 @@ def TellClasses():
              UtilityPrint,
             ]
 
+# This cache is used for storing evaluated curve matrices
+# the idea is to get the data once and hold onto it
+# this prevents numerous wasteful calls to dg.update()
+CURVE_LUT_CACHE = {}
+CURVE_HASHES = {}
+SPLINE_HASHES ={}
+
+# todo: make a "matrix from 2 u" function, a "matrix for segments" function
+# basically I want the SplineLUT to handle all curve matrix getters
+class SplineLUT:
+    __slots__ = ("u_sample_points", "positions", "tangents", "normals", "hash", "curve_name")
+
+    def __init__(self, u_sample_points, positions, tangents, normals, hash, curve_name):
+        # points: ordered iterable of (u, position, tangent, normal)
+        # Each vector is an iterable of 3 floats.
+        self.u_sample_points = u_sample_points; self.hash = hash; self.curve_name = curve_name
+        self.positions = positions; self.tangents = tangents; self.normals = normals
+
+    def data_at_u(self, u):
+        if u <= 0 + FLOAT_EPSILON: return self.positions[0], self.tangents[0], self.normals[0]
+        elif u >= 1 - FLOAT_EPSILON: return self.positions[-1], self.tangents[-1], self.normals[-1]
+        else:
+            u_sample_points = self.u_sample_points
+            # get the index in the list just above the desired u value
+            from bisect import bisect_right # this finds an "insertion point" quickly
+            i = bisect_right(u_sample_points, u) 
+            u0 = u_sample_points[i-1]; u1 = u_sample_points[i]
+            if u - FLOAT_EPSILON >= u0 and u0 <= u + FLOAT_EPSILON :
+                factor = (u - u0) / (u1 - u0)
+                position = self.positions[i-1].lerp( self.positions[i], factor)
+                tangent = self.tangents[i-1].lerp( self.tangents[i], factor).normalized()
+                normal = self.normals[i-1].lerp( self.normals[i], factor).normalized()
+                return position, tangent, normal
+            else: # we're exactly on the vertex.
+                return self.positions[i-1], self.tangents[i-1], self.normals[i-1]
+    
+    def matrix_at_u(self, u):
+        from mathutils import Matrix
+        position, tangent, normal = self.data_at_u(u)
+        normal = (normal - tangent * normal.dot(tangent)).normalized()
+        bitangent = normal.cross(tangent).normalized()
+        matrix = Matrix.Identity(3)
+        matrix[0] = normal
+        matrix[1] = tangent
+        matrix[2] = bitangent
+        matrix.transpose(); matrix = matrix.to_4x4()
+        matrix.translation = position
+        return matrix
+
+    def matrix_from_start_end_u(self, start_u, end_u):
+        from mathutils import Matrix
+        position_start, _tangent_start, normal_start = self.data_at_u(start_u)
+        position_end, _tangent_end, _normal_end = self.data_at_u(end_u)
+        tangent = position_end - position_start
+        length = tangent.length
+        if tangent.length_squared < FLOAT_EPSILON:
+            raise RuntimeError(f"Failed to read the curve {self.curve_name}.")
+        tangent.normalize()
+        normal = (normal_start - tangent * normal_start.dot(tangent)).normalized()
+        bitangent = normal.cross(tangent).normalized()
+        matrix = Matrix.Identity(3)
+        matrix[0] = normal
+        matrix[1] = tangent
+        matrix[2] = bitangent
+        matrix.transpose(); matrix = matrix.to_4x4()
+        matrix.translation = position_start
+        matrix[3][3] = length # set the lenght with our HACK metadata thing
+        return matrix
+
+    def matrices_from_u_segments(self, u_values=[]):
+        return tuple( self.matrix_from_start_end_u(u_values[i], u_values[i+1]) for i in range(len(u_values)-1) )
+
+    def point_and_u_at_nearest_point_on_curve(self, point):
+        from mathutils.geometry import intersect_point_line
+        # because kd_find can return any number of points it always returns a list
+        nearest_point, index, distance = kd_find(self, self.positions, ref_pt=point, )[0]
+        # ONE of the segments this point belongs to will have the right value
+        max_index = len(self.u_sample_points)-1
+        if index >= 0 and index < max_index: # check the line between the found point and the next point
+            closest_point, parametric_distance_to = intersect_point_line(
+                            point, self.positions[index], self.positions[index + 1],)
+            if parametric_distance_to > 0 - FLOAT_EPSILON and parametric_distance_to < 1 + FLOAT_EPSILON:
+                # we have found our point
+                a = self.u_sample_points[index]; b = self.u_sample_points[index + 1]
+                return closest_point, (a + (b - a) * parametric_distance_to)
+        if index > 0 and index <= max_index: # check the previous segment
+            closest_point, parametric_distance_to = intersect_point_line(
+                            point, self.positions[index], self.positions[index - 1],)
+            if parametric_distance_to > 0 - FLOAT_EPSILON and parametric_distance_to < 1 + FLOAT_EPSILON:
+                # we have found our point
+                a = self.u_sample_points[index]; b = self.u_sample_points[index - 1]
+                return closest_point, (a + (b - a) * parametric_distance_to)
+
+    def __repr__(self):
+        return f"Cached curve {self.curve_name}"
+
+
+def hash_spline(spline) -> int:
+    # explicit tuple because Python will make a freakin' generator object otherwise
+    spline_metadata = ( spline.type, spline.resolution_u, spline.order_u, 
+                        spline.use_cyclic_u, spline.use_endpoint_u,
+                        spline.tilt_interpolation, spline.radius_interpolation, )
+    if spline.type == 'BEZIER':
+        points_data = tuple( ( *bp.co, *bp.handle_left, *bp.handle_right,
+                                bp.handle_right_type, bp.handle_left_type,
+                                bp.tilt, bp.radius) for bp in spline.bezier_points )
+    else:
+        points_data = tuple( (*p.co, p.tilt, p.radius ) for p in spline.points )
+    return hash( (spline_metadata, points_data) )
+
+def hash_curve(curve, spline_hashes) -> int:
+    curve_metadata = ( curve.dimensions, curve.twist_mode, curve.resolution_u, )
+    return hash( (curve_metadata, spline_hashes) )
+
+def fill_curve_lut(curve_name, bContext):
+    curve = bpy_object_get_guarded( curve_name )
+
+    if not curve: raise RuntimeError(f"WARN: No curve found for {curve_name}.")
+    elif curve.type != "CURVE": raise RuntimeError(f"WARN: Object {curve_name} is not a curve.")
+    else:
+        spline_hashes = tuple( hash_spline(spline) for spline in curve.data.splines)
+        curve_hash = hash_curve(curve.data, spline_hashes)
+        SPLINE_HASHES[curve.name] = spline_hashes; CURVE_HASHES[curve_name] = curve_hash
+        if existing_cache := CURVE_LUT_CACHE.get(curve_name):
+            if existing_cache['hash'] == curve_hash: return
+        mesh = get_mesh_from_curve(curve_name, "_MANTIS_CACHE_CURVE", bContext)
+        curve_lut_cache = []
+        from .utilities.utilities import all_data_from_ribbon, DetectRibbons
+        for i, ribbon in enumerate(DetectRibbons(mesh)):
+            spline_hash = spline_hashes[i]
+            if existing_cache := CURVE_LUT_CACHE.get(curve_name):
+                if len(existing_cache['spline_LUT']) >= i:
+                    if existing_cache['spline_LUT'][i].hash == spline_hash: continue
+            # othewise we need to get the data
+            # if I ever decide to use the radius in Mantis I'll add it to the LUT
+            u_samples, positions, normals, tangents, radii = all_data_from_ribbon(mesh, curve.matrix_world, ribbon)
+            for radius in radii:
+                if radius < FLOAT_EPSILON: # radius is 0:
+                    raise RuntimeError(zero_radius_error_message(None, curve))
+            spline_lut = SplineLUT(
+                u_samples, positions, tangents, normals, hash=spline_hash, curve_name=curve_name, )
+            curve_lut_cache.append(spline_lut)
+    
+    CURVE_LUT_CACHE[curve_name] = {}
+    CURVE_LUT_CACHE[curve_name]['hash'] = curve_hash
+    CURVE_LUT_CACHE[curve_name]['spline_LUT'] = curve_lut_cache
+    # remove the mesh, it is no longer needed - we have built a cache
+    # import bpy
+    # bpy.data.meshes.remove(mesh)
+
+def get_from_curve_lut(curve_name, spline_index, bContext) -> SplineLUT:
+    spline_lookup = None
+    try:
+        fill_curve_lut(curve_name=curve_name, bContext=bContext)
+        spline_lookup = CURVE_LUT_CACHE[curve_name]['spline_LUT'][spline_index]
+    except IndexError as e:
+        raise e(f"{self} is attempting to read from a spline in {curve_name} that does not exist."
+                    " Try and reduce the value of Spline Index.")
+    return spline_lookup
+
+
 def matrix_from_head_tail(head, tail, normal=None):
     from mathutils import Vector, Matrix
     if normal is None:
@@ -101,14 +262,7 @@ def get_mesh_from_curve(curve_name : str, execution_id : str, bContext, ribbon=T
             m.name = m_name
         return m
 
-def cleanup_curve(curve_name : str, execution_id : str) -> None:
-        import bpy
-        curve = bpy_object_get_guarded(curve_name)
-        m_name = curve_name+'.'+str(hash(curve.name+'.'+ execution_id))
-        if (mesh := bpy.data.meshes.get(m_name)):
-            bpy.data.meshes.remove(mesh)
-
-def kd_find(node, points, ref_pt, num_points):
+def kd_find(node, points, ref_pt, num_points = 1):
         if num_points == 0:
             raise RuntimeError(f"Cannot find 0 points for {node}")
         from mathutils import kdtree
@@ -326,7 +480,6 @@ class InputColorSetPallete(SimpleInputNode):
             self.parameters[o.name] = o.default_value
         return super().fill_parameters(ui_node)
 
-
 class UtilityCustomProperty(MantisMiscNode):
     __slots__ = ()
     socket_templates = UtilityCustomPropertySockets
@@ -380,80 +533,38 @@ class UtilityMatrixFromCurve(MantisMiscNode):
     def bPrepare(self, bContext = None,):
         from mathutils import Matrix
         import bpy
-        mat = Matrix.Identity(4)
-        curve_name = self.evaluate_input("Curve")
-        curve = bpy_object_get_guarded( curve_name, self)
-        mode = self.evaluate_input("Mode")
+        curve_name = self.evaluate_input("Curve"); mode = self.evaluate_input("Mode")
         # DIVISIONS, FACTOR
-        if not curve:
-            prRed(f"WARN: No curve found for {self}. Using an identity matrix instead.")
-            mat[3][3] = 1.0
-        elif curve.type != "CURVE":
-            prRed(f"WARN: Object {curve.name} is not a curve. Using an identity matrix instead.")
-            mat[3][3] = 1.0
-        else:
-            if bContext is None: bContext = bpy.context # is this wise?
-            m = get_mesh_from_curve(curve.name, self.base_tree.execution_id, bContext)
-            from .utilities.utilities import data_from_ribbon_mesh
-            #
-            num_divisions = self.evaluate_input("Total Divisions")
-            if mode == 'DIVISIONS' and num_divisions <= 0:
-                raise GraphError("The number of divisions in the curve must be 1 or greater.")
-            m_index = self.evaluate_input("Matrix Index")
-            if mode == 'DIVISIONS' and m_index >= num_divisions:
-                prRed(m_index, num_divisions)
-                raise GraphError(f"{self} tried to get a matrix-index greater the total number of divisions."
-                                  "The matrix index starts at 0. You're probably off by +1.")
-            spline_index = self.evaluate_input("Spline Index")
-            if spline_index > len(curve.data.splines)-1:
-                raise GraphError(f"{self} is attempting to read from a spline in {curve.name} that does not exist."
-                                  " Try and reduce the value of Spline Index.")
-            splines_factors = [ [] for i in range (spline_index)]
-            
-            if mode == 'FACTOR':
-                factor = self.evaluate_input('Factor')
-                factor = min(factor, 1 - 0.0001) # to make our fake tangent work
-                factors = [ factor, factor + 0.0001 ]
-                # TODO this is technically not accurate, we want the real tangent
-                # ... but this should be close enough.
-            elif mode == 'FACTOR_WITH_TAIL':
-                factor = self.evaluate_input('Factor')
-                factor = min(factor, 1 - 0.0001) # to make our fake tangent work
-                factors = [ factor,
-                            self.evaluate_input('Factor (Tail)')]
-            else:  # mode == 'DIVISIONS':
-                factors = [1/num_divisions*m_index, 1/num_divisions*(m_index+1)]
-            splines_factors.append(factors)
-            data = data_from_ribbon_mesh(m, splines_factors, curve.matrix_world)
-            if data[spline_index][1][0] < FLOAT_EPSILON: # radius is None:
-                raise RuntimeError(zero_radius_error_message(self, curve))
-            
-            head=data[spline_index][0][0]
-            tail= data[spline_index][0][1]
-            axis = (tail-head).normalized()
-            if axis.length_squared < FLOAT_EPSILON:
-                raise RuntimeError(f"Failed to read the curve {curve.name}.")
-            normal=data[spline_index][2][0]
-            # make sure the normal is perpendicular to the tail
-            from .utilities.utilities import make_perpendicular
-            normal = make_perpendicular(axis, normal)
-            mat = matrix_from_head_tail(head, tail, normal)
-            # this is in world space... let's just convert it back
-            mat.translation = head - curve.location
-            if mode == 'FACTOR':
-                mat[3][3]=1.0 # Set the length
-
-            # TODO HACK TODO
-            # all the nodes should work in world-space, and it should be the responsibility
-            # of the xForm node to convert!
-
-        self.parameters["Matrix"] = mat
+        if bContext is None: bContext = bpy.context # is this wise?
+        spline_index = self.evaluate_input("Spline Index")
+        spline_lookup : SplineLUT = get_from_curve_lut(curve_name, spline_index, bContext)
+        assert(spline_lookup)
+        #
+        num_divisions = self.evaluate_input("Total Divisions")
+        if mode == 'DIVISIONS' and num_divisions <= 0:
+            raise GraphError("The number of divisions in the curve must be 1 or greater.")
+        m_index = self.evaluate_input("Matrix Index")
+        if mode == 'DIVISIONS' and m_index >= num_divisions:
+            prRed(m_index, num_divisions)
+            raise GraphError(f"{self} tried to get a matrix-index greater the total number of divisions."
+                                "The matrix index starts at 0. You're probably off by +1.")
+        if mode == 'FACTOR':
+            factor = self.evaluate_input('Factor')
+            matrix = spline_lookup.matrix_at_u(factor)
+        elif mode == 'FACTOR_WITH_TAIL':
+            factor = self.evaluate_input('Factor')
+            factor_tail = self.evaluate_input('Factor (Tail)')
+            matrix = spline_lookup.matrix_from_start_end_u(factor, factor_tail)
+        else:  # mode == 'DIVISIONS':
+            factor = 1/num_divisions*m_index
+            factor_tail = 1/num_divisions*(m_index+1)
+            matrix = spline_lookup.matrix_from_start_end_u(factor, factor_tail)
+        
+        self.parameters["Matrix"] = matrix
         self.prepared = True
         self.executed = True
 
-    def bFinalize(self, bContext=None):
-        cleanup_curve(self.evaluate_input("Curve"), self.base_tree.execution_id)
-
+#TODO there is no harm in grabbing normal and tangent here, too
 class UtilityPointFromCurve(MantisMiscNode):
     '''Get a point from a curve'''
     __slots__ = ()
@@ -463,28 +574,13 @@ class UtilityPointFromCurve(MantisMiscNode):
     def bPrepare(self, bContext = None,):
         import bpy
         curve_name = self.evaluate_input("Curve")
-        curve = bpy_object_get_guarded( curve_name, self)
-        if not curve:
-            raise RuntimeError(f"No curve found for {self}.")
-        elif curve.type != "CURVE":
-            raise GraphError(f"ERROR: Object {curve.name} is not a curve.")
-        else:
-            if bContext is None: bContext = bpy.context # is this wise?
-            m = get_mesh_from_curve(curve.name, self.base_tree.execution_id, bContext)
-            from .utilities.utilities import data_from_ribbon_mesh
-            #
-            num_divisions = 1
-            spline_index = self.evaluate_input("Spline Index")
-            splines_factors = [ [] for i in range (spline_index)]
-            factors = [self.evaluate_input("Factor")]
-            splines_factors.append(factors)
-            data = data_from_ribbon_mesh(m, splines_factors, curve.matrix_world)
-            p = data[spline_index][0][0] - curve.location
-        self.parameters["Point"] = p
+        if bContext is None: bContext = bpy.context # is this wise?
+        spline_index = self.evaluate_input("Spline Index")
+        spline_lookup : SplineLUT = get_from_curve_lut(curve_name, spline_index, bContext)
+        factor = self.evaluate_input("Factor")
+        position, _tan, _nrm = spline_lookup.data_at_u(factor)
+        self.parameters["Point"] = position
         self.prepared, self.executed = True, True
-
-    def bFinalize(self, bContext=None):
-        cleanup_curve(self.evaluate_input("Curve"), self.base_tree.execution_id)
 
 class UtilityMatricesFromCurve(MantisMiscNode):
     '''Get matrices from a curve'''
@@ -493,41 +589,15 @@ class UtilityMatricesFromCurve(MantisMiscNode):
     passes=frozenset({'bPrepare', 'bFinalize'})
 
     def bPrepare(self, bContext = None,):
-        import time
-        # start_time = time.time()
-        #
-        from mathutils import Matrix
-        import bpy
-        m = Matrix.Identity(4)
         curve_name = self.evaluate_input("Curve")
-        curve = bpy_object_get_guarded( curve_name, self)
-        if not curve:
-            prRed(f"WARN: No curve found for {self}. Using an identity matrix instead.")
-            m[3][3] = 1.0
-        elif curve.type != "CURVE":
-            prRed(f"WARN: Object {curve.name} is not a curve. Using an identity matrix instead.")
-            m[3][3] = 1.0
-        else:
-            if bContext is None: bContext = bpy.context # is this wise?
-            mesh = get_mesh_from_curve(curve.name, self.base_tree.execution_id, bContext)
-            from .utilities.utilities import data_from_ribbon_mesh
-            num_divisions = self.evaluate_input("Total Divisions")
-            spline_index = self.evaluate_input("Spline Index")
-            splines_factors = [ [] for i in range (spline_index)]
-            factors = [0.0] + [(1/num_divisions*(i+1)) for i in range(num_divisions)]
-            splines_factors.append(factors)
-            data = data_from_ribbon_mesh(mesh, splines_factors, curve.matrix_world)
-            # [spline_index][points,tangents,normals][datapoint_index]
-            from .utilities.utilities import make_perpendicular
-            matrices=[]
-            for i in range(num_divisions):
-                if data[spline_index][1][i] < FLOAT_EPSILON: # radius is None:
-                    raise RuntimeError(zero_radius_error_message(self, curve))
-                m = matrix_from_head_tail (
-                data[spline_index][0][i], data[spline_index][0][i+1],
-                make_perpendicular((data[spline_index][0][i+1]-data[spline_index][0][i]).normalized(), data[spline_index][2][i]),)
-                m.translation = data[spline_index][0][i] - curve.location
-                matrices.append(m)
+        spline_index = self.evaluate_input("Spline Index")
+        import bpy
+        if bContext is None: bContext = bpy.context # is this wise?
+        spline_lookup : SplineLUT = get_from_curve_lut(curve_name, spline_index, bContext)
+    
+        num_divisions = self.evaluate_input("Total Divisions")
+        factors = [0.0] + [(1/num_divisions*(i+1)) for i in range(num_divisions)]
+        matrices = spline_lookup.matrices_from_u_segments(factors)
 
         for link in self.outputs["Matrices"].links:
             for i, m in enumerate(matrices):
@@ -535,23 +605,10 @@ class UtilityMatricesFromCurve(MantisMiscNode):
                 if not (out := self.outputs.get(name)): # reuse them if there are multiple links.
                     out = self.outputs[name] = NodeSocket(name = name, node=self)
                 c = out.connect(link.to_node, link.to_socket)
-                # prOrange(c)
                 self.parameters[name] = m
-                # print (mesh)
             link.die()
+        self.prepared = True; self.executed = True
 
-        self.prepared = True
-        self.executed = True
-        # prGreen(f"Matrices from curves took {time.time() - start_time} seconds.")
-
-    def bFinalize(self, bContext=None):
-        import bpy
-        curve_name = self.evaluate_input("Curve")
-        curve = bpy_object_get_guarded( curve_name, self)
-        m_name = curve.name+'.'+self.base_tree.execution_id
-        if (mesh := bpy.data.meshes.get(m_name)):
-            prGreen(f"Freeing mesh data {m_name}...")
-            bpy.data.meshes.remove(mesh)
 
 class UtilityNumberOfCurveSegments(MantisMiscNode):
     __slots__ = ()
@@ -586,61 +643,27 @@ class UtilityMatrixFromCurveSegment(MantisMiscNode):
     def bPrepare(self, bContext = None,):
         import bpy
         curve_name = self.evaluate_input("Curve")
-        curve = bpy_object_get_guarded( curve_name, self)
-        if not curve:
-            raise RuntimeError(f"No curve found for {self}.")
-        elif curve.type != "CURVE":
-            raise GraphError(f"ERROR: Object {curve.name} is not a curve.")
-        else:
-            if bContext is None: bContext = bpy.context # is this wise?
-            m = get_mesh_from_curve(curve.name, self.base_tree.execution_id, bContext)
-            from .utilities.utilities import data_from_ribbon_mesh
-            # this section is dumb, but it is because the data_from_ribbon_mesh
-            #  function is designed to pull data from many splines at once (for optimization)
-            #  so we have to give it empty splines for each one we skip.
-            # TODO: Refactor this to make it so I can select spline index
-            spline_index = self.evaluate_input("Spline Index")
-            spline = curve.data.splines[spline_index]
-            splines_factors = [ [] for i in range (spline_index)]
-            factors = [0.0]
-            points = spline.bezier_points if spline.type == 'BEZIER' else spline.points
-            total_length=0.0
-            for i in range(len(points)-1):
-                total_length+= (seg_length := (points[i+1].co - points[i].co).length)
-                factors.append(seg_length)
-            prev_length = 0.0
-            for i in range(len(factors)):
-                factors[i] = prev_length+factors[i]/total_length
-                prev_length=factors[i]
-                # Why does this happen? Floating point error?
-                if factors[i]>1.0: factors[i] = 1.0
-            splines_factors.append(factors)
-            #
-            data = data_from_ribbon_mesh(m, splines_factors, curve.matrix_world)
-            segment_index = self.evaluate_input("Segment Index")
-            if data[spline_index][1][segment_index] < FLOAT_EPSILON: # radius is None:
-                raise RuntimeError(zero_radius_error_message(self, curve))
-            head=data[spline_index][0][segment_index]
-            tail= data[spline_index][0][segment_index+1]
-            axis = (tail-head).normalized()
-            normal=data[spline_index][2][segment_index]
-            # make sure the normal is perpendicular to the tail
-            from .utilities.utilities import make_perpendicular
-            normal = make_perpendicular(axis, normal)
-            m = matrix_from_head_tail(head, tail, normal)
-            m.translation = head - curve.location
-            self.parameters["Matrix"] = m
+        curve = bpy_object_get_guarded(curve_name, self)
+        spline_index = self.evaluate_input("Spline Index")
+        if bContext is None: bContext = bpy.context # is this wise?
+        spline_lookup = get_from_curve_lut(curve_name, spline_index, bContext)
+        spline = curve.data.splines[spline_index]
+        factors = []
+        points = spline.bezier_points if spline.type == 'BEZIER' else spline.points
+        total_length=0.0
+        for i in range(len(points)): # points[i].co[:3] because nurbs have W element :/
+            _pt, u = spline_lookup.point_and_u_at_nearest_point_on_curve(points[i].co[:3])
+            factors.append(u)
+        segment_index = self.evaluate_input("Segment Index")
+        m = spline_lookup.matrix_from_start_end_u(factors[segment_index], factors[segment_index+1])
+        self.parameters["Matrix"] = m
         self.prepared, self.executed = True, True
-
-    def bFinalize(self, bContext=None):
-        cleanup_curve(self.evaluate_input("Curve"), self.base_tree.execution_id)
 
 class UtilityGetCurvePoint(MantisMiscNode):
     __slots__ = ()
     socket_templates = GetCurvePointSockets
 
     def bPrepare(self, bContext=None):
-        import bpy
         curve_name = self.evaluate_input("Curve")
         curve = bpy_object_get_guarded( curve_name, self)
         if not curve:
@@ -665,24 +688,12 @@ class UtilityGetNearestFactorOnCurve(MantisMiscNode):
     def bPrepare(self, bContext = None,):
         import bpy
         curve_name = self.evaluate_input("Curve")
-        curve = bpy_object_get_guarded( curve_name, self)
-        if not curve:
-            raise RuntimeError(f"No curve found for {self}.")
-        elif curve.type != "CURVE":
-            raise GraphError(f"ERROR: Object {curve.name} is not a curve.")
-        else:
-            if bContext is None: bContext = bpy.context # is this wise?
-            m = get_mesh_from_curve(curve.name,
-                                    self.base_tree.execution_id,
-                                    bContext, ribbon=False)
-            # this is confusing but I am not re-writing these old functions
-            from .utilities.utilities import FindNearestPointOnWireMesh as nearest_point
-            spline_index = self.evaluate_input("Spline Index")
-            ref_pt = self.evaluate_input("Reference Point")
-            splines_points = [ [] for i in range (spline_index)]
-            splines_points.append([ref_pt])
-            pt =  nearest_point(m, splines_points)[spline_index][0]
-            self.parameters["Factor"] = pt
+        spline_index = self.evaluate_input("Spline Index")
+        if bContext is None: bContext = bpy.context # is this wise?
+        spline_lookup = get_from_curve_lut(curve_name, spline_index, bContext)
+        ref_pt = self.evaluate_input("Reference Point")
+        _closest_point, u = spline_lookup.point_and_u_at_nearest_point_on_curve(ref_pt)
+        self.parameters["Factor"] = u
         self.prepared, self.executed = True, True
 
 class UtilityKDChoosePoint(MantisMiscNode):
