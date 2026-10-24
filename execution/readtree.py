@@ -503,6 +503,18 @@ def parse_tree(base_tree, error_popups=False):
 
     solve_only_these = set(solve_only_these)
 
+
+    overlay_tagged_nodes = {}
+    for node_signature, socket_id in mContext.tagged_for_overlay:
+        if overlay_tagged_nodes.get(node_signature):
+            overlay_tagged_nodes[node_signature].append(socket_id)
+        else:
+            overlay_tagged_nodes[node_signature] = [socket_id]
+    def check_and_apply_overlay(n):
+        if overlays_for_this_node := overlay_tagged_nodes.get(n.signature):
+            for socket_id in overlays_for_this_node:
+                node_scan_overlays(n, socket_id,)
+
     solve_layer = unsolved_schema.copy(); solve_layer.extend(roots)
     while(solve_layer):
         n = solve_layer.pop()
@@ -541,6 +553,7 @@ def parse_tree(base_tree, error_popups=False):
                 if dep not in schema_solve_done:
                     break
             else:
+                check_and_apply_overlay(n)
                 try:
                     n.bPrepare()
                 except Exception as e:

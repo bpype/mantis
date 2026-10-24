@@ -49,9 +49,14 @@ def grp_node_reroute_common(in_node, out_node, interface):
             out_link.die()
 
 def reroute_links_grp(group, all_nodes):
+    # TODO: find out why I need 2 paths here. shouldn't it always be a group?
+    if group.ui_node.bl_idname == 'MantisNodeGroup':
+        items_tree = group.ui_node.node_tree.interface.items_tree
+    else: # it's an input or output or something. Why?
+        items_tree = group.ui_node.id_data.interface.items_tree
     interface = GroupInterface(
-        ( *group.signature, "InputInterface"),
-        group.base_tree, group.ui_node, 'INPUT',)
+        ( *group.signature, "InputInterface"), group.base_tree,
+            'INPUT', group.ui_node, items_tree=items_tree )
     all_nodes[interface.signature] = interface
     if group.inputs:
         if group_input := all_nodes.get(( *group.signature, "NodeGroupInput")):
@@ -60,12 +65,18 @@ def reroute_links_grp(group, all_nodes):
             raise RuntimeError("internal error: failed to enter a node group ")
 
 def reroute_links_grpout(group_output, all_nodes):
-    if (group := all_nodes.get( ( *group_output.signature[:-1],) )):
+    if (group_output_node := all_nodes.get( ( *group_output.signature[:-1],) )):
+        # TODO: see above
+        if group_output_node.ui_node.bl_idname == 'MantisNodeGroup':
+            items_tree = group_output_node.ui_node.node_tree.interface.items_tree
+        else:
+            items_tree = group_output_node.ui_node.id_data.interface.items_tree
         interface = GroupInterface(
-            ( *group.signature, "OutputInterface"),
-            group.base_tree, group.ui_node, 'OUTPUT',)
+            ( *group_output_node.signature, "OutputInterface"),
+            group_output_node.base_tree, 'OUTPUT', ui_node=group_output_node.ui_node,
+            items_tree=items_tree,)
         all_nodes[interface.signature] = interface
-        grp_node_reroute_common(group_output, group, interface)
+        grp_node_reroute_common(group_output, group_output_node, interface)
     else:
         prOrange(f"WARN: unconnected outputs from a node group "
                  "(maybe you are running the tree from inside a node group?)")
@@ -146,14 +157,36 @@ class AutoGenNode(MantisNode):
 class GroupInterface(MantisNode):
     __slots__ = ("in_out")
     node_type = 'INTERFACE'
-    def __init__(self, signature, base_tree, ui_node, in_out):
+    def __init__(self, signature, base_tree, in_out, ui_node = None, items_tree = None):
+        # DO: refactor me to use the tree interface
         super().__init__(signature, base_tree)
         self.prepared, self.executed = True, True
         self.in_out = in_out
         # init the sockets based on in/out, then set up traversal
-        collection = ui_node.inputs if in_out == 'INPUT' else ui_node.outputs
-        for socket in collection:
-            self.inputs[socket.identifier] = NodeSocket(is_input=True, node=self, name=socket.identifier)
-            self.outputs[socket.identifier] = NodeSocket(is_input=False, node=self, name=socket.identifier)
-        for socket in self.inputs.keys(): self.set_traverse( [(socket, socket)] )
+    
+        if self.in_out == 'SCHEMA_INPUT': # the length is, in reality, a constant input
+            self.outputs["Length"] = NodeSocket(is_input=False, node=self, name="Length")
+        if 'SCHEMA' in self.in_out: # the index like a constant in for each iteration
+            self.outputs["Index"]  = NodeSocket(is_input=False, node=self, name="Index")
+               
+        for i, item in enumerate(items_tree):
+            if item.item_type == 'PANEL': continue
+            is_connection = False; is_array = False
+            if  hasattr(item, 'is_connection'): # in older files and for some types this happens
+                is_connection = item.is_connection # BUG really every socket should be a Mantis interface type
+                is_array = item.is_array
+            if (self.in_out in {'INPUT', 'OUTPUT'} and item.in_out == self.in_out):
+                source = self.inputs[item.identifier] = NodeSocket(is_input=True, node=self, name=item.identifier)
+                target = self.outputs[item.identifier] = NodeSocket(is_input=False, node=self, name=item.identifier)
+                self.set_traverse( [(source.name, target.name)] )
+            elif self.in_out == 'SCHEMA_INPUT':
+                if is_array: continue  # I'll skip these for now
+                source = self.inputs[item.identifier] = NodeSocket(is_input=True, node=self, name=item.identifier)
+                target = self.outputs[item.identifier] = NodeSocket(is_input=False, node=self, name=item.identifier)
+                self.set_traverse( [(source.name, target.name)] )
+            elif self.in_out == 'SCHEMA_BETWEEN':
+                if is_connection: # we need these at every in-between because they are modified between
+                    source = self.inputs[item.identifier] = NodeSocket(is_input=True, node=self, name=item.identifier)
+                    target = self.outputs[item.identifier] = NodeSocket(is_input=False, node=self, name=item.identifier)
+                    self.set_traverse( [(source.name, target.name)] )
         self.execution_prepared=True

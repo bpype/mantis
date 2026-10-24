@@ -931,8 +931,8 @@ class MantisNode:
         "hierarchy_dependencies", "dependencies",
         "unmet_hierarchy_dependency_count",
         "prepared", "executed", "execution_prepared",
-        "mContext",
-        "is_schema_prototype"
+        "mContext", "is_schema_prototype",
+        "generated_at_schema_index", "schema_uuid"
         )
     node_type = 'UNINITIALIZED'
     socket_templates = None
@@ -957,6 +957,8 @@ class MantisNode:
         #  again without changing the readtree code much.
         self.mContext = None # for now I am gonna set this at runtime
         self.is_schema_prototype = False
+        # For nodes generated in a schema.
+        self.generated_at_schema_index = -1; self.schema_uuid = ""
         # I know it isn't "beautiful OOP" or whatever, but it is just easier
         # code should be simple and do things in the simplest way.
         # in the future I can refactor it, but it will require changes to 100+
