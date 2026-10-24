@@ -438,6 +438,8 @@ def generate_custom_interface_types():
                 my_interface_draw = interface_string_draw
             case "xFormSocket":
                 my_interface_draw = interface_xform_draw
+            case _:
+                my_interface_draw = interface_draw
 
         interface = type(
                       name,
