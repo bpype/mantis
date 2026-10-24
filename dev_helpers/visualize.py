@@ -35,7 +35,7 @@ class MantisVisualizeNode(Node):
 
     def gen_data(self, mantis_node, mode='DEBUG_CONNECTIONS'):
         from ..utilities.utilities import get_ui_node
-        if mantis_node.node_type in ['SCHEMA', 'DUMMY']:
+        if mantis_node.node_type in ['SCHEMA', 'DUMMY', 'INTERFACE']:
             np=None
         elif mantis_node.ui_signature is None:
             np=None
@@ -68,6 +68,7 @@ class MantisVisualizeNode(Node):
                 multi = False
                 if len(inp.links) > 1: multi = True
                 s = self.inputs.new('WildcardSocket', inp.name, use_multi_input=multi)
+                s.color = (0.0, 0.0, 0.0, 1.0)
                 s.link_limit = 4000
                 try:
                     if sock := np.inputs.get(inp.name):
@@ -83,6 +84,7 @@ class MantisVisualizeNode(Node):
                             continue
 
                 s = self.outputs.new('WildcardSocket', out.name)
+                s.color = (0.0, 0.0, 0.0, 1.0)
                 try:
                     if sock := np.outputs.get(out.name):
                         s.color = sock.color_simple
@@ -101,18 +103,21 @@ class MantisVisualizeNode(Node):
                 multi = False
                 if len(inp.links) > 1: multi = True
                 s = self.inputs.new('WildcardSocket', inp.name)
+                s.color = (0.0, 0.0, 0.0, 1.0)
                 s.link_limit = 4000
             for out in mantis_node.outputs:
                 match mode:
                     case "DEBUG_CONNECTIONS":
                         if not out.is_connected:
                             continue
-                self.outputs.new('WildcardSocket', out.name)
+                s = self.outputs.new('WildcardSocket', out.name)
+                s.color = (0.0, 0.0, 0.0, 1.0)
 
 def gen_vis_node( mantis_node,
                   vis_tree,
                   links,
                   omit_simple=False,
+                  only_hierarchy_links=False
                  ):
     from ..base_definitions import array_output_types
     # if mantis_node.node_type == 'UTILITY' and \
@@ -123,11 +128,15 @@ def gen_vis_node( mantis_node,
     vis.gen_data(mantis_node)
     for inp in mantis_node.inputs.values():
         for l in inp.links:
-            if l.from_node in mantis_node.hierarchy_dependencies:
+            if only_hierarchy_links and l.from_node in mantis_node.hierarchy_dependencies:
+                links.add(l)
+            else:
                 links.add(l)
     for out in mantis_node.outputs.values():
         for l in out.links:
-            if l.to_node in mantis_node.hierarchy_connections:
+            if only_hierarchy_links and l.to_node in mantis_node.hierarchy_connections:
+                links.add(l)
+            else:
                 links.add(l)
     return vis
 
@@ -141,7 +150,7 @@ def visualize_tree(m_nodes, base_tree, context):
     import cProfile
     import pstats, io
     from pstats import SortKey
-    cull_no_links = False
+    cull_no_links = True
     with cProfile.Profile() as pr:
         try:
             trace_from_roots = True
