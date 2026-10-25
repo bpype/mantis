@@ -180,15 +180,6 @@ def node_scan_overlays(node, socket_id,):
     from ..misc_nodes import SimpleInputNode
     from ..internal_nodes import AutoGenNode
     from ..utilities.utilities import get_ui_node
-    overlay_data_type = str
-    if isinstance(node, (SimpleInputNode,AutoGenNode) ):
-        overlay_data_type = type(node.parameters[list(node.outputs.values())[0].name])
-    else:
-        match node.inputs[socket_id].socket_type:
-            case "IntSocket" | "UnsignedIntSocket":
-                overlay_data_type = int
-            case "FloatSocket" | "FloatPositiveSocket" | "FloatFactorSocket" | "FloatAngleSocket":
-                overlay_data_type = float
     from ..utilities.node_common import GraphError
     interface_nodes = node.mContext.interface_nodes
     if not isinstance(node, AutoGenNode):
@@ -206,12 +197,21 @@ def node_scan_overlays(node, socket_id,):
             else:
                 raise KeyError(f"Socket not found by ID {socket_id} in node {node.ui_signature}\n"
                             f"Candidates: {[socket.identifier for socket in ui_node.inputs]}")
-
         value = socket.default_value # get the ACTUAL UI value
         if hasattr(socket, 'overlay_text'): # TODO this is all wrong but for now
             value = "$"+socket.overlay_text # I am not implementing the Parser feature
     else: # since it doesn't have a UI node
         value = node.parameters[socket_id]
+    
+    overlay_data_type = str
+    if isinstance(node, (AutoGenNode) ):
+        overlay_data_type = type(node.parameters[list(node.outputs.values())[0].name])
+    else: # we have the UI socket
+        match socket.bl_idname:
+            case "IntSocket" | "UnsignedIntSocket":
+                overlay_data_type = int
+            case "FloatSocket" | "FloatPositiveSocket" | "FloatFactorSocket" | "FloatAngleSocket":
+                overlay_data_type = float
     
     if not isinstance(value, str): return
     # First step: get the interface nodes and the overlay keys
@@ -246,14 +246,17 @@ def node_scan_overlays(node, socket_id,):
     for interface_item in node.mContext.base_tree.interface.items_tree:
         if interface_item.item_type != "SOCKET": continue
         if interface_item.in_out != "INPUT": continue
-        # NOTE this will need to change if overlays extend to other data types
-        if hasattr(interface_item, "default_string"):
-            # NOTE that there may be duplicate names. Too bad!
-            root_overlay_values[interface_item.name] = interface_item.default_string
-        elif hasattr(interface_item, "default_int"):
-            root_overlay_values[interface_item.name] = str(interface_item.default_int).zfill(STRING_PADDING)
-        elif hasattr(interface_item, "default_float"):
-            root_overlay_values[interface_item.name] = str(interface_item.default_float).zfill(STRING_PADDING)
+        base_value=None
+        match interface_item.bl_socket_idname:
+            case "IntSocket" | "BooleanSocket":
+                # TODO parser for number types
+                base_value = interface_item.default_int
+            case "FloatSocket":
+                base_value = interface_item.default_float
+            case "StringSocket":
+                base_value = interface_item.default_string
+        if base_value:
+            root_overlay_values[interface_item.name] = base_value
         overlay_keys.add(interface_item.name)
         name_to_id_map[interface_item.name] = None # don't worry about it
         name_to_type_map[interface_item.name] = interface_item.bl_socket_idname
@@ -328,7 +331,9 @@ def node_scan_overlays(node, socket_id,):
                             overlay_resolved_value = overlay_value
                         break
                 else: # we'll try the base tree
-                    if base_tree_result := root_overlay_values.get(overlay_try):
+                    if base_tree_result := root_overlay_values.get(key):
+                        if overlay_data_type == str and not isinstance(base_tree_result, str):
+                            base_tree_result = str(base_tree_result).zfill(STRING_PADDING)
                         overlay_resolved_value = base_tree_result
                     else:
                         prOrange(f"WARN: no overlay value applied for {node.ui_signature} for key {key}")
@@ -589,7 +594,6 @@ def parse_tree(base_tree, error_popups=False):
             continue
 
         if n.signature in all_schema.keys():
-            prOrange(n)
             for dep in n.hierarchy_dependencies:
                 if dep not in schema_solve_done and (dep in solve_only_these):
                     if dep.prepared:

@@ -702,9 +702,6 @@ class xFormObjectInstance(xFormNode):
         modifier["Socket_1"] = self.evaluate_input("As Instance")
         # custom properties
         self.setup_custom_props(self.bGetObject(), "Custom Properties")
-        for i, (driver_key, driver_item) in enumerate(self.drivers.items()):
-            print (wrapGreen(i), wrapWhite(self), wrapPurple(driver_key))
-            prOrange(driver_item)
         finish_drivers(self)
 
     def bGetObject(self, mode = 'POSE'):

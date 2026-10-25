@@ -977,8 +977,8 @@ def handle_overlay_detect(node, socket_id, socket_idname, value) -> str:
             socket_type = int
         case "FloatSocket" | "FloatPositiveSocket" | "FloatFactorSocket" | "FloatAngleSocket":
             socket_type = float
-    
-    if node.signature[0] is None and len(node.signature) ==2:
+    # ONLY for root node trees, we can just directly fill this.
+    if node.signature[0] is None and len(node.signature) == 2:
         for key, interface_item in root_items_tree.items():
             if interface_item.item_type != "SOCKET": continue
             if interface_item.in_out != "INPUT": continue

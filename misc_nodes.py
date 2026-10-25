@@ -373,10 +373,11 @@ class SimpleInputNode(MantisMiscNode):
         from .utilities.utilities import handle_overlay_detect
         ui_outputs = ui_node.outputs
         node_socket = ui_outputs[0] # this is a simple input node.
-        # TODO HACK this will not work for number types!!
         if (value := node_socket.default_value) is not None:
+            if hasattr(node_socket, 'use_overlay') and node_socket.use_overlay:
+                value = '$' + node_socket.overlay_text
             if isinstance(value, str) and "$" in value:
-                value = handle_overlay_detect(self, node_socket.identifier, 'StringSocket', value)
+                value = handle_overlay_detect(self, node_socket.identifier, node_socket.bl_idname, value)
             self.parameters[node_socket.name] = value
         
 #*#-------------------------------#++#-------------------------------#*#
