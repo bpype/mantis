@@ -932,7 +932,7 @@ class MantisNode:
         "unmet_hierarchy_dependency_count",
         "prepared", "executed", "execution_prepared",
         "mContext", "is_schema_prototype",
-        "generated_at_schema_index", "schema_uuid"
+        "generated_at_schema_index",
         )
     node_type = 'UNINITIALIZED'
     socket_templates = None
@@ -957,8 +957,10 @@ class MantisNode:
         #  again without changing the readtree code much.
         self.mContext = None # for now I am gonna set this at runtime
         self.is_schema_prototype = False
-        # For nodes generated in a schema.
-        self.generated_at_schema_index = -1; self.schema_uuid = ""
+        # For nodes generated in a schema, it's a list so that we can store the whole path
+        # this is not strictly necessary for interface resolution but it is much easier
+        # initialize it as all -1, we'll modify this if we need to, e.g. in the schema
+        self.generated_at_schema_index = [-1] * len(self.signature)
         # I know it isn't "beautiful OOP" or whatever, but it is just easier
         # code should be simple and do things in the simplest way.
         # in the future I can refactor it, but it will require changes to 100+

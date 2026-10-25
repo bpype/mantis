@@ -147,8 +147,11 @@ class SchemaSolver:
     # Using lambdas here causes a lot of function calls, should be optimized out
     # since after all this only needs to change when the index updates
     def set_schema_per_interation_constants(self):
-        self.index_str = '.'+str(self.uuid)+'.'+str(self.index).zfill(4)
-        self.prev_index_str = '.'+str(self.uuid)+'.'+str(self.index-1).zfill(4)
+        # NOTE: I removed the UUID that has always been here
+        #  I can't figure out why I needed it and as far as I can tell there
+        #  really is no way for this to have name clashes. Tests work OK, too.
+        self.index_str = '.'+str(self.index).zfill(4)
+        self.prev_index_str = '.'+str(self.index-1).zfill(4)
         self.current_interface = self.interfaces[self.index]
         self.next_interface = self.interfaces[self.index + 1] # this is guaranteed
         if self.is_node_group:
@@ -158,18 +161,22 @@ class SchemaSolver:
         from ..internal_nodes import GroupInterface
         # One input interface per iteration, and one output interface
         items_tree = self.tree.interface.items_tree
+        mContext=self.node.mContext
         for i in range(self.solve_length): # one input per
-            index_str = "."+str(i).zfill(4) # self.index_str
+            index_str = '.'+str(i).zfill(4)
             name = 'InputInterface'+index_str
             if i == 0: in_out = 'SCHEMA_INPUT'
             else:      in_out = 'SCHEMA_BETWEEN'
             signature = (*self.autogen_path_names, name)
             interface = GroupInterface(signature=signature, base_tree=self.tree, in_out=in_out, 
                         ui_node=None, items_tree=items_tree)
+            interface.mContext = mContext
+            mContext.interface_nodes[interface.signature] = interface
+            interface.generated_at_schema_index = self.node.generated_at_schema_index + [i]
             # add the index and length socket constants
             interface.parameters['Index'] = i
-            if i == 0:
-                interface.parameters['Length'] = self.solve_length
+            # if i == 0: # TODO I am duplicating Length for the interface feature, this is not necessary
+            interface.parameters['Length'] = self.solve_length
             # the GroupInterface will initialize with the right sockets, but we still have to link them
 
             if in_out == 'SCHEMA_INPUT': # Take the links into the schema and plug them here
@@ -186,11 +193,14 @@ class SchemaSolver:
             self.solved_nodes[signature]=interface
 
         # now do the output
-        signature = (*self.autogen_path_names, "OutputInterface")
+        signature = (*self.autogen_path_names, "OutputInterface" + index_str)
         interface = GroupInterface(signature=signature, base_tree=self.tree,
                     in_out='OUTPUT', ui_node=None, items_tree=items_tree)
         self.interfaces.append(interface)
+        interface.generated_at_schema_index = i
         self.solved_nodes[signature]=interface
+        interface.mContext = mContext
+        mContext.interface_nodes[interface.signature] = interface
 
     def is_node_deeper_nested(self, queried_node, compare_node):
         return len(compare_node.signature) < len(queried_node.signature)
@@ -243,9 +253,11 @@ class SchemaSolver:
                 unprepared.append(mantis_node)
             if mantis_node.__class__.__name__ in custom_props_types:
                 setup_custom_props_from_np(mantis_node, ui_node)
-            mantis_node.fill_parameters(ui_node)
-            # be sure to pass on the Mantis Context to them
+            # be sure to pass on the Mantis Context to them.
             mantis_node.mContext=mContext
+            mantis_node.generated_at_schema_index = self.node.generated_at_schema_index + [self.index]
+            mantis_node.fill_parameters(ui_node)
+            assert mantis_node.mContext is not None
 
     def handle_link_from_index_input(self, index, frame_mantis_nodes, ui_link):
         from ..base_definitions import can_remove_socket_for_autogen

@@ -92,7 +92,7 @@ def gen_mantis_nodes(base_tree, current_tree, tree_path_names, mContext, all_man
             if not local_mantis_nodes.get(sig):
                 mantis_node = DummyNode( signature=sig , base_tree=base_tree, ui_node=ui_node, ui_signature=ui_sig )
                 local_mantis_nodes[sig] = mantis_node; all_mantis_nodes[sig] = mantis_node; dummy_nodes[sig] = mantis_node
-                if ui_node.bl_idname in ["NodeGroupOutput"]:
+                if ui_node.bl_idname in {"NodeGroupOutput"}:
                     mantis_node.reroute_links_type = 'out'
         elif ui_node.bl_idname in  ["MantisNodeGroup", "MantisSchemaGroup"]:
             mantis_node = DummyNode( signature= (sig := (None, *tree_path_names, ui_node.name) ), base_tree=base_tree, ui_node=ui_node )
@@ -102,7 +102,6 @@ def gen_mantis_nodes(base_tree, current_tree, tree_path_names, mContext, all_man
             if ui_node.bl_idname == "MantisNodeGroup":
                 mantis_node.reroute_links_type = 'group'
             else:
-                mantis_node.reroute_links_type = 'schema'
                 schema_nodes[sig] = mantis_node
         # if it wasn't the types we ignore or the types we make a Dummy for, use this to catch all non-special cases.
         elif (mantis_class := ui_node.mantis_class):
@@ -184,8 +183,16 @@ def node_scan_overlays(node, socket_id,):
     my_interfaces = []
     for index in range(len(node.signature)-1):
         if index == 0: continue # root
-        interface_signature = (*node.signature[:index+1], "InputInterface")
-        my_interfaces.append( interface_nodes[interface_signature] )
+        # we add one here because the node inside the schema references the schema's interface...
+        current_schema_interface_index = node.generated_at_schema_index[index+1]
+        if current_schema_interface_index < 0: # this indicates that it is not in a schema
+            interface = interface_nodes.get(
+                interface_signature := (*node.signature[:index+1], "InputInterface"))
+        else:
+            interface = interface_nodes.get(
+                interface_signature := (*node.signature[:index+1],
+                "InputInterface."+str(current_schema_interface_index).zfill(4)))
+        my_interfaces.append( interface )
     # the my_interfaces list is sorted in REVERSE order of importance
     # Next, get all the overlay providers.
     name_to_id_map = {}
@@ -207,6 +214,7 @@ def node_scan_overlays(node, socket_id,):
         overlay_keys.add(interface_item.name)
         name_to_id_map[interface_item.name] = None # don't worry about it
         name_to_type_map[interface_item.name] = interface_item.bl_socket_idname
+    # BUG? should this be my_interfaces ? why bother with interfaces this may not be a part of?
     for interface_node in interface_nodes.values():
         # problem: the interface node stores socket identifiers as keys
         # so in reality we need to get the group UI node and ask for its input names
@@ -223,6 +231,14 @@ def node_scan_overlays(node, socket_id,):
                 name_to_id_map[interface_item.name]=interface_item.identifier
                 name_to_type_map[interface_item.name] = interface_item.bl_socket_idname
                 overlay_keys.add(interface_item.name)
+        # For schema interfaces, we also need to get the length and index.
+        if 'Index' in interface.outputs:
+            overlay_keys.add('Index'); overlay_keys.add('Length')
+    if 'Index' in overlay_keys:
+        name_to_id_map['Index']='Index'
+        name_to_type_map['Index']= "IntSocket"
+        name_to_id_map['Length']='Length'
+        name_to_type_map['Length']= "IntSocket"
     # sort by reverse length so we find "CatsAndFrogs" before "Cats"
     overlay_keys = sorted(overlay_keys, key= lambda a :-1*len(a))
     # First I need to break it into substrings based on quotation marks
@@ -241,7 +257,11 @@ def node_scan_overlays(node, socket_id,):
             if key in overlay_try:
                 overlay_resolved_value = "$" + key
                 for interface in reversed(my_interfaces): # since this is reversed when we build it
-                    if interface.inputs.get(actual_key := name_to_id_map.get(key)):
+                    actual_key = name_to_id_map.get(key)
+                    socket = interface.inputs.get(actual_key)
+                    if key in ['Index', 'Length']:
+                        socket = interface.outputs.get(actual_key)
+                    if socket:
                         overlay_value = None
                         try:
                             overlay_value = interface.evaluate_input(actual_key)
@@ -251,10 +271,8 @@ def node_scan_overlays(node, socket_id,):
                                                  f"an invalid input in the node group: {interface.signature[:-1]}.")
                             raise GraphError( f"Error: Variable {key} is not supported because it is "
                                               f"type {socket_type}" )
-                            continue
                             # NOTE that the above can also be caused by any BUG occuring in node group update
                             # because it causes the interface to be invalid for the UI node that spawns the interface node.
-                        
                         if isinstance(overlay_value, (float, int)):
                             overlay_value = str(overlay_value).zfill(STRING_PADDING)
                         assert (isinstance(overlay_value, str)), f"Error: Variable {key} is not supported because it is type {type(overlay_value)}"

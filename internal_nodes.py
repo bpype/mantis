@@ -49,11 +49,7 @@ def grp_node_reroute_common(in_node, out_node, interface):
             out_link.die()
 
 def reroute_links_grp(group, all_nodes):
-    # TODO: find out why I need 2 paths here. shouldn't it always be a group?
-    if group.ui_node.bl_idname == 'MantisNodeGroup':
-        items_tree = group.ui_node.node_tree.interface.items_tree
-    else: # it's an input or output or something. Why?
-        items_tree = group.ui_node.id_data.interface.items_tree
+    items_tree = group.ui_node.node_tree.interface.items_tree
     interface = GroupInterface(
         ( *group.signature, "InputInterface"), group.base_tree,
             'INPUT', group.ui_node, items_tree=items_tree )
@@ -66,11 +62,7 @@ def reroute_links_grp(group, all_nodes):
 
 def reroute_links_grpout(group_output, all_nodes):
     if (group_output_node := all_nodes.get( ( *group_output.signature[:-1],) )):
-        # TODO: see above
-        if group_output_node.ui_node.bl_idname == 'MantisNodeGroup':
-            items_tree = group_output_node.ui_node.node_tree.interface.items_tree
-        else:
-            items_tree = group_output_node.ui_node.id_data.interface.items_tree
+        items_tree = group_output_node.ui_node.id_data.interface.items_tree
         interface = GroupInterface(
             ( *group_output_node.signature, "OutputInterface"),
             group_output_node.base_tree, 'OUTPUT', ui_node=group_output_node.ui_node,
@@ -94,7 +86,7 @@ class DummyNode(MantisNode):
         self.uuid = uuid4()
         self.solver = None
         self.node_type = 'DUMMY'
-        self.reroute_links_type='group' # group, out, schema
+        self.reroute_links_type=""
         if ui_node:
             if ui_node.bl_idname in ["MantisSchemaGroup"]:
                 self.node_type = 'DUMMY_SCHEMA'
@@ -120,8 +112,6 @@ class DummyNode(MantisNode):
         match self.reroute_links_type:
             case "group":
                 reroute_links_grp(self, all_nodes)
-            case "schema":
-                pass # gonna implement this later
             case "out":
                 reroute_links_grpout(self, all_nodes)
 
@@ -163,11 +153,15 @@ class GroupInterface(MantisNode):
         self.prepared, self.executed = True, True
         self.in_out = in_out
         # init the sockets based on in/out, then set up traversal
-    
-        if self.in_out == 'SCHEMA_INPUT': # the length is, in reality, a constant input
-            self.outputs["Length"] = NodeSocket(is_input=False, node=self, name="Length")
+        
+        # TODO: I'm adding length everywhere for now so overlays work
+        # need a more complex interface lookup for overlays to work w/out dupe length
+        # if self.in_out == 'SCHEMA_INPUT': # the length is, in reality, a constant input
+        #     self.outputs["Length"] = NodeSocket(is_input=False, node=self, name="Length")
+        # so the above should be here and below should omit length, end TODO
         if 'SCHEMA' in self.in_out: # the index like a constant in for each iteration
             self.outputs["Index"]  = NodeSocket(is_input=False, node=self, name="Index")
+            self.outputs["Length"] = NodeSocket(is_input=False, node=self, name="Length")
                
         for i, item in enumerate(items_tree):
             if item.item_type == 'PANEL': continue
