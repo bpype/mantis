@@ -46,6 +46,23 @@ class MantisSocket(parent_classes):
     def draw_color_simple(self):
         return self.color_simple    
 
+class MantisSocketOverlayEnabled(MantisSocket):
+    # this class just needs a couple properties
+    use_overlay: bpy.props.BoolProperty( default=False )
+    overlay_text: bpy.props.StringProperty( default="", )
+    def draw(self, context, layout, node, text):
+        if self.is_linked or self.node.bl_idname in text_only_output_types:
+            layout.label(text=getattr(self, "display_text", "") if self.is_linked else self.name)
+        elif hasattr(self, "default_value") and not self.is_output:
+            has_overlay = hasattr(self, "overlay_text") and hasattr(self, "use_overlay")
+            row = layout.row(align=True) if has_overlay else layout
+            # We'll show the property or the overlay field here
+            prop_field = "overlay_text" if (has_overlay and self.use_overlay) else "default_value"
+            row.prop(self, prop_field,text=self.name)
+            # and the button to choose whether or not to use the overlay field
+            if has_overlay: row.prop(self, "use_overlay", text="", icon='CONSOLE', toggle=True)
+        else:
+            layout.label(text=self.name)
 
 
 
@@ -932,7 +949,7 @@ class QuaternionSocketAA(MantisSocket):
         default = (1.0, 0.0, 0.0, 0.0,),
         update = update_socket,)
 
-class IntSocket(MantisSocket):
+class IntSocket(MantisSocketOverlayEnabled):
     '''Custom node socket type'''
     bl_idname = 'IntSocket'
     bl_label = "Integer"
@@ -942,7 +959,7 @@ class IntSocket(MantisSocket):
     input : bpy.props.BoolProperty(default =False,)
     is_valid_interface_type=True
 
-class UnsignedIntSocket(MantisSocket):
+class UnsignedIntSocket(MantisSocketOverlayEnabled):
     '''Unsigned Integer Socket'''
     bl_idname = 'UnsignedIntSocket'
     bl_label = "Unsigned Integer"

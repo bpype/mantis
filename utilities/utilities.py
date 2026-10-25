@@ -964,19 +964,31 @@ def project_point_to_plane(point, origin, normal):
 # If a $ character is in a value, it is an overlay request
 # in the root tree, supply it immediately, otherwise tag this node
 # once we finish pulling data from the tree we handle the overlay.
-def handle_overlay_detect(node, socket_id, value) -> str:
+def handle_overlay_detect(node, socket_id, socket_idname, value) -> str:
     mContext = node.mContext
     root_tree = mContext.base_tree
     root_items_tree = root_tree.interface.items_tree
     # detect if it is in the root tree, if so, handle immediately
     out_value = value
+    socket_type = str
+    match socket_idname:
+        case "IntSocket" | "UnsignedIntSocket":
+            socket_type = int
+        case "FloatSocket" | "FloatPositiveSocket" | "FloatFactorSocket" | "FloatAngleSocket":
+            socket_type = float
+    
     if node.signature[0] is None and len(node.signature) ==2:
         for key, interface_item in root_items_tree.items():
             if interface_item.item_type != "SOCKET": continue
             if interface_item.in_out != "INPUT": continue
             # NOTE this will need to change if overlays extend to other data types
-            if not hasattr(interface_item, "default_string"): continue
-            out_value = out_value.replace("$"+key, interface_item.default_string)
+            if hasattr(interface_item, "default_string"):
+                out_value = socket_type(out_value.replace("$"+key, interface_item.default_string))
+            elif key == value: # TODO this is the wrong way to do this, replace this with parser later
+                if hasattr(interface_item, "default_int"):
+                    out_value = socket_type(interface_item.default_int)
+                elif hasattr(interface_item, "default_float"):
+                    out_value = socket_type(interface_item.default_float)
     else: # since it is not root, we have to tag it.
         mContext.tagged_for_overlay.append((node.signature, socket_id))
     return out_value

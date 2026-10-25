@@ -160,6 +160,16 @@ overlay_valid_socket_types = [
 forbidden_key_names = ["",]
 forbidden_in_key_name = ['$',]
 def node_scan_overlays(node, socket_id,):
+    from ..misc_nodes import SimpleInputNode
+    overlay_data_type = str
+    if isinstance(node, SimpleInputNode):
+        overlay_data_type = type(node.parameters[list(node.outputs.values())[0].name])
+    else:
+        match node.inputs[socket_id].socket_type:
+            case "IntSocket" | "UnsignedIntSocket":
+                overlay_data_type = int
+            case "FloatSocket" | "FloatPositiveSocket" | "FloatFactorSocket" | "FloatAngleSocket":
+                overlay_data_type = float
     from ..utilities.node_common import GraphError
     interface_nodes = node.mContext.interface_nodes
     from ..utilities.utilities import get_ui_node
@@ -176,7 +186,10 @@ def node_scan_overlays(node, socket_id,):
         else:
             raise KeyError(f"Socket not found by ID {socket_id} in node {node.ui_signature}\n"
                         f"Candidates: {[socket.identifier for socket in ui_node.inputs]}")
+    
     value = socket.default_value # get the ACTUAL UI value
+    if hasattr(socket, 'overlay_text'): # TODO this is all wrong but for now
+        value = "$"+socket.overlay_text # I am not implementing the Parser feature
     if not isinstance(value, str): return
     # First step: get the interface nodes and the overlay keys
     # this should only check interfaces that are ancestors of this node
@@ -247,7 +260,10 @@ def node_scan_overlays(node, socket_id,):
     overlay_tries = []
     for quoted_substring in  quoted_substrings:
         overlay_tries.extend(quoted_substring.split("$"))
-    result = overlay_tries[0] # the 0th element is always before the split character
+    if overlay_data_type == str:
+        result = overlay_tries[0] # the 0th element is always before the split character
+    else: # TODO HACK later use the parser feature
+        result = 0
     # the reason for the difference between overlay_try and key is because
     #  we don't actually know if the $text part has a key in it
     for overlay_try in overlay_tries[1:]:
@@ -273,10 +289,13 @@ def node_scan_overlays(node, socket_id,):
                                               f"type {socket_type}" )
                             # NOTE that the above can also be caused by any BUG occuring in node group update
                             # because it causes the interface to be invalid for the UI node that spawns the interface node.
-                        if isinstance(overlay_value, (float, int)):
-                            overlay_value = str(overlay_value).zfill(STRING_PADDING)
-                        assert (isinstance(overlay_value, str)), f"Error: Variable {key} is not supported because it is type {type(overlay_value)}"
-                        overlay_resolved_value = overlay_try.replace(key, overlay_value)
+                        if overlay_data_type == str:
+                            if isinstance(overlay_value, (float, int)):
+                                overlay_value = str(overlay_value).zfill(STRING_PADDING)
+                            assert (isinstance(overlay_value, str)), f"Error: Variable {key} is not supported because it is type {type(overlay_value)}"
+                            overlay_resolved_value = overlay_try.replace(key, overlay_value)
+                        else:
+                            overlay_resolved_value = overlay_value
                         break
                 else: # we'll try the base tree
                     if base_tree_result := root_overlay_values.get(overlay_try):

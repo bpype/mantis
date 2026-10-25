@@ -1000,10 +1000,10 @@ class MantisNode:
             if socket.ui_only == True: continue # used in UI but not in generation
             if socket.is_input:
                 self.inputs[socket.name] = NodeSocket(is_input=True, name=socket.name,
-                                    node=self,)
+                                    node=self, socket_type=socket.bl_idname)
             else:
                 self.outputs[socket.name] = NodeSocket(is_input=False, name=socket.name,
-                                    node=self,)
+                                    node=self, socket_type=socket.bl_idname)
             self.parameters[socket.name] = None
         for traverse_owner, traverse_target in traverse_in.items():
             self.inputs[traverse_owner].traverse_target = self.outputs[traverse_target]
@@ -1208,8 +1208,14 @@ class MantisNode:
                                                     tuple(v[8:12]),
                                                     tuple(v[12:16]) ))
                 elif (value := node_socket.default_value) is not None:
+                    if hasattr(node_socket, 'use_overlay') and node_socket.use_overlay:
+                        value = "$"+node_socket.overlay_text
+                        # TODO: the overlay system should use a math parser for numerical types
+                        #       that treats strings as variable names
+                        # but for now I am just gonna hamfist it like this lol
                     if isinstance(value, str) and "$" in value:
-                        value = handle_overlay_detect(self, node_socket.identifier, value)
+                        value = handle_overlay_detect(self,
+                            node_socket.identifier, node_socket.bl_idname, value)
                     self.parameters[key] = value
                 else:
                     raise RuntimeError(wrapRed("No value found for " + self.__repr__() + " when filling out node parameters for " + ui_node.name + "::"+node_socket.name))
@@ -1412,10 +1418,12 @@ class NodeSocket:
         "is_input",
         "links",
         "is_linked",
+        "socket_type",
     )
     def __init__(self, is_input = False,
                  node = None, name = None,
-                 traverse_target = None):
+                 traverse_target = None,
+                 socket_type=""):
         self.can_traverse = False # to/from the other side of the parent node
         self.traverse_target = None
         self.node = node
@@ -1423,6 +1431,7 @@ class NodeSocket:
         self.is_input = is_input
         self.links = []
         self.is_linked = False
+        self.socket_type = socket_type
         if (traverse_target):
             self.can_traverse = True
 
@@ -1476,6 +1485,7 @@ class MantisNodeSocketCollection(dict):
             if socket.ui_only == True: continue # used in UI but not in generation
             if socket.is_input != self.is_input: continue
             self[socket.name] = NodeSocket(is_input=self.is_input, name=socket.name, node=self.node)
+    
     def __delitem__(self, key):
         """Deletes a node socket by name, and all its links."""
         socket = self[key]
