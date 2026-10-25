@@ -168,9 +168,10 @@ class SchemaSolver:
             if i == 0: in_out = 'SCHEMA_INPUT'
             else:      in_out = 'SCHEMA_BETWEEN'
             signature = (*self.autogen_path_names, name)
-            interface = GroupInterface(signature=signature, base_tree=self.tree, in_out=in_out, 
-                        ui_node=None, items_tree=items_tree)
-            interface.mContext = mContext
+            if not (interface := self.all_nodes.get( signature)):
+                interface = GroupInterface(signature=signature, base_tree=self.tree, in_out=in_out, 
+                            ui_node=None, items_tree=items_tree)
+                interface.mContext = mContext
             mContext.interface_nodes[interface.signature] = interface
             interface.generated_at_schema_index = self.node.generated_at_schema_index + [i]
             # add the index and length socket constants

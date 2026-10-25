@@ -237,8 +237,7 @@ class MantisVisualizeOutput(Operator):
 
     def execute(self, context):
         from time import time
-        from ..utilities.utilities import wrapGreen, prGreen
-
+        from ..utilities.utilities import prGreen
         tree=context.space_data.path[0].node_tree
         tree.update_tree(context)
         prGreen(f"Visualize Tree: {tree.name}")

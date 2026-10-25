@@ -49,8 +49,7 @@ def autogen_node(base_tree, ui_socket, signature, mContext):
     mantis_node.ui_signature = None # does not exist in the UI
     return mantis_node
 
-# TODO: investigate whether I can set the properties in the downstream nodes directly.
-#       I am doing this in Schema Solver and it seems to work quite efficiently.
+
 def make_connections_to_ng_dummy(base_tree, tree_path_names, local_mantis_nodes, all_mantis_nodes, to_mantis_node):
     from ..socket_definitions import no_default_value
     for inp in to_mantis_node.ui_node.inputs:
@@ -66,21 +65,22 @@ def make_connections_to_ng_dummy(base_tree, tree_path_names, local_mantis_nodes,
             #  using UUID signature leads to TERRIBLE CONFUSING BUGS.
             if from_mantis_node is None: 
                 from_mantis_node = autogen_node(base_tree, inp, signature, to_mantis_node.mContext)
+                local_mantis_nodes[signature]=from_mantis_node
+                all_mantis_nodes[signature]=from_mantis_node
             if from_mantis_node: # autogen can fail and we should catch it.
                 from mathutils import Matrix
-                from_mantis_node.parameters = {inp.name: 
+                from_mantis_node.parameters[inp.name] = \
                                                Matrix(( tuple(inp.default_value[0:4]), \
                                                         tuple(inp.default_value[4:8]), \
                                                         tuple(inp.default_value[8:12]), \
                                                         tuple(inp.default_value[12:16]) )) if inp.bl_idname == 'MatrixSocket' \
-                                                            else inp.default_value}
-                local_mantis_nodes[signature] = from_mantis_node; all_mantis_nodes[signature] = from_mantis_node
+                                                            else inp.default_value
                 from_mantis_node.outputs[inp.name].connect(node=to_mantis_node, socket=to_s, sort_id=0)
             else:
-                prRed("No available auto-generated class for input %s in %s" % (inp.name, np.name))
+                prRed("No available auto-generated class for input %s in %s" % (inp.name, to_mantis_node.ui_node.name))
 
 def gen_mantis_nodes(base_tree, current_tree, tree_path_names, mContext, all_mantis_nodes, local_mantis_nodes, dummy_nodes, group_nodes, schema_nodes, in_schema ):
-    from ..internal_nodes import DummyNode
+    from ..internal_nodes import DummyNode, GroupInterface
     for ui_node in current_tree.nodes:
         mantis_node = None
         if ui_node.bl_idname in ["NodeFrame", "NodeReroute"]:
@@ -93,16 +93,38 @@ def gen_mantis_nodes(base_tree, current_tree, tree_path_names, mContext, all_man
                 mantis_node = DummyNode( signature=sig , base_tree=base_tree, ui_node=ui_node, ui_signature=ui_sig )
                 local_mantis_nodes[sig] = mantis_node; all_mantis_nodes[sig] = mantis_node; dummy_nodes[sig] = mantis_node
                 if ui_node.bl_idname in {"NodeGroupOutput"}:
+                    # We need an interface node, let's make it now.
+                    items_tree = ui_node.id_data.interface.items_tree
+                    interface = GroupInterface(
+                        # we'll clip the 'NodeGroupOutput' from the signature
+                        ( *mantis_node.signature[:-1], "OutputInterface"),
+                        mantis_node.base_tree, 'OUTPUT', ui_node=mantis_node.ui_node,
+                        items_tree=items_tree,)
+                    interface.mContext = mContext
+                    all_mantis_nodes[interface.signature] = interface; local_mantis_nodes[interface.signature] = interface
                     mantis_node.reroute_links_type = 'out'
         elif ui_node.bl_idname in  ["MantisNodeGroup", "MantisSchemaGroup"]:
             mantis_node = DummyNode( signature= (sig := (None, *tree_path_names, ui_node.name) ), base_tree=base_tree, ui_node=ui_node )
+            mantis_node.mContext = mContext
             local_mantis_nodes[sig] = mantis_node; all_mantis_nodes[sig] = mantis_node; dummy_nodes[sig] = mantis_node
-            make_connections_to_ng_dummy(base_tree, tree_path_names, local_mantis_nodes, all_mantis_nodes, mantis_node)
-            group_nodes.append(mantis_node)
+            items_tree = ui_node.node_tree.interface.items_tree
             if ui_node.bl_idname == "MantisNodeGroup":
                 mantis_node.reroute_links_type = 'group'
+                name = 'InputInterface'
+                interface_in_out = 'INPUT'
             else:
                 schema_nodes[sig] = mantis_node
+                name = 'InputInterface.0000'
+                interface_in_out = 'SCHEMA_INPUT'
+            # let's make the interface node for this now
+            interface = GroupInterface(
+                ( *mantis_node.signature, name), mantis_node.base_tree,
+                   interface_in_out, mantis_node.ui_node, items_tree=items_tree )
+            interface.mContext = mContext
+            all_mantis_nodes[interface.signature] = interface; local_mantis_nodes[interface.signature] = interface
+            group_nodes.append(mantis_node)
+            # This function depends on generating the interface
+            make_connections_to_ng_dummy(base_tree, tree_path_names, local_mantis_nodes, all_mantis_nodes, mantis_node)
         # if it wasn't the types we ignore or the types we make a Dummy for, use this to catch all non-special cases.
         elif (mantis_class := ui_node.mantis_class):
             sig = (None, *tree_path_names, ui_node.name)

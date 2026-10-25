@@ -49,11 +49,7 @@ def grp_node_reroute_common(in_node, out_node, interface):
             out_link.die()
 
 def reroute_links_grp(group, all_nodes):
-    items_tree = group.ui_node.node_tree.interface.items_tree
-    interface = GroupInterface(
-        ( *group.signature, "InputInterface"), group.base_tree,
-            'INPUT', group.ui_node, items_tree=items_tree )
-    all_nodes[interface.signature] = interface
+    interface = all_nodes.get( ( *group.signature, "InputInterface") )
     if group.inputs:
         if group_input := all_nodes.get(( *group.signature, "NodeGroupInput")):
             grp_node_reroute_common(group, group_input, interface)
@@ -62,12 +58,7 @@ def reroute_links_grp(group, all_nodes):
 
 def reroute_links_grpout(group_output, all_nodes):
     if (group_output_node := all_nodes.get( ( *group_output.signature[:-1],) )):
-        items_tree = group_output_node.ui_node.id_data.interface.items_tree
-        interface = GroupInterface(
-            ( *group_output_node.signature, "OutputInterface"),
-            group_output_node.base_tree, 'OUTPUT', ui_node=group_output_node.ui_node,
-            items_tree=items_tree,)
-        all_nodes[interface.signature] = interface
+        interface = all_nodes.get( ( *group_output_node.signature, "OutputInterface") )
         grp_node_reroute_common(group_output, group_output_node, interface)
     else:
         prOrange(f"WARN: unconnected outputs from a node group "
@@ -156,7 +147,10 @@ class GroupInterface(MantisNode):
         
         # the index and length are like constant inputs.
         if self.in_out == 'SCHEMA_INPUT':
-            self.outputs["Length"] = NodeSocket(is_input=False, node=self, name="Length")
+            # this one is here because the tree expects it when linking things together
+            self.outputs["Schema Length"] = NodeSocket(is_input=False, node=self, name="Schema Length")
+            # HACK this one here is just there for overlays, really, doesn't hurt
+            self.outputs["Length"] = self.outputs["Schema Length"]
         if 'SCHEMA' in self.in_out: 
             self.outputs["Index"]  = NodeSocket(is_input=False, node=self, name="Index")
                

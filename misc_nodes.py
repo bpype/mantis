@@ -623,8 +623,7 @@ class UtilityNumberOfCurveSegments(MantisMiscNode):
             self.parameters["Number of Segments"] = len(spline.bezier_points)-1
         else:
             self.parameters["Number of Segments"] = len(spline.points)-1
-        self.prepared = True
-        self.executed = True
+        self.prepared = True; self.executed = True
 
 class UtilityNumberOfSplines(MantisMiscNode):
     __slots__ = ()
