@@ -222,14 +222,14 @@ def fill_curve_lut(curve_name, bContext):
     # import bpy
     # bpy.data.meshes.remove(mesh)
 
-def get_from_curve_lut(curve_name, spline_index, bContext) -> SplineLUT:
+def get_from_curve_lut(curve_name, spline_index, bContext, node_for_error=None) -> SplineLUT:
     spline_lookup = None
     try:
         fill_curve_lut(curve_name=curve_name, bContext=bContext)
         spline_lookup = CURVE_LUT_CACHE[curve_name]['spline_LUT'][spline_index]
-    except IndexError as e:
-        raise e(f"{self} is attempting to read from a spline in {curve_name} that does not exist."
-                    " Try and reduce the value of Spline Index.")
+    except IndexError: # replace with a more helpful error message
+        raise IndexError(f"{node_for_error} is attempting to read from a spline in {curve_name} "
+                "that does not exist. Try and reduce the value of Spline Index.")
     return spline_lookup
 
 
@@ -538,7 +538,7 @@ class UtilityMatrixFromCurve(MantisMiscNode):
         # DIVISIONS, FACTOR
         if bContext is None: bContext = bpy.context # is this wise?
         spline_index = self.evaluate_input("Spline Index")
-        spline_lookup : SplineLUT = get_from_curve_lut(curve_name, spline_index, bContext)
+        spline_lookup : SplineLUT = get_from_curve_lut(curve_name, spline_index, bContext, self)
         assert(spline_lookup)
         #
         num_divisions = self.evaluate_input("Total Divisions")
@@ -577,7 +577,7 @@ class UtilityPointFromCurve(MantisMiscNode):
         curve_name = self.evaluate_input("Curve")
         if bContext is None: bContext = bpy.context # is this wise?
         spline_index = self.evaluate_input("Spline Index")
-        spline_lookup : SplineLUT = get_from_curve_lut(curve_name, spline_index, bContext)
+        spline_lookup : SplineLUT = get_from_curve_lut(curve_name, spline_index, bContext, self)
         factor = self.evaluate_input("Factor")
         position, _tan, _nrm = spline_lookup.data_at_u(factor)
         self.parameters["Point"] = position
@@ -594,7 +594,7 @@ class UtilityMatricesFromCurve(MantisMiscNode):
         spline_index = self.evaluate_input("Spline Index")
         import bpy
         if bContext is None: bContext = bpy.context # is this wise?
-        spline_lookup : SplineLUT = get_from_curve_lut(curve_name, spline_index, bContext)
+        spline_lookup : SplineLUT = get_from_curve_lut(curve_name, spline_index, bContext, self)
     
         num_divisions = self.evaluate_input("Total Divisions")
         factors = [0.0] + [(1/num_divisions*(i+1)) for i in range(num_divisions)]
@@ -647,7 +647,7 @@ class UtilityMatrixFromCurveSegment(MantisMiscNode):
         curve = bpy_object_get_guarded(curve_name, self)
         spline_index = self.evaluate_input("Spline Index")
         if bContext is None: bContext = bpy.context # is this wise?
-        spline_lookup = get_from_curve_lut(curve_name, spline_index, bContext)
+        spline_lookup = get_from_curve_lut(curve_name, spline_index, bContext, self)
         spline = curve.data.splines[spline_index]
         factors = []
         points = spline.bezier_points if spline.type == 'BEZIER' else spline.points
@@ -691,7 +691,7 @@ class UtilityGetNearestFactorOnCurve(MantisMiscNode):
         curve_name = self.evaluate_input("Curve")
         spline_index = self.evaluate_input("Spline Index")
         if bContext is None: bContext = bpy.context # is this wise?
-        spline_lookup = get_from_curve_lut(curve_name, spline_index, bContext)
+        spline_lookup = get_from_curve_lut(curve_name, spline_index, bContext, self)
         ref_pt = self.evaluate_input("Reference Point")
         _closest_point, u = spline_lookup.point_and_u_at_nearest_point_on_curve(ref_pt)
         self.parameters["Factor"] = u

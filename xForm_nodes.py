@@ -834,7 +834,7 @@ class xFormCurvePin(xFormNode):
 
         # Now set the matrix - since this may provide dependencies to other nodes
         from .misc_nodes import get_from_curve_lut
-        spline_lookup = get_from_curve_lut(curve_name, spline_index, bContext)
+        spline_lookup = get_from_curve_lut(curve_name, spline_index, bContext, self)
         matrix = self.get_matrix_from_spline(spline_lookup)
         # HACK: this is giving a local space matrix, and that's dumb
         # TODO: Mantis should handle coordinate space conversion automatically
