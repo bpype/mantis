@@ -223,16 +223,16 @@ def node_scan_overlays(node, socket_id,):
         current_schema_interface_index = node.generated_at_schema_index[index+1]
         if current_schema_interface_index < 0: # this indicates that it is not in a schema
             interface = interface_nodes.get(
-                interface_signature := (*node.signature[:index+1], "InputInterface"))
+                interface_signature := (None, *node.signature[1:index+1], "InputInterface"))
         else: # First we get the interface that enters the schema (index 0)
             interface = interface_nodes.get(
-                interface_signature := (*node.signature[:index+1],
+                interface_signature := (None, *node.signature[1:index+1],
                 "InputInterface."+str( 0 ).zfill(4)))
             if interface and interface not in my_interfaces: my_interfaces.append(interface)
             if current_schema_interface_index == 0: continue # just did it
             # we need to get the schema of the current index
             interface = interface_nodes.get(
-                interface_signature := (*node.signature[:index+1],
+                interface_signature := (None, *node.signature[1:index+1],
                 "InputInterface."+str(current_schema_interface_index).zfill(4)))
         if interface:
             my_interfaces.append( interface )
@@ -551,8 +551,8 @@ def parse_tree(base_tree, error_popups=False):
         if mantis_node.__class__.__name__ in array_output_types:
             solve_only_these.append(mantis_node)
             array_nodes.append(mantis_node)
-        if mantis_node.node_type == 'INTERFACE':
-            mContext.interface_nodes[mantis_node.signature] = mantis_node
+        if mantis_node.node_type == 'INTERFACE': # strip the SCHEMA/AUTOGEN tag if it is there
+            mContext.interface_nodes[( None, *mantis_node.signature[1:]) ] = mantis_node
 
     from itertools import chain
     for schema in chain(all_schema.values(), array_nodes):

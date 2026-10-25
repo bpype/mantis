@@ -172,7 +172,8 @@ class SchemaSolver:
                 interface = GroupInterface(signature=signature, base_tree=self.tree, in_out=in_out, 
                             ui_node=None, items_tree=items_tree)
                 interface.mContext = mContext
-            mContext.interface_nodes[interface.signature] = interface
+            # strip the AUTOGEN/SCHEMA tag if it is there
+            mContext.interface_nodes[( None, *interface.signature[1:]) ] = interface
             interface.generated_at_schema_index = self.node.generated_at_schema_index + [i]
             # add the index and length socket constants
             interface.parameters['Index'] = i
@@ -201,7 +202,8 @@ class SchemaSolver:
         interface.generated_at_schema_index = i
         self.solved_nodes[signature]=interface
         interface.mContext = mContext
-        mContext.interface_nodes[interface.signature] = interface
+        # strip the AUTOGEN/SCHEMA tag if it is there
+        mContext.interface_nodes[( None, *interface.signature[1:]) ] = interface
 
     def is_node_deeper_nested(self, queried_node, compare_node):
         return len(compare_node.signature) < len(queried_node.signature)
