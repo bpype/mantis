@@ -51,9 +51,10 @@ class MantisSocketOverlayEnabled(MantisSocket):
     use_overlay: bpy.props.BoolProperty( default=False )
     overlay_text: bpy.props.StringProperty( default="", )
     def draw(self, context, layout, node, text):
-        if self.is_linked or self.node.bl_idname in text_only_output_types:
-            layout.label(text=getattr(self, "display_text", "") if self.is_linked else self.name)
-        elif hasattr(self, "default_value") and not self.is_output:
+        is_simple_out = ((hasattr(self, "default_value")) and hasattr(self, "input") and getattr(self, "input"))
+        if self.is_linked and not is_simple_out:
+            layout.label(text=getattr(self, "display_text", "") )
+        elif hasattr(self, "default_value"):
             has_overlay = hasattr(self, "overlay_text") and hasattr(self, "use_overlay")
             row = layout.row(align=True) if has_overlay else layout
             # We'll show the property or the overlay field here
