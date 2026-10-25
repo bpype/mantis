@@ -175,6 +175,7 @@ def node_scan_overlays(node, socket_id,):
     from ..utilities.utilities import get_ui_node
     ui_node = get_ui_node(node.ui_signature, node.base_tree)
     # we'll assume that the overlay tag system checked if this is linked.
+    # TODO this is probably redundant with the check above this
     # First let's check if it is a simple input node, by checking outputs that are marked "input"
     for socket in ui_node.outputs:
         # weird edge case for simple input nodes with unnamed sockets
@@ -201,7 +202,13 @@ def node_scan_overlays(node, socket_id,):
         if current_schema_interface_index < 0: # this indicates that it is not in a schema
             interface = interface_nodes.get(
                 interface_signature := (*node.signature[:index+1], "InputInterface"))
-        else:
+        else: # First we get the interface that enters the schema (index 0)
+            interface = interface_nodes.get(
+                interface_signature := (*node.signature[:index+1],
+                "InputInterface."+str( 0 ).zfill(4)))
+            if interface not in my_interfaces: my_interfaces.append(interface)
+            if current_schema_interface_index == 0: continue # just did it
+            # we need to get the schema of the current index
             interface = interface_nodes.get(
                 interface_signature := (*node.signature[:index+1],
                 "InputInterface."+str(current_schema_interface_index).zfill(4)))

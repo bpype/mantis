@@ -154,14 +154,11 @@ class GroupInterface(MantisNode):
         self.in_out = in_out
         # init the sockets based on in/out, then set up traversal
         
-        # TODO: I'm adding length everywhere for now so overlays work
-        # need a more complex interface lookup for overlays to work w/out dupe length
-        # if self.in_out == 'SCHEMA_INPUT': # the length is, in reality, a constant input
-        #     self.outputs["Length"] = NodeSocket(is_input=False, node=self, name="Length")
-        # so the above should be here and below should omit length, end TODO
-        if 'SCHEMA' in self.in_out: # the index like a constant in for each iteration
-            self.outputs["Index"]  = NodeSocket(is_input=False, node=self, name="Index")
+        # the index and length are like constant inputs.
+        if self.in_out == 'SCHEMA_INPUT':
             self.outputs["Length"] = NodeSocket(is_input=False, node=self, name="Length")
+        if 'SCHEMA' in self.in_out: 
+            self.outputs["Index"]  = NodeSocket(is_input=False, node=self, name="Index")
                
         for i, item in enumerate(items_tree):
             if item.item_type == 'PANEL': continue

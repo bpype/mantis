@@ -175,8 +175,8 @@ class SchemaSolver:
             interface.generated_at_schema_index = self.node.generated_at_schema_index + [i]
             # add the index and length socket constants
             interface.parameters['Index'] = i
-            # if i == 0: # TODO I am duplicating Length for the interface feature, this is not necessary
-            interface.parameters['Length'] = self.solve_length
+            if i == 0: # TODO I am duplicating Length for the interface feature, this is not necessary
+                interface.parameters['Length'] = self.solve_length
             # the GroupInterface will initialize with the right sockets, but we still have to link them
 
             if in_out == 'SCHEMA_INPUT': # Take the links into the schema and plug them here
