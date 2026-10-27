@@ -47,7 +47,7 @@ prop_ignore = [ "__dict__", "__doc__", "__module__", "__weakref__",# "name",
                 # node stuff
                 "mantis_node_class_name", "color", "height", "initialized", "select",
                 "show_options", "show_preview", "show_texture", "use_custom_color",
-                "warning_propagation",
+                "warning_propagation", "panel_states",
                 # these are in Bone
                 "socket_count", "display_bb_settings", "display_def_settings",
                 "display_ik_settings", "display_vp_settings",

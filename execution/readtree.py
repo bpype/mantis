@@ -253,7 +253,7 @@ def node_scan_overlays(node, socket_id,):
                 base_value = interface_item.default_int
             case "FloatSocket":
                 base_value = interface_item.default_float
-            case "StringSocket":
+            case "StringSocket" | "BoneCollectionSocket":
                 base_value = interface_item.default_string
         if base_value:
             root_overlay_values[interface_item.name] = base_value

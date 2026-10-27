@@ -992,7 +992,7 @@ def handle_overlay_detect(node, socket_id, socket_idname, value) -> str:
                 case "FloatSocket":
                     if socket_type in {int, float} and '$'+key == out_value:
                         out_value = socket_type(interface_item.default_float)
-                case "StringSocket":
+                case "StringSocket" | 'BoneCollectionSocket':
                     if socket_type == str:
                         out_value = socket_type(out_value.replace("$"+key, interface_item.default_string))
 
