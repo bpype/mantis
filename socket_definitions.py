@@ -783,9 +783,6 @@ class GenericRotationSocket(MantisSocket):
     color = (0.0,0.0,0.0,0.0)
     input : bpy.props.BoolProperty(default =False,)
 
-
-
-
 ###############################
 
 class EnableSocket(MantisSocket):
@@ -2492,7 +2489,7 @@ class EnumDriverType(MantisSocket):
 # enum for interpolation type
 # eventually gonna make it to the fancy stuff
 
-class FloatSocket(MantisSocket):
+class FloatSocket(MantisSocketOverlayEnabled):
     """Float Input socket"""
     bl_idname = 'FloatSocket'
     bl_label = "Float"
@@ -2502,7 +2499,7 @@ class FloatSocket(MantisSocket):
     color : bpy.props.FloatVectorProperty(default=cFloat, size=4)
     input : bpy.props.BoolProperty(default =False,)
 
-class FloatPositiveSocket(MantisSocket):
+class FloatPositiveSocket(MantisSocketOverlayEnabled):
     """Float Input socket"""
     bl_idname = 'FloatPositiveSocket'
     bl_label = "Float (Positive)"
@@ -2512,7 +2509,7 @@ class FloatPositiveSocket(MantisSocket):
     color : bpy.props.FloatVectorProperty(default=cFloat, size=4)
     input : bpy.props.BoolProperty(default =False,)
 
-class FloatFactorSocket(MantisSocket):
+class FloatFactorSocket(MantisSocketOverlayEnabled):
     '''xFrom Input Output'''
     bl_idname = 'FloatFactorSocket'
     bl_label = "Float (Factor)"
@@ -2527,7 +2524,7 @@ class FloatFactorSocket(MantisSocket):
     color : bpy.props.FloatVectorProperty(default=cFloat, size=4)
     input : bpy.props.BoolProperty(default =False,)
 
-class FloatAngleSocket(MantisSocket):
+class FloatAngleSocket(MantisSocketOverlayEnabled):
     '''xFrom Input Output'''
     bl_idname = 'FloatAngleSocket'
     bl_label = "Float (Angle)"
