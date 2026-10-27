@@ -370,7 +370,7 @@ class SimpleInputNode(MantisMiscNode):
         self.prepared, self.executed = True, True
 
     def fill_parameters(self, ui_node=None):
-        from .utilities.utilities import handle_overlay_detect
+        from .execution.overlays import handle_overlay_detect
         ui_outputs = ui_node.outputs
         node_socket = ui_outputs[0] # this is a simple input node.
         if (value := node_socket.default_value) is not None:

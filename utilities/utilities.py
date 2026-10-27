@@ -961,45 +961,6 @@ def SugiyamaGraph(tree, iterations):
 def project_point_to_plane(point, origin, normal):
     return point - normal.dot(point- origin)*normal
 
-# If a $ character is in a value, it is an overlay request
-# in the root tree, supply it immediately, otherwise tag this node
-# once we finish pulling data from the tree we handle the overlay.
-def handle_overlay_detect(node, socket_id, socket_idname, value) -> str:
-    mContext = node.mContext
-    root_tree = mContext.base_tree
-    root_items_tree = root_tree.interface.items_tree
-    # detect if it is in the root tree, if so, handle immediately
-    out_value = value
-    # what this recieves is determined by its idname
-    socket_type = str
-    match socket_idname:
-        case "IntSocket" | "UnsignedIntSocket":
-            socket_type = int
-        case "FloatSocket" | "FloatPositiveSocket" | "FloatFactorSocket" | "FloatAngleSocket":
-            socket_type = float
-    # ONLY for root node trees, we can just directly fill this.
-    if node.signature[0] is None and len(node.signature) == 2:
-        for key, interface_item in root_items_tree.items():
-            if interface_item.item_type != "SOCKET": continue
-            if interface_item.in_out != "INPUT": continue
-            # then what the interface provides is determined by its idname in turn
-            # NOTE I'm not 100% sure checking the socket_type is the right thing to do here
-            match interface_item.bl_socket_idname:
-                case "IntSocket" | "BooleanSocket":
-                    if socket_type in {int, float} and '$'+key == out_value:
-                        # TODO this is the wrong way to do this, replace this with parser later
-                        out_value = socket_type(interface_item.default_int)
-                case "FloatSocket":
-                    if socket_type in {int, float} and '$'+key == out_value:
-                        out_value = socket_type(interface_item.default_float)
-                case "StringSocket" | 'BoneCollectionSocket':
-                    if socket_type == str:
-                        out_value = socket_type(out_value.replace("$"+key, interface_item.default_string))
-
-    else: # since it is not root, we have to tag it.
-        mContext.tagged_for_overlay.append((node.signature, socket_id))
-    return out_value
-
 ####################################
 # CURVE STUFF
 ####################################

@@ -1135,7 +1135,7 @@ class MantisNode:
         # apply overlay variables here so this updates predictably
         if (isinstance(value, str) and
                 (self.signature, ui_socket.identifier) in self.mContext.tagged_for_overlay):
-            from .execution.readtree import node_scan_overlays
+            from .execution.overlays import node_scan_overlays
             value = node_scan_overlays(self, ui_socket.identifier)
         # TODO: I need to make Node Groups apply overlays downstream, but since
         #       they don't update live anyway, no need just yet
@@ -1184,7 +1184,7 @@ class MantisNode:
 
     def fill_parameters(self, ui_node=None)  -> None:
         from mathutils import Matrix
-        from .utilities.utilities import handle_overlay_detect
+        from .execution.overlays import handle_overlay_detect
         if not ui_node:
             if ( (self.signature[0] in FILL_PARAMETERS_SKIP_ROOTS) or
                 (self.signature[-1] in FILL_PARAMETERS_SKIP_NAMES) ): # I think this is harmless
