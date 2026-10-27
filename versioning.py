@@ -474,23 +474,17 @@ def add_new_display_features_v0_13_5(*args, **kwargs):
     current_major_version = tree.mantis_version[0]
     current_minor_version = tree.mantis_version[1]
     current_sub_version = tree.mantis_version[2]
-    print(tree.mantis_version[:])
     if  current_major_version > 0:return# major version must be 0
     if current_minor_version > 13: return# minor version must be 12 or less
     if current_minor_version == 13 and current_sub_version >= 5: return# sub version must be 4 or less
     prPurple(f"Adding new Display Features to {tree.name}")
-    live_updates = tree.do_live_update
-    tree.do_live_update = False
-    live_updates = tree.do_live_update
-    bones = []
-    armatures = []
+    live_updates = tree.do_live_update; tree.do_live_update = False
+    
+    bones = []; armatures = []
     for node in tree.nodes:
-        if hasattr(node, 'is_updating'):
-            node.is_updating = True
-        if node.bl_idname == 'xFormBoneNode':
-            bones.append(node)
-        if node.bl_idname == 'xFormArmatureNode':
-            armatures.append(node)
+        if hasattr(node, 'is_updating'): node.is_updating = True
+        if node.bl_idname == 'xFormBoneNode': bones.append(node)
+        if node.bl_idname == 'xFormArmatureNode': armatures.append(node)
     try:
         for bone_node in bones:
             # we'll just try this...
@@ -499,6 +493,8 @@ def add_new_display_features_v0_13_5(*args, **kwargs):
                                                  UseTransformAtCustomShape,
                                                  UseTransformAroundCustomShape,
                                                  xFormBoneSockets)
+            if bone_node.inputs.get(BoneDisplayType.name):
+                continue # Already fixed
             input_templates = ( BoneDisplayType,
                                 CustomObjectWireWidth,
                                 UseTransformAroundCustomShape,
@@ -519,6 +515,8 @@ def add_new_display_features_v0_13_5(*args, **kwargs):
             # we'll just try this...
             from .xForm_socket_templates import (ArmatureDisplayType,
                                                  xFormArmatureSockets)
+            if bone_node.inputs.get(ArmatureDisplayType.name):
+                continue # Already fixed
             input_templates = ( ArmatureDisplayType, )
             armature_node.init_sockets(input_templates)
             armature_node.socket_templates = xFormArmatureSockets
