@@ -10,7 +10,7 @@ from .utilities.utilities import (prRed, prGreen, prPurple, prWhite,
                               wrapRed, wrapGreen, wrapPurple, wrapWhite,
                               wrapOrange,)
 
-from .utilities.utilities import get_socket_maps, relink_socket_map, do_relink
+from .utilities.utilities import get_socket_maps, get_socket_overlay_info, do_relink
 from .mantis_dataclasses import MantisSocketTemplate
 
 MANTIS_VERSION_MAJOR=0
@@ -557,6 +557,7 @@ def node_group_update(node, force = False):
            (node.id_data.is_executing == True) or \
            (node.id_data.is_exporting == True):
             return
+
     # note: if (node.id_data.is_exporting == True) I need to be able to update so I can make links.
     if node.node_tree is None:
         node.inputs.clear(); node.outputs.clear()
@@ -578,10 +579,6 @@ def node_group_update(node, force = False):
         for i, socket in enumerate(collection):
             map[socket.identifier]=i
 
-    if node.node_tree is None:
-        node.inputs.clear(); node.outputs.clear()
-        node.id_data.do_live_update = toggle_update
-        return
     found_in, found_out = [], []
     update_input, update_output = False, False
     for item in node.node_tree.interface.items_tree:
@@ -636,6 +633,10 @@ def node_group_update(node, force = False):
     if not (update_input or update_output):
         node.id_data.do_live_update = toggle_update
         return
+    
+    # At this point, we know we're gonna change things so let's do this
+    # remember what has Overlay turned on and what the value is
+    overlay_state = get_socket_overlay_info(node) 
 
     if update_input or update_output and (socket_maps is not None):
         if update_input :
@@ -677,6 +678,7 @@ def node_group_update(node, force = False):
             socket_collection = node.inputs if is_input else node.outputs
             counter = input_index if is_input else output_index
             reorder_collection = reorder_me_input if is_input else reorder_me_output
+            socket = None
             if socket_map:
                 if item.identifier in socket_map.keys():
                     socket = relink_socket_map_add_socket(node, socket_collection, item, item.in_out)
@@ -733,6 +735,11 @@ def node_group_update(node, force = False):
                     to_index+=1
                 collection.move(i, to_index)
 
+        # restore the overlay state, whether it is using Overlay or not and the overlay text
+        for socket in node.inputs:
+            if socket and (overlay_text := overlay_state.get(socket.identifier)):
+                socket.use_overlay=True; socket.overlay_text = overlay_text
+        
         # at this point there is no wildcard socket
         if socket_map_in and '__extend__' in socket_map_in.keys():
             do_relink(node, None, socket_map_in, in_out='INPUT', parent_name='Constant' )
@@ -1127,15 +1134,19 @@ class MantisNode:
         return change_handled
 
     def ui_modify_socket(self, ui_socket, socket_name=None) -> bool:
+        from .execution.overlays import node_scan_overlays, get_socket_idname_data_type, parser_handle_text
         """ Handle changes in the node's UI. Updates the rig if possible."""
         # Always update the node's data
         change_handled=False
         if socket_name is None: socket_name = ui_socket.name
         value = ui_socket.default_value
+        if hasattr(ui_socket, 'use_overlay') and ui_socket.use_overlay:
+            value = ui_socket.overlay_text
+            if get_socket_idname_data_type(ui_socket.bl_idname) != str:
+                value = parser_handle_text(value)
         # apply overlay variables here so this updates predictably
         if (isinstance(value, str) and
                 (self.signature, ui_socket.identifier) in self.mContext.tagged_for_overlay):
-            from .execution.overlays import node_scan_overlays
             value = node_scan_overlays(self, ui_socket.identifier)
         # TODO: I need to make Node Groups apply overlays downstream, but since
         #       they don't update live anyway, no need just yet
@@ -1184,7 +1195,7 @@ class MantisNode:
 
     def fill_parameters(self, ui_node=None)  -> None:
         from mathutils import Matrix
-        from .execution.overlays import handle_overlay_detect
+        from .execution.overlays import handle_overlay_detect, get_socket_idname_data_type, parser_handle_text
         if not ui_node:
             if ( (self.signature[0] in FILL_PARAMETERS_SKIP_ROOTS) or
                 (self.signature[-1] in FILL_PARAMETERS_SKIP_NAMES) ): # I think this is harmless
@@ -1209,7 +1220,9 @@ class MantisNode:
                                                     tuple(v[12:16]) ))
                 elif (value := node_socket.default_value) is not None:
                     if hasattr(node_socket, 'use_overlay') and node_socket.use_overlay:
-                        value = "$"+node_socket.overlay_text
+                        value = node_socket.overlay_text
+                        if get_socket_idname_data_type(node_socket.bl_idname) != str:
+                            value = parser_handle_text(value)
                         # TODO: the overlay system should use a math parser for numerical types
                         #       that treats strings as variable names
                         # but for now I am just gonna hamfist it like this lol

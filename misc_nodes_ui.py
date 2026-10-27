@@ -368,10 +368,11 @@ class UtilityMetaRigNode(Node, MantisMiscNode):
     
     def display_update(self, parsed_tree, context):
         mantis_node = parsed_tree.get(get_signature_from_edited_tree(self, context))
+        using_overlay = self.inputs['Meta-Armature'].use_overlay
         if mantis_node:
             self.armature= mantis_node.evaluate_input("Meta-Armature")
             self.pose_bone= mantis_node.evaluate_input("Meta-Bone")
-        if not self.armature:
+        if not self.armature and not using_overlay:
             self.inputs["Meta-Bone"].hide=True
         else:
             self.inputs["Meta-Bone"].hide=False

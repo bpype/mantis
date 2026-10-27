@@ -1,4 +1,17 @@
 
+# For now, this is not yet implemented. lol
+def parser_handle_text(text):
+    return '$' + text
+
+def get_socket_idname_data_type(socket_idname):
+    data_type = str
+    match socket_idname:
+        case "IntSocket" | "UnsignedIntSocket":
+            data_type = int
+        case "FloatSocket" | "FloatPositiveSocket" | "FloatFactorSocket" | "FloatAngleSocket":
+            data_type = float
+    return (data_type)
+
 # If a $ character is in a value, it is an overlay request
 # in the root tree, supply it immediately, otherwise tag this node
 # once we finish pulling data from the tree we handle the overlay.
@@ -9,30 +22,27 @@ def handle_overlay_detect(node, socket_id, socket_idname, value) -> str:
     # detect if it is in the root tree, if so, handle immediately
     out_value = value
     # what this recieves is determined by its idname
-    socket_type = str
-    match socket_idname:
-        case "IntSocket" | "UnsignedIntSocket":
-            socket_type = int
-        case "FloatSocket" | "FloatPositiveSocket" | "FloatFactorSocket" | "FloatAngleSocket":
-            socket_type = float
+
+    socket_data_type = get_socket_idname_data_type(socket_idname)
+
     # ONLY for root node trees, we can just directly fill this.
     if node.signature[0] is None and len(node.signature) == 2:
         for key, interface_item in root_items_tree.items():
             if interface_item.item_type != "SOCKET": continue
             if interface_item.in_out != "INPUT": continue
             # then what the interface provides is determined by its idname in turn
-            # NOTE I'm not 100% sure checking the socket_type is the right thing to do here
+            # NOTE I'm not 100% sure checking the socket_data_type is the right thing to do here
             match interface_item.bl_socket_idname:
                 case "IntSocket" | "BooleanSocket":
-                    if socket_type in {int, float} and '$'+key == out_value:
+                    if socket_data_type in {int, float} and '$'+key == out_value:
                         # TODO this is the wrong way to do this, replace this with parser later
-                        out_value = socket_type(interface_item.default_int)
+                        out_value = socket_data_type(interface_item.default_int)
                 case "FloatSocket":
-                    if socket_type in {int, float} and '$'+key == out_value:
-                        out_value = socket_type(interface_item.default_float)
+                    if socket_data_type in {int, float} and '$'+key == out_value:
+                        out_value = socket_data_type(interface_item.default_float)
                 case "StringSocket" | 'BoneCollectionSocket':
-                    if socket_type == str:
-                        out_value = socket_type(out_value.replace("$"+key, interface_item.default_string))
+                    if socket_data_type == str:
+                        out_value = socket_data_type(out_value.replace("$"+key, interface_item.default_string))
 
     else: # since it is not root, we have to tag it.
         mContext.tagged_for_overlay.append((node.signature, socket_id))
@@ -69,8 +79,10 @@ def node_scan_overlays(node, socket_id,):
                 raise KeyError(f"Socket not found by ID {socket_id} in node {node.ui_signature}\n"
                             f"Candidates: {[socket.identifier for socket in ui_node.inputs]}")
         value = socket.default_value # get the ACTUAL UI value
-        if hasattr(socket, 'overlay_text'): # TODO this is all wrong but for now
-            value = "$"+socket.overlay_text # I am not implementing the Parser feature
+        if hasattr(socket, 'overlay_text'):
+            value = socket.overlay_text
+            if get_socket_idname_data_type(socket.bl_idname) != str:
+                value = parser_handle_text(value)
     else: # since it doesn't have a UI node
         value = node.parameters[socket_id]
     
@@ -78,11 +90,7 @@ def node_scan_overlays(node, socket_id,):
     if isinstance(node, (AutoGenNode) ):
         overlay_data_type = type(node.parameters[list(node.outputs.values())[0].name])
     else: # we have the UI socket
-        match socket.bl_idname:
-            case "IntSocket" | "UnsignedIntSocket":
-                overlay_data_type = int
-            case "FloatSocket" | "FloatPositiveSocket" | "FloatFactorSocket" | "FloatAngleSocket":
-                overlay_data_type = float
+        overlay_data_type = get_socket_idname_data_type(socket.bl_idname)
     
     if not isinstance(value, str): return
     # First step: get the interface nodes and the overlay keys

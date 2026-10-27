@@ -131,6 +131,15 @@ def set_bone_selection(pose_bone, selection_state):
 # groups and changing sockets -- this is used extensively by Schema.
 ##################################################################################################
 
+# store the overlay state of the node's sockets to ensure they don't reset.
+# The socket will only be in the overlay map if it is set to use overlay
+def get_socket_overlay_info(node):
+    overlay_state = {} # we only need the inputs for this
+    for socket in node.inputs:
+        if hasattr(socket, 'use_overlay') and socket.use_overlay:
+            overlay_state[socket.identifier] = socket.overlay_text
+    return overlay_state
+
 # this one returns None if there is an error.
 def get_socket_maps(node, force=False):
     maps = [{}, {}]

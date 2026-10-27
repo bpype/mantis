@@ -370,12 +370,14 @@ class SimpleInputNode(MantisMiscNode):
         self.prepared, self.executed = True, True
 
     def fill_parameters(self, ui_node=None):
-        from .execution.overlays import handle_overlay_detect
+        from .execution.overlays import handle_overlay_detect, get_socket_idname_data_type, parser_handle_text
         ui_outputs = ui_node.outputs
         node_socket = ui_outputs[0] # this is a simple input node.
         if (value := node_socket.default_value) is not None:
             if hasattr(node_socket, 'use_overlay') and node_socket.use_overlay:
-                value = '$' + node_socket.overlay_text
+                value = node_socket.overlay_text
+                if get_socket_idname_data_type(node_socket.bl_idname) != str:
+                    value = parser_handle_text(value)
             if isinstance(value, str) and "$" in value:
                 value = handle_overlay_detect(self, node_socket.identifier, node_socket.bl_idname, value)
             self.parameters[node_socket.name] = value

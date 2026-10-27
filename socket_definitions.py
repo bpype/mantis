@@ -44,28 +44,42 @@ class MantisSocket(parent_classes):
         return self.color
     @classmethod
     def draw_color_simple(self):
-        return self.color_simple    
+        return self.color_simple
+
+def overlay_toggle_update(self, context):
+    if self.node.id_data.bl_idname in {'MantisTree', 'SchemaTree'}:
+        parsed_tree = self.node.id_data.parsed_tree
+        self.node.display_update(parsed_tree=parsed_tree, context=context)
+        # and we need to mark the node as un-prepared.
+        # For now I am not gonna try to resolve the overlay value from the UI.
+        from .base_definitions import get_signature_from_edited_tree
+        mantis_node = parsed_tree.get(get_signature_from_edited_tree(self, context))
+        mantis_node.reset_execution_recursive()
+    
+def overlay_text_update(self, context):
+    if self.node.id_data.bl_idname in {'MantisTree', 'SchemaTree'}:
+        parsed_tree = self.node.id_data.parsed_tree
+        from .base_definitions import get_signature_from_edited_tree
+        mantis_node = parsed_tree.get(get_signature_from_edited_tree(self, context))
+        mantis_node.ui_modify_socket(self, self.name)
 
 class MantisSocketOverlayEnabled(MantisSocket):
     # this class just needs a couple properties
-    use_overlay: bpy.props.BoolProperty( default=False )
-    overlay_text: bpy.props.StringProperty( default="", )
+    use_overlay: bpy.props.BoolProperty( default=False, update=overlay_toggle_update)
+    overlay_text: bpy.props.StringProperty( default="", update=overlay_text_update)
     def draw(self, context, layout, node, text):
         is_simple_out = ((hasattr(self, "default_value")) and hasattr(self, "input") and getattr(self, "input"))
         if self.is_linked and not is_simple_out:
             layout.label(text=getattr(self, "display_text", "") )
         elif hasattr(self, "default_value"):
-            has_overlay = hasattr(self, "overlay_text") and hasattr(self, "use_overlay")
-            row = layout.row(align=True) if has_overlay else layout
+            row = layout.row(align=True)
             # We'll show the property or the overlay field here
-            prop_field = "overlay_text" if (has_overlay and self.use_overlay) else "default_value"
+            prop_field = "overlay_text" if self.use_overlay else "default_value"
             row.prop(self, prop_field,text=self.name)
             # and the button to choose whether or not to use the overlay field
-            if has_overlay: row.prop(self, "use_overlay", text="", icon='CONSOLE', toggle=True)
+            row.prop(self, "use_overlay", text="", icon='CONSOLE', toggle=True)
         else:
             layout.label(text=self.name)
-
-
 
 from .utilities.utilities import (prRed, prGreen, prPurple, prWhite,
                               prOrange,
@@ -1297,7 +1311,7 @@ def poll_is_armature(self, obj):
 # def poll_is_armature(self, obj):
     # return obj.type == "ARMATURE"
 
-class EnumMetaRigSocket(MantisSocket):
+class EnumMetaRigSocket(MantisSocketOverlayEnabled):
     '''Custom node socket type'''
     bl_idname = 'EnumMetaRigSocket'
     bl_label = "Meta Rig"
@@ -1322,7 +1336,16 @@ class EnumMetaRigSocket(MantisSocket):
         if self.is_output:
             layout.label(text=self.name)
         elif not (self.is_linked):
-            layout.prop_search(data=self, property="search_prop", search_data=bpy.data, search_property="objects", text="", icon="OUTLINER_OB_ARMATURE", results_are_suggestions=True)
+            row = layout.row(align=True)
+            # We'll show the property or the overlay field here
+            if self.use_overlay:
+                row.prop(self, "overlay_text",text=self.name)
+            else:
+                row.prop_search(data=self, property="search_prop", search_data=bpy.data,
+                                   search_property="objects", text="", icon="OUTLINER_OB_ARMATURE",
+                                   results_are_suggestions=True)
+            # and the button to choose whether or not to use the overlay field
+            row.prop(self, "use_overlay", text="", icon='CONSOLE', toggle=True)
         elif hasattr(self.node, "armature"):
             layout.label(text=self.node.armature)
             # TODO: we should actually use the parsed tree to query this info directly, since this socket may belong to a node group in/out
