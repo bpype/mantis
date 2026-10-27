@@ -161,8 +161,9 @@ class xFormBoneNode(Node, xFormNode):
                     self.display_bb_settings = segs > 1
                 except TypeError:
                     self.display_bb_settings = True # it is probably a driver
-            else:
-                self.display_bb_settings = self.inputs['BBone Segments'].default_value > 1
+            else: # Show the bbone settings if there could be a BBone.
+                self.display_bb_settings = ( (self.inputs['BBone Segments'].default_value > 1) \
+                                             or (self.inputs['BBone Segments'].use_overlay) )
             if self.inputs['Name'].is_linked and mantis_node_ready:
                 self.inputs['Name'].display_text = mantis_node.evaluate_input("Name")
 

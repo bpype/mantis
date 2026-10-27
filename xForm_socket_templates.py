@@ -117,7 +117,6 @@ need_different_defaults = [
     ("bbone_easeout", 1, 0),
 ]
 
-
 # VERSIONING for Bone
 bone_hide_prop_group='bone'
 if bpy_version >= (5,0,0):
@@ -126,7 +125,7 @@ bone_hide_template = replace(HideTemplate, name='Hide', category='always_show',
                             blender_property='hide', default_value=False,
                             prop_owner_group = bone_hide_prop_group)
 
-bbone_template = SockTemplate( name="<BBone Template>",
+bbone_template = SockTemplate( name="<BBone Template>", category = 'bbone',
         default_value = 0.0, blender_property=None, is_input=True,
         bl_idname='FloatSocket', prop_owner_group='bone',)
 
