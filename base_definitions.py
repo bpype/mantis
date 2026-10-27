@@ -112,8 +112,8 @@ def update_reroute_cache_item_source_recursively(reroute, tree_cache, source):
                 )
             tree_cache[reroute.name] = cache_object
         cache_object.source = source
-        if reroute.outputs[0].is_linked: # reroutes are always single-output
-            for l in reroute.outputs[0].links: # with potentially many links
+        if rr_links := reroute.outputs[0].links: # reroutes are always single-output
+            for l in rr_links:                   # with potentially many links
                 if l.to_node.bl_idname == 'NodeReroute':
                     reroutes.add(l.to_node)
 
