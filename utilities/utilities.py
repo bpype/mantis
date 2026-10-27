@@ -528,7 +528,10 @@ def import_widget_obj(path,):
             from .geometry_node_graphgen import gen_import_obj_node_group
             ng = gen_import_obj_node_group()
         import_modifier.node_group = ng
-        import_modifier["Socket_0"]=path
+        if bpy_version < (5, 2, 0):
+            import_modifier["Socket_0"]=path
+        else:
+            import_modifier.properties.inputs.Socket_0.value = path
         return ob
 
 def import_object_from_file(path):

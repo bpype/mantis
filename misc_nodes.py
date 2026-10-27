@@ -1206,7 +1206,11 @@ class InputWidget(MantisMiscNode):
                 from .utilities.geometry_node_graphgen import gen_scale_object_data_modifier
                 ng = gen_scale_object_data_modifier()
             scale_modifier.node_group = ng
-            scale_modifier['Socket_2']=scaling
+            if bpy_version < (5, 2, 0):
+                scale_modifier['Socket_2']=scaling
+            else:
+                scale_modifier.properties.inputs.Socket_2.value = scaling
+                
         # now we'll check for the mirrors.
         if any(axes_flipped) and do_mirror:
             if (flip_modifier := self.bObject.modifiers.get("Simple Flip")) is None:
