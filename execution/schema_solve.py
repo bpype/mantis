@@ -58,6 +58,11 @@ class SchemaSolver:
             if (other := self.node.inputs['Schema Length'].links[0].from_node).prepared == False:
                 raise RuntimeError(f"Schema Length cannot be determined for {self.node} because {other} is not prepared.")
         self.solve_length = self.node.evaluate_input("Schema Length")
+        # The user may be using an overlay variable to set the schema length
+        from .overlays import node_scan_overlays
+        if isinstance(self.solve_length, str):
+            self.solve_length = node_scan_overlays(self.node, 'Schema Length')
+        if self.solve_length == 0: return
         # I'm making this a property of the solver because the solver's data is modified as it solves each iteration
         self.index = 0
         self.interfaces = []
