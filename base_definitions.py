@@ -807,6 +807,9 @@ class MantisNodeGroup(Node, MantisUINode):
 class GraphError(Exception):
     pass
 
+class OverlayApplyError(Exception):
+    pass
+
 class BlenderVersionError(Exception):
     pass
 
@@ -1134,7 +1137,8 @@ class MantisNode:
         return change_handled
 
     def ui_modify_socket(self, ui_socket, socket_name=None) -> bool:
-        from .execution.overlays import node_scan_overlays, get_socket_idname_data_type, parser_handle_text
+        from .execution.overlays import ( node_scan_overlays, get_socket_idname_data_type,
+                                          parser_handle_text, handle_overlay_detect )
         """ Handle changes in the node's UI. Updates the rig if possible."""
         # Always update the node's data
         change_handled=False
@@ -1144,10 +1148,13 @@ class MantisNode:
             value = ui_socket.overlay_text
             if get_socket_idname_data_type(ui_socket.bl_idname) != str:
                 value = parser_handle_text(value)
-        # apply overlay variables here so this updates predictably
+        # apply overlay variables here so this updates predictably            
         if (isinstance(value, str) and
                 (self.signature, ui_socket.identifier) in self.mContext.tagged_for_overlay):
-            value = node_scan_overlays(self, ui_socket.identifier)
+            try:
+                value = node_scan_overlays(self, ui_socket.identifier)
+            except OverlayApplyError:
+                return False # failed to apply the overlay and handle the change
         # TODO: I need to make Node Groups apply overlays downstream, but since
         #       they don't update live anyway, no need just yet
         if socket_name == 'Enable': value = not value

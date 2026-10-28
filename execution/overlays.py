@@ -1,4 +1,11 @@
 
+from ..utilities.utilities import (prRed, prGreen, prPurple, prWhite,
+                              prOrange,
+                              wrapRed, wrapGreen, wrapPurple, wrapWhite,
+                              wrapOrange,)
+
+from ..base_definitions import OverlayApplyError
+
 # For now, this is not yet implemented. lol
 def parser_handle_text(text):
     return '$' + text
@@ -17,37 +24,34 @@ def get_socket_idname_data_type(socket_idname):
 # once we finish pulling data from the tree we handle the overlay.
 def handle_overlay_detect(node, socket_id, socket_idname, value) -> str:
     mContext = node.mContext
-    root_tree = mContext.base_tree
-    root_items_tree = root_tree.interface.items_tree
-    # detect if it is in the root tree, if so, handle immediately
-    out_value = value
-    # what this recieves is determined by its idname
-
-    socket_data_type = get_socket_idname_data_type(socket_idname)
-
-    # ONLY for root node trees, we can just directly fill this.
     if node.signature[0] is None and len(node.signature) == 2:
-        for key, interface_item in root_items_tree.items():
-            if interface_item.item_type != "SOCKET": continue
-            if interface_item.in_out != "INPUT": continue
-            # then what the interface provides is determined by its idname in turn
-            # NOTE I'm not 100% sure checking the socket_data_type is the right thing to do here
-            match interface_item.bl_socket_idname:
-                case "IntSocket" | "BooleanSocket":
-                    if socket_data_type in {int, float} and '$'+key == out_value:
-                        # TODO this is the wrong way to do this, replace this with parser later
-                        out_value = socket_data_type(interface_item.default_int)
-                case "FloatSocket":
-                    if socket_data_type in {int, float} and '$'+key == out_value:
-                        out_value = socket_data_type(interface_item.default_float)
-                case "StringSocket" | 'BoneCollectionSocket':
-                    if socket_data_type == str:
-                        out_value = socket_data_type(out_value.replace("$"+key, interface_item.default_string))
-
+        value = fill_root_tree_overlays(mContext, socket_idname, value)
     else: # since it is not root, we have to tag it.
         mContext.tagged_for_overlay.append((node.signature, socket_id))
-    return out_value
+    return value
 
+# The root tree doesn't have any interfaces to look up so we can fill it immediately
+def fill_root_tree_overlays(mContext, socket_idname, value):
+    root_tree = mContext.base_tree
+    root_items_tree = root_tree.interface.items_tree
+    socket_data_type = get_socket_idname_data_type(socket_idname)
+
+    for key, interface_item in root_items_tree.items():
+        if interface_item.item_type != "SOCKET": continue
+        if interface_item.in_out != "INPUT": continue
+        # then what the interface provides is determined by its idname in turn
+        match interface_item.bl_socket_idname:
+            case "IntSocket" | "BooleanSocket":
+                if socket_data_type in {int, float} and '$'+key == value:
+                    # TODO this is the wrong way to do this, replace this with parser later
+                    value = socket_data_type(interface_item.default_int)
+            case "FloatSocket":
+                if socket_data_type in {int, float} and '$'+key == value:
+                    value = socket_data_type(interface_item.default_float)
+            case "StringSocket" | 'BoneCollectionSocket':
+                if socket_data_type == str:
+                    value = socket_data_type(value.replace("$"+key, interface_item.default_string))
+    return value
 
 STRING_PADDING = 4
 overlay_valid_socket_types = [
@@ -157,7 +161,7 @@ def node_scan_overlays(node, socket_id,):
                 name_to_type_map[interface_item.name] = interface_item.bl_socket_idname
                 overlay_keys.add(interface_item.name)
         # For schema interfaces, we also need to get the length and index.
-        if 'Index' in interface.outputs:
+        if 'Index' in interface_node.outputs:
             overlay_keys.add('Index'); overlay_keys.add('Length')
     if 'Index' in overlay_keys:
         name_to_id_map['Index']='Index'
@@ -217,6 +221,9 @@ def node_scan_overlays(node, socket_id,):
                     else:
                         prOrange(f"WARN: no overlay value applied for {node.ui_signature} for key {key}")
                 break # we found the key and are done here. One found Key per overlay-try
+        # this is where we can catch the errors if the type of the resolved value was wrong
+        if type(overlay_resolved_value) != overlay_data_type:
+            raise OverlayApplyError( f"Could not apply overlay variable to {node}::{socket_id}.")
         result += overlay_resolved_value
     # Simple Input sockets with unnamed sockets assign this ID automatically
     # But Mantis uses the name instead. Usually the name and ID are the same.

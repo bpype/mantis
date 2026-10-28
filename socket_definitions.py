@@ -46,45 +46,41 @@ class MantisSocket(parent_classes):
     def draw_color_simple(self):
         return self.color_simple
 
-def socket_update_get_node_tree(self, context):
+def socket_update_get_root_tree(self, context):
     context = bpy.context
     if not context.space_data:
         return None
     if not hasattr(context.space_data, "path"):
         return None
     try:
-        node_tree = context.space_data.path[0].node_tree
+        root_tree = context.space_data.path[0].node_tree
     except IndexError: # not in the UI, for example, in a script instead.
         return None
-    if node_tree is None:
+    if root_tree is None:
         return None
-    if node_tree.is_executing or node_tree.is_exporting or not node_tree.do_live_update:
+    if root_tree.is_executing or root_tree.is_exporting or not root_tree.do_live_update:
         return None
-    return node_tree
+    return root_tree
 
 def overlay_toggle_update(self, context):
-    node_tree = socket_update_get_node_tree(self, context)
-    if node_tree is None: return
+    root_tree = socket_update_get_root_tree(self, context)
+    if root_tree is None: return
     parsed_tree = self.node.id_data.parsed_tree
     if hasattr(self.node, "display_update"):
         self.node.display_update(parsed_tree=parsed_tree, context=context)
-    node_tree.update_tree(context, force = True)
+    root_tree.update_tree(context, force = True)
     # and we need to mark the node as un-prepared.
     # For now I am not gonna try to resolve the overlay value from the UI.
-    # have to check each one. see default_update NOTE
-    # for mantis_node in node_tree.parsed_tree.values():
-    #     try_update_mantis_node_for_socket(mantis_node, node_tree, self)
     
 def overlay_text_update(self, context):
-    node_tree = socket_update_get_node_tree(self, context)
-    if node_tree is None: return
-    parsed_tree = self.node.id_data.parsed_tree
+    root_tree = socket_update_get_root_tree(self, context)
+    if root_tree is None: return
     # have to check each one. see default_update NOTE
     handled = True
-    for mantis_node in node_tree.parsed_tree.values():
-        handled = try_update_mantis_node_for_socket(mantis_node, node_tree, self) and handled
+    for mantis_node in root_tree.parsed_tree.values():
+        handled = try_update_mantis_node_for_socket(mantis_node, root_tree, self) and handled
     if not handled:
-        node_tree.update_tree(context, force = True)
+        root_tree.update_tree(context, force = True)
 
 class MantisSocketOverlayEnabled(MantisSocket):
     # this class just needs a couple properties
@@ -394,12 +390,74 @@ enum_default_xForm_values =(
 from bpy.types import NodeTreeInterfaceSocket
 
 def interface_socket_update(self, context):
-    # we're just gonna do this the dumb way for now and invalidate the tree
-    # BUG HACK TODO actually I am gonna do this stuff later
-    # later, I can do this based on the connections in the tree
-    # and the socket updater can use the same code for group interface modifications
-    # TODO do this stuff because the tree will be a lot snappier
-    pass
+    from .execution.overlays import fill_root_tree_overlays, parser_handle_text
+    from itertools import chain
+    # so what I need to do here is:
+    #  - if this is the root tree, and the interface has connections, invalidate them
+    #  - or if the root tree node is using an overlay, update it directly
+    #  - if there are any overlay-tagged, invalidate them
+    root_tree = socket_update_get_root_tree(self, context)
+    if root_tree is None: return # happens on startup or if e.g. tree is executing
+    parsed_tree = root_tree.parsed_tree
+    if len(parsed_tree) == 0: return # nothing to do here
+    # get the mContext
+    # HACK HACK HACK this is so ugly
+    keys = list(parsed_tree.keys())
+    mContext = None; i=0
+    while mContext is None:
+        mantis_node = parsed_tree[ keys[i] ]
+        mContext = mantis_node.mContext; i+=1
+        if i > len(keys): return # no mContext found
+        # should exit immediately, the first node probably has it
+    if self.id_data.name == root_tree.name:
+        # checc for node group inputs and recursively reset execution for their children
+        for node in root_tree.nodes:
+            if node.bl_idname in {'NodeGroupInput'}:
+                for o in node.outputs:
+                    for l in o.links:
+                        # We're in the root tree, that makes this easier
+                        if mantis_node := parsed_tree.get( (None, l.to_node.name) ):
+                            prPurple (mantis_node)
+                            mantis_node.reset_execution_recursive()
+            else: # The overlays in the root tree get set directly, let's handle that here, also
+                for socket in chain(node.inputs, node.outputs):   
+                    
+                    value = None
+                    if hasattr(socket, 'default_value'):
+                        value = socket.default_value
+                        if hasattr(socket, 'use_overlay') and socket.use_overlay:
+                            value = parser_handle_text(socket.overlay_text)
+                    if isinstance(value, str) and '$' in value:
+                        if socket.name  == 'Schema Length': # this one has to force a new parse
+                            root_tree.update_tree(force=True) # because it modifies tree topology
+                            return
+                        value = fill_root_tree_overlays(mContext, socket.bl_idname, value)
+
+    # Now update the overlay-tagged nodes.
+    for mantis_node_signature, socket_id in mContext.tagged_for_overlay:
+        if socket_id == 'Schema Length': break # break to force update
+        # We always need to parse again after changing schema length
+        mantis_node = parsed_tree.get(mantis_node_signature)
+        if mantis_node:
+            from .utilities.utilities import get_ui_node
+            if mantis_node.ui_signature is None: break # can't update it
+            ui_node = get_ui_node(mantis_node.ui_signature, root_tree)
+            if ui_node:
+                if socket_id == 'socket': # this is an anonymous output in a simple-input node
+                    ui_socket = ui_node.outputs[0]
+                else:
+                    if (ui_socket := ui_node.inputs.get(socket_id)) is None:
+                        for socket in ui_node.inputs:
+                            if socket_id == socket.identifier: break
+                        else: # Failed to update it, just update the tree.
+                            root_tree.update_tree(force=True); return
+                # Now we have the ui socket
+                mantis_node.ui_modify_socket(ui_socket, ui_socket.name)
+    else:
+        return
+    # if we break from the for loop above, we failed to update the socket and have to update the tree
+    root_tree.update_tree(force=True)
+    # TODO: I can update these values instead of resetting them
 
 
 interface_default_value_description="The default value of the socket when it is not connected."
@@ -533,8 +591,8 @@ def socket_update(mantis_node, ui_socket, socket_name=None):
 def default_update(ui_socket, context, do_execute=True):
     if not context:
         context = bpy.context
-    node_tree = socket_update_get_node_tree(ui_socket, context)
-    if node_tree is None: return
+    root_tree = socket_update_get_root_tree(ui_socket, context)
+    if root_tree is None: return
     # if it is a Schema Node, it will fail the checks below -- but we need it to update the tree.
     from .base_definitions import SchemaUINode
     if isinstance(ui_socket.node, SchemaUINode):
@@ -546,9 +604,9 @@ def default_update(ui_socket, context, do_execute=True):
         updating = ui_socket.node.is_updating
         ui_socket.node.is_updating=True
         try:
-            node_tree.update_tree(context, force = True)
+            root_tree.update_tree(context, force = True)
             prPurple(f"Executing tree after socket change: {ui_socket.node.name}:{ui_socket.name}")
-            node_tree.execute_tree(context)
+            root_tree.execute_tree(context)
         finally:
             ui_socket.node.is_updating=updating
         return
@@ -566,23 +624,23 @@ def default_update(ui_socket, context, do_execute=True):
     mantis_updated=True
     if (ui_socket.node.bl_idname in ["MantisNodeGroup", "MantisSchemaGroup"]):
         mantis_updated=False # this kind of socket can't be updated here (yet)
-        node_tree.update_tree(context, force=True)
+        root_tree.update_tree(context, force=True)
     elif ui_socket.node.bl_idname in array_output_types:
         mantis_updated=False
-        node_tree.update_tree(context, force=True)
+        root_tree.update_tree(context, force=True)
     elif hasattr(ui_socket, 'default_value'):
         # NOTE: there may be many mantis nodes for each UI node... so we need to try all of them.
-        for mantis_node in node_tree.parsed_tree.values():
+        for mantis_node in root_tree.parsed_tree.values():
             # we may not have to regenerate the tree; try and update the socket
             # the 'and' here ensures we trigger an update if even one of the mantis nodes fails
-            mantis_updated = try_update_mantis_node_for_socket(mantis_node, node_tree, ui_socket) and mantis_updated
+            mantis_updated = try_update_mantis_node_for_socket(mantis_node, root_tree, ui_socket) and mantis_updated
         # we want to force it if we have made an unhandled change inside of a schema.
-        node_tree.update_tree(context, force = (mantis_updated == False))
-    node_tree.display_update(context)
+        root_tree.update_tree(context, force = (mantis_updated == False))
+    root_tree.display_update(context)
     if mantis_updated==False:
         try:
             prPurple(f"Executing tree after socket change: {ui_socket.node.name}:{ui_socket.name}")
-            node_tree.execute_tree(context)
+            root_tree.execute_tree(context)
         except Exception as e:
             prRed("Automatic Tree Execution failed because of %s" % e)
 
