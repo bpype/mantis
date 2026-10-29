@@ -417,8 +417,14 @@ def interface_socket_update(self, context):
                     for l in o.links:
                         # We're in the root tree, that makes this easier
                         if mantis_node := parsed_tree.get( (None, l.to_node.name) ):
-                            prPurple (mantis_node)
-                            mantis_node.reset_execution_recursive()
+                            #rebuild the tree, it's unlikely the root tree change will not require this
+                            root_tree.update_tree(force=True)
+                            try: # if only I had a goto in this confounded language
+                                prPurple(f"Executing tree after interface change")
+                                root_tree.execute_tree(context)
+                            except Exception as e:
+                                prRed("Automatic Tree Execution failed because of %s" % e)
+                            return
             else: # The overlays in the root tree get set directly, let's handle that here, also
                 for socket in chain(node.inputs, node.outputs):   
                     
@@ -430,6 +436,11 @@ def interface_socket_update(self, context):
                     if isinstance(value, str) and '$' in value:
                         if socket.name  == 'Schema Length': # this one has to force a new parse
                             root_tree.update_tree(force=True) # because it modifies tree topology
+                            try: # if only I had a goto in this confounded language
+                                prPurple(f"Executing tree after interface change")
+                                root_tree.execute_tree(context)
+                            except Exception as e:
+                                prRed("Automatic Tree Execution failed because of %s" % e)
                             return
                         value = fill_root_tree_overlays(mContext, socket.bl_idname, value)
 
@@ -450,13 +461,18 @@ def interface_socket_update(self, context):
                         for socket in ui_node.inputs:
                             if socket_id == socket.identifier: break
                         else: # Failed to update it, just update the tree.
-                            root_tree.update_tree(force=True); return
+                            break
                 # Now we have the ui socket
                 mantis_node.ui_modify_socket(ui_socket, ui_socket.name)
     else:
         return
     # if we break from the for loop above, we failed to update the socket and have to update the tree
     root_tree.update_tree(force=True)
+    try:
+        prPurple(f"Executing tree after interface change")
+        root_tree.execute_tree(context)
+    except Exception as e:
+        prRed("Automatic Tree Execution failed because of %s" % e)
     # TODO: I can update these values instead of resetting them
 
 
