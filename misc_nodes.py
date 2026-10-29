@@ -379,7 +379,7 @@ class SimpleInputNode(MantisMiscNode):
                 if get_socket_idname_data_type(node_socket.bl_idname) != str:
                     value = parser_handle_text(value)
             if isinstance(value, str) and "$" in value:
-                value = handle_overlay_detect(self, node_socket.identifier, node_socket.bl_idname, value)
+                value = handle_overlay_detect(self, node_socket.name, node_socket.bl_idname, value)
             self.parameters[node_socket.name] = value
         
 #*#-------------------------------#++#-------------------------------#*#

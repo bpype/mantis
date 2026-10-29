@@ -172,20 +172,16 @@ class SchemaSolver:
             name = 'InputInterface'+index_str
             if i == 0: in_out = 'SCHEMA_INPUT'
             else:      in_out = 'SCHEMA_BETWEEN'
-            signature = (*self.autogen_path_names, name)
+            signature = (None, *self.autogen_path_names[1:], name)
             if not (interface := self.all_nodes.get( signature)):
                 interface = GroupInterface(signature=signature, base_tree=self.tree, in_out=in_out, 
-                            ui_node=None, items_tree=items_tree)
-                interface.mContext = mContext
-            # strip the AUTOGEN/SCHEMA tag if it is there
-            mContext.interface_nodes[( None, *interface.signature[1:]) ] = interface
+                            mContext=mContext, ui_node=self.node.ui_node, items_tree=items_tree)
             interface.generated_at_schema_index = self.node.generated_at_schema_index + [i]
-            # add the index and length socket constants
+            # add the index and length socket constants. Only the first one needs Length
+            #  (it's best to avoid having multiple places to read single-source values.)
             interface.parameters['Index'] = i
-            if i == 0: # TODO I am duplicating Length for the interface feature, this is not necessary
-                interface.parameters['Length'] = self.solve_length
+            if i == 0: interface.parameters['Length'] = self.solve_length
             # the GroupInterface will initialize with the right sockets, but we still have to link them
-
             if in_out == 'SCHEMA_INPUT': # Take the links into the schema and plug them here
                 for item in items_tree:
                     if item.item_type == 'PANEL': continue
@@ -200,15 +196,13 @@ class SchemaSolver:
             self.solved_nodes[signature]=interface
 
         # now do the output
-        signature = (*self.autogen_path_names, "OutputInterface" + index_str)
-        interface = GroupInterface(signature=signature, base_tree=self.tree,
-                    in_out='OUTPUT', ui_node=None, items_tree=items_tree)
+        signature = (None, *self.autogen_path_names[1:], "OutputInterface" + index_str)
+        interface = GroupInterface(signature=signature, base_tree=self.tree, in_out='OUTPUT',
+                                   mContext=mContext, ui_node=self.node.ui_node, items_tree=items_tree)
         self.interfaces.append(interface)
         interface.generated_at_schema_index = i
         self.solved_nodes[signature]=interface
-        interface.mContext = mContext
         # strip the AUTOGEN/SCHEMA tag if it is there
-        mContext.interface_nodes[( None, *interface.signature[1:]) ] = interface
 
     def is_node_deeper_nested(self, queried_node, compare_node):
         return len(compare_node.signature) < len(queried_node.signature)

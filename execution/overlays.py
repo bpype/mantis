@@ -4,7 +4,7 @@ from ..utilities.utilities import (prRed, prGreen, prPurple, prWhite,
                               wrapRed, wrapGreen, wrapPurple, wrapWhite,
                               wrapOrange,)
 
-from ..base_definitions import OverlayApplyError
+from ..base_definitions import OverlayApplyError, GraphError
 
 # For now, this is not yet implemented. lol
 def parser_handle_text(text):
@@ -53,80 +53,19 @@ def fill_root_tree_overlays(mContext, socket_idname, value):
                     value = socket_data_type(value.replace("$"+key, interface_item.default_string))
     return value
 
-STRING_PADDING = 4
-overlay_valid_socket_types = [
-    "FloatSocket", "FloatPositiveSocket", "FloatFactorSocket",
-    "FloatAngleSocket", "UnsignedIntSocket", "IntSocket", "StringSocket",
-]
-# Do not use these input names as overlay keys:
-forbidden_key_names = ["",]
-forbidden_in_key_name = ['$',]
-def node_scan_overlays(node, socket_id,):
-    from ..misc_nodes import SimpleInputNode
-    from ..internal_nodes import AutoGenNode
-    from ..utilities.utilities import get_ui_node
-    from ..utilities.node_common import GraphError
-    interface_nodes = node.mContext.interface_nodes
-    if not isinstance(node, AutoGenNode):
-        ui_node = get_ui_node(node.ui_signature, node.base_tree)
-        # we'll assume that the overlay tag system checked if this is linked.
-        # TODO this is probably redundant with the check above this
-        # First let's check if it is a simple input node, by checking outputs that are marked "input"
-        for socket in ui_node.outputs:
-            # weird edge case for simple input nodes with unnamed sockets
-            # the socket.identifier is not used by Mantis but it defaults to 'socket'\
-            if socket.identifier == socket_id and socket.input == True: break
-        else:
-            for socket in ui_node.inputs:
-                if socket.identifier == socket_id: break
-            else:
-                raise KeyError(f"Socket not found by ID {socket_id} in node {node.ui_signature}\n"
-                            f"Candidates: {[socket.identifier for socket in ui_node.inputs]}")
-        value = socket.default_value # get the ACTUAL UI value
-        if hasattr(socket, 'overlay_text'):
-            value = socket.overlay_text
-            if get_socket_idname_data_type(socket.bl_idname) != str:
-                value = parser_handle_text(value)
-    else: # since it doesn't have a UI node
-        value = node.parameters[socket_id]
-    
-    overlay_data_type = str
-    if isinstance(node, (AutoGenNode) ):
-        overlay_data_type = type(node.parameters[list(node.outputs.values())[0].name])
-    else: # we have the UI socket
-        overlay_data_type = get_socket_idname_data_type(socket.bl_idname)
-    
-    if not isinstance(value, str): return
-    # First step: get the interface nodes and the overlay keys
-    # this should only check interfaces that are ancestors of this node
+def get_interfaces_for_node(mantis_node,):
+    all_interface_nodes = mantis_node.mContext.input_interface_nodes
     my_interfaces = []
-    for index in range(len(node.signature)-1):
-        if index == 0: continue # root
-        # we add one here because the node inside the schema references the schema's interface...
-        current_schema_interface_index = node.generated_at_schema_index[index+1]
-        if current_schema_interface_index < 0: # this indicates that it is not in a schema
-            interface = interface_nodes.get(
-                interface_signature := (None, *node.signature[1:index+1], "InputInterface"))
-        else: # First we get the interface that enters the schema (index 0)
-            interface = interface_nodes.get(
-                interface_signature := (None, *node.signature[1:index+1],
-                "InputInterface."+str( 0 ).zfill(4)))
-            if interface and interface not in my_interfaces: my_interfaces.append(interface)
-            if current_schema_interface_index == 0: continue # just did it
-            # we need to get the schema of the current index
-            interface = interface_nodes.get(
-                interface_signature := (None, *node.signature[1:index+1],
-                "InputInterface."+str(current_schema_interface_index).zfill(4)))
-        if interface:
-            my_interfaces.append( interface )
-    # the my_interfaces list is sorted in REVERSE order of importance
-    # Next, get all the overlay providers.
-    name_to_id_map = {}
-    name_to_type_map = {} # Just for printing reasonable error messages
-    overlay_keys = set()
-    root_overlay_values = {}
-    # First, we'll get the base tree's default inputs
-    for interface_item in node.mContext.base_tree.interface.items_tree:
+    for index in range(len(mantis_node.signature)-1):
+        if index == 0: continue # the root isn't relevant unless I refactor to make an interface for it
+        current_schema_interface_index = mantis_node.generated_at_schema_index[index+1]
+        interfaces_from_schema = all_interface_nodes[ ( None, *mantis_node.signature[1:index+1] ) ]
+        # we need to get ONLY the interfaces up to the current index, which is 0 for non-schema
+        my_interfaces.extend( interfaces_from_schema[:current_schema_interface_index+1] ) # +1 (slice end is not inclusive)
+    return my_interfaces
+
+def get_base_tree_overlay_values(items_tree, name_to_type_map, overlay_keys, root_overlay_values):
+    for interface_item in items_tree:
         if interface_item.item_type != "SOCKET": continue
         if interface_item.in_out != "INPUT": continue
         base_value=None
@@ -141,21 +80,21 @@ def node_scan_overlays(node, socket_id,):
         if base_value:
             root_overlay_values[interface_item.name] = base_value
         overlay_keys.add(interface_item.name)
-        name_to_id_map[interface_item.name] = None # don't worry about it
         name_to_type_map[interface_item.name] = interface_item.bl_socket_idname
-    # BUG? should this be my_interfaces ? why bother with interfaces this may not be a part of?
-    for interface_node in interface_nodes.values():
-        # problem: the interface node stores socket identifiers as keys
-        # so in reality we need to get the group UI node and ask for its input names
-        # if there is a duplicate name, too bad!
-        group_ui_node = get_ui_node(interface_node.ui_signature[:-1], node.base_tree)
-        for interface_item in group_ui_node.node_tree.interface.items_tree:
+
+def get_overlay_keys_types_ids(my_interfaces, overlay_keys, name_to_type_map, name_to_id_map):
+    # We need to get all the relevant keys to search for, all the types for error messages
+    # and all the IDs because interface nodes store stuff by ID, not by name
+    # and if there is a duplicate name, it will shadow - too bad!
+    for interface_node in my_interfaces:
+        # fill in the overlay keys and name-to-type-map (used for errors)
+        interface_items_tree = interface_node.get_tree_interface_items()
+        for interface_item in interface_items_tree:
             if interface_item.item_type != 'SOCKET': continue
             if interface_item.in_out != 'INPUT': continue
             if interface_item.name in forbidden_key_names: continue
             for substr in forbidden_in_key_name:
-                if substr in interface_item.name:
-                    break
+                if substr in interface_item.name: break
             else: # if we do not find a bad substr
                 name_to_id_map[interface_item.name]=interface_item.identifier
                 name_to_type_map[interface_item.name] = interface_item.bl_socket_idname
@@ -164,24 +103,60 @@ def node_scan_overlays(node, socket_id,):
         if 'Index' in interface_node.outputs:
             overlay_keys.add('Index'); overlay_keys.add('Length')
     if 'Index' in overlay_keys:
-        name_to_id_map['Index']='Index'
-        name_to_type_map['Index']= "IntSocket"
-        name_to_id_map['Length']='Length'
-        name_to_type_map['Length']= "IntSocket"
+        name_to_id_map['Index']='Index'; name_to_type_map['Index']= "IntSocket"
+        name_to_id_map['Length']='Length'; name_to_type_map['Length']= "IntSocket"
+
+STRING_PADDING = 4
+overlay_valid_socket_types = [
+    "FloatSocket", "FloatPositiveSocket", "FloatFactorSocket",
+    "FloatAngleSocket", "UnsignedIntSocket", "IntSocket", "StringSocket",
+]
+# Do not use these input names as overlay keys:
+forbidden_key_names = ["",]
+forbidden_in_key_name = ['$',]
+def node_scan_overlays(node, socket_id,):
+    from ..internal_nodes import AutoGenNode
+    overlay_data_type = str
+    try:
+        socket = node.inputs[socket_id]
+    except KeyError:
+        socket = node.outputs[socket_id]
+    if socket_id == 'Schema Length':
+        # this happens in schema solve init, the actual value lives in an autogen node...
+        # it doesn't matter, we only need the overlay value and the intended type
+        value = node.evaluate_input('Schema Length')
+        overlay_data_type = int
+    else:
+        value = node.parameters[socket_id]
+    if overlay_data_type == str: # It is still default, not set to int by the above
+        if isinstance(node, (AutoGenNode) ):  # we need to check it for the general case
+            overlay_data_type = type(node.parameters[list(node.outputs.values())[0].name])
+        else: # we have the mantis socket which has a type field
+            overlay_data_type = get_socket_idname_data_type(socket.socket_type)
+    if not isinstance(value, str): return
+    # First step: get the interface nodes and the overlay keys
+    # this should only check interfaces that are ancestors of this node
+    my_interfaces = get_interfaces_for_node(mantis_node=node)
+    # the my_interfaces list is sorted in REVERSE order of importance
+    # Next, get all the overlay providers.
+    name_to_type_map, root_overlay_values, name_to_id_map = {}, {}, {}
+    overlay_keys = set()
+    # First, we'll get the base tree's default inputs
+    items_tree = node.mContext.base_tree.interface.items_tree
+    get_base_tree_overlay_values(items_tree, name_to_type_map, overlay_keys, root_overlay_values)
+    get_overlay_keys_types_ids(my_interfaces, overlay_keys, name_to_type_map, name_to_id_map)
     # sort by reverse length so we find "CatsAndFrogs" before "Cats"
     overlay_keys = sorted(overlay_keys, key= lambda a :-1*len(a))
     # First I need to break it into substrings based on quotation marks
     from ..utilities.utilities import split_quoted_substrings_to_strings
     quoted_substrings = split_quoted_substrings_to_strings(value)
     overlay_tries = []
-    for quoted_substring in  quoted_substrings:
+    for quoted_substring in quoted_substrings:
         overlay_tries.extend(quoted_substring.split("$"))
-    if overlay_data_type == str:
-        result = overlay_tries[0] # the 0th element is always before the split character
-    else: # TODO HACK later use the parser feature
-        result = 0
+    if overlay_data_type == str: result = overlay_tries[0] # the 0th element is always before the split character
+    else: result = 0# TODO HACK later use the parser feature
     # the reason for the difference between overlay_try and key is because
-    #  we don't actually know if the $text part has a key in it
+    #  we don't actually know if the $text part has a key in it yet!
     for overlay_try in overlay_tries[1:]:
         if not overlay_try: continue # some of these are empty
         overlay_resolved_value = "$" + overlay_try
@@ -225,9 +200,5 @@ def node_scan_overlays(node, socket_id,):
         if type(overlay_resolved_value) != overlay_data_type:
             raise OverlayApplyError( f"Could not apply overlay variable to {node}::{socket_id}.")
         result += overlay_resolved_value
-    # Simple Input sockets with unnamed sockets assign this ID automatically
-    # But Mantis uses the name instead. Usually the name and ID are the same.
-    if socket_id == 'socket' and ui_node.outputs[0].name == "":
-        socket_id = ''
     node.parameters[socket_id] = result
     return result # because sometimes I need to get the result, too

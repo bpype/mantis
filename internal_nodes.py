@@ -119,6 +119,10 @@ class NoOpNode(MantisNode):
         self.execution_prepared=True
     # this node is useful for me to insert in the tree and use for debugging especially connections.
 
+from .socket_definitions import no_default_value
+from .execution.overlays import handle_overlay_detect, get_socket_idname_data_type, parser_handle_text
+from mathutils import Matrix
+
 class AutoGenNode(MantisNode):
     __slots__ = ()
     node_type = 'UTILITY'
@@ -131,18 +135,52 @@ class AutoGenNode(MantisNode):
         super().reset_execution()
         self.prepared, self.executed = True, True
 
+    # This is a re-implementation of the fill parameters in the base class
+    # but it is possible to streamline a few things here
+    # so rather than add another branch in the main class I have
+    # decided to duplicate some code. This isn't great but it's a little faster.
+    def fill_parameters(self, ui_node=None)  -> None:
+        ui_inputs = ui_node.inputs
+        for key in self.parameters.keys():
+            if node_socket := ui_inputs.get(key):
+                if node_socket.bl_idname in no_default_value: continue
+                elif node_socket.is_linked: continue
+                # unlike the general case, we don't need to bother with outputs at all for autogen nodes
+                if node_socket.bl_idname == 'MatrixSocket':
+                    v = node_socket.default_value
+                    self.parameters[key] = Matrix(( tuple(v[0:4]),
+                                                    tuple(v[4:8]),
+                                                    tuple(v[8:12]),
+                                                    tuple(v[12:16]) ))
+                elif (value := node_socket.default_value) is not None:
+                    if hasattr(node_socket, 'use_overlay') and node_socket.use_overlay:
+                        value = node_socket.overlay_text
+                        if get_socket_idname_data_type(node_socket.bl_idname) != str:
+                            value = parser_handle_text(value)
+                    # THIS is the most important reason I am using a custom fill here:
+                    # The overlay for this kind of node must use the identifier, not the name
+                    if isinstance(value, str) and "$" in value:
+                        value = handle_overlay_detect(self,
+                            node_socket.identifier, node_socket.bl_idname, value)
+                    self.parameters[key] = value
+                else:
+                    raise RuntimeError(wrapRed("No value found for " + self.__repr__() + " when filling out node parameters for " + ui_node.name + "::"+node_socket.name))
+
+
+
+    
 
 # The Group Interface node is responsible for gathering node connections
 #   going in or out of the group and connecting back out the other side
 # this is also where caching and overlays live
 class GroupInterface(MantisNode):
-    __slots__ = ("in_out")
+    __slots__ = ("in_out", "tree_name")
     node_type = 'INTERFACE'
-    def __init__(self, signature, base_tree, in_out, ui_node = None, items_tree = None):
-        # DO: refactor me to use the tree interface
+    def __init__(self, signature, base_tree, in_out, mContext, ui_node = None, items_tree = None, ):
         super().__init__(signature, base_tree)
         self.prepared, self.executed = True, True
         self.in_out = in_out
+        self.tree_name = ui_node.node_tree.name
         # init the sockets based on in/out, then set up traversal
         
         # the index and length are like constant inputs.
@@ -174,4 +212,24 @@ class GroupInterface(MantisNode):
                     source = self.inputs[item.identifier] = NodeSocket(is_input=True, node=self, name=item.identifier)
                     target = self.outputs[item.identifier] = NodeSocket(is_input=False, node=self, name=item.identifier)
                     self.set_traverse( [(source.name, target.name)] )
+        if self.in_out in {'INPUT', 'SCHEMA_INPUT', 'SCHEMA_BETWEEN'}:
+            # We need to store the input interface nodes for looking up overlay variables
+            # Important to set the mContext's interface stuff up so the rest of the tree has access to this
+            # Why not include the name of the node? It's easier to look up based on tree path
+            # And in order to prevent ambiguity, we make lists for each one so that schema interfaces come together
+            if mContext.input_interface_nodes.get(self.signature[:-1], None) is None:
+                mContext.input_interface_nodes[ self.signature[:-1] ] = [ self ]
+            else: # it's a schema so we add the next interface to the list
+                mContext.input_interface_nodes[ self.signature[:-1] ].append(self)
         self.execution_prepared=True
+
+    def get_tree_interface_items(self):
+        from bpy import data as bpy_data
+        if tree := bpy_data.node_groups.get(self.tree_name):
+            return tree.interface.items_tree
+
+    def evaluate_input(self, input_name, index=0):
+        value = super().evaluate_input(input_name, index)
+        # This node should cache the result for faster lookup later
+        self.parameters[input_name] = value
+        return value
