@@ -180,7 +180,10 @@ class GroupInterface(MantisNode):
         super().__init__(signature, base_tree)
         self.prepared, self.executed = True, True
         self.in_out = in_out
-        self.tree_name = ui_node.node_tree.name
+        if hasattr(ui_node, "node_tree"):
+            self.tree_name = ui_node.node_tree.name
+        else: # It is an output node
+            self.tree_name = ui_node.id_data.name
         # init the sockets based on in/out, then set up traversal
         
         # the index and length are like constant inputs.
