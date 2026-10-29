@@ -63,6 +63,8 @@ class SchemaSolver:
         if isinstance(self.solve_length, str):
             self.solve_length = node_scan_overlays(self.node, 'Schema Length')
         if self.solve_length == 0: return
+        elif self.solve_length < 0:
+            raise GraphError(f"Schema Length of less than 0 is not allowed in {self.node}")
         # I'm making this a property of the solver because the solver's data is modified as it solves each iteration
         self.index = 0
         self.interfaces = []
