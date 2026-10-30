@@ -46,7 +46,8 @@ def autogen_node(base_tree, ui_socket, signature, mContext):
     from ..internal_nodes import AutoGenNode
     mantis_node = AutoGenNode(signature, base_tree)
     mantis_node.mContext = mContext
-    mantis_node.outputs[ui_socket.identifier] = NodeSocket(is_input=False, name=ui_socket.identifier, node=mantis_node)
+    mantis_node.outputs[ui_socket.identifier] = NodeSocket(is_input=False,
+        name=ui_socket.identifier, node=mantis_node, socket_type=ui_socket.bl_idname)
     mantis_node.parameters[ui_socket.identifier] = None
     mantis_node.ui_signature = None # does not exist in the UI
     return mantis_node

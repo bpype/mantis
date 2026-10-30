@@ -77,7 +77,7 @@ def get_base_tree_overlay_values(items_tree, name_to_type_map, overlay_keys, roo
                 base_value = interface_item.default_float
             case "StringSocket" | "BoneCollectionSocket":
                 base_value = interface_item.default_string
-        if base_value:
+        if base_value is not None:
             root_overlay_values[interface_item.name] = base_value
         overlay_keys.add(interface_item.name)
         name_to_type_map[interface_item.name] = interface_item.bl_socket_idname
@@ -116,7 +116,7 @@ forbidden_key_names = ["",]
 forbidden_in_key_name = ['$',]
 def node_scan_overlays(node, socket_id,):
     from ..internal_nodes import AutoGenNode
-    overlay_data_type = str
+    overlay_data_type = str; socket = None
     try:
         socket = node.inputs[socket_id]
     except KeyError:
@@ -129,7 +129,9 @@ def node_scan_overlays(node, socket_id,):
     else:
         value = node.parameters[socket_id]
     if overlay_data_type == str: # It is still default, not set to int by the above
-        if isinstance(node, (AutoGenNode) ):  # we need to check it for the general case
+        if not socket or not socket.socket_type: # can't determine.
+            prRed(f"WARNING: cannot determine data type for overlay"
+                  f"variable {socket_id} in {node}" )
             overlay_data_type = type(node.parameters[list(node.outputs.values())[0].name])
         else: # we have the mantis socket which has a type field
             overlay_data_type = get_socket_idname_data_type(socket.socket_type)
@@ -189,7 +191,7 @@ def node_scan_overlays(node, socket_id,):
                             overlay_resolved_value = overlay_value
                         break
                 else: # we'll try the base tree
-                    if base_tree_result := root_overlay_values.get(key):
+                    if (base_tree_result := root_overlay_values.get(key)) is not None:
                         if overlay_data_type == str and not isinstance(base_tree_result, str):
                             base_tree_result = str(base_tree_result).zfill(STRING_PADDING)
                         overlay_resolved_value = base_tree_result
