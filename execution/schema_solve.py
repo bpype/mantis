@@ -182,7 +182,8 @@ class SchemaSolver:
             # add the index and length socket constants. Only the first one needs Length
             #  (it's best to avoid having multiple places to read single-source values.)
             interface.parameters['Index'] = i
-            if i == 0: interface.parameters['Length'] = self.solve_length
+            # This has already been fully resolved, we do not need to relink anything.
+            if i == 0: interface.parameters['Schema Length'] = self.solve_length
             # the GroupInterface will initialize with the right sockets, but we still have to link them
             if in_out == 'SCHEMA_INPUT': # Take the links into the schema and plug them here
                 for item in items_tree:

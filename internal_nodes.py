@@ -188,10 +188,7 @@ class GroupInterface(MantisNode):
         
         # the index and length are like constant inputs.
         if self.in_out == 'SCHEMA_INPUT':
-            # this one is here because the tree expects it when linking things together
             self.outputs["Schema Length"] = NodeSocket(is_input=False, node=self, name="Schema Length")
-            # HACK this one here is just there for overlays, really, doesn't hurt
-            self.outputs["Length"] = self.outputs["Schema Length"]
         if 'SCHEMA' in self.in_out: 
             self.outputs["Index"]  = NodeSocket(is_input=False, node=self, name="Index")
                
@@ -232,6 +229,8 @@ class GroupInterface(MantisNode):
             return tree.interface.items_tree
 
     def evaluate_input(self, input_name, index=0):
+        # I'm hardcoding this so that the schema length overlay is available as just 'length'
+        if input_name == 'Length': input_name = 'Schema'
         value = super().evaluate_input(input_name, index)
         # This node should cache the result for faster lookup later
         self.parameters[input_name] = value

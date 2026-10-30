@@ -63,7 +63,6 @@ def socket_update_get_root_tree(self, context):
     return root_tree
 
 def overlay_toggle_update(self, context):
-    prRed("BENIS BENIS BENIS")
     root_tree = socket_update_get_root_tree(self, context)
     if root_tree is None: return
     parsed_tree = self.node.id_data.parsed_tree
@@ -74,7 +73,6 @@ def overlay_toggle_update(self, context):
     # For now I am not gonna try to resolve the overlay value from the UI.
     
 def overlay_text_update(self, context):
-    prPurple("BENIS BENIS BENIS")
     root_tree = socket_update_get_root_tree(self, context)
     if root_tree is None: return
     # have to check each one. see default_update NOTE
