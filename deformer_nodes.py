@@ -27,6 +27,7 @@ def TellClasses():
 # object instance probably can't use the deformer but it doesn't hurt to try.
 deformable_types= (xFormGeometryObject, InputExistingGeometryObject, xFormObjectInstance)
 
+# This is used by Armature Deformer for finding xForm to copy skin weights from
 def trace_xForm_back(mantis_node, socket):
     if (trace := trace_single_line(mantis_node, socket)[0] ) :
         for i in range(len(trace)): # have to look in reverse, actually
@@ -46,6 +47,10 @@ class MantisDeformerNode(MantisNode):
                          additional_parameters= {"Name":None})
         self.prepared = True
         self.bObject=[]
+        # almost all of the deformer nodes need this
+        if 'Deformer' in self.inputs.keys() and 'Deformer' in self.outputs.keys():
+            self.set_traverse( [('Deformer', 'Deformer')])
+
     # we need evaluate_input to have the same behaviour as links.
     def evaluate_input(self, input_name, index=0):
         if (input_name in ['Target', 'Object', 'Hook Target']):
@@ -681,12 +686,6 @@ class DeformerSurfaceDeform(MantisDeformerNode):
     __slots__ = ()
     socket_templates = SurfaceDeformSockets
     passes=frozenset({'bRelationship', 'bFinalize', 'bModifierApply'})
-
-    def GetxForm(self, socket="Deformer"):
-        if socket == "Deformer":
-            return super().GetxForm()
-        else:
-            trace_xForm_back(self, socket)
     
     def bRelationshipPass(self, bContext = None,):
         self.executed = True
@@ -713,12 +712,6 @@ class DeformerMeshDeform(MantisDeformerNode):
     __slots__ = ()
     socket_templates = MeshDeformSockets
     passes=frozenset({'bRelationship', 'bFinalize', 'bModifierApply'})
-
-    def GetxForm(self, socket="Deformer"):
-        if socket == "Deformer":
-            return super().GetxForm()
-        else:
-            trace_xForm_back(self, socket)
     
     def bRelationshipPass(self, bContext = None,):
         self.executed = True
@@ -744,12 +737,6 @@ class DeformerLatticeDeform(MantisDeformerNode):
     '''A node representing a lattice deform modifier'''
     __slots__ = ()
     socket_templates = LatticeDeformSockets
-
-    def GetxForm(self, socket="Deformer"):
-        if socket == "Deformer":
-            return super().GetxForm()
-        else:
-            trace_xForm_back(self, socket)
     
     def bRelationshipPass(self, bContext = None,):
         self.executed = True
@@ -771,12 +758,6 @@ class DeformerSmoothCorrectiveDeform(MantisDeformerNode):
     '''A node representing a corrective smooth deform modifier'''
     __slots__ = ()
     socket_templates = SmoothDeformSockets
-
-    def GetxForm(self, socket="Deformer"):
-        if socket == "Deformer":
-            return super().GetxForm()
-        else:
-            trace_xForm_back(self, socket)
     
     def bRelationshipPass(self, bContext = None,):
         self.executed = True
