@@ -384,7 +384,10 @@ def safe_setattr(ob, att_name, val):
     ob_class_name = ob.__class__.__name__
     match ob_class_name:
         case "NodesModifier":
-            ob[att_name]=val
+            if bpy_version < (5, 2, 0):
+                ob[att_name]=val
+            else:
+                setattr( getattr( ob.properties.inputs, att_name), 'value', val)
         case "Key":
             ob.key_blocks[att_name].value=val
         case _:
@@ -457,7 +460,17 @@ def evaluate_sockets(mantis_node, b_objects, props_sockets,):
                         # NOW we can set up the driver.
                         # TODO: Maybe can prefill this in the socket template or cache the result per-socket
                         driver_properties = {} # use this dict to pack this data without mutating the driver itself
-                        driver_properties["path_from_id"] = b_object.path_from_id(prop,)
+
+                        ob_class_name = b_object.__class__.__name__
+                        if ob_class_name == "NodesModifier":
+                            # this doesn't even support path_from_id because it is is a bpy_props property group
+                            # So we'll construct it directly
+                            if bpy_version < (5, 2, 0): # get the path as normal, but with ["brackets and quotes"]
+                                driver_properties["path_from_id"] = b_object.path_from_id(f"[\"{prop}\"]")
+                            else:
+                                driver_properties["path_from_id"] = b_object.path_from_id("properties") + f".inputs.{prop}.value"
+                        else:
+                            driver_properties["path_from_id"] = b_object.path_from_id(prop,)
                         driver_properties['owner'] = b_object # it is the CALLER's responsibility to send the right object!!
                         # we need a special case here for Bones :/
                         # TODO: refactor so I don't need this
@@ -493,7 +506,10 @@ def evaluate_sockets(mantis_node, b_objects, props_sockets,):
             if ob_class_name not in {'NodesModifier', 'Key'}:
                 setattr(b_object, prop, assign_this_value)
             elif ob_class_name == "NodesModifier":
-                b_object[prop] = assign_this_value
+                if bpy_version < (5, 2, 0):
+                    b_object[prop] = assign_this_value
+                else:
+                    setattr( getattr( b_object.properties.inputs, prop), 'value', assign_this_value)
             else: # ob_class_name == "Key":
                 b_object.key_blocks[prop].value = assign_this_value
 

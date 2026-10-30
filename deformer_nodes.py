@@ -481,14 +481,15 @@ class DeformerMorphTargetDeform(MantisDeformerNode):
         
         # at this point we make the node tree
         from .utilities.geometry_node_graphgen import gen_morph_target_nodes
-        d, props_sockets = gen_morph_target_nodes(
-                            self.evaluate_input("Name"),
-                            xf.bGetObject(),
-                            targets,
-                            context,
-                            use_offset=self.evaluate_input("Use Offset"))
+        d, props_sockets, b_obs = gen_morph_target_nodes(
+                                    self.evaluate_input("Name"),
+                                    xf.bGetObject(),
+                                    targets,
+                                    context,
+                                    use_offset=self.evaluate_input("Use Offset"))
+        b_obs['DEFAULT']=d
         self.bObject.append(d)
-        evaluate_sockets(self, {"DEFAULT":d}, props_sockets)
+        evaluate_sockets(self, b_obs, props_sockets)
         finish_drivers(self)
 
     def gen_shape_key_lattice(self, xf, context):

@@ -5,6 +5,7 @@ from .utilities import (prRed, prGreen, prPurple, prWhite, prOrange,
 
 def gen_morph_target_nodes(mod_name, mod_ob, targets, context, use_offset=True):
     from bpy import data
+    from bpy.app import version as bpy_version
     modifier = mod_ob.modifiers.new(mod_name, type='NODES')
     mod_ob.add_rest_position_attribute = True
     ng = data.node_groups.new(mod_name, "GeometryNodeTree")
@@ -24,6 +25,7 @@ def gen_morph_target_nodes(mod_name, mod_ob, targets, context, use_offset=True):
     add_these = []
 
     props_sockets={}
+    props_sockets_b_objects={}
     object_map = {}
 
     for i, t in enumerate(targets):
@@ -78,17 +80,34 @@ def gen_morph_target_nodes(mod_name, mod_ob, targets, context, use_offset=True):
         else:
             ng.links.new(input=inp.outputs[mt_name+" Value"], output=scale1.inputs["Scale"])
         add_these.append(scale1)
-        object_map["Socket_"+str((i+1)*2)]=mt_node.GetxForm().bGetObject()
+        object_map["Socket_"+str((i+1)*2)] = mt_node.GetxForm().bGetObject()
         from ..mantis_dataclasses import MantisSocketFiller
-        socket_value = MantisSocketFiller(
-            property_name = (prop := "Socket_"+str((i+1)*2+1)),
-            socket_name = (socket_name := "Value."+str(i).zfill(3)),
-            default_value = 1.0
-        )
-        props_sockets[prop] = socket_value
+
+        prop = "Socket_"+str((i+1)*2+1)
+        if bpy_version < (5, 2, 0):
+            socket_value = MantisSocketFiller(
+                property_name = prop,
+                property_group = prop,
+                socket_name = (socket_name := "Value."+str(i).zfill(3)),
+                default_value = 1.0
+            )
+            props_sockets_b_objects[prop] = modifier
+            props_sockets[prop] = socket_value
+        else:
+            socket_value = MantisSocketFiller(
+                property_name = prop,
+                property_group = prop,
+                socket_name = (socket_name := "Value."+str(i).zfill(3)),
+                default_value = 1.0
+            )
+            props_sockets_b_objects[prop] = modifier
+            props_sockets[prop] = socket_value
+            
     
     set_position = ng.nodes.new("GeometryNodeSetPosition")
     bake = ng.nodes.new("GeometryNodeBake")
+    if bpy_version >= (5,0,0):
+        bake.bake_items.new("GEOMETRY", 'Geometry')
     ng.links.new(inp.outputs["Geometry"], output=set_position.inputs["Geometry"])
     ng.links.new(set_position.outputs["Geometry"], output=bake.inputs[0])
     ng.links.new(bake.outputs[0], output=out.inputs[0])
@@ -114,8 +133,11 @@ def gen_morph_target_nodes(mod_name, mod_ob, targets, context, use_offset=True):
         pass # this is unlikely to fail since I package the wheel but if it does it shouldn't crash out.
 
     for socket, ob in object_map.items():
-        modifier[socket]=ob
-    return modifier, props_sockets
+        if bpy_version < (5, 2, 0):
+            modifier[socket]=ob
+        else: # the syntax for this was changed in Blender 5.2.0
+            setattr( getattr(modifier.properties.inputs, socket), 'value',  ob)
+    return modifier, props_sockets, props_sockets_b_objects
 
 def gen_object_instance_node_group():
     from bpy import data
