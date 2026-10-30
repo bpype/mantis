@@ -63,6 +63,7 @@ def socket_update_get_root_tree(self, context):
     return root_tree
 
 def overlay_toggle_update(self, context):
+    prRed("BENIS BENIS BENIS")
     root_tree = socket_update_get_root_tree(self, context)
     if root_tree is None: return
     parsed_tree = self.node.id_data.parsed_tree
@@ -73,6 +74,7 @@ def overlay_toggle_update(self, context):
     # For now I am not gonna try to resolve the overlay value from the UI.
     
 def overlay_text_update(self, context):
+    prPurple("BENIS BENIS BENIS")
     root_tree = socket_update_get_root_tree(self, context)
     if root_tree is None: return
     # have to check each one. see default_update NOTE
@@ -81,15 +83,16 @@ def overlay_text_update(self, context):
         handled = try_update_mantis_node_for_socket(mantis_node, root_tree, self) and handled
     if not handled:
         root_tree.update_tree(context, force = True)
+        root_tree.execute_tree(context)
 
 class MantisSocketOverlayEnabled(MantisSocket):
     # this class just needs a couple properties
     use_overlay: bpy.props.BoolProperty( default=False, update=overlay_toggle_update)
     overlay_text: bpy.props.StringProperty( default="", update=overlay_text_update)
     def draw(self, context, layout, node, text):
-        is_simple_out = ((hasattr(self, "default_value")) and hasattr(self, "input") and getattr(self, "input"))
+        is_simple_out = ((hasattr(self, "default_value")) and (hasattr(self, "input") and getattr(self, "input")))
         if self.is_linked and not is_simple_out:
-            layout.label(text=getattr(self, "display_text", "") )
+            layout.label( text=text, )
         elif hasattr(self, "default_value"):
             row = layout.row(align=True)
             # We'll show the property or the overlay field here
