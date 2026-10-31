@@ -79,6 +79,7 @@ CURVE_LUT_CACHE = {}
 CURVE_HASHES = {}
 SPLINE_HASHES ={}
 
+
 # todo: make a "matrix from 2 u" function, a "matrix for segments" function
 # basically I want the SplineLUT to handle all curve matrix getters
 class SplineLUT:
@@ -232,6 +233,43 @@ def get_from_curve_lut(curve_name, spline_index, bContext, node_for_error=None) 
                 "that does not exist. Try and reduce the value of Spline Index.")
     return spline_lookup
 
+
+# Store this stuff so we can reuse it or check it for updates
+METARIG_DATA_CACHE = {}
+
+# recursing like this is slightly easier than managing state myself
+# and it is easier to read/understand
+# it is unlikely that this will run into Recursion Depth Limit
+# if it does, I'll rewrite this without recursion
+def calculate_matrix_recursive_branching(parent_matrix, children, cache):
+    from collections import deque
+    from .mantis_dataclasses import MantisBoneTransform, MantisBBoneTransform
+    from mathutils import Matrix
+    children = deque( children )
+    for child in children:
+        m = parent_matrix @ child.matrix
+        transform_matrix = Matrix.Translation(child.head_local) @ m.to_4x4()
+        cache[child.name] = ( MantisBoneTransform(
+            matrix = transform_matrix, matrix_space = 'OBJECT', length=child.length),
+            MantisBBoneTransform.bbone_transform_from_bone(child)
+        )
+        calculate_matrix_recursive_branching(m, child.children, cache)
+
+def fill_metarig_cache_for_object(armature):
+    from .mantis_dataclasses import MantisBoneTransform, MantisBBoneTransform
+    from mathutils import Matrix
+    my_cache = {}
+    # recursively fill the armature with local matrices
+    roots = [ b for b in armature.data.bones if b.parent is None]
+    for b in roots:
+        parent_matrix = b.matrix
+        transform_matrix = Matrix.Translation(b.head_local) @ parent_matrix.to_4x4()
+        my_cache[b.name] = ( MantisBoneTransform(
+            matrix = transform_matrix, matrix_space = 'OBJECT', length=b.length),
+            MantisBBoneTransform.bbone_transform_from_bone(b)
+        )
+        calculate_matrix_recursive_branching(parent_matrix, b.children, my_cache)
+    METARIG_DATA_CACHE[armature.name] = my_cache
 
 def matrix_from_head_tail(head, tail, normal=None):
     from mathutils import Vector, Matrix
@@ -766,6 +804,12 @@ class UtilityMetaRig(MantisMiscNode):
     '''A node representing an armature object'''
     __slots__ = ()
     socket_templates = MetaRigSockets
+
+    def bDataFromScene(self):
+        # TWO possibilities:
+        #   - this node has no real dependencies and is ready to prep
+        #   - this node has dependencies and can't be prepped until building the tree
+        pass
 
     def bPrepare(self, bContext = None,):
         #kinda clumsy, whatever

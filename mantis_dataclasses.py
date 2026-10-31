@@ -64,12 +64,12 @@ class MantisBoneTransform():
 
 @dataclass(slots=True)
 class MantisBBoneTransform():
-    num_bbone_segmetns: int = field(default=1)
+    bbone_segments: int = field(default=1)
     # Offsets & Curve Handles
     bbone_curveinx: float = field(default=0.0)
-    bbone_curveiny: float = field(default=0.0)
+    bbone_curveinz: float = field(default=0.0)
     bbone_curveoutx: float = field(default=0.0)
-    bbone_curveouty: float = field(default=0.0)
+    bbone_curveoutz: float = field(default=0.0)
     # Easing
     bbone_easein: float = field(default=1.0)
     bbone_easeout: float = field(default=1.0)
@@ -82,13 +82,35 @@ class MantisBBoneTransform():
     bbone_scaleout: Tuple[float, float, float] = field(
         default_factory=lambda: (1.0, 1.0, 1.0) )
     # Custom Handles
-    use_bbone_custom_handles: bool = field(default=False)
-    bbone_custom_handle_start: str = field(default=None)
-    bbone_custom_handle_end: str = field(default=None)
+    bbone_handle_type_start: str = field(default="AUTO")
+    bbone_handle_type_end:   str = field(default="AUTO")
+    bbone_custom_handle_start: str = field(default="")
+    bbone_custom_handle_end:   str = field(default="")
+
+    @classmethod
+    def bbone_transform_from_bone(cls, bone):
+        return cls(
+            bbone_segments = bone.bbone_segments,
+            bbone_curveinx = bone.bbone_curveinx,
+            bbone_curveinz = bone.bbone_curveinz,
+            bbone_curveoutx = bone.bbone_curveoutx,
+            bbone_curveoutz = bone.bbone_curveoutz,
+            bbone_easein = bone.bbone_easein,
+            bbone_easeout = bone.bbone_easeout,
+            bbone_rollin = bone.bbone_rollin,
+            bbone_rollout = bone.bbone_rollout,
+            bbone_scalein = bone.bbone_scalein,
+            bbone_scaleout = bone.bbone_scaleout,
+            bbone_handle_type_start = bone.bbone_handle_type_start,
+            bbone_handle_type_end = bone.bbone_handle_type_end,
+            bbone_custom_handle_start = bone.bbone_custom_handle_start,
+            bbone_custom_handle_end = bone.bbone_custom_handle_end,
+        )
 
 # used to apply values or drivers to blender properties in a generic way
 @dataclass(slots=True)
 class MantisSocketFiller():
+
     socket_name: str = field(default="")
     property_group : str = field(default="")
     property_name : str = field(default="")
