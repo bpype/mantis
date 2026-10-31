@@ -805,7 +805,7 @@ class xFormCurvePin(xFormNode):
 
         constraints = self.generate_constraints(ob, curve); c = constraints[-1]
         props_sockets = self.gen_property_socket_map()
-        b_objects = {"constraints":c, "object":self.bObject}
+        b_objects = {"constraint":c, "object":self.bObject}
         evaluate_sockets(self, b_objects, props_sockets)
 
         # Find the default values to set even if the properties are drive:
