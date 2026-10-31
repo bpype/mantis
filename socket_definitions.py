@@ -385,10 +385,9 @@ enum_default_xForm_values =(
                      "PLEASE use this only for development and testing. "
                      "If you use this as a feature in your rigs you will be sorry."),)
     
-# Custom Interface Types give the user the ability to set properties for the interface
-# we'll define a base class, and generate the individual classes from the base class
-# but we'll leave the option to define a few of them directly.
-from bpy.types import NodeTreeInterfaceSocket
+########################################################################
+#  Update Callbacks
+########################################################################
 
 def interface_socket_update(self, context):
     from .execution.overlays import fill_root_tree_overlays, parser_handle_text
@@ -476,6 +475,139 @@ def interface_socket_update(self, context):
         prRed("Automatic Tree Execution failed because of %s" % e)
     # TODO: I can update these values instead of resetting them
 
+def socket_update(mantis_node, ui_socket, socket_name=None):
+    node_updated = mantis_node.ui_modify_socket(ui_socket, socket_name)
+    if not node_updated: # so that we can tag its dependencies
+        mantis_node.reset_execution_recursive()
+    return node_updated
+
+def default_update(ui_socket, context, do_execute=True):
+    if not context:
+        context = bpy.context
+    root_tree = socket_update_get_root_tree(ui_socket, context)
+    if root_tree is None: return
+    # if it is a Schema Node, it will fail the checks below -- but we need it to update the tree.
+    from .base_definitions import SchemaUINode
+    if isinstance(ui_socket.node, SchemaUINode):
+        # This was causing infinite loops before checking for is_updating
+        # It seems to be happening when adding/removing links that are in schema trees
+        # even if they are not connected to the schema node
+        # I suspect that this completely disables this feature... whatever. TODO checc this
+        if ui_socket.node.is_updating: return
+        updating = ui_socket.node.is_updating
+        ui_socket.node.is_updating=True
+        try:
+            root_tree.update_tree(context, force = True)
+            prPurple(f"Executing tree after socket change: {ui_socket.node.name}:{ui_socket.name}")
+            root_tree.execute_tree(context)
+        finally:
+            ui_socket.node.is_updating=updating
+        return
+    if hasattr(ui_socket.node, "initialized"):
+        if not ui_socket.node.initialized: return
+    elif hasattr(ui_socket.node, 'is_updating'):
+        if ui_socket.node.is_updating: return
+    else: return
+    # if the socket has survived THAT ordeal, then the context is OK.
+    # first, we try to update the Mantis tree in-situ.
+    # Some nodes can update their b-objects, others will have to force-update the tree
+    # because we just modified the data without modifying the topology of the graph.
+    # finally, try and execute it if mantis couldn't update the b_objects itself.
+    from .base_definitions import array_output_types
+    mantis_updated=True
+    if (ui_socket.node.bl_idname in ["MantisNodeGroup", "MantisSchemaGroup"]):
+        mantis_updated=False # this kind of socket can't be updated here (yet)
+        root_tree.update_tree(context, force=True)
+    elif ui_socket.node.bl_idname in array_output_types:
+        mantis_updated=False
+        root_tree.update_tree(context, force=True)
+    elif hasattr(ui_socket, 'default_value'):
+        from .utilities.utilities import tree_from_mantis_node
+        # we may not have to regenerate the tree; try and update the socket
+        for mantis_node in root_tree.parsed_tree.values():
+            if mantis_node.ui_signature is None: continue
+            if mantis_node.ui_signature[-1] == ui_socket.node.name and \
+                        tree_from_mantis_node(mantis_node.ui_signature, root_tree) == ui_socket.node.id_data:
+                mantis_updated = try_update_mantis_node_for_socket(mantis_node, root_tree, ui_socket) and mantis_updated
+        root_tree.update_tree(context, force = (mantis_updated == False) )
+    root_tree.display_update(context)
+    if mantis_updated==False:
+        try:
+            prPurple(f"Executing tree after socket change: {ui_socket.node.name}:{ui_socket.name}")
+            root_tree.execute_tree(context)
+        except Exception as e:
+            prRed("Automatic Tree Execution failed because of %s" % e)
+
+def try_update_mantis_node_for_socket(mantis_node, root_tree, ui_socket):
+    # check to see if the mantis node is in the same ui-tree as this ui_socket
+    node_updated = True
+    from .misc_nodes import SimpleInputNode
+    if isinstance(mantis_node, SimpleInputNode):
+        node_updated = socket_update(mantis_node, ui_socket)
+        for l in mantis_node.outputs[ui_socket.name].links:
+            node_updated = node_updated and socket_update(l.to_node, ui_socket, l.to_socket)
+    else:
+        node_updated = socket_update(mantis_node, ui_socket)
+    # execute the tree if even one node didn't update
+    return node_updated
+
+
+def update_socket(self, context,):
+    default_update(self,context)
+
+def driver_variable_socket_update(self, context):
+    default_update(self,context)
+
+def driver_socket_update(self, context):
+    default_update(self,context)
+
+def update_mute_socket(self, context):
+    self.node.mute = not self.default_value
+    default_update(self,context)
+
+def update_hide_socket(self, context):
+    self.node.mute = self.default_value
+    default_update(self,context)
+
+def ik_chain_length_update_socket(self, context):
+    default_update(self,context)
+    # self.node.update_chain_length(context)
+
+def update_parent_node(self, context):
+    default_update(self,context)
+    if hasattr(self.node, "display_update"):
+        self.node.display_update(context)
+
+def update_metarig_armature(self, context,):
+    if self.search_prop:
+        self.node.armature = self.search_prop.name
+        self.node.inputs[1].armature = self.search_prop
+    default_update(self,context)
+
+def update_metarig_posebone(self, context,):
+    self.node.pose_bone = self.default_value
+    default_update(self,context)
+
+def update_socket_external_load(self, context):
+    # this is a socket update for sockets that load data from a pack
+    # e.g. widget, metarig, curve, or component selector sockets
+    # currently no plans to add any but widgets, but whatever
+    default_update(self, context)
+    self.previous_value = self.default_value # this is all I need to do lol
+    items = get_widget_library_items(self, context) # feels silly to do this here
+    for item in items:
+        if item[0] == self.default_value:
+            self.previous_index = item[-1]
+            break
+
+########################################################################
+#  Interface Types
+########################################################################
+
+# Custom Interface Types give the user the ability to set properties for the interface
+# we'll define a base class, and generate the individual classes from the base class
+# but we'll leave the option to define a few of them directly.
+from bpy.types import NodeTreeInterfaceSocket
 
 interface_default_value_description="The default value of the socket when it is not connected."
 class MantisInterfaceSocketBaseClass():
@@ -593,143 +725,6 @@ def generate_custom_interface_types():
 #
 # I actually think I was wrong about all of that lol
 # TODO change it back, dingus
-
-########################################################################
-#  Update Callbacks
-########################################################################
-
-
-def socket_update(mantis_node, ui_socket, socket_name=None):
-    node_updated = mantis_node.ui_modify_socket(ui_socket, socket_name)
-    if not node_updated: # so that we can tag its dependencies
-        mantis_node.reset_execution_recursive()
-    return node_updated
-
-def default_update(ui_socket, context, do_execute=True):
-    if not context:
-        context = bpy.context
-    root_tree = socket_update_get_root_tree(ui_socket, context)
-    if root_tree is None: return
-    # if it is a Schema Node, it will fail the checks below -- but we need it to update the tree.
-    from .base_definitions import SchemaUINode
-    if isinstance(ui_socket.node, SchemaUINode):
-        # This was causing infinite loops before checking for is_updating
-        # It seems to be happening when adding/removing links that are in schema trees
-        # even if they are not connected to the schema node
-        # I suspect that this completely disables this feature... whatever. TODO checc this
-        if ui_socket.node.is_updating: return
-        updating = ui_socket.node.is_updating
-        ui_socket.node.is_updating=True
-        try:
-            root_tree.update_tree(context, force = True)
-            prPurple(f"Executing tree after socket change: {ui_socket.node.name}:{ui_socket.name}")
-            root_tree.execute_tree(context)
-        finally:
-            ui_socket.node.is_updating=updating
-        return
-    if hasattr(ui_socket.node, "initialized"):
-        if not ui_socket.node.initialized: return
-    elif hasattr(ui_socket.node, 'is_updating'):
-        if ui_socket.node.is_updating: return
-    else: return
-    # if the socket has survived THAT ordeal, then the context is OK.
-    # first, we try to update the Mantis tree in-situ.
-    # Some nodes can update their b-objects, others will have to force-update the tree
-    # because we just modified the data without modifying the topology of the graph.
-    # finally, try and execute it if mantis couldn't update the b_objects itself.
-    from .base_definitions import array_output_types
-    mantis_updated=True
-    if (ui_socket.node.bl_idname in ["MantisNodeGroup", "MantisSchemaGroup"]):
-        mantis_updated=False # this kind of socket can't be updated here (yet)
-        root_tree.update_tree(context, force=True)
-    elif ui_socket.node.bl_idname in array_output_types:
-        mantis_updated=False
-        root_tree.update_tree(context, force=True)
-    elif hasattr(ui_socket, 'default_value'):
-        # NOTE: there may be many mantis nodes for each UI node... so we need to try all of them.
-        for mantis_node in root_tree.parsed_tree.values():
-            # we may not have to regenerate the tree; try and update the socket
-            # the 'and' here ensures we trigger an update if even one of the mantis nodes fails
-            mantis_updated = try_update_mantis_node_for_socket(mantis_node, root_tree, ui_socket) and mantis_updated
-        # we want to force it if we have made an unhandled change inside of a schema.
-        root_tree.update_tree(context, force = (mantis_updated == False))
-    root_tree.display_update(context)
-    if mantis_updated==False:
-        try:
-            prPurple(f"Executing tree after socket change: {ui_socket.node.name}:{ui_socket.name}")
-            root_tree.execute_tree(context)
-        except Exception as e:
-            prRed("Automatic Tree Execution failed because of %s" % e)
-
-def try_update_mantis_node_for_socket(mantis_node, node_tree, ui_socket):
-    # we may not have to regenerate the tree; try and update the socket
-    from .utilities.utilities import tree_from_mantis_node
-    # check to see if the mantis node is in the same ui-tree as this ui_socket
-    if mantis_node.ui_signature is None: return False# autogenerated nodes
-    if mantis_node.ui_signature[-1] == ui_socket.node.name and \
-                tree_from_mantis_node(mantis_node.ui_signature, node_tree) == ui_socket.node.id_data:
-        node_updated = True
-        from .misc_nodes import SimpleInputNode
-        if isinstance(mantis_node, SimpleInputNode):
-            node_updated = socket_update(mantis_node, ui_socket)
-            for l in mantis_node.outputs[ui_socket.name].links:
-                node_updated = node_updated and socket_update(l.to_node, ui_socket, l.to_socket)
-        else:
-            node_updated = socket_update(mantis_node, ui_socket)
-        # execute the tree if even one node didn't update
-        return node_updated
-    return False
-
-def update_socket(self, context,):
-    default_update(self,context)
-
-def driver_variable_socket_update(self, context):
-    default_update(self,context)
-
-def driver_socket_update(self, context):
-    default_update(self,context)
-
-def update_mute_socket(self, context):
-    self.node.mute = not self.default_value
-    default_update(self,context)
-
-def update_hide_socket(self, context):
-    self.node.mute = self.default_value
-    default_update(self,context)
-
-def ik_chain_length_update_socket(self, context):
-    default_update(self,context)
-    # self.node.update_chain_length(context)
-
-def update_parent_node(self, context):
-    default_update(self,context)
-    if hasattr(self.node, "display_update"):
-        self.node.display_update(context)
-
-def update_metarig_armature(self, context,):
-    if self.search_prop:
-        self.node.armature = self.search_prop.name
-        self.node.inputs[1].armature = self.search_prop
-    default_update(self,context)
-
-def update_metarig_posebone(self, context,):
-    self.node.pose_bone = self.default_value
-    default_update(self,context)
-
-def update_socket_external_load(self, context):
-    # this is a socket update for sockets that load data from a pack
-    # e.g. widget, metarig, curve, or component selector sockets
-    # currently no plans to add any but widgets, but whatever
-    default_update(self, context)
-    self.previous_value = self.default_value # this is all I need to do lol
-    items = get_widget_library_items(self, context) # feels silly to do this here
-    for item in items:
-        if item[0] == self.default_value:
-            self.previous_index = item[-1]
-            break
-
-
-
 
 ########################################################################
 #  Sockets
