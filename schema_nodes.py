@@ -39,11 +39,11 @@ class SchemaNode(MantisNode):
         super().__init__(signature, base_tree, socket_templates)
         self.prepared = True; self.executed = True
         self.execution_prepared = True # should not affect execution!
+        self.default_prepare_state = 3 # prepared, executed = True, True (always ready)
 
     def reset_execution(self):
         super().reset_execution()
-        self.prepared, self.executed = True, True
-        raise RuntimeError( "43 Code thought to unreachable has been reached."
+        raise RuntimeError( "46 Code meant to unreachable has been reached."
                            f"Please report this as a bug. {self}")
 
 

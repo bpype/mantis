@@ -75,11 +75,7 @@ class xFormNode(MantisNode):
         super().__init__(signature, base_tree, socket_templates,
                          additional_parameters)
         self.bObject=None
-
-    # because new objects are created during prep phase
-    def reset_execution(self):
-        super().reset_execution()
-        self.prepared=False
+        self.default_prepare_state = 0 # prepared, executed = False, False (complete reset)
 
     def check_drivers(self):
         for st in self.socket_templates:
@@ -879,6 +875,10 @@ class xFormGetBone(xFormNode):
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, self.socket_templates)
         # this is just a getter
+        self.prepared=True; self.executed=True; self.execution_prepared=True
+
+    def reset_execution(self):
+        super().reset_execution()
         self.prepared=True; self.executed=True; self.execution_prepared=True
     
     def bGetParentArmature(self):

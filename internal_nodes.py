@@ -74,6 +74,7 @@ class DummyNode(MantisNode):
         super().__init__(signature, base_tree)
         self.ui_node = ui_node
         self.prepared = True
+        self.default_prepare_state = 3 # set prepared and executed to True
         self.uuid = uuid4()
         self.solver = None
         self.node_type = 'DUMMY'
@@ -116,6 +117,7 @@ class NoOpNode(MantisNode):
         self.init_parameters()
         self.set_traverse([("Input", "Output")])
         self.prepared, self.executed = True, True
+        self.default_prepare_state = 3 # set prepared and executed to True
         self.execution_prepared=True
     # this node is useful for me to insert in the tree and use for debugging especially connections.
 
@@ -129,11 +131,8 @@ class AutoGenNode(MantisNode):
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree)
         self.prepared, self.executed = True, True
+        self.default_prepare_state = 3 # set prepared and executed to True
         self.execution_prepared=True
-
-    def reset_execution(self):
-        super().reset_execution()
-        self.prepared, self.executed = True, True
 
     # This is a re-implementation of the fill parameters in the base class
     # but it is possible to streamline a few things here
@@ -166,10 +165,6 @@ class AutoGenNode(MantisNode):
                 else:
                     raise RuntimeError(wrapRed("No value found for " + self.__repr__() + " when filling out node parameters for " + ui_node.name + "::"+node_socket.name))
 
-
-
-    
-
 # The Group Interface node is responsible for gathering node connections
 #   going in or out of the group and connecting back out the other side
 # this is also where caching and overlays live
@@ -179,6 +174,7 @@ class GroupInterface(MantisNode):
     def __init__(self, signature, base_tree, in_out, mContext, ui_node = None, items_tree = None, ):
         super().__init__(signature, base_tree)
         self.prepared, self.executed = True, True
+        self.default_prepare_state = 3 # set prepared and executed to True
         self.in_out = in_out
         if hasattr(ui_node, "node_tree"):
             self.tree_name = ui_node.node_tree.name
@@ -222,6 +218,8 @@ class GroupInterface(MantisNode):
             else: # it's a schema so we add the next interface to the list
                 mContext.input_interface_nodes[ self.signature[:-1] ].append(self)
         self.execution_prepared=True
+
+    # BUG TODO probably I need to make these guys clear and re-fill their parameters on reset_execution
 
     def get_tree_interface_items(self):
         from bpy import data as bpy_data

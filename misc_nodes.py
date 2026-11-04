@@ -414,9 +414,10 @@ class SimpleInputNode(MantisMiscNode):
     __slots__ = ()
     node_type = 'UTILITY'
     passes=frozenset({})
-    def __init__(self, signature, base_tree, socket_templates=[], additional_parameters={}):
-        super().__init__(signature, base_tree, socket_templates, additional_parameters)
+    def __init__(self, signature, base_tree):
+        super().__init__(signature, base_tree, [], {})
         self.prepared, self.executed = True, True
+        self.default_prepare_state = 3 # set prepared and executed to True
 
     def fill_parameters(self, ui_node=None):
         from .execution.overlays import handle_overlay_detect, get_socket_idname_data_type, parser_handle_text
@@ -1020,17 +1021,16 @@ class UtilityDriver(MantisMiscNode):
             additional_parameters = {"Driver":MantisDriver(),})
         setup_custom_property_inputs_outputs(self)
         self.prepared = True
+        self.default_prepare_state = 1 # set prepared to True, leave Executed unchanged
 
     def reset_execution(self):
         super().reset_execution()
         from .utilities.drivers import MantisDriver
         self.parameters["Driver"]=MantisDriver()
-        self.prepared=True
 
     def bRelationshipPass(self, bContext = None,):
         prepare_parameters(self)
         from .utilities.drivers import MantisDriver
-        #prPurple("Executing Driver Node")
         my_vars = []
         keys = self.evaluate_input("fCurve")
         if keys is None or len(keys) <2:
@@ -1073,6 +1073,7 @@ class UtilitySwitch(MantisMiscNode):
         super().__init__(signature, base_tree, self.socket_templates,
             additional_parameters={ "Driver":MantisDriver(), })
         self.prepared = True
+        self.default_prepare_state = 1 # set prepared to True, leave execution unchanged
 
     # NOTE: _index for interface consistency
     def evaluate_input(self, input_name, _index=0):
@@ -1094,7 +1095,6 @@ class UtilitySwitch(MantisMiscNode):
         super().reset_execution()
         from .utilities.drivers import MantisDriver
         self.parameters["Driver"]=MantisDriver()
-        self.prepared=True
 
     def bRelationshipPass(self, bContext = None,):
         #prepare_parameters(self)
@@ -1329,10 +1329,7 @@ class InputExistingGeometryData(MantisMiscNode):
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, self.socket_templates)
         self.prepared = True; self.executed = True
-
-    def reset_execution(self):
-        super().reset_execution()
-        self.prepared, self.executed = True, True
+        self.default_prepare_state = 3 # set prepared and executed to True
 
     # the mode argument is only for interface consistency
     def bGetObject(self, mode=''):
@@ -1358,10 +1355,7 @@ class UtilityDeclareCollections(MantisMiscNode):
         # The user creates all the sockets for this one.
         super().__init__(signature, base_tree)
         self.prepared, self.executed = True, True
-
-    def reset_execution(self):
-        super().reset_execution()
-        self.prepared, self.executed = True, True
+        self.default_prepare_state = 3 # set prepared and executed to True
 
     def fill_parameters(self, ui_node=None):
         from .mantis_dataclasses import MantisSocketTemplate
@@ -1383,9 +1377,9 @@ class UtilityCollectionJoin(MantisMiscNode):
     __slots__ = ()
     socket_templates = CollectionJoinSockets
 
-    def reset_execution(self):
-        super().reset_execution()
-        self.prepared, self.executed = False, False
+    def __init__(self, signature, base_tree):
+        super().__init__(signature, base_tree, self.socket_templates,)
+        self.default_prepare_state = 0 # set prepared and executed to False
 
     def bPrepare(self, bContext = None,):
         if self.inputs['Collections'].links:
@@ -1410,9 +1404,9 @@ class UtilityCollectionHierarchy(MantisMiscNode):
     __slots__ = ()
     socket_templates = CollectionHierarchySockets
 
-    def reset_execution(self):
-        super().reset_execution()
-        self.prepared, self.executed = False, False
+    def __init__(self, signature, base_tree):
+        super().__init__(signature, base_tree, self.socket_templates,)
+        self.default_prepare_state = 0 # set prepared and executed to False
 
     def bPrepare(self, bContext = None,):
         parent_col = self.evaluate_input('Parent Collection')
@@ -1435,10 +1429,7 @@ class UtilityGeometryOfXForm(MantisMiscNode):
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, self.socket_templates)
         self.prepared = True; self.executed = True
-
-    def reset_execution(self):
-        super().reset_execution()
-        self.prepared, self.executed = True, True
+        self.default_prepare_state = 3 # set prepared and executed to True
 
     # mode for interface consistency
     def bGetObject(self, mode=''):
@@ -1458,7 +1449,6 @@ class UtilityNameOfXForm(MantisMiscNode):
     __slots__ = ()
     socket_templates = NameOfXFormSockets
 
-    # mode for interface consistency
     def bPrepare(self, bContext = None,):
         if not (self.inputs.get('xForm') and self.inputs['xForm'].links):
             raise RuntimeError( f"WARN: Cannot retrieve data from {self},"
@@ -1485,7 +1475,6 @@ class UtilityPointFromBoneMatrix(MantisMiscNode):
     __slots__ = ()
     socket_templates = PointFromBoneMatrixSockets
 
-    # TODO: find out why this is sometimes not ready at bPrepare phase
     def bPrepare(self, bContext = None,):
         from mathutils import Vector
         matrix = self.evaluate_input("Bone Matrix")
@@ -1503,7 +1492,6 @@ class UtilitySetBoneLength(MantisMiscNode):
         from mathutils import Vector
         if matrix := self.evaluate_input("Bone Matrix"):
             matrix = matrix.copy()
-            # print (self.inputs["Length"].links)
             matrix[3][3] = self.evaluate_input("Length")
             self.parameters["Length"] = self.evaluate_input("Length")
             self.parameters["Bone Matrix"] = matrix
@@ -1517,10 +1505,8 @@ class UtilityMatrixSetLocation(MantisMiscNode):
     socket_templates = MatrixSetLocationSockets
 
     def bPrepare(self, bContext = None,):
-        from mathutils import Vector
         if matrix := self.evaluate_input("Matrix"):
             matrix = matrix.copy()
-            # print (self.inputs["Length"].links)
             loc = self.evaluate_input("Location")
             matrix[0][3] = loc[0]; matrix[1][3] = loc[1]; matrix[2][3] = loc[2]
             self.parameters["Matrix"] = matrix

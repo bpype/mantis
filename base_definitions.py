@@ -942,6 +942,7 @@ class MantisNode:
         "prepared", "executed", "execution_prepared",
         "mContext", "is_schema_prototype",
         "generated_at_schema_index",
+        "default_prepare_state",
         )
     node_type = 'UNINITIALIZED'
     socket_templates = None
@@ -961,6 +962,7 @@ class MantisNode:
         self.hierarchy_dependencies, self.dependencies = [], []
         self.unmet_hierarchy_dependency_count = float("inf") # we will set this when filling the dependencies lists
         self.prepared, self.executed = False, False
+        self.default_prepare_state = 1 # set executed to False, retain prepared state
         self.execution_prepared = False
         # execution_prepared is for tracking prep state in execution, so that I can avoid preparing nodes
         #  again without changing the readtree code much.
@@ -989,7 +991,15 @@ class MantisNode:
     def reset_execution(self) -> None:
         """ Reset the node for additional execution without re-building the tree."""
         self.drivers.clear(); self.bObject=None
+        match self.default_prepare_state:
+            case 0: # Reset fully
+                self.prepared = False; self.executed = False
+            case 1: # leave prepared unchanged, reset executed
         self.executed = False
+            case 2: # node is treated as always prepared, reset execution
+                self.prepared = True; self.executed = False
+            case 3: # node is treated as always prepared, reset execution
+                self.prepared = True; self.executed = True
         self.execution_prepared = False
 
     def init_sockets(self, additional_parameters : dict = {}) -> None:
@@ -1185,7 +1195,7 @@ class MantisNode:
     # but some nodes are always prepared, so we have to kick it forward.
     def reset_execution_recursive(self):
         self.reset_execution()
-        if self.prepared==False: return # all good from here
+        if self.prepared == False: return # all good from here
         for conn in self.hierarchy_connections:
             conn.reset_execution_recursive()
 

@@ -22,10 +22,7 @@ class PrimitiveNode(MantisNode):
         super().__init__(signature, base_tree, socket_templates,
                          additional_parameters)
         self.prepared = True
-    
-    def reset_execution(self):
-        super().reset_execution()
-        self.prepared=True
+        self.default_prepare_state = 2 # set prepared to True, executed to False
 
 class CirclePrimitive(PrimitiveNode):
     '''A node representing a Circle Primitive mesh'''
@@ -73,12 +70,7 @@ class GeometryLattice(PrimitiveNode):
 
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, self.socket_templates)
-        self.prepared = False
-
-    def reset_execution(self):
-        super().reset_execution()
-        self.prepared=False
-        self.executed=False
+        self.default_prepare_state = 0 # set prepared and executed to False
         
     # mode is unused but needed for interface consistency
     def bGetObject(self, mode=''):

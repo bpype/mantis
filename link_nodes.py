@@ -60,6 +60,7 @@ class MantisLinkNode(MantisNode):
         super().__init__(signature, base_tree, self.socket_templates,
                          additional_parameters= {'Name':None})
         self.prepared = True; self.bObject=[]
+        self.default_prepare_state = 2 # set prepared to True and executed to False
 
     def bTransformPass(self, bContext=None):
         parent_xForm_info = get_parent_xForm_info(self, 'Input Relationship')
@@ -139,7 +140,7 @@ class MantisLinkNode(MantisNode):
 
     def reset_execution(self):
         super().reset_execution()
-        self.prepared = True; self.bObject = []
+        self.bObject = []
 
     def bFinalize(self, bContext=None):
         finish_drivers(self)

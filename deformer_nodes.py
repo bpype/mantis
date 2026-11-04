@@ -46,6 +46,7 @@ class MantisDeformerNode(MantisNode):
         super().__init__(signature, base_tree, socket_templates,
                          additional_parameters= {"Name":None})
         self.prepared = True
+        self.default_prepare_state = 2 # 2 ==> prepared = True and executed = False
         self.bObject=[]
         # almost all of the deformer nodes need this
         if 'Deformer' in self.inputs.keys() and 'Deformer' in self.outputs.keys():
@@ -76,7 +77,7 @@ class MantisDeformerNode(MantisNode):
     
     def reset_execution(self):
         super().reset_execution()
-        self.bObject=[]; self.prepared=True
+        self.bObject=[]
 
     def fill_parameters(self, ui_node=None):
         super().fill_parameters(ui_node)
@@ -464,11 +465,8 @@ class DeformerMorphTargetDeform(MantisDeformerNode):
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, self.socket_templates)
         self.executed = True
+        self.default_prepare_state = 3 # 3 ==> prepared, executed = True, True
         setup_custom_property_inputs_outputs(self)
-    
-    def reset_execution(self):
-        return super().reset_execution()
-        self.executed=True
 
     def gen_morph_target_modifier(self, xf, context):
         # first let's see if this is a no-op
