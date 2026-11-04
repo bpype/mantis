@@ -146,6 +146,7 @@ class SplineLUT:
         return tuple( self.matrix_from_start_end_u(u_values[i], u_values[i+1]) for i in range(len(u_values)-1) )
 
     def point_and_u_at_nearest_point_on_curve(self, point):
+        # BUG? this isn't 100% guarenteed to not recurse forever
         from mathutils.geometry import intersect_point_line
         # because kd_find can return any number of points it always returns a list
         nearest_point, index, distance = kd_find(self, self.positions, ref_pt=point, )[0]
@@ -158,6 +159,10 @@ class SplineLUT:
                 # we have found our point
                 a = self.u_sample_points[index]; b = self.u_sample_points[index + 1]
                 return closest_point, (a + (b - a) * parametric_distance_to)
+            elif index == 0 and parametric_distance_to <= 0 + FLOAT_EPSILON:
+                return (self.positions[index], 0)
+            else: # this is basically Newton iteration
+                return self.point_and_u_at_nearest_point_on_curve(nearest_point)
         if index > 0 and index <= max_index: # check the previous segment
             closest_point, parametric_distance_to = intersect_point_line(
                             point, self.positions[index], self.positions[index - 1],)
@@ -165,6 +170,11 @@ class SplineLUT:
                 # we have found our point
                 a = self.u_sample_points[index]; b = self.u_sample_points[index - 1]
                 return closest_point, (a + (b - a) * parametric_distance_to)
+            elif index == max_index and parametric_distance_to >= 1.0 - FLOAT_EPSILON:
+                return (self.positions[max_index], 1.0)
+            else: # this is basically Newton iteration
+                return self.point_and_u_at_nearest_point_on_curve(nearest_point)
+        raise RuntimeError("172 This should not happen, please report this as a bug.")
 
     def __repr__(self):
         return f"Cached curve {self.curve_name}"
