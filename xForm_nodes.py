@@ -376,7 +376,9 @@ class xFormBone(xFormNode):
         self.bSetParent(eb)
 
         if eb.head == eb.tail:
-            raise RuntimeError(wrapRed(f"Could not create edit bone: {name} because bone head was located in the same place as bone tail."))
+            raise RuntimeError(wrapRed(f"Could not create edit bone: {name} because"
+                                        " bone head was located in the same place as"
+                                        " bone tail."))
 
         # Setup Deform attributes...
         eb_props_sockets = self.gen_property_socket_map(prop_owner_group="edit_bone")
