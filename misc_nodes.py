@@ -214,8 +214,9 @@ def fill_curve_lut(curve_name, bContext):
         for i, ribbon in enumerate(DetectRibbons(mesh)):
             spline_hash = spline_hashes[i]
             if existing_cache := CURVE_LUT_CACHE.get(curve_name):
-                if len(existing_cache['spline_LUT']) >= i:
-                    if existing_cache['spline_LUT'][i].hash == spline_hash: continue
+                if len(existing_cache['spline_LUT']) >= i + 1: # off by one award
+                    if existing_cache['spline_LUT'][i].hash == spline_hash:
+                        curve_lut_cache.append( existing_cache['spline_LUT'][i]); continue
             # othewise we need to get the data
             # if I ever decide to use the radius in Mantis I'll add it to the LUT
             u_samples, positions, normals, tangents, radii = all_data_from_ribbon(mesh, curve.matrix_world, ribbon)
