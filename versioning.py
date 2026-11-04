@@ -533,14 +533,14 @@ def add_new_display_features_v0_13_5(*args, **kwargs):
 
 def up_0_13_5_modes_for_matrix_from_curve_and_compose_matrix(*args, **kwargs):
     node = kwargs['node']
-    if 'Mode' in node.inputs:
+    if 'Mode' in node.inputs.keys():
         return # done already
     tree = node.id_data
     current_major_version = tree.mantis_version[0]
     current_minor_version = tree.mantis_version[1]
     current_sub_version = tree.mantis_version[2]
     if  current_major_version > 0: return# major version must be 0
-    if current_minor_version >= 13: return# minor version must be 12 or less
+    if current_minor_version > 13: return# minor version must be 13 or less
     if current_minor_version == 13 and current_sub_version >= 5: return# sub version must be 4 or less
 
     live_updates = tree.do_live_update
