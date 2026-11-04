@@ -652,7 +652,10 @@ class UtilityMatricesFromCurve(MantisMiscNode):
         factors = [0.0] + [(1/num_divisions*(i+1)) for i in range(num_divisions)]
         matrices = spline_lookup.matrices_from_u_segments(factors)
 
+        # This will only run once, even if the node is reused
+        links_visited = 0
         for link in self.outputs["Matrices"].links:
+            links_visited += 1
             for i, m in enumerate(matrices):
                 name = "Matrix"+str(i).zfill(4)
                 if not (out := self.outputs.get(name)): # reuse them if there are multiple links.
@@ -660,6 +663,9 @@ class UtilityMatricesFromCurve(MantisMiscNode):
                 c = out.connect(link.to_node, link.to_socket)
                 self.parameters[name] = m
             link.die()
+        if links_visited == 0: # this is the second or greater run, we have to revisit them
+            for i, m in enumerate(matrices):
+                self.parameters["Matrix"+str(i).zfill(4)] = m
         self.prepared = True; self.executed = True
 
 
