@@ -462,6 +462,8 @@ def parse_tree(base_tree, error_popups=False):
     kept_mantis_node = {}
     while (all_mantis_nodes):
         mantis_node = all_mantis_nodes.pop()
+        if mantis_node.is_schema_prototype:
+            continue
         if mantis_node.node_type in ["DUMMY", 'SCHEMA', 'DUMMY_SCHEMA']:
             continue # screen out the ui_node schema nodes, group in/out, and group placeholders
         # cleanup autogen nodes
