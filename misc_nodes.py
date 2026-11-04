@@ -590,15 +590,14 @@ class UtilityMatrixFromCurve(MantisMiscNode):
         # DIVISIONS, FACTOR
         if bContext is None: bContext = bpy.context # is this wise?
         spline_index = self.evaluate_input("Spline Index")
-        spline_lookup : SplineLUT = get_from_curve_lut(curve_name, spline_index, bContext, self)
-        assert(spline_lookup)
-        #
+        spline_lookup : SplineLUT = get_from_curve_lut(curve_name, spline_index, bpy_context, self)
+        num_divisions = 0; m_index = 0
+        if mode == 'DIVISIONS':
         num_divisions = self.evaluate_input("Total Divisions")
-        if mode == 'DIVISIONS' and num_divisions <= 0:
-            raise GraphError("The number of divisions in the curve must be 1 or greater.")
         m_index = self.evaluate_input("Matrix Index")
-        if mode == 'DIVISIONS' and m_index >= num_divisions:
-            prRed(m_index, num_divisions)
+            if num_divisions <= 0:
+                raise GraphError("The number of divisions in the curve must be 1 or greater.")
+            elif m_index >= num_divisions:
             raise GraphError(f"{self} tried to get a matrix-index greater the total number of divisions."
                                 "The matrix index starts at 0. You're probably off by +1.")
         if mode == 'FACTOR':
@@ -608,11 +607,12 @@ class UtilityMatrixFromCurve(MantisMiscNode):
             factor = self.evaluate_input('Factor')
             factor_tail = self.evaluate_input('Factor (Tail)')
             matrix = spline_lookup.matrix_from_start_end_u(factor, factor_tail)
-        else:  # mode == 'DIVISIONS':
-            factor = 1/num_divisions*m_index
-            factor_tail = 1/num_divisions*(m_index+1)
+        elif mode == 'DIVISIONS':
+            factor = m_index/num_divisions
+            factor_tail = (m_index+1)/num_divisions
             matrix = spline_lookup.matrix_from_start_end_u(factor, factor_tail)
-        
+        else:
+            raise RuntimeError("721 This should not happen please report bug")
         self.parameters["Matrix"] = matrix
         self.prepared = True
         self.executed = True
