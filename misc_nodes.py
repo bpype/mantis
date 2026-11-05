@@ -1,5 +1,5 @@
 from .utilities.node_common import *
-from .base_definitions import MantisNode, NodeSocket, FLOAT_EPSILON
+from .base_definitions import MantisNode, NodeSocket, FLOAT_EPSILON, resolve_overlays
 from .xForm_nodes import xFormNode
 from .misc_nodes_socket_templates import *
 from math import pi, tau
@@ -76,9 +76,7 @@ def TellClasses():
 # the idea is to get the data once and hold onto it
 # this prevents numerous wasteful calls to dg.update()
 CURVE_LUT_CACHE = {}
-CURVE_HASHES = {}
-SPLINE_HASHES ={}
-
+CURVE_UUIDS = {}
 
 # todo: make a "matrix from 2 u" function, a "matrix for segments" function
 # basically I want the SplineLUT to handle all curve matrix getters
@@ -194,10 +192,18 @@ def hash_spline(spline) -> int:
     return hash( (spline_metadata, points_data) )
 
 def hash_curve(curve, spline_hashes) -> int:
-    curve_metadata = ( curve.dimensions, curve.twist_mode, curve.resolution_u, )
+    curve_metadata = ( curve.dimensions, curve.twist_mode, curve.resolution_u, len(curve.splines) )
     return hash( (curve_metadata, spline_hashes) )
 
-def fill_curve_lut(curve_name, bContext):
+def check_curve_is_current_hash(curve_name, execution_id):
+    curve = bpy_object_get_guarded( curve_name )
+    spline_hashes = tuple( hash_spline(spline) for spline in curve.data.splines)
+    curve_hash = hash_curve(curve.data, spline_hashes)
+    if existing_cache := CURVE_LUT_CACHE.get(curve_name):
+        if existing_cache['hash'] == curve_hash: return True
+    return False
+
+def fill_curve_lut(curve_name, execution_id, bContext):
     curve = bpy_object_get_guarded( curve_name )
 
     if not curve: raise RuntimeError(f"WARN: No curve found for {curve_name}.")
@@ -205,7 +211,6 @@ def fill_curve_lut(curve_name, bContext):
     else:
         spline_hashes = tuple( hash_spline(spline) for spline in curve.data.splines)
         curve_hash = hash_curve(curve.data, spline_hashes)
-        SPLINE_HASHES[curve.name] = spline_hashes; CURVE_HASHES[curve_name] = curve_hash
         if existing_cache := CURVE_LUT_CACHE.get(curve_name):
             if existing_cache['hash'] == curve_hash: return
         mesh = get_mesh_from_curve(curve_name, "_MANTIS_CACHE_CURVE", bContext)
@@ -226,27 +231,30 @@ def fill_curve_lut(curve_name, bContext):
             spline_lut = SplineLUT(
                 u_samples, positions, tangents, normals, hash=spline_hash, curve_name=curve_name, )
             curve_lut_cache.append(spline_lut)
-    
     CURVE_LUT_CACHE[curve_name] = {}
+    CURVE_UUIDS[curve_name] = execution_id
     CURVE_LUT_CACHE[curve_name]['hash'] = curve_hash
     CURVE_LUT_CACHE[curve_name]['spline_LUT'] = curve_lut_cache
     # remove the mesh, it is no longer needed - we have built a cache
-    # import bpy
-    # bpy.data.meshes.remove(mesh)
+    from bpy import data as bpy_data
+    bpy_data.meshes.remove(mesh)
 
-def get_from_curve_lut(curve_name, spline_index, bContext, node_for_error=None) -> SplineLUT:
+def get_from_curve_lut(curve_name, spline_index, bContext, node) -> SplineLUT:
     spline_lookup = None
+    execution_id = node.mContext.execution_id
     try:
-        fill_curve_lut(curve_name=curve_name, bContext=bContext)
+        fill_curve_lut(curve_name=curve_name, execution_id=execution_id, bContext=bContext)
         spline_lookup = CURVE_LUT_CACHE[curve_name]['spline_LUT'][spline_index]
-    except IndexError: # replace with a more helpful error message
-        raise IndexError(f"{node_for_error} is attempting to read from a spline in {curve_name} "
+    except IndexError:
+        raise IndexError(f"{node} is attempting to read from a spline in {curve_name} "
                 "that does not exist. Try and reduce the value of Spline Index.")
     return spline_lookup
 
 
 # Store this stuff so we can reuse it or check it for updates
 METARIG_DATA_CACHE = {}
+METARIG_HASHES = {}
+METARIG_EXECUITION_IDS = {}
 
 # recursing like this is slightly easier than managing state myself
 # and it is easier to read/understand
@@ -266,9 +274,15 @@ def calculate_matrix_recursive_branching(parent_matrix, children, cache):
         )
         calculate_matrix_recursive_branching(m, child.children, cache)
 
-def fill_metarig_cache_for_object(armature):
+def fill_metarig_cache_for_object(armature, execution_id):
+    if armature is None: return
     from .mantis_dataclasses import MantisBoneTransform, MantisBBoneTransform
     from mathutils import Matrix
+    my_hash = hash_meta_armature(armature)
+    if armature.name in METARIG_HASHES.keys():
+        current_hash = METARIG_HASHES[armature.name]
+        if current_hash == my_hash:
+            return
     my_cache = {}
     # recursively fill the armature with local matrices
     roots = [ b for b in armature.data.bones if b.parent is None]
@@ -280,7 +294,57 @@ def fill_metarig_cache_for_object(armature):
             MantisBBoneTransform.bbone_transform_from_bone(b)
         )
         calculate_matrix_recursive_branching(parent_matrix, b.children, my_cache)
+    METARIG_EXECUITION_IDS[armature.name] = execution_id
+    METARIG_HASHES[armature.name] = my_hash
     METARIG_DATA_CACHE[armature.name] = my_cache
+
+def hash_meta_armature(armature):
+    hash_me_bones = tuple( (
+        (b.name, b.length, *b.matrix_local[0],
+                           *b.matrix_local[1],
+                           *b.matrix_local[2],
+                           *b.matrix_local[3]  )
+        for b in armature.data.bones
+    ) )
+    hash_me_object = ( armature.name, *armature.matrix_world[0],
+                                      *armature.matrix_world[1],
+                                      *armature.matrix_world[2],
+                                      *armature.matrix_world[3],)
+    return hash( (hash_me_bones, hash_me_object) )
+
+def socket_is_ready(mantis_node, socket_name):
+    if ( mantis_node.inputs[socket_name].is_linked == False or
+         mantis_node.inputs[socket_name].links[0].from_node.prepared == True):
+        return True
+    return False
+
+def curve_common_get_data_from_scene(mantis_node, curve_socket_name='Curve'):
+    # first we need to determine if we can get the curve itself
+    if ( mantis_node.inputs[curve_socket_name].is_linked == False or
+         mantis_node.inputs[curve_socket_name].links[0].from_node.prepared == True):
+        curve_name = mantis_node.evaluate_input(curve_socket_name)
+        if curve_name:
+            execution_id = mantis_node.mContext.execution_id
+            if CURVE_UUIDS.get(curve_name) != execution_id:
+                from bpy import context as bpy_context
+                if not check_curve_is_current_hash:
+                    fill_curve_lut(curve_name=curve_name,
+                        execution_id = execution_id, bContext=bpy_context)
+                else: return # done here!
+            else: return
+    # do this if we haven't left early:
+    mantis_node.prepared = False; mantis_node.executed = False
+
+def data_from_scene_hard_reset_break_condition(mantis_node):
+    match mantis_node.default_prepare_state:
+        case 0:
+            mantis_node.prepared == False
+        case 1:
+            mantis_node.prepared == False
+        case 2: # this one is always prepared, check if it is executed
+            mantis_node.executed == False
+        case 3: # this one is always ready, don't ever break on this one
+            False
 
 def matrix_from_head_tail(head, tail, normal=None):
     from mathutils import Vector, Matrix
@@ -582,25 +646,52 @@ class UtilityMatrixFromCurve(MantisMiscNode):
     '''Get a matrix from a curve'''
     __slots__ = ()
     socket_templates = MatrixFromCurveSockets
-    passes=frozenset({'bPrepare', 'bFinalize'})
+    passes = frozenset( {'bGetDataFromScene', 'bPrepare'})
 
-    def bPrepare(self, bContext = None,):
-        from mathutils import Matrix
-        import bpy
-        curve_name = self.evaluate_input("Curve"); mode = self.evaluate_input("Mode")
-        # DIVISIONS, FACTOR
-        if bContext is None: bContext = bpy.context # is this wise?
+    @resolve_overlays
+    def bGetDataFromScene(self):
+        curve_common_get_data_from_scene(self)
+        if ( socket_is_ready(self, 'Curve') and
+             socket_is_ready(self, 'Spline Index') and 
+             socket_is_ready(self, 'Mode') ):
+            # get the mode and check some more
+            mode = self.evaluate_input("Mode")
+            if mode == 'DIVISIONS':
+                if not socket_is_ready(self, "Total Divisions") or \
+                   not socket_is_ready(self, 'Matrix Index'):
+                    self.prepared =False; self.executed = False; return
+            elif mode == 'FACTOR':
+                if not socket_is_ready(self, "Factor"):
+                    self.prepared =False; self.executed = False; return
+            elif mode == 'FACTOR_WITH_TAIL':
+                if not socket_is_ready(self, "Factor") or \
+                   not socket_is_ready(self, 'Factor (Tail)'):
+                    self.prepared =False; self.executed = False; return
+            else: self.prepared =False; self.executed = False; return
+            # has passed every check at this point
+            result_before = self.parameters["Matrix"] # make sure to copy this
+            if result_before: result_before = result_before.copy() # if it exists
+            self.get_result()
+            if self.parameters["Matrix"] != result_before and self.prepared:
+                self.reset_execution_recursive(hard=True,
+                    break_condition=data_from_scene_hard_reset_break_condition)
+            self.prepared = True; self.executed = True
+
+    def get_result(self):
+        curve_name = self.evaluate_input("Curve")
+        mode = self.evaluate_input("Mode")
+        from bpy import context as bpy_context
         spline_index = self.evaluate_input("Spline Index")
         spline_lookup : SplineLUT = get_from_curve_lut(curve_name, spline_index, bpy_context, self)
         num_divisions = 0; m_index = 0
         if mode == 'DIVISIONS':
-        num_divisions = self.evaluate_input("Total Divisions")
-        m_index = self.evaluate_input("Matrix Index")
+            num_divisions = self.evaluate_input("Total Divisions")
+            m_index = self.evaluate_input("Matrix Index")
             if num_divisions <= 0:
                 raise GraphError("The number of divisions in the curve must be 1 or greater.")
             elif m_index >= num_divisions:
-            raise GraphError(f"{self} tried to get a matrix-index greater the total number of divisions."
-                                "The matrix index starts at 0. You're probably off by +1.")
+                raise GraphError(f"{self} tried to get a matrix-index greater the total number of divisions."
+                                    "The matrix index starts at 0. You're probably off by +1.")
         if mode == 'FACTOR':
             factor = self.evaluate_input('Factor')
             matrix = spline_lookup.matrix_at_u(factor)
@@ -615,33 +706,86 @@ class UtilityMatrixFromCurve(MantisMiscNode):
         else:
             raise RuntimeError("721 This should not happen please report bug")
         self.parameters["Matrix"] = matrix
-        self.prepared = True
-        self.executed = True
+
+    def bPrepare(self, bContext = None,):
+        self.get_result()
+        self.prepared = True; self.executed = True
 
 #TODO there is no harm in grabbing normal and tangent here, too
 class UtilityPointFromCurve(MantisMiscNode):
     '''Get a point from a curve'''
     __slots__ = ()
     socket_templates = PointFromCurveSockets
-    passes=frozenset({'bPrepare', 'bFinalize'})
+    passes = frozenset( {'bGetDataFromScene', 'bPrepare'})
 
-    def bPrepare(self, bContext = None,):
-        import bpy
+    @resolve_overlays
+    def bGetDataFromScene(self):
+        super().bGetDataFromScene()
+        curve_common_get_data_from_scene(self)
+        if ( socket_is_ready(self, 'Curve') and
+             socket_is_ready(self, 'Spline Index') and 
+             socket_is_ready(self, 'Factor') ):
+            result_before = self.parameters["Point"] # make sure to copy this
+            if result_before: result_before = result_before.copy() # if it exists
+            self.get_result()
+            if self.parameters["Point"] != result_before and self.prepared:
+                self.reset_execution_recursive(hard=True,
+                    break_condition=data_from_scene_hard_reset_break_condition)
+            self.prepared = True; self.executed = True
+        else: self.prepared =False; self.executed = False; return
+
+    def get_result(self):
         curve_name = self.evaluate_input("Curve")
-        if bContext is None: bContext = bpy.context # is this wise?
         spline_index = self.evaluate_input("Spline Index")
-        spline_lookup : SplineLUT = get_from_curve_lut(curve_name, spline_index, bContext, self)
+        from bpy import context as bpy_context
+        spline_lookup : SplineLUT = get_from_curve_lut(curve_name, spline_index, bpy_context, self)
         factor = self.evaluate_input("Factor")
         position, _tan, _nrm = spline_lookup.data_at_u(factor)
         self.parameters["Point"] = position
         self.prepared, self.executed = True, True
+    
+    def bPrepare(self, bContext = None,):
+        self.get_result()
+        self.prepared, self.executed = True, True
 
 class UtilityMatricesFromCurve(MantisMiscNode):
     '''Get matrices from a curve'''
-    __slots__ = ()
+    __slots__ = ("number_of_outputs")
     socket_templates = MatricesFromCurveSockets
-    passes=frozenset({'bPrepare', 'bFinalize'})
+    passes = frozenset( {'bGetDataFromScene', 'bPrepare'})
 
+    def __init__(self, signature, base_tree):
+        super().__init__(signature, base_tree, self.socket_templates)
+        self.number_of_outputs = -1
+
+    @resolve_overlays
+    def bGetDataFromScene(self):
+        super().bGetDataFromScene()
+        curve_common_get_data_from_scene(self)
+        # for now not even gonna try and do this one before bPrepare pass
+        if self.number_of_outputs == -1: # defaults to -1, set it once
+            self.number_of_outputs = len(self.outputs["Matrices"].links)
+            return # done here for now, this is the first go
+        ready = 0
+        my_sockets = list(self.inputs.keys())
+        for socket_name in my_sockets:
+            if socket_is_ready(self, socket_name):
+                ready += 1
+        if ready == len(my_sockets):
+            result_before = []
+            for i in range(self.number_of_outputs):
+                name = "Matrix"+str(i).zfill(4)
+                result_before.append(self.parameters[name])
+            self.bPrepare()
+            for i in range(self.number_of_outputs):
+                name = "Matrix"+str(i).zfill(4)
+                m = self.parameters[name]
+                if m != result_before:
+                    self.prepared = False; self.executed = False; return
+        else: # oh how I wish this benighted language had a goto statement
+            self.prepared = False; self.executed = False
+
+        
     def bPrepare(self, bContext = None,):
         curve_name = self.evaluate_input("Curve")
         spline_index = self.evaluate_input("Spline Index")
@@ -697,25 +841,42 @@ class UtilityNumberOfSplines(MantisMiscNode):
 class UtilityMatrixFromCurveSegment(MantisMiscNode):
     __slots__ = ()
     socket_templates = MatrixFromCurveSegmentSockets
-    passes=frozenset({'bPrepare', 'bFinalize'})
+    passes = frozenset( {'bGetDataFromScene', 'bPrepare'})
 
-    def bPrepare(self, bContext = None,):
-        import bpy
+    @resolve_overlays
+    def bGetDataFromScene(self):
+        super().bGetDataFromScene()
+        curve_common_get_data_from_scene(self)
+        if ( socket_is_ready(self, 'Curve') and
+             socket_is_ready(self, 'Spline Index') and 
+             socket_is_ready(self, 'Segment Index') ):
+            result_before = self.parameters['Matrix'] # make sure to copy this
+            if result_before: result_before = result_before.copy() # if it exists
+            self.get_result()
+            if self.parameters['Matrix'] == result_before and self.prepared:
+                self.reset_execution_recursive(hard=True,
+                    break_condition=data_from_scene_hard_reset_break_condition)
+            self.prepared = True; self.executed = True
+        else: self.prepared =False; self.executed = False; return
+
+    def get_result(self):
         curve_name = self.evaluate_input("Curve")
-        curve = bpy_object_get_guarded(curve_name, self)
         spline_index = self.evaluate_input("Spline Index")
-        if bContext is None: bContext = bpy.context # is this wise?
-        spline_lookup = get_from_curve_lut(curve_name, spline_index, bContext, self)
+        from bpy import context as bpy_context
+        spline_lookup = get_from_curve_lut(curve_name, spline_index, bpy_context, self)
+        curve = bpy_object_get_guarded(curve_name, self)
         spline = curve.data.splines[spline_index]
         factors = []
         points = spline.bezier_points if spline.type == 'BEZIER' else spline.points
-        total_length=0.0
         for i in range(len(points)): # points[i].co[:3] because nurbs have W element :/
             _pt, u = spline_lookup.point_and_u_at_nearest_point_on_curve(points[i].co[:3])
             factors.append(u)
         segment_index = self.evaluate_input("Segment Index")
         m = spline_lookup.matrix_from_start_end_u(factors[segment_index], factors[segment_index+1])
         self.parameters["Matrix"] = m
+
+    def bPrepare(self, bContext = None,):
+        self.get_result()
         self.prepared, self.executed = True, True
 
 class UtilityGetCurvePoint(MantisMiscNode):
@@ -743,16 +904,34 @@ class UtilityGetCurvePoint(MantisMiscNode):
 class UtilityGetNearestFactorOnCurve(MantisMiscNode):
     __slots__ = ()
     socket_templates = GetNearestFactorOnCurveSockets
+    passes = frozenset( {'bGetDataFromScene', 'bPrepare'})
 
-    def bPrepare(self, bContext = None,):
-        import bpy
+    @resolve_overlays
+    def bGetDataFromScene(self):
+        super().bGetDataFromScene()
+        curve_common_get_data_from_scene(self)
+        if ( socket_is_ready(self, 'Curve') and
+             socket_is_ready(self, 'Spline Index') and
+             socket_is_ready(self, 'Reference Point') ):
+            result_before = self.parameters['Factor']
+            self.get_result()
+            if self.parameters['Factor'] != result_before and self.prepared:
+                self.reset_execution_recursive(hard=True,
+                    break_condition=data_from_scene_hard_reset_break_condition)
+            self.prepared = True; self.executed = True
+        else:self.prepared =False; self.executed = False; return
+
+    def get_result(self):
         curve_name = self.evaluate_input("Curve")
         spline_index = self.evaluate_input("Spline Index")
-        if bContext is None: bContext = bpy.context # is this wise?
-        spline_lookup = get_from_curve_lut(curve_name, spline_index, bContext, self)
+        from bpy import context as bpy_context
+        spline_lookup = get_from_curve_lut(curve_name, spline_index, bpy_context, self)
         ref_pt = self.evaluate_input("Reference Point")
         _closest_point, u = spline_lookup.point_and_u_at_nearest_point_on_curve(ref_pt)
         self.parameters["Factor"] = u
+
+    def bPrepare(self, bContext = None,):
+        self.get_result()
         self.prepared, self.executed = True, True
 
 class UtilityKDChoosePoint(MantisMiscNode):
@@ -822,46 +1001,67 @@ class UtilityMetaRig(MantisMiscNode):
     '''A node representing an armature object'''
     __slots__ = ()
     socket_templates = MetaRigSockets
+    passes = frozenset( {'bGetDataFromScene', 'bPrepare'})
 
-    def bDataFromScene(self):
+    @resolve_overlays
+    def bGetDataFromScene(self):
         # TWO possibilities:
         #   - this node has no real dependencies and is ready to prep
         #   - this node has dependencies and can't be prepped until building the tree
-        pass
-
+        # so we'll either set the matrix and call the node finished, or we'll defer it
+        armature_name = None; armature = None
+        if ( (self.inputs["Meta-Armature"].is_linked == False) or
+              self.inputs['Meta-Armature'].links[0].from_node.prepared == True ):
+            armature_name = self.evaluate_input("Meta-Armature")
+            from bpy import data as bpy_data
+            armature = bpy_data.objects.get(armature_name)
+        if armature: # only need to check and fill once per execution
+            execution_id = self.mContext.execution_id
+            execution_iteration = self.mContext.execution_iteration_counter
+            execution_id = (execution_id, execution_iteration)
+            if METARIG_EXECUITION_IDS.get(armature_name) != execution_id:
+                fill_metarig_cache_for_object(armature, execution_id)
+        else: self.prepared =False; self.executed = False; return
+        needs_bone = False; can_get_metarig_bone = False
+        if self.inputs['Meta-Bone'].is_linked == False:
+            if self.parameters['Meta-Bone']: can_get_metarig_bone = True; needs_bone = True
+            else: needs_bone = False # it is None or ""
+        elif self.inputs['Meta-Bone'].is_linked:
+            needs_bone = True
+            if self.inputs['Meta-Bone'].links[0].from_node.prepared == True:
+                can_get_metarig_bone = True
+        # so now if we need the bone and we can get it, good!
+        if (needs_bone == False) or (needs_bone and can_get_metarig_bone):
+                self.set_matrix(); self.prepared = True; self.executed = True
+        else: self.prepared =False; self.executed = False; return
+        
+    def set_matrix(self):
+        m_at_start = self.parameters["Matrix"]
+        meta_rig  = self.evaluate_input("Meta-Armature")
+        meta_bone = self.evaluate_input("Meta-Bone")
+        if meta_bone is None and self.inputs["Meta-Bone"].is_linked == False:
+            from bpy import data as bpy_data
+            armature = bpy_data.objects.get(meta_rig)
+            self.parameters["Matrix"] = armature.matrix_world.copy()
+            self.parameters["Matrix"][3][3] = 1
+        elif meta_bone is not None:
+            self.parameters["Matrix"] = METARIG_DATA_CACHE[meta_rig][meta_bone][0].matrix.copy()
+            # and I am still using the old, stupid way of dealing with bone length for now...
+            self.parameters["Matrix"][3][3] = METARIG_DATA_CACHE[meta_rig][meta_bone][0].length
+        else:
+            raise RuntimeError(f"Could not get matrix for {self}")
+        if self.parameters["Matrix"] != m_at_start and self.prepared:
+            self.reset_execution_recursive(hard=True,
+                break_condition=data_from_scene_hard_reset_break_condition)
+    
     def bPrepare(self, bContext = None,):
-        #kinda clumsy, whatever
-        import bpy
-        from mathutils import Matrix
-        m = Matrix.Identity(4)
-
         meta_rig  = self.evaluate_input("Meta-Armature")
         if meta_rig is None:
             raise RuntimeError("Invalid input for Meta-Armature.")
         meta_bone = self.evaluate_input("Meta-Bone")
         if meta_rig is None or meta_bone is None:
             raise RuntimeError("Invalid input for Meta-Bone.")
-
-        if meta_rig:
-            if ( armOb := bpy.data.objects.get(meta_rig) ):
-                m = armOb.matrix_world
-                if ( b := armOb.data.bones.get(meta_bone)):
-                    # calculate the correct object-space matrix
-                    m = Matrix.Identity(3)
-                    bones = [] # from the last ancestor, mult the matrices until we get to b
-                    while (b): bones.append(b); b = b.parent
-                    while (bones): b = bones.pop(); m = m @ b.matrix
-                    m = Matrix.Translation(b.head_local) @ m.to_4x4()
-                    #
-                    m[3][3] = b.length # this is where I arbitrarily decided to store length
-                # else:
-                #     prRed("no bone for MetaRig node ", self)
-        else:
-            raise RuntimeError(wrapRed(f"No meta-rig input for MetaRig node {self}"))
-
-        self.parameters["Matrix"] = m
-        self.prepared = True
-        self.executed = True
+        self.set_matrix(); self.prepared = True; self.executed = True
 
 class UtilityBoneProperties(SimpleInputNode):
     '''A node representing a bone's gettable properties'''
@@ -878,7 +1078,7 @@ class UtilityDriverVariable(MantisMiscNode):
     node_type = "DRIVER"
     passes=frozenset({'bPrepare', 'bRelationship'})
 
-    def reset_execution(self):
+    def reset_execution(self, hard = False) -> None:
         super().reset_execution()
         # clear the pointer properties to prevent using stale pointer data.
         my_var = self.parameters["Driver Variable"]
@@ -1023,7 +1223,7 @@ class UtilityDriver(MantisMiscNode):
         self.prepared = True
         self.default_prepare_state = 1 # set prepared to True, leave Executed unchanged
 
-    def reset_execution(self):
+    def reset_execution(self, hard = False) -> None:
         super().reset_execution()
         from .utilities.drivers import MantisDriver
         self.parameters["Driver"]=MantisDriver()
@@ -1091,14 +1291,12 @@ class UtilitySwitch(MantisMiscNode):
                 return node #this will fetch the first one, that's good!
         return None
 
-    def reset_execution(self):
+    def reset_execution(self, hard = False) -> None:
         super().reset_execution()
         from .utilities.drivers import MantisDriver
         self.parameters["Driver"]=MantisDriver()
 
     def bRelationshipPass(self, bContext = None,):
-        #prepare_parameters(self)
-        #prPurple ("Executing Switch Node")
         xForm = self.GetxForm()
         if xForm : xForm = xForm.bGetObject()
         if not xForm:
@@ -1143,7 +1341,7 @@ class UtilityCombineThreeBool(MantisMiscNode):
     __slots__ = ()
     socket_templates = CombineThreeBoolSockets
 
-    def reset_execution(self): # need to make sure any references are deleted
+    def reset_execution(self, hard = False) -> None: # need to make sure any references are deleted
         super().reset_execution() # so we prepare the node again to reset them
         if self.parameters["Three-Bool"] is not None:
             for param in self.parameters["Three-Bool"]:
@@ -1164,7 +1362,7 @@ class UtilityCombineVector(MantisMiscNode):
     __slots__ = ()
     socket_templates = CombineVectorSockets
 
-    def reset_execution(self): # need to make sure any references are deleted
+    def reset_execution(self, hard = False) -> None: # need to make sure any references are deleted
         super().reset_execution() # so we prepare the node again to reset them
         if self.parameters["Vector"] is not None:
             for param in self.parameters["Vector"]:
@@ -1172,7 +1370,6 @@ class UtilityCombineVector(MantisMiscNode):
                     self.prepared=False; break
 
     def bPrepare(self, bContext = None,):
-        #prPurple("Executing CombineVector Node")
         prepare_parameters(self)
         self.parameters["Vector"] = (
           self.evaluate_input("X"),
@@ -1207,7 +1404,7 @@ class InputWidget(MantisMiscNode):
     socket_templates = InputWidgetSockets
     node_type = "XFORM"
 
-    def reset_execution(self):
+    def reset_execution(self, hard = False) -> None:
         super().reset_execution()
         self.prepared=False
 
@@ -1302,7 +1499,7 @@ class InputExistingGeometryObject(MantisMiscNode):
     socket_templates = InputExistingGeometryObjectSockets
     node_type = "XFORM"
 
-    def reset_execution(self):
+    def reset_execution(self, hard = False) -> None:
         super().reset_execution()
         self.prepared=False
 
@@ -1790,7 +1987,7 @@ class UtilityChoose(MantisMiscNode):
     __slots__ = ()
     socket_templates = ChooseSockets
 
-    def reset_execution(self):
+    def reset_execution(self, hard = False) -> None:
         prepared=self.prepared
         super().reset_execution()
         # prevent this node from attempting to prepare again.

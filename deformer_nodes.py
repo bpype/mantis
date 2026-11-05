@@ -75,7 +75,7 @@ class MantisDeformerNode(MantisNode):
             return_me.append(xf)
         return return_me
     
-    def reset_execution(self):
+    def reset_execution(self, hard = False) -> None:
         super().reset_execution()
         self.bObject=[]
 

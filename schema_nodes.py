@@ -41,7 +41,7 @@ class SchemaNode(MantisNode):
         self.execution_prepared = True # should not affect execution!
         self.default_prepare_state = 3 # prepared, executed = True, True (always ready)
 
-    def reset_execution(self):
+    def reset_execution(self, hard = False) -> None:
         super().reset_execution()
         raise RuntimeError( "46 Code meant to unreachable has been reached."
                            f"Please report this as a bug. {self}")

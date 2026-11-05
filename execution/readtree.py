@@ -371,6 +371,9 @@ def parse_tree(base_tree, error_popups=False):
         if mantis_node.__class__.__name__ in array_output_types:
             solve_only_these.append(mantis_node)
             array_nodes.append(mantis_node)
+        if ( 'bGetDataFromScene' in mantis_node.passes and 
+             mantis_node.is_schema_prototype == False ): # these should not have any state or data
+                mantis_node.bGetDataFromScene()
 
     from itertools import chain
     for schema in chain(all_schema.values(), array_nodes):
@@ -605,7 +608,7 @@ def execute_tree(nodes, base_tree, context, error_popups = False, profile=False)
     for mantis_node in nodes.values():
         if not mContext: # just grab one of these. this is a silly way to do this.
             mContext = mantis_node.mContext
-            mContext.b_objects = {} # clear the objects and recreate them
+            mContext.b_objects.clear() # clear the objects and recreate them
         mantis_node.reset_execution()
     mContext.execution_failed = False
 
@@ -619,6 +622,11 @@ def execute_tree(nodes, base_tree, context, error_popups = False, profile=False)
         if overlays_for_this_node := overlay_tagged_nodes.get(n.signature):
             for socket_id in overlays_for_this_node:
                 node_scan_overlays(n, socket_id,)
+
+    for mantis_node in nodes.values():
+        if 'bGetDataFromScene' in mantis_node.passes:
+            mantis_node.bGetDataFromScene()
+    mContext.execution_failed = False
 
     select_me, switch_me = [], [] # switch the mode on these objects
     active = None # only need it for switching modes
@@ -728,6 +736,8 @@ def execute_tree(nodes, base_tree, context, error_popups = False, profile=False)
         if (original_active):
             context.view_layer.objects.active = original_active
             original_active.select_set(True)
+        # increment the execution iteration counter
+        mContext.execution_iteration_counter += 1
     except Exception as e:
         e = execution_error_cleanup(None, e, switch_me, show_error=error_popups)
         if error_popups == False:

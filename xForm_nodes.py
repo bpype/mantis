@@ -1,5 +1,5 @@
 from .utilities.node_common import *
-from .base_definitions import MantisNode, NodeSocket
+from .base_definitions import MantisNode, resolve_overlays
 from .xForm_socket_templates import *
 from .mantis_dataclasses import xForm_info
 
@@ -709,12 +709,22 @@ class xFormCurvePin(xFormNode):
     """An xForm pinned to a specific location on a curve."""
     __slots__ = ()
     socket_templates = xFormCurvePinSockets
-    passes=frozenset({'bPrepare', 'bFinalize'})
+    passes=frozenset({'bGetDataFromScene', 'bPrepare', 'bFinalize'})
+
     def __init__(self, signature, base_tree):
         super().__init__(signature, base_tree, self.socket_templates,
             additional_parameters={"Matrix":None})
         setup_custom_property_inputs_outputs(self)
 
+    @resolve_overlays
+    def bGetDataFromScene(self):
+        from .misc_nodes import ( curve_common_get_data_from_scene,
+                                  data_from_scene_hard_reset_break_condition )
+        curve_common_get_data_from_scene(self, curve_socket_name='Parent Curve')
+        if self.prepared:
+            self.reset_execution_recursive(hard=True,
+                break_condition=data_from_scene_hard_reset_break_condition)
+        
     def get_matrix_from_spline(self, spline_lookup):
         matrix = spline_lookup.matrix_at_u(self.parameters["Curve Pin Factor"])
         track_axis = self.parameters["Forward Axis"]; up_axis = self.parameters["Up Axis"]
@@ -877,7 +887,7 @@ class xFormGetBone(xFormNode):
         # this is just a getter
         self.prepared=True; self.executed=True; self.execution_prepared=True
 
-    def reset_execution(self):
+    def reset_execution(self, hard = False) -> None:
         super().reset_execution()
         self.prepared=True; self.executed=True; self.execution_prepared=True
     
