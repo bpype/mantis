@@ -781,6 +781,10 @@ class MantisNodeGroup(Node, MantisUINode):
     node_tree:PointerProperty(type=NodeTree, poll=poll_node_tree, update=node_tree_prop_update,)
     is_updating:BoolProperty(default=False)
 
+    def init(self, context):
+        # this makes it explicitly use my MantisUINode init function
+        super(Node, self).init(context)
+
     def draw_label(self):
         if self.node_tree is None:
             return "Node Group"

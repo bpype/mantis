@@ -481,6 +481,8 @@ def socket_update(mantis_node, ui_socket, socket_name=None):
         mantis_node.reset_execution_recursive()
     return node_updated
 
+GROUP_TYPES = {"MantisNodeGroup", "MantisSchemaGroup"}
+
 def default_update(ui_socket, context, do_execute=True):
     if not context:
         context = bpy.context
@@ -501,12 +503,22 @@ def default_update(ui_socket, context, do_execute=True):
             prPurple(f"Executing tree after socket change: {ui_socket.node.name}:{ui_socket.name}")
             root_tree.execute_tree(context)
         finally:
-            ui_socket.node.is_updating=updating
+            ui_socket.node.is_updating=updating; return
+    if hasattr(ui_socket.node, 'is_updating'):
+        if ui_socket.node.is_updating: return
+    # similarly, we can do an early exit for changing group sockets.
+    if (ui_socket.node.bl_idname in {"MantisNodeGroup", "MantisSchemaGroup"}):
+        mantis_updated=False # this kind of socket can't be updated here (yet)
+        root_tree.update_tree(context, force=True)
+        try:
+            prPurple(f"Executing tree after socket change: {ui_socket.node.name}:{ui_socket.name}")
+            root_tree.execute_tree(context)
+        except Exception as e:
+            prRed("Automatic Tree Execution failed because of %s" % e)
         return
+    # Now we know we are dealing with a normal node
     if hasattr(ui_socket.node, "initialized"):
         if not ui_socket.node.initialized: return
-    elif hasattr(ui_socket.node, 'is_updating'):
-        if ui_socket.node.is_updating: return
     else: return
     # if the socket has survived THAT ordeal, then the context is OK.
     # first, we try to update the Mantis tree in-situ.
@@ -515,10 +527,7 @@ def default_update(ui_socket, context, do_execute=True):
     # finally, try and execute it if mantis couldn't update the b_objects itself.
     from .base_definitions import array_output_types
     mantis_updated=True
-    if (ui_socket.node.bl_idname in ["MantisNodeGroup", "MantisSchemaGroup"]):
-        mantis_updated=False # this kind of socket can't be updated here (yet)
-        root_tree.update_tree(context, force=True)
-    elif ui_socket.node.bl_idname in array_output_types:
+    if ui_socket.node.bl_idname in array_output_types:
         mantis_updated=False
         root_tree.update_tree(context, force=True)
     elif hasattr(ui_socket, 'default_value'):
