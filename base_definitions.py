@@ -644,7 +644,6 @@ def node_group_update(node, force = False):
                 schema_length=0
                 if sl := node.inputs.get("Schema Length"):
                     schema_length = sl.default_value
-                # sometimes this isn't available yet # TODO not happy about this solution
             remove_me=[]
             # remove all found map items but the Schema Length input (reuse it)
             for i, socket in enumerate(node.inputs):

@@ -104,7 +104,7 @@ def get_overlay_keys_types_ids(my_interfaces, overlay_keys, name_to_type_map, na
             overlay_keys.add('Index'); overlay_keys.add('Length')
     if 'Index' in overlay_keys:
         name_to_id_map['Index']='Index'; name_to_type_map['Index']= "IntSocket"
-        name_to_id_map['Length']='Length'; name_to_type_map['Length']= "IntSocket"
+        name_to_id_map['Length']='Schema Length'; name_to_type_map['Length']= "IntSocket"
 
 STRING_PADDING = 4
 overlay_valid_socket_types = [
